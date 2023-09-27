@@ -38,6 +38,10 @@ const Container = styled.div`
 	padding: 0 4% 64px;
 	& > * + * {
 		margin-top: 32px;
+		
+		@media (max-width: 560px) {
+            margin-top: 16px;
+        }
 	}
 `;
 

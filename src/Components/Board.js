@@ -3,10 +3,7 @@ import styled from 'styled-components';
 import axios from 'axios';
 import Modal from 'react-modal';
 import { useCustomContext } from '../Context';
-
-const daysKor = ['월', '화', '수', '목', '금', '토', '일'];
-const hours = ['09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'];
-const idx2hour = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', '24:00'];
+import { daysKor, hours, idx2hour } from '../global';
 
 const getMonday = () => {
     const monday = new Date();
@@ -41,13 +38,48 @@ const isToday = (dayIdx) => {
 }
 
 const Board = () => {
-    const { ensembles } = useCustomContext();
+    const { teams, ensembles, init, getEnsembles } = useCustomContext();
     const [info, setInfo] = useState(null);
-    const [week, setWeek] = useState(getWeek());
+    const [infoId, setInfoId] = useState('');
+    const [modifyId, setModifyId] = useState('');
+    const [modifyName, setModifyName] = useState('');
+    const [modifyDesc, setModifyDesc] = useState('');
+    const week = getWeek();
 
     const handleInfoModal = async (id) => {
-        const { data } = await axios.get(`https://us-central1-semachi.cloudfunctions.net/ensembleinfo?id=${id}`);
-        setInfo(data);
+        try {
+            const { data } = await axios.get(`https://us-central1-semachi.cloudfunctions.net/ensembleinfo?id=${id}`);
+            setInfo(data);
+            setInfoId(id);
+            
+        } catch {
+            alert('이미 삭제된 합주예요.');
+            getEnsembles();
+        }
+    };
+
+    const handleEnsembleDelete = async (id) => {
+        if (!window.confirm('진짜 삭제할래요?')) {
+            return;
+        }
+
+        const { data } = await axios.get(`https://us-central1-semachi.cloudfunctions.net/ensembledelete?id=${id}`);
+        getEnsembles(teams);
+        
+        setInfo(null);
+    };
+
+    const handleTeamModify = async () => {
+        const { data } = await axios.post(`https://us-central1-semachi.cloudfunctions.net/teammodify?id=${modifyId}`, {
+            name: modifyName,
+            desc: modifyDesc
+        });
+
+        init();
+        setModifyId('');
+        setModifyName('');
+        setModifyDesc('');
+
     };
 
     return (
@@ -84,38 +116,88 @@ const Board = () => {
             </DayColumnContainer>
             <Modal
                 isOpen={info}
-                onRequestClose={() => {
-                    setInfo(null);
-                }}
+                onRequestClose={() => {setInfo(null)}}
                 style={modalStyle}
                 contentLabel='Info'
             >
                 <ModalTitle>합주 정보</ModalTitle>
                 <ModalFormContainer>
                     <InfoContainer>
-                        <InfoInnerContainer>
+                        <ModalRowContainer>
                             <ModalLabel>팀 이름</ModalLabel>
-                            <ModalLabel>팀 소개</ModalLabel>
-                            <ModalLabel>팀 타입</ModalLabel>
-                            <ModalLabel>합주 시간</ModalLabel>
-                            <ModalLabel>합주실</ModalLabel>
-                            <ModalLabel>합주 타입</ModalLabel>
-                            <ModalLabel>합주 종료일</ModalLabel>
-                        </InfoInnerContainer>
-                        <InfoInnerContainer>
                             <InfoLabel>{info && info.name}</InfoLabel>
+                        </ModalRowContainer>
+                        <ModalRowContainer>
+                            <ModalLabel>팀 소개</ModalLabel>
                             <InfoLabel>{info && info.desc}</InfoLabel>
-                            <InfoLabel>{info && info.type}팀타입으로수정!!!</InfoLabel>
-                            <InfoLabel>{info && `${daysKor[info.day]}요일 (${week[info.day]}일) ${idx2hour[info.startTime]}-${idx2hour[info.endTime + 1]}`}</InfoLabel>
+                        </ModalRowContainer>
+                        <ModalRowContainer>
+                            <ModalLabel>팀 타입</ModalLabel>
+                            <InfoLabel>{info && info.teamType}</InfoLabel>
+                        </ModalRowContainer>
+                        <ModalRowContainer>
+                            <ModalLabel>합주 시간</ModalLabel>
+                            <InfoLabel>{info && `${daysKor[info.day]}요일 ${idx2hour[info.startTime]} ~ ${idx2hour[info.endTime + 1]}`}</InfoLabel>
+                        </ModalRowContainer>
+                        <ModalRowContainer>
+                            <ModalLabel>합주실</ModalLabel>
                             <InfoLabel>{info && info.room}</InfoLabel>
+                        </ModalRowContainer>
+                        <ModalRowContainer>
+                            <ModalLabel>합주 타입</ModalLabel>
                             <InfoLabel>{info && info.type}</InfoLabel>
+                        </ModalRowContainer>
+                        <ModalRowContainer>
+                            <ModalLabel>{info && info.type !== '일회성' ? '공연 날짜' : '합주 날짜'}</ModalLabel>
                             <InfoLabel>{info && info.due}</InfoLabel>
-                        </InfoInnerContainer>
+                        </ModalRowContainer>
                     </InfoContainer>
-                    <InfoButtonContainer>
-                        <Button>팀 정보 수정</Button>
-                        <Button>합주 삭제</Button>
-                    </InfoButtonContainer>
+                    {info && (
+                        <>
+                            <InfoButtonContainer>
+                                <Button onClick={() => {
+                                    setModifyId(info.id);
+                                    setModifyName(info.name);
+                                    setModifyDesc(info.desc);
+                                    setInfo(null)
+                                }}>팀 수정</Button>
+                                <Button onClick={() => handleEnsembleDelete(infoId)}>합주 삭제</Button>
+                            </InfoButtonContainer>
+                        </>
+                    )}
+                </ModalFormContainer>
+            </Modal>
+            <Modal
+                isOpen={modifyId}
+                onRequestClose={() => {
+                    setModifyId('');
+                    setModifyName('');
+                    setModifyDesc('');
+                }}
+                style={modalStyle}
+                contentLabel='TeamModify'
+            >
+                <ModalTitle>팀 정보 수정</ModalTitle>
+                <ModalFormContainer>
+                    <ModalLabel>팀 이름</ModalLabel>
+                    <ModalInput
+                        value={modifyName}
+                        onChange={e => {
+                            if (e.target.value.length <= 20) {
+                                setModifyName(e.target.value);
+                            }
+                        }}
+                        placeholder='팀명 입력해요 (~20 글자)'
+                    />
+                    <ModalLabel>팀 소개</ModalLabel>
+                    <ModalTextArea
+                        value={modifyDesc}
+                        onChange={e => setModifyDesc(e.target.value)}
+                        placeholder='팀원 목록이랑 선곡이랑 이것 저것 써요'
+                    />
+                    <SubmitButtonContainer>
+                        <SubmitButton disabled={modifyName.length === 0} onClick={handleTeamModify}>수정하기</SubmitButton>
+                    </SubmitButtonContainer>
                 </ModalFormContainer>
             </Modal>
         </Container>
@@ -150,6 +232,10 @@ const Container = styled.div`
     padding: 32px 16px 32px 16px;
     width: 100%;
     max-width: 1080px;
+
+    @media (max-width: 560px) {
+        padding: 24px 8px 24px 8px;
+    }
 `;
 
 const HourColumn = styled.div`
@@ -221,6 +307,7 @@ const Ensemble = styled.div`
     padding: 2px;
     overflow: hidden;
     text-overflow: ellipsis;
+    word-break: break-all;
     user-select: none;
     cursor: pointer;
 `;
@@ -232,6 +319,10 @@ const ModalTitle = styled.div`
     user-select: none;
     text-align: center;
     margin-bottom: 24px;
+
+    @media (max-width: 560px) {
+        margin-bottom: 12px;
+    }
 `;
 
 const ModalFormContainer = styled.div`
@@ -245,31 +336,34 @@ const ModalFormContainer = styled.div`
 
 const InfoContainer = styled.div`
     display: flex;
+    flex-direction: column;
     margin-bottom: 32px;
-    
-    & > * + * {
-        margin-left: 16px;
+
+    @media (max-width: 560px) {
+        margin-bottom: 8px;
     }
 `;
 
-const InfoInnerContainer = styled.div`
+const ModalRowContainer = styled.div`
     display: flex;
-    flex-direction: column;
-
-    & > * + * {
-        margin-top: 16px;
-    }
+    margin-bottom: 16px;
 `;
 
 const ModalLabel = styled.div`
     display: flex;
     font-size: 125%;
     user-select: none;
+    width: 120px;
+
+    @media (max-width: 560px) {
+        width: 72px;
+    }
 `;
 
 const InfoLabel = styled.div`
     font-family: Bold;
     font-size: 125%;
+    white-space: pre-line;
 `;
 
 const InfoButtonContainer = styled.div`
@@ -293,6 +387,72 @@ const Button = styled.div`
     color: ${({ theme }) => theme.white};
     user-select: none;
     cursor: pointer;
+`;
+
+const ModalInput = styled.input`
+    resize: none;
+    border: none;
+    overflow: hidden;
+    margin: 16px 24px 32px;
+    padding: 16px;
+    background-color: ${({ theme }) => theme.background};
+    border-radius: 16px;
+
+    &:focus {
+        outline: 2px solid ${({ theme }) => theme.primary};
+    }
+
+    @media (max-width: 560px) {
+        margin: 8px 16px 16px;
+    }
+`;
+
+const ModalTextArea = styled.textarea`
+    resize: none;
+    border: none;
+    height: 200px;
+    margin: 16px 24px 32px;
+    padding: 16px;
+    background-color: ${({ theme }) => theme.background};
+    border-radius: 16px;
+    
+    &:focus {
+        outline: 2px solid ${({ theme }) => theme.primary};
+    }
+
+    @media (max-width: 560px) {
+        margin: 8px 16px 16px;
+    }
+`;
+
+const SubmitButtonContainer = styled.div`
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin: 32px 0 16px;
+
+    @media (max-width: 560px) {
+        margin: 8px 0 0;
+    }
+`;
+
+const SubmitButton = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 160px;
+    background-color: ${({ theme }) => theme.primary};
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 125%;
+    color: ${({ theme }) => theme.white};
+    user-select: none;
+    cursor: pointer;
+
+    ${({ disabled }) => disabled && `
+        background-color: #cccccc;
+        cursor: default;
+    `}
 `;
 
 export default Board;

@@ -13,6 +13,9 @@ const Container = styled.div`
     display: flex;
     justify-content: center;
     margin: 64px 0 32px;
+    @media (max-width: 560px) {
+        margin: 32px 0px 16px;
+    }
 `;
 
 const H1 = styled.h1`

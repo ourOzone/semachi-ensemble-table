@@ -242,12 +242,22 @@ const HourColumn = styled.div`
     display: flex;
     flex-direction: column;
     margin: 2px 8px 0 0;
+    @media (max-width: 380px) {
+        margin-top: -1px;
+    }
 `;
 
 const Hour = styled.div`
     text-align: center;
     user-select: none;
     margin-top: 62px;
+
+    @media (max-width: 560px) {
+        margin-top: 47px;
+    }
+    @media (max-width: 380px) {
+        margin-top: 44px;
+    }
 `;
 
 const DayColumnContainer = styled.div`
@@ -287,9 +297,15 @@ const BlockContainer = styled.div`
     flex-direction: column;
     & > *:nth-child(odd) {
         margin: 2px 2px 0;
+        @media (max-width: 560px) {
+            margin: 1px 1px 0;
+        }
     }
     & > *:nth-child(even) {
         margin: 0 2px 2px;
+        @media (max-width: 560px) {
+            margin: 0 1px 1px;
+        }
     }
 `;
 
@@ -297,6 +313,13 @@ const Block = styled.div`
     display: flex;
     background-color: #ecf5fd;
     height: 38px;
+    
+    @media (max-width: 560px) {
+        height: 29px;
+    }
+    @media (max-width: 380px) {
+        height: 27px;
+    }
 `;
 
 const Ensemble = styled.div`
@@ -310,6 +333,13 @@ const Ensemble = styled.div`
     word-break: break-all;
     user-select: none;
     cursor: pointer;
+
+    @media (max-width: 560px) {
+        height: 29px;
+    }
+    @media (max-width: 380px) {
+        height: 27px;
+    }
 `;
 
 const ModalTitle = styled.div`

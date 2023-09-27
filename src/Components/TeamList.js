@@ -454,7 +454,7 @@ const ModalFormContainer = styled.div`
     padding: 24px;
     width: 100%;
     @media (max-width: 560px) {
-        padding: 16px 24px 8px;
+        padding: 24px 24px 8px;
     }
 `;
 

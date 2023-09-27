@@ -12,7 +12,10 @@ const Footer = () => {
 const Container = styled.div`
     display: flex;
     justify-content: center;
-    margin-top: 64px;
+    margin-top: 128px;
+    @media (max-width: 560px) {
+        margin-top: 64px;
+    }
 `;
 
 const FooterText = styled.div`

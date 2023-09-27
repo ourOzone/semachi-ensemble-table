@@ -150,11 +150,11 @@ const TeamList = () => {
                     <ModalInput
                         value={teamAddName}
                         onChange={e => {
-                            if (e.target.value.length <= 10) {
+                            if (e.target.value.length <= 20) {
                                 setTeamAddName(e.target.value);
                             }
                         }}
-                        placeholder='팀명 입력해요 (~10 글자)'
+                        placeholder='팀명 입력해요 (~20 글자)'
                     />
                     <ModalLabel>팀 소개</ModalLabel>
                     <ModalTextArea
@@ -569,6 +569,9 @@ const Select = styled.select`
 
     &:focus {
         outline: 2px solid ${({ theme }) => theme.primary};
+    }
+    @media (max-width: 560px) {
+        margin: 0 2px;
     }
 `;
 

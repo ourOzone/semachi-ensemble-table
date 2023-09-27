@@ -41,11 +41,13 @@ function ContextProvider({ children }) {
                     teamId: ensemble.data.teamId,
                     teamName: hour === ensemble.data.startTime ? ensemble.data.teamName : '',
                     isExternal: ensemble.data.room === '외부',
+                    isOneTime: ensemble.data.type === '일회성',
+                    due: ensemble.data.due,
                     teamcoloridx: teamsData.map(team => team.id).indexOf(ensemble.data.teamId)
                 });
             }
         });
-        console.log(data)
+        console.log(blocks)
         setEnsembles(blocks);
     };
 

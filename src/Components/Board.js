@@ -103,6 +103,7 @@ const Board = () => {
                                         <Ensemble
                                             key={`${dayIdx}_${time}_${ensemble.id}`}
                                             teamcoloridx={ensemble.teamcoloridx}
+                                            alpha={ensemble.isOneTime && Math.ceil(Math.abs(new Date(ensemble.due) - new Date()) / (1000 * 3600 * 24)) > 7}
                                             onClick={() => handleInfoModal(ensemble.id)}
                                         >
                                             {block.length < 4 && ensemble.teamName}
@@ -242,8 +243,11 @@ const HourColumn = styled.div`
     display: flex;
     flex-direction: column;
     margin: 2px 8px 0 0;
+    @media (max-width: 560px) {
+        margin-top: 4px;
+    }
     @media (max-width: 380px) {
-        margin-top: -1px;
+        margin-top: 2px;
     }
 `;
 
@@ -253,7 +257,7 @@ const Hour = styled.div`
     margin-top: 62px;
 
     @media (max-width: 560px) {
-        margin-top: 47px;
+        margin-top: 46.5px;
     }
     @media (max-width: 380px) {
         margin-top: 44px;
@@ -327,6 +331,7 @@ const Ensemble = styled.div`
     height: 38px;
     background-color: ${(props) => props.theme.teamColors[props.teamcoloridx]};
     color: ${({ theme }) => theme.white};
+    opacity: ${({ alpha }) => alpha ? 0.3 : 1};
     padding: 2px;
     overflow: hidden;
     text-overflow: ellipsis;

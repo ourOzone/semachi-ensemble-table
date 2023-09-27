@@ -329,7 +329,7 @@ const Block = styled.div`
 const Ensemble = styled.div`
     flex: 1;
     height: 38px;
-    background-color: ${(props) => props.theme.teamColors[props.teamcoloridx]};
+    background-color: ${(props) => props.theme.teamColors[props.teamcoloridx % 10]};
     color: ${({ theme }) => theme.white};
     opacity: ${({ alpha }) => alpha ? 0.3 : 1};
     padding: 2px;

@@ -59,27 +59,28 @@ const Notes = () => {
     };
 
     return (
-        <Container>
-            <NotesLabelContainer>
-                <NotesTitle>비고</NotesTitle>
-                <NotesDesc>이번 주만 합주 안 해요, 이펙터 패치 쓸래요 등등</NotesDesc>
-            </NotesLabelContainer>
-            <NoteInputContainer>
-                <NoteTextarea
+        <div style={{display: 'flex', flexDirection: 'column', width: '70%', padding: '8px', border: '1px solid black'}}>
+            <div>
+                <h2 style={{fontSize: '200%'}}>비고</h2>
+                <div>이번 주만 합주 안 해요, 이펙터 패치 쓸래요 등등</div>
+            </div>
+            <div style={{display: 'flex'}}>
+                <textarea
+                    style={{width: '80%', height: '48px'}}
                     ref={textRef}
                     value={text}
                     onChange={handleTextareaChange}
                     placeholder='여따 새로 써요'
                 />
-                <Button onClick={addMutation.mutate}>추가</Button>
-            </NoteInputContainer>
+                <button onClick={addMutation.mutate}>추가</button>
+            </div>
             {data && data.map(note => (
-                <Note key={note.id}>
-                    <NoteText>{note.text}</NoteText>
-                    <NoteDeleteButton onClick={() => handleNoteDelete(note.id)}>✕</NoteDeleteButton>
-                </Note>
+                <div style={{border: '1px solid black', display: 'flex', marginTop: '8px'}} key={note.id}>
+                    <div>{note.text}</div>
+                    <button style={{marginLeft: '4px'}} onClick={() => handleNoteDelete(note.id)}>✕</button>
+                </div>
             ))}
-        </Container>
+        </div>
     )
 };
 

@@ -32,10 +32,9 @@ function App() {
 						<Title />
 						<TeamList />
 						<Board />
-						<Suspense fallback={<Loading />}>
+						<Suspense>
 							<Notes />
 						</Suspense>
-						<Footer />
 					</Container>
 			</QueryClientProvider>
 		</ThemeProvider>
@@ -46,7 +45,6 @@ const Container = styled.div`
 	display: flex;
 	flex-direction: column;
 	width: 100%;
-	background-color: #ecf5fd;
 	align-items: center;
 	padding: 0 4% 64px;
 	& > * + * {

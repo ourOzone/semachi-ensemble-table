@@ -19,9 +19,7 @@ const Container = styled.div`
 `;
 
 const H1 = styled.h1`
-    font-family: Bold;
     font-size: 250%;
-    color: ${({ theme }) => theme.title};
     user-select: none;
 `;
 

@@ -113,19 +113,19 @@ const TeamList = () => {
     }
 
     return (
-        <Container>
-            <TeamListLabelContainer>
-                <TeamListTitle>
+        <div style={{ border: '1px solid black', padding: '8px'}}>
+            <div>
+                <h2 style={{fontSize: '200%'}}>
                     팀 목록
-                </TeamListTitle>
-                <TeamListDesc>
+                </h2>
+                <div style={{marginBottom: '8px'}}>
                     합주 일정을 추가하려면 팀을 눌러요
-                </TeamListDesc>
-            </TeamListLabelContainer>
-            <TeamListContainer>
-                <TeamAddButton onClick={() => setTeamAddModal(true)}>+</TeamAddButton>
+                </div>
+            </div>
+            <div style={{display: 'flex'}}>
+                <button>+</button>
                 {teams && teams.map((team, idx) => (
-                    <TeamContainer
+                    <div style={{display: 'flex', marginLeft: '8px', border: '1px solid black'}}
                         key={idx}
                         idx={idx}
                         onClick={() => {
@@ -133,197 +133,12 @@ const TeamList = () => {
                             setEnsembleTeamName(team.name);
                         }}
                     >
-                        <Team>{team.name}</Team>
-                        <TeamDeleteButton onClick={(e) => handleTeamDelete(e, team)}>✕</TeamDeleteButton>
-                    </TeamContainer>
+                        <div>{team.name}</div>
+                        <button onClick={(e) => handleTeamDelete(e, team)}>✕</button>
+                    </div>
                 ))}
-            </TeamListContainer>
-            <Modal
-                isOpen={teamAddModal}
-                onRequestClose={() => setTeamAddModal(false)}
-                style={modalStyle}
-                contentLabel='TeamAdd'
-            >
-                <ModalTitleContainer>
-                    <ModalTitle>팀 추가</ModalTitle>
-                    <ModalEscapeButton onClick={() => setTeamAddModal(false)}>✕</ModalEscapeButton>
-                </ModalTitleContainer>
-                <ModalFormContainer>
-                    <ModalLabel>팀 이름</ModalLabel>
-                    <ModalInput
-                        value={teamAddName}
-                        onChange={e => {
-                            if (e.target.value.length <= 20) {
-                                setTeamAddName(e.target.value);
-                            }
-                        }}
-                        placeholder='팀명 입력해요 (~20 글자)'
-                    />
-                    <ModalLabel>팀 소개</ModalLabel>
-                    <ModalTextArea
-                        value={teamAddDesc}
-                        onChange={e => setTeamAddDesc(e.target.value)}
-                        placeholder='팀원 목록이랑 선곡이랑 이것 저것 써요'
-                    />
-                    <ModalLabel>팀 타입</ModalLabel>
-                    <RadioContainer>
-                        <RadioLabel
-                            onClick={() => setTeamAddType('신입-정기/연말공연')}
-                        >
-                            <Radio checked={teamAddType === '신입-정기/연말공연'} />
-                            신입-정기/연말공연
-                        </RadioLabel>
-                        <RadioLabel
-                            onClick={() => setTeamAddType('메인/재학생-정기/연말공연')}
-                        >
-                            <Radio checked={teamAddType === '메인/재학생-정기/연말공연'} />
-                            메인/재학생-정기/연말공연
-                        </RadioLabel>
-                        <RadioLabel
-                            onClick={() => setTeamAddType('신입-외부공연')}
-                        >
-                            <Radio checked={teamAddType === '신입-외부공연'} />
-                            신입-외부공연
-                        </RadioLabel>
-                        <RadioLabel
-                            onClick={() => setTeamAddType('메인/재학생-외부공연')}
-                        >
-                            <Radio checked={teamAddType === '메인/재학생-외부공연'} />
-                            메인/재학생-외부공연
-                        </RadioLabel>
-                    </RadioContainer>
-                    <SubmitButtonContainer>
-                        <SubmitButton disabled={teamAddName.length === 0} onClick={handleTeamAdd}>추가하기</SubmitButton>
-                    </SubmitButtonContainer>
-                </ModalFormContainer>
-            </Modal>
-            <Modal
-                isOpen={ensembleTeamId}
-                onRequestClose={() => setEnsembleTeamId('')}
-                style={modalStyle}
-                contentLabel='EnsembleAdd'
-            >
-                <ModalTitleContainer>
-                    <ModalTitle>합주 추가</ModalTitle>
-                    <ModalEscapeButton onClick={() => setEnsembleTeamId('')}>✕</ModalEscapeButton>
-                </ModalTitleContainer>
-                <ModalFormContainer>
-                    <ModalRowContainer>
-                        <ModalLabel>팀 이름</ModalLabel>
-                        <Bold>{ensembleTeamName}</Bold>
-                    </ModalRowContainer>
-                    <ModalRowContainer  style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <ModalLabel>합주 타입</ModalLabel>
-                        <RadioContainer>
-                            <RadioLabel
-                                onClick={() => setEnsembleType('유기한')}
-                            >
-                                <Radio checked={ensembleType === '유기한'} />
-                                유기한 - 지정한 공연 날짜 이후 자동으로 삭제할 거예요
-                            </RadioLabel>
-                            <RadioLabel
-                                onClick={() => setEnsembleType('무기한')}
-                            >
-                                <Radio checked={ensembleType === '무기한'} />
-                                무기한 - 알아서 수동으로 삭제해야 해요
-                            </RadioLabel>
-                            <RadioLabel
-                                onClick={() => setEnsembleType('일회성')}
-                            >
-                                <Radio checked={ensembleType === '일회성'} />
-                                일회성 - 지정한 날에 하고 나면 사라져요
-                            </RadioLabel>
-                        </RadioContainer>
-                    </ModalRowContainer>
-                    {ensembleType !== '일회성' && (
-                        <ModalRowContainer>
-                            <ModalLabel>합주 요일</ModalLabel>
-                            <Select
-                                value={ensembleDay}
-                                onChange={(e) => setEnsembleDay(Number(e.target.value))}
-                            >
-                                {['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'].map((day, idx) => (
-                                    <option key={day} value={idx}>{day}</option>
-                                ))}
-                            </Select>
-                        </ModalRowContainer>
-                    )}
-                    {ensembleType !== '무기한' && (
-                        <ModalRowContainer>
-                            {ensembleType === '유기한' && (<ModalLabel>공연 날짜</ModalLabel>)}
-                            {ensembleType === '일회성' && (<ModalLabel>합주 날짜</ModalLabel>)}
-                            <Select
-                                value={ensembleDueYear}
-                                onChange={(e) => setEnsembleDueYear(Number(e.target.value))}
-                            >
-                                {Array.from({ length: 2 }, (_, i) => i + today.getFullYear()).map(year => (
-                                    <option key={year} value={year}>{year}</option>
-                                ))}
-                            </Select>
-                            <ModalText>년</ModalText>
-                            <Select
-                                value={ensembleDueMonth}
-                                onChange={(e) => setEnsembleDueMonth(Number(e.target.value))}
-                            >
-                                {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
-                                    <option key={month} value={month}>{month}</option>
-                                ))}
-                            </Select>
-                            <ModalText>월</ModalText>
-                            <Select
-                                value={ensembleDueDate}
-                                onChange={(e) => setEnsembleDueDate(Number(e.target.value))}
-                            >
-                                {Array.from({ length: getMonthDate(ensembleDueYear, ensembleDueMonth) }, (_, i) => i + 1).map(date => (
-                                    <option key={date} value={date}>{date}</option>
-                                ))}
-                            </Select>
-                            <ModalText>일</ModalText>
-                        </ModalRowContainer>
-                    )}
-                    <ModalRowContainer> 
-                    <ModalLabel>합주 시간</ModalLabel>
-                        <Select
-                            value={ensembleStartTime}
-                            onChange={(e) => setEnsembleStartTime(Number(e.target.value))}
-                        >
-                            {[...Array(idx2hour.length).keys()].map(time => (
-                                <option key={time} value={time}>{idx2hour[time]}</option>
-                            ))}
-                        </Select>
-                        <ModalText>~</ModalText>
-                        <Select
-                            value={ensembleEndTime}
-                            onChange={(e) => setEnsembleEndTime(Number(e.target.value))}
-                        >
-                            {Array.from({ length: idx2hour.length - ensembleStartTime - 1 }, (_, i) => i + ensembleStartTime).map(time => (
-                                <option key={time} value={time}>{idx2hour[time + 1]}</option>
-                            ))}
-                        </Select>
-                    </ModalRowContainer>
-                    <ModalRowContainer style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <ModalLabel>합주실</ModalLabel>
-                        <RadioContainer>
-                            <RadioLabel
-                                onClick={() => setEnsembleRoom('동방')}
-                            >
-                                <Radio checked={ensembleRoom === '동방'} />
-                                동방
-                            </RadioLabel>
-                            <RadioLabel
-                                onClick={() => setEnsembleRoom('외부')}
-                            >
-                                <Radio checked={ensembleRoom === '외부'} />
-                                외부 합주실
-                            </RadioLabel>
-                        </RadioContainer>
-                    </ModalRowContainer>
-                    <SubmitButtonContainer>
-                        <SubmitButton onClick={handleEnsembleAdd}>추가하기</SubmitButton>
-                    </SubmitButtonContainer>
-                </ModalFormContainer>
-            </Modal>
-        </Container>
+            </div>
+        </div>
     )
 };
 

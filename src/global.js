@@ -40,7 +40,6 @@ export default createGlobalStyle`
         padding: 0;
         box-sizing: border-box;
         font-size: 16px;
-        font-family: Regular;
 
         @media (max-width: 560px) {
             font-size: 12px;

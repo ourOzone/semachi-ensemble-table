@@ -4,14 +4,14 @@ import styled from 'styled-components';
 const Footer = () => {
     return (
         <Container>
-            <FooterText>개발: 37th B. 고민재, 32nd G. 이승우</FooterText>
+            <FooterText>비고</FooterText>
         </Container>
     )
 };
 
 const Container = styled.div`
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     margin-top: 128px;
     @media (max-width: 560px) {
         margin-top: 64px;
@@ -19,7 +19,7 @@ const Container = styled.div`
 `;
 
 const FooterText = styled.div`
-    color: ${({ theme }) => theme.gray};
+    font-size: 300%;
 `;
 
 export default Footer;

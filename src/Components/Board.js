@@ -83,17 +83,22 @@ const Board = () => {
     };
 
     return (
-        <Container>
+        <div style={{border: '1px solid black', 
+            display: 'flex',
+            padding: '16px', 
+            width: '100%',
+            maxWidth: '1080px'}}
+        >
             <HourColumn>
                 {hours.map(hour => <Hour key={hour}>{hour}</Hour>)}
             </HourColumn>
             <DayColumnContainer>
                 {ensembles && ensembles.map((day, dayIdx) => (
                     <DayColumn key={dayIdx}>
-                        <DateTitle istoday={isToday(dayIdx)}>
+                        <DateTitle>
                             {week[dayIdx]}
                         </DateTitle>
-                        <DayTitle istoday={isToday(dayIdx)}>
+                        <DayTitle>
                             {daysKor[dayIdx]}
                         </DayTitle>
                         <BlockContainer>
@@ -115,103 +120,7 @@ const Board = () => {
                     </DayColumn>
                 ))}
             </DayColumnContainer>
-            <Modal
-                isOpen={info}
-                onRequestClose={() => {setInfo(null)}}
-                style={modalStyle}
-                contentLabel='Info'
-            >
-                <ModalTitleContainer>
-                    <ModalTitle>합주 정보</ModalTitle>
-                    <ModalEscapeButton onClick={() => {setInfo(null)}}>✕</ModalEscapeButton>
-                </ModalTitleContainer>
-                <ModalFormContainer>
-                    <InfoContainer>
-                        <ModalRowContainer>
-                            <ModalLabel>팀 이름</ModalLabel>
-                            <InfoLabel>{info && info.name}</InfoLabel>
-                        </ModalRowContainer>
-                        <ModalRowContainer>
-                            <ModalLabel>팀 소개</ModalLabel>
-                            <InfoLabel>{info && info.desc}</InfoLabel>
-                        </ModalRowContainer>
-                        <ModalRowContainer>
-                            <ModalLabel>팀 타입</ModalLabel>
-                            <InfoLabel>{info && info.teamType}</InfoLabel>
-                        </ModalRowContainer>
-                        <ModalRowContainer>
-                            <ModalLabel>합주 시간</ModalLabel>
-                            <InfoLabel>{info && `${daysKor[info.day]}요일 ${idx2hour[info.startTime]} ~ ${idx2hour[info.endTime + 1]}`}</InfoLabel>
-                        </ModalRowContainer>
-                        <ModalRowContainer>
-                            <ModalLabel>합주실</ModalLabel>
-                            <InfoLabel>{info && info.room}</InfoLabel>
-                        </ModalRowContainer>
-                        <ModalRowContainer>
-                            <ModalLabel>합주 타입</ModalLabel>
-                            <InfoLabel>{info && info.type}</InfoLabel>
-                        </ModalRowContainer>
-                        <ModalRowContainer>
-                            <ModalLabel>{info && info.type !== '일회성' ? '공연 날짜' : '합주 날짜'}</ModalLabel>
-                            <InfoLabel>{info && info.due}</InfoLabel>
-                        </ModalRowContainer>
-                    </InfoContainer>
-                    {info && (
-                        <>
-                            <InfoButtonContainer>
-                                <Button onClick={() => {
-                                    setModifyId(info.id);
-                                    setModifyName(info.name);
-                                    setModifyDesc(info.desc);
-                                    setInfo(null)
-                                }}>팀 수정</Button>
-                                <Button onClick={() => handleEnsembleDelete(infoId)}>합주 삭제</Button>
-                            </InfoButtonContainer>
-                        </>
-                    )}
-                </ModalFormContainer>
-            </Modal>
-            <Modal
-                isOpen={modifyId}
-                onRequestClose={() => {
-                    setModifyId('');
-                    setModifyName('');
-                    setModifyDesc('');
-                }}
-                style={modalStyle}
-                contentLabel='TeamModify'
-            >
-                <ModalTitleContainer>
-                    <ModalTitle>팀 정보 수정</ModalTitle>
-                    <ModalEscapeButton onClick={() => {
-                        setModifyId('');
-                        setModifyName('');
-                        setModifyDesc('');
-                    }}>✕</ModalEscapeButton>
-                </ModalTitleContainer>
-                <ModalFormContainer>
-                    <ModalLabel>팀 이름</ModalLabel>
-                    <ModalInput
-                        value={modifyName}
-                        onChange={e => {
-                            if (e.target.value.length <= 20) {
-                                setModifyName(e.target.value);
-                            }
-                        }}
-                        placeholder='팀명 입력해요 (~20 글자)'
-                    />
-                    <ModalLabel>팀 소개</ModalLabel>
-                    <ModalTextArea
-                        value={modifyDesc}
-                        onChange={e => setModifyDesc(e.target.value)}
-                        placeholder='팀원 목록이랑 선곡이랑 이것 저것 써요'
-                    />
-                    <SubmitButtonContainer>
-                        <SubmitButton disabled={modifyName.length === 0} onClick={handleTeamModify}>수정하기</SubmitButton>
-                    </SubmitButtonContainer>
-                </ModalFormContainer>
-            </Modal>
-        </Container>
+        </div>
     )
 };
 
@@ -264,7 +173,7 @@ const HourColumn = styled.div`
 const Hour = styled.div`
     text-align: center;
     user-select: none;
-    margin-top: 62px;
+    margin-top: 59px;
 
     @media (max-width: 560px) {
         margin-top: 46.5px;
@@ -325,7 +234,7 @@ const BlockContainer = styled.div`
 
 const Block = styled.div`
     display: flex;
-    background-color: #ecf5fd;
+    border: 1px solid black;
     height: 38px;
     
     @media (max-width: 560px) {

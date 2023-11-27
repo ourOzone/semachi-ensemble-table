@@ -47,7 +47,7 @@ function ContextProvider({ children }) {
                 });
             }
         });
-        console.log(blocks)
+        
         setEnsembles(blocks);
     };
 

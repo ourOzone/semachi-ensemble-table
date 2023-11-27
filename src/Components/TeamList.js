@@ -4,7 +4,7 @@ import axios from 'axios';
 import Modal from 'react-modal';
 import { Radio } from '@mui/material';
 import { useCustomContext } from '../Context';
-import { idx2hour, getPublishDate } from '../global';
+import { idx2hour } from '../global';
 
 const getMonthDate = (year, month) => {
     const date = new Date(year, month, 1);
@@ -16,7 +16,7 @@ const getMonthDate = (year, month) => {
 const TeamList = () => {
     const today = new Date();
 
-    const { teams, getEnsembles, init } = useCustomContext();
+    const { teams, getEnsembles, isLoading, setIsLoading, init } = useCustomContext();
     const [teamAddModal, setTeamAddModal] = useState(false);
     const [teamAddName, setTeamAddName] = useState('');
     const [teamAddDesc, setTeamAddDesc] = useState('');
@@ -144,7 +144,10 @@ const TeamList = () => {
                 style={modalStyle}
                 contentLabel='TeamAdd'
             >
-                <ModalTitle>팀 추가</ModalTitle>
+                <ModalTitleContainer>
+                    <ModalTitle>팀 추가</ModalTitle>
+                    <ModalEscapeButton onClick={() => setTeamAddModal(false)}>✕</ModalEscapeButton>
+                </ModalTitleContainer>
                 <ModalFormContainer>
                     <ModalLabel>팀 이름</ModalLabel>
                     <ModalInput
@@ -200,7 +203,10 @@ const TeamList = () => {
                 style={modalStyle}
                 contentLabel='EnsembleAdd'
             >
-                <ModalTitle>합주 추가</ModalTitle>
+                <ModalTitleContainer>
+                    <ModalTitle>합주 추가</ModalTitle>
+                    <ModalEscapeButton onClick={() => setEnsembleTeamId('')}>✕</ModalEscapeButton>
+                </ModalTitleContainer>
                 <ModalFormContainer>
                     <ModalRowContainer>
                         <ModalLabel>팀 이름</ModalLabel>
@@ -439,11 +445,26 @@ const ModalTitle = styled.div`
     color: ${({ theme }) => theme.title};
     user-select: none;
     text-align: center;
-    margin-bottom: 24px;
+    width: 100%;
+    padding-left: 28px;
+`;
+
+const ModalTitleContainer = styled.div`
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    margin-bottom: 20px;
 
     @media (max-width: 560px) {
         margin-bottom: 12px;
     }
+`;
+
+const ModalEscapeButton = styled.div`
+    margin-right: 8px;
+    font-size: 150%;
+    user-select: none;
+    cursor: pointer;
 `;
 
 const ModalFormContainer = styled.div`

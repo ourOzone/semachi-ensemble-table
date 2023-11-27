@@ -121,7 +121,10 @@ const Board = () => {
                 style={modalStyle}
                 contentLabel='Info'
             >
-                <ModalTitle>합주 정보</ModalTitle>
+                <ModalTitleContainer>
+                    <ModalTitle>합주 정보</ModalTitle>
+                    <ModalEscapeButton onClick={() => {setInfo(null)}}>✕</ModalEscapeButton>
+                </ModalTitleContainer>
                 <ModalFormContainer>
                     <InfoContainer>
                         <ModalRowContainer>
@@ -178,7 +181,14 @@ const Board = () => {
                 style={modalStyle}
                 contentLabel='TeamModify'
             >
-                <ModalTitle>팀 정보 수정</ModalTitle>
+                <ModalTitleContainer>
+                    <ModalTitle>팀 정보 수정</ModalTitle>
+                    <ModalEscapeButton onClick={() => {
+                        setModifyId('');
+                        setModifyName('');
+                        setModifyDesc('');
+                    }}>✕</ModalEscapeButton>
+                </ModalTitleContainer>
                 <ModalFormContainer>
                     <ModalLabel>팀 이름</ModalLabel>
                     <ModalInput
@@ -353,11 +363,26 @@ const ModalTitle = styled.div`
     color: ${({ theme }) => theme.title};
     user-select: none;
     text-align: center;
-    margin-bottom: 24px;
+    width: 100%;
+    padding-left: 28px;
+`;
+
+const ModalTitleContainer = styled.div`
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    margin-bottom: 20px;
 
     @media (max-width: 560px) {
         margin-bottom: 12px;
     }
+`;
+
+const ModalEscapeButton = styled.div`
+    margin-right: 8px;
+    font-size: 150%;
+    user-select: none;
+    cursor: pointer;
 `;
 
 const ModalFormContainer = styled.div`

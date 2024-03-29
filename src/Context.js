@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext } from 'react';
 import axios from 'axios';
+import { url } from './global';
 
 const Context = createContext();
 
@@ -21,33 +22,33 @@ function ContextProvider({ children }) {
     const [ensembles, setEnsembles] = useState([]);
 
     const getTeamList = async () => {
-        const { data } = await axios.get('https://us-central1-semachi.cloudfunctions.net/teams');
+        const { data } = await axios.get(`${url}/teams`);
 		const teamsData = data.map((team) => ({
-            name: team.data.name,
-            id: team.id
+            name: team.name,
+            id: team._id
         }))
         setTeams(teamsData);
 		return teamsData;
     }
 
     const getEnsembles = async (teamsData) => {
-        const { data } = await axios.get('https://us-central1-semachi.cloudfunctions.net/ensembles');
+        const { data } = await axios.get(`${url}/ensembles`);
         const blocks = getBlocks();
 
         data.forEach((ensemble) => {
-            for (let hour = ensemble.data.startTime; hour <= ensemble.data.endTime; hour++) {
-                blocks[ensemble.data.day][hour].push({
-                    id: ensemble.id,
-                    teamId: ensemble.data.teamId,
-                    teamName: hour === ensemble.data.startTime ? ensemble.data.teamName : '',
-                    isExternal: ensemble.data.room === '외부',
-                    isOneTime: ensemble.data.type === '일회성',
-                    due: ensemble.data.due,
-                    teamcoloridx: teamsData.map(team => team.id).indexOf(ensemble.data.teamId)
+            for (let hour = ensemble.startTime; hour <= ensemble.endTime; hour++) {
+                blocks[ensemble.day][hour].push({
+                    id: ensemble._id,
+                    teamId: ensemble.teamId,
+                    teamName: hour === ensemble.startTime ? ensemble.teamName : '',
+                    isExternal: ensemble.room === '외부',
+                    isOneTime: ensemble.type === '일회성',
+                    due: ensemble.due,
+                    teamcoloridx: teamsData.map(team => team.id).indexOf(ensemble.teamId)
                 });
             }
         });
-        
+        console.log(blocks)
         setEnsembles(blocks);
     };
 

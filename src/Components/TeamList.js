@@ -4,7 +4,7 @@ import axios from 'axios';
 import Modal from 'react-modal';
 import { Radio } from '@mui/material';
 import { useCustomContext } from '../Context';
-import { idx2hour } from '../global';
+import { idx2hour, getPublishDate, url } from '../global';
 
 const getMonthDate = (year, month) => {
     const date = new Date(year, month, 1);
@@ -16,7 +16,7 @@ const getMonthDate = (year, month) => {
 const TeamList = () => {
     const today = new Date();
 
-    const { teams, getEnsembles, isLoading, setIsLoading, init } = useCustomContext();
+    const { teams, getEnsembles, init } = useCustomContext();
     const [teamAddModal, setTeamAddModal] = useState(false);
     const [teamAddName, setTeamAddName] = useState('');
     const [teamAddDesc, setTeamAddDesc] = useState('');
@@ -39,7 +39,7 @@ const TeamList = () => {
 
         setTeamAddModal(false);
         
-        const { data } = await axios.post('https://us-central1-semachi.cloudfunctions.net/teamadd', {
+        const { data } = await axios.post(`${url}/teams`, {
             name: teamAddName,
             desc: teamAddDesc,
             type: teamAddType,
@@ -60,7 +60,7 @@ const TeamList = () => {
             return;
         }
         
-        const { data } = await axios.get(`https://us-central1-semachi.cloudfunctions.net/teamdelete?id=${team.id}`)
+        const { data } = await axios.get(`${url}/deleteteam?id=${team.id}`)
         
         init();
     }
@@ -87,7 +87,7 @@ const TeamList = () => {
             day = ensembleDay;
         }
 
-        const { data } = await axios.post('https://us-central1-semachi.cloudfunctions.net/ensembleadd', {
+        const { data } = await axios.post(`${url}/ensembles`, {
             teamId: ensembleTeamId,
             teamName: ensembleTeamName,
             day: day,
@@ -144,10 +144,7 @@ const TeamList = () => {
                 style={modalStyle}
                 contentLabel='TeamAdd'
             >
-                <ModalTitleContainer>
-                    <ModalTitle>팀 추가</ModalTitle>
-                    <ModalEscapeButton onClick={() => setTeamAddModal(false)}>✕</ModalEscapeButton>
-                </ModalTitleContainer>
+                <ModalTitle>팀 추가</ModalTitle>
                 <ModalFormContainer>
                     <ModalLabel>팀 이름</ModalLabel>
                     <ModalInput
@@ -203,10 +200,7 @@ const TeamList = () => {
                 style={modalStyle}
                 contentLabel='EnsembleAdd'
             >
-                <ModalTitleContainer>
-                    <ModalTitle>합주 추가</ModalTitle>
-                    <ModalEscapeButton onClick={() => setEnsembleTeamId('')}>✕</ModalEscapeButton>
-                </ModalTitleContainer>
+                <ModalTitle>합주 추가</ModalTitle>
                 <ModalFormContainer>
                     <ModalRowContainer>
                         <ModalLabel>팀 이름</ModalLabel>
@@ -445,26 +439,11 @@ const ModalTitle = styled.div`
     color: ${({ theme }) => theme.title};
     user-select: none;
     text-align: center;
-    width: 100%;
-    padding-left: 28px;
-`;
-
-const ModalTitleContainer = styled.div`
-    display: flex;
-    justify-content: flex-end;
-    width: 100%;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 
     @media (max-width: 560px) {
         margin-bottom: 12px;
     }
-`;
-
-const ModalEscapeButton = styled.div`
-    margin-right: 8px;
-    font-size: 150%;
-    user-select: none;
-    cursor: pointer;
 `;
 
 const ModalFormContainer = styled.div`

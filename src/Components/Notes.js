@@ -1,46 +1,36 @@
-import React, { useState, useRef, useEffect, Suspense } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { getPublishDate } from '../global';
-import { useCustomContext } from '../Context';
-import { NotListedLocationSharp } from '@mui/icons-material';
-
-const getNotes = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    const { data } = await axios.get('https://us-central1-semachi.cloudfunctions.net/notes');
-    const notes = data.map(note => ({
-        id: note.id,
-        text: note.data.text
-    }))
-
-    return notes;
-};
+import { getPublishDate, url } from '../global';
 
 const Notes = () => {
     const [text, setText] = useState('');
+    const [notes, setNotes] = useState([]);
     const textRef = useRef();
-    
-    const { data } = useQuery(['notes'], getNotes);
-    
-    const handleSubmit = async () => {
-        if (text.length === 0) {
-            return;
-        }
 
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        const { data } = await axios.post('https://us-central1-semachi.cloudfunctions.net/noteadd', {
+    useEffect(() => {
+        getNotes();
+    }, []);
+
+    const getNotes = async () => {
+        const { data } = await axios.get(`${url}/notes`);
+        const noteList = data.map(note => ({
+            id: note._id,
+            text: note.text
+        }))
+
+        setNotes(noteList);
+    };
+
+    const handleSubmit = async () => {
+        const { data } = await axios.post(`${url}/notes`, {
             text: text,
             publishDate: new Date()
         });
         
         setText('');
+        getNotes();
     };
-
-    const queryClient = useQueryClient();
-    const addMutation = useMutation(handleSubmit, {
-        onSuccess: () => queryClient.invalidateQueries(['notes'])
-    });
 
     const handleTextareaChange = (e) => {
         setText(e.target.value);
@@ -49,11 +39,10 @@ const Notes = () => {
     };
 
     const handleNoteDelete = async (id) => {
-        // setIsLoading(true);
         if (!window.confirm('진짜 삭제할래요?')) {
             return;
         }
-        const { data } = await axios.get(`https://us-central1-semachi.cloudfunctions.net/notedelete?id=${id}`);
+        const { data } = await axios.get(`${url}/deletenote?id=${id}`);
 
         getNotes();
     };
@@ -71,11 +60,11 @@ const Notes = () => {
                     onChange={handleTextareaChange}
                     placeholder='여따 새로 써요'
                 />
-                <Button onClick={addMutation.mutate}>추가</Button>
+                <Button onClick={handleSubmit}>추가</Button>
             </NoteInputContainer>
-            {data && data.map(note => (
+            {notes && notes.map(note => (
                 <Note key={note.id}>
-                    <NoteText>{note.text}</NoteText>
+                    <NoteText onBlur={handleSubmit}>{note.text}</NoteText>
                     <NoteDeleteButton onClick={() => handleNoteDelete(note.id)}>✕</NoteDeleteButton>
                 </Note>
             ))}

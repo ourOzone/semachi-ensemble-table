@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import axios from 'axios';
 import Modal from 'react-modal';
 import { useCustomContext } from '../Context';
-import { daysKor, hours, idx2hour } from '../global';
+import { daysKor, hours, idx2hour, url } from '../global';
 
 const getMonday = () => {
     const monday = new Date();
@@ -48,8 +48,9 @@ const Board = () => {
 
     const handleInfoModal = async (id) => {
         try {
-            const { data } = await axios.get(`https://us-central1-semachi.cloudfunctions.net/ensembleinfo?id=${id}`);
+            const { data } = await axios.get(`${url}/ensembleinfo?id=${id}`);
             setInfo(data);
+            console.log(data)
             setInfoId(id);
             
         } catch {
@@ -63,14 +64,14 @@ const Board = () => {
             return;
         }
 
-        const { data } = await axios.get(`https://us-central1-semachi.cloudfunctions.net/ensembledelete?id=${id}`);
+        const { data } = await axios.get(`${url}/deleteensemble?id=${id}`);
         getEnsembles(teams);
         
         setInfo(null);
     };
 
     const handleTeamModify = async () => {
-        const { data } = await axios.post(`https://us-central1-semachi.cloudfunctions.net/teammodify?id=${modifyId}`, {
+        const { data } = await axios.post(`${url}/teammodify?id=${modifyId}`, {
             name: modifyName,
             desc: modifyDesc
         });
@@ -81,7 +82,6 @@ const Board = () => {
         setModifyDesc('');
 
     };
-
     return (
         <Container>
             <HourColumn>
@@ -121,10 +121,7 @@ const Board = () => {
                 style={modalStyle}
                 contentLabel='Info'
             >
-                <ModalTitleContainer>
-                    <ModalTitle>합주 정보</ModalTitle>
-                    <ModalEscapeButton onClick={() => {setInfo(null)}}>✕</ModalEscapeButton>
-                </ModalTitleContainer>
+                <ModalTitle>합주 정보</ModalTitle>
                 <ModalFormContainer>
                     <InfoContainer>
                         <ModalRowContainer>
@@ -141,7 +138,7 @@ const Board = () => {
                         </ModalRowContainer>
                         <ModalRowContainer>
                             <ModalLabel>합주 시간</ModalLabel>
-                            <InfoLabel>{info && `${daysKor[info.day]}요일 ${idx2hour[info.startTime]} ~ ${idx2hour[info.endTime + 1]}`}</InfoLabel>
+                            <InfoLabel>{info && `${daysKor[info.day]}요일 ${idx2hour[info.start_time]} ~ ${idx2hour[info.end_time + 1]}`}</InfoLabel>
                         </ModalRowContainer>
                         <ModalRowContainer>
                             <ModalLabel>합주실</ModalLabel>
@@ -181,14 +178,7 @@ const Board = () => {
                 style={modalStyle}
                 contentLabel='TeamModify'
             >
-                <ModalTitleContainer>
-                    <ModalTitle>팀 정보 수정</ModalTitle>
-                    <ModalEscapeButton onClick={() => {
-                        setModifyId('');
-                        setModifyName('');
-                        setModifyDesc('');
-                    }}>✕</ModalEscapeButton>
-                </ModalTitleContainer>
+                <ModalTitle>팀 정보 수정</ModalTitle>
                 <ModalFormContainer>
                     <ModalLabel>팀 이름</ModalLabel>
                     <ModalInput
@@ -363,26 +353,11 @@ const ModalTitle = styled.div`
     color: ${({ theme }) => theme.title};
     user-select: none;
     text-align: center;
-    width: 100%;
-    padding-left: 28px;
-`;
-
-const ModalTitleContainer = styled.div`
-    display: flex;
-    justify-content: flex-end;
-    width: 100%;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 
     @media (max-width: 560px) {
         margin-bottom: 12px;
     }
-`;
-
-const ModalEscapeButton = styled.div`
-    margin-right: 8px;
-    font-size: 150%;
-    user-select: none;
-    cursor: pointer;
 `;
 
 const ModalFormContainer = styled.div`

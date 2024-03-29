@@ -1,22 +1,13 @@
-import { useEffect, Suspense } from 'react';
+import { useEffect } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import theme from './theme';
+import axios from 'axios';
 import Title from './Components/Title';
 import TeamList from './Components/TeamList';
 import Board from './Components/Board';
 import Notes from './Components/Notes';
 import Footer from './Components/Footer';
-import Loading from './Components/Loading';
 import { useCustomContext } from './Context';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
-const queryClient = new QueryClient({
-	defaultOptions: {
-	  queries: {
-		suspense: true,
-	  },
-	},
-  })
 
 function App() {
     const { init } = useCustomContext();
@@ -27,17 +18,13 @@ function App() {
 
 	return (
 		<ThemeProvider theme={theme}>
-			<QueryClientProvider client={queryClient}>
-					<Container>
-						<Title />
-						<TeamList />
-						<Board />
-						<Suspense fallback={<Loading />}>
-							<Notes />
-						</Suspense>
-						<Footer />
-					</Container>
-			</QueryClientProvider>
+			<Container>
+				<Title />
+				<TeamList />
+				<Board />
+				<Notes />
+				<Footer />
+			</Container>
 		</ThemeProvider>
 	);
 }

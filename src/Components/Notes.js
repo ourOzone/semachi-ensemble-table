@@ -23,13 +23,18 @@ const Notes = () => {
     };
 
     const handleSubmit = async () => {
-        const { data } = await axios.post(`${url}/notes`, {
-            text: text,
-            publishDate: new Date()
-        });
-        
-        setText('');
-        getNotes();
+        try {
+            const { data } = await axios.post(`${url}/notes`, {
+                text: text,
+                publishDate: new Date()
+            });
+            
+            setText('');
+            getNotes();
+        }
+        catch {
+            alert('너무 많아요. 100개 까지만 돼요.');
+        }
     };
 
     const handleTextareaChange = (e) => {
@@ -77,12 +82,12 @@ const Container = styled.div`
     flex-direction: column;
     background-color: ${({ theme }) => theme.white};
     border-radius: 40px;
-    padding: 32px 16px 16px;
+    padding: 32px 16px 32px;
     width: 100%;
     max-width: 1080px;
 
     @media (max-width: 560px) {
-        padding: 24px 8px 8px;
+        padding: 24px 8px 16px;
     }
 `;
 
@@ -116,6 +121,12 @@ const NoteInputContainer = styled.div`
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
+    margin: 24px 16px 16px;
+
+    @media (max-width: 560px) {
+        margin: 8px;
+        min-height: 72px;
+    }
 `;
 
 const NoteTextarea = styled.textarea`
@@ -124,33 +135,32 @@ const NoteTextarea = styled.textarea`
     overflow: hidden;
     font-size: 125%;
     min-height: 100px;
-    width: 75%;
+    width: 90%;
     height: auto;
-    margin: 24px 16px 16px;
     padding: 16px;
     background-color: ${({ theme }) => theme.background};
     border-radius: 16px;
     
+    @media (max-width: 560px) {
+        min-height: 50px;
+        max-height: 72px;
+    }
     &:focus {
         outline: 2px solid ${({ theme }) => theme.primary};
-    }
-    @media (max-width: 560px) {
-        margin: 16px 8px 8px;
-        min-height: 72px;
     }
 `;
 
 const Note = styled.div`
     display: flex;
     justify-content: space-between;
-    margin: 16px;
-    min-height: 100px;
+    margin: 16px 16px 0;
+    min-height: 76px;
     background-color: ${({ theme }) => theme.background};
     border-radius: 16px;
     
     @media (max-width: 560px) {
-        margin: 8px;
-        min-height: 72px;
+        margin: 8px 8px 0;
+        min-height: 64px;
     }
 `;
 
@@ -158,6 +168,9 @@ const NoteText = styled.div`
     padding: 16px;
     font-size: 125%;
     white-space: pre-line;
+    @media (max-width: 560px) {
+        padding: 12px;
+    }
 `;
 
 const NoteDeleteButton = styled.div`
@@ -174,8 +187,9 @@ const Button = styled.div`
     justify-content: center;
     background-color: ${({ theme }) => theme.primary};
     padding: 8px 16px;
-    margin: 8px 8px 16px 8px;
+    margin: 8px 8px 0px 8px;
     width: 72px;
+    min-width: 72px;
     border-radius: 100px;
     font-size: 125%;
     color: ${({ theme }) => theme.white};
@@ -183,7 +197,7 @@ const Button = styled.div`
     cursor: pointer;
     
     @media (max-width: 560px) {
-        margin-bottom: 8px;
+        min-width: 48px;
     }
 `;
 

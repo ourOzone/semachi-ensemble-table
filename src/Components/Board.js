@@ -50,17 +50,16 @@ const Board = () => {
         try {
             const { data } = await axios.get(`${url}/ensembleinfo?id=${id}`);
             setInfo(data);
-            console.log(data)
             setInfoId(id);
             
         } catch {
             alert('이미 삭제된 합주예요.');
-            getEnsembles();
+            getEnsembles(teams);
         }
     };
 
-    const handleEnsembleDelete = async (id) => {
-        if (!window.confirm('진짜 삭제할래요?')) {
+    const handleEnsembleDelete = async (info, id) => {
+        if (!window.confirm(`"${info.name}" 팀의\n${`${daysKor[info.day]}요일 ${idx2hour[info.start_time]} ~ ${idx2hour[info.end_time + 1]}`} 합주를 삭제해요.\n진짜 삭제할래요?`)) {
             return;
         }
 
@@ -90,10 +89,10 @@ const Board = () => {
             <DayColumnContainer>
                 {ensembles && ensembles.map((day, dayIdx) => (
                     <DayColumn key={dayIdx}>
-                        <DateTitle istoday={isToday(dayIdx)}>
+                        <DateTitle istoday={isToday(dayIdx) ? true : undefined}>
                             {week[dayIdx]}
                         </DateTitle>
-                        <DayTitle istoday={isToday(dayIdx)}>
+                        <DayTitle istoday={isToday(dayIdx) ? true : undefined}>
                             {daysKor[dayIdx]}
                         </DayTitle>
                         <BlockContainer>
@@ -103,7 +102,7 @@ const Board = () => {
                                         <Ensemble
                                             key={`${dayIdx}_${time}_${ensemble.id}`}
                                             teamcoloridx={ensemble.teamcoloridx}
-                                            alpha={ensemble.isOneTime && Math.ceil(Math.abs(new Date(ensemble.due) - new Date()) / (1000 * 3600 * 24)) > 7}
+                                            alpha={ensemble.isOneTime ? Math.ceil(Math.abs(new Date(ensemble.due) - new Date()) / (1000 * 3600 * 24)) > 7 : undefined}
                                             onClick={() => handleInfoModal(ensemble.id)}
                                         >
                                             {block.length < 4 && ensemble.teamName}
@@ -116,12 +115,15 @@ const Board = () => {
                 ))}
             </DayColumnContainer>
             <Modal
-                isOpen={info}
+                isOpen={!!info}
                 onRequestClose={() => {setInfo(null)}}
                 style={modalStyle}
                 contentLabel='Info'
             >
-                <ModalTitle>합주 정보</ModalTitle>
+                <ModalTitleContainer>
+                    <ModalTitle>합주 정보</ModalTitle>
+                    <ModalExitButton onClick={() => setInfo(null)}>✕</ModalExitButton>
+                </ModalTitleContainer>
                 <ModalFormContainer>
                     <InfoContainer>
                         <ModalRowContainer>
@@ -150,7 +152,7 @@ const Board = () => {
                         </ModalRowContainer>
                         <ModalRowContainer>
                             <ModalLabel>{info && info.type !== '일회성' ? '공연 날짜' : '합주 날짜'}</ModalLabel>
-                            <InfoLabel>{info && info.due}</InfoLabel>
+                            <InfoLabel>{info && info.due.split('T')[0]}</InfoLabel>
                         </ModalRowContainer>
                     </InfoContainer>
                     {info && (
@@ -162,14 +164,14 @@ const Board = () => {
                                     setModifyDesc(info.desc);
                                     setInfo(null)
                                 }}>팀 수정</Button>
-                                <Button onClick={() => handleEnsembleDelete(infoId)}>합주 삭제</Button>
+                                <Button onClick={() => handleEnsembleDelete(info, infoId)}>합주 삭제</Button>
                             </InfoButtonContainer>
                         </>
                     )}
                 </ModalFormContainer>
             </Modal>
             <Modal
-                isOpen={modifyId}
+                isOpen={!!modifyId}
                 onRequestClose={() => {
                     setModifyId('');
                     setModifyName('');
@@ -178,7 +180,14 @@ const Board = () => {
                 style={modalStyle}
                 contentLabel='TeamModify'
             >
-                <ModalTitle>팀 정보 수정</ModalTitle>
+                <ModalTitleContainer>
+                    <ModalTitle>팀 정보 수정</ModalTitle>
+                    <ModalExitButton onClick={() => {
+                        setModifyId('');
+                        setModifyName('');
+                        setModifyDesc('');
+                    }}>✕</ModalExitButton>
+                </ModalTitleContainer>
                 <ModalFormContainer>
                     <ModalLabel>팀 이름</ModalLabel>
                     <ModalInput
@@ -347,17 +356,34 @@ const Ensemble = styled.div`
     }
 `;
 
+const ModalTitleContainer = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 12px 24px;
+    width: 100%;
+
+    @media (max-width: 560px) {
+        padding: 0 4px 12px;
+    }
+`;
+
 const ModalTitle = styled.div`
+    flex: 1;
+    margin: 0;
     font-family: Bold;
     font-size: 150%;
     color: ${({ theme }) => theme.title};
     user-select: none;
     text-align: center;
-    margin-bottom: 24px;
+`;
 
-    @media (max-width: 560px) {
-        margin-bottom: 12px;
-    }
+const ModalExitButton = styled.button`
+    background: none;
+    border: none;
+    user-select: none;
+    font-size: 150%;
+    cursor: pointer;
 `;
 
 const ModalFormContainer = styled.div`
@@ -388,10 +414,10 @@ const ModalLabel = styled.div`
     display: flex;
     font-size: 125%;
     user-select: none;
-    width: 120px;
+    min-width: 120px;
 
     @media (max-width: 560px) {
-        width: 72px;
+        min-width: 64px;
     }
 `;
 

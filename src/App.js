@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import theme from './theme';
-import axios from 'axios';
 import Title from './Components/Title';
 import TeamList from './Components/TeamList';
 import Board from './Components/Board';
@@ -33,7 +32,7 @@ const Container = styled.div`
 	display: flex;
 	flex-direction: column;
 	width: 100%;
-	background-color: #ecf5fd;
+	background-color: #f4faff;
 	align-items: center;
 	padding: 0 4% 64px;
 	& > * + * {

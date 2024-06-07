@@ -13,13 +13,39 @@ const getMonthDate = (year, month) => {
     return date.getDate();
 }
 
+function getNextDay(dayOfWeek) {
+    const daysOfWeekMap = {
+        0: 1,
+        1: 2,
+        2: 3,
+        3: 4,
+        4: 5,
+        5: 6,
+        6: 0
+    };
+  
+    const today = new Date();
+    const todayDayOfWeek = today.getDay();
+    const targetDayOfWeek = daysOfWeekMap[dayOfWeek];
+  
+    let daysUntilNext = (targetDayOfWeek - todayDayOfWeek + 7) % 7;
+  
+    const nextDate = new Date();
+    nextDate.setDate(today.getDate() + daysUntilNext);
+  
+    const month = nextDate.getMonth() + 1;
+    const date = nextDate.getDate();
+  
+    return `(${month}월 ${date}일~)`;
+}
+
 const TeamList = () => {
     const today = new Date();
 
     const { teams, getEnsembles, init } = useCustomContext();
     const [teamAddModal, setTeamAddModal] = useState(false);
     const [teamAddName, setTeamAddName] = useState('');
-    const [teamAddDesc, setTeamAddDesc] = useState('');
+    const [teamAddDesc, setTeamAddDesc] = useState('팀 설명: \n\nV. \nG1. \nG2. \nB. \nD. \nK. \nMgr. \n셋리스트:\n\n');
     const [teamAddType, setTeamAddType] = useState('신입-정기/연말공연');
     const [ensembleTeamId, setEnsembleTeamId] = useState('');
     const [ensembleTeamName, setEnsembleTeamName] = useState('');
@@ -39,7 +65,7 @@ const TeamList = () => {
 
         setTeamAddModal(false);
         
-        const { data } = await axios.post(`${url}/teams`, {
+        await axios.post(`${url}/teams`, {
             name: teamAddName,
             desc: teamAddDesc,
             type: teamAddType,
@@ -56,11 +82,11 @@ const TeamList = () => {
     const handleTeamDelete = async (e, team) => {
         e.stopPropagation();
 
-        if (!window.confirm('진짜 삭제할래요?')) {
+        if (!window.confirm(`"${team.name}" 팀을 삭제해요.\n진짜 삭제할래요?`)) {
             return;
         }
         
-        const { data } = await axios.get(`${url}/deleteteam?id=${team.id}`)
+        await axios.get(`${url}/deleteteam?id=${team.id}`)
         
         init();
     }
@@ -139,13 +165,16 @@ const TeamList = () => {
                 ))}
             </TeamListContainer>
             <Modal
-                isOpen={teamAddModal}
+                isOpen={!!teamAddModal}
                 onRequestClose={() => setTeamAddModal(false)}
                 style={modalStyle}
                 contentLabel='TeamAdd'
             >
-                <ModalTitle>팀 추가</ModalTitle>
-                <ModalFormContainer>
+                <ModalTitleContainer>
+                    <ModalTitle>팀 추가</ModalTitle>
+                    <ModalExitButton onClick={() => setTeamAddModal(false)}>✕</ModalExitButton>
+                </ModalTitleContainer>
+                <ModalFormContainer style={{ paddingTop: '24px' }}>
                     <ModalLabel>팀 이름</ModalLabel>
                     <ModalInput
                         value={teamAddName}
@@ -195,12 +224,15 @@ const TeamList = () => {
                 </ModalFormContainer>
             </Modal>
             <Modal
-                isOpen={ensembleTeamId}
+                isOpen={!!ensembleTeamId}
                 onRequestClose={() => setEnsembleTeamId('')}
                 style={modalStyle}
                 contentLabel='EnsembleAdd'
             >
-                <ModalTitle>합주 추가</ModalTitle>
+                <ModalTitleContainer>
+                    <ModalTitle>합주 추가</ModalTitle>
+                    <ModalExitButton onClick={() => setEnsembleTeamId('')}>✕</ModalExitButton>
+                </ModalTitleContainer>
                 <ModalFormContainer>
                     <ModalRowContainer>
                         <ModalLabel>팀 이름</ModalLabel>
@@ -240,6 +272,7 @@ const TeamList = () => {
                                     <option key={day} value={idx}>{day}</option>
                                 ))}
                             </Select>
+                            <ModalText>&nbsp;&nbsp;{getNextDay(ensembleDay)}</ModalText>
                         </ModalRowContainer>
                     )}
                     {ensembleType !== '무기한' && (
@@ -275,6 +308,7 @@ const TeamList = () => {
                             <ModalText>일</ModalText>
                         </ModalRowContainer>
                     )}
+                    {ensembleType === '유기한' && (<ModalText style={{color: 'red', marginTop: '2px'}}>(합주 날짜가 아니에요!!!)</ModalText>)}
                     <ModalRowContainer> 
                     <ModalLabel>합주 시간</ModalLabel>
                         <Select
@@ -402,7 +436,7 @@ const TeamAddButton = styled.div`
     cursor: pointer;
     
     @media (max-width: 560px) {
-        min-height: 0px;
+        min-height: 34px;
     }
 `;
 
@@ -433,17 +467,34 @@ const TeamDeleteButton = styled.div`
         }
 `;
 
+const ModalTitleContainer = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 12px 24px;
+    width: 100%;
+
+    @media (max-width: 560px) {
+        padding: 0 4px 12px;
+    }
+`;
+
 const ModalTitle = styled.div`
+    flex: 1;
+    margin: 0;
     font-family: Bold;
     font-size: 150%;
     color: ${({ theme }) => theme.title};
     user-select: none;
     text-align: center;
-    margin-bottom: 24px;
+`;
 
-    @media (max-width: 560px) {
-        margin-bottom: 12px;
-    }
+const ModalExitButton = styled.button`
+    background: none;
+    border: none;
+    user-select: none;
+    font-size: 150%;
+    cursor: pointer;
 `;
 
 const ModalFormContainer = styled.div`
@@ -452,6 +503,7 @@ const ModalFormContainer = styled.div`
     background-color: ${({ theme }) => theme.white};
     border-radius: 40px;
     padding: 24px;
+    padding-top: 8px;
     width: 100%;
     @media (max-width: 560px) {
         padding: 24px 24px 8px;
@@ -461,6 +513,13 @@ const ModalFormContainer = styled.div`
 const ModalLabel = styled.div`
     font-size: 125%;
     user-select: none;
+    min-width: 84px;
+    @media (max-width: 360px) {
+    min-width: 64px;
+    }
+    @media (max-width: 360px) {
+    min-width: 52px;
+    }
 `;
 
 const ModalInput = styled.input`
@@ -477,7 +536,7 @@ const ModalInput = styled.input`
     }
 
     @media (max-width: 560px) {
-        margin: 8px 16px 16px;
+        margin: 8px 0 16px;
     }
 `;
 
@@ -495,7 +554,7 @@ const ModalTextArea = styled.textarea`
     }
 
     @media (max-width: 560px) {
-        margin: 8px 16px 16px;
+        margin: 8px 0 16px;
         height: 120px;
     }
 `;
@@ -506,7 +565,7 @@ const RadioContainer = styled.div`
     margin: 16px 16px 0 16px;
 
     @media (max-width: 560px) {
-        margin: 8px 8px 0 8px;
+        margin: 8px 8px 0 0;
     }
 `;
 
@@ -546,7 +605,7 @@ const SubmitButton = styled.div`
 const ModalRowContainer = styled.div`
     display: flex;
     align-items: center;
-    margin-bottom: 16px;
+    margin-top: 16px;
 `;
 
 const Bold = styled.div`

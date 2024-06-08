@@ -24,7 +24,7 @@ const Notes = () => {
 
     const handleSubmit = async () => {
         try {
-            const { data } = await axios.post(`${url}/notes`, {
+            await axios.post(`${url}/notes`, {
                 text: text,
                 publishDate: new Date()
             });
@@ -47,7 +47,12 @@ const Notes = () => {
         if (!window.confirm('진짜 삭제할래요?')) {
             return;
         }
-        const { data } = await axios.get(`${url}/deletenote?id=${id}`);
+        try {
+            const { data } = await axios.get(`${url}/deletenote?id=${id}`);
+        }
+        catch {
+            alert('이미 삭제된 비고예요.');
+        }
 
         getNotes();
     };

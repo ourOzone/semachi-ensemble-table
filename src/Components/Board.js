@@ -58,7 +58,7 @@ const Board = () => {
         }
     };
 
-    const handleEnsembleDelete = async (info, id) => {
+    const handleDeleteEnsemble = async (info, id) => {
         if (!window.confirm(`"${info.name}" 팀의\n${`${daysKor[info.day]}요일 ${idx2hour[info.start_time]} ~ ${idx2hour[info.end_time + 1]}`} 합주를 삭제해요.\n진짜 삭제할래요?`)) {
             return;
         }
@@ -69,7 +69,7 @@ const Board = () => {
         setInfo(null);
     };
 
-    const handleTeamModify = async () => {
+    const handleModifyTeam = async () => {
         const { data } = await axios.post(`${url}/teammodify?id=${modifyId}`, {
             name: modifyName,
             desc: modifyDesc
@@ -164,7 +164,7 @@ const Board = () => {
                                     setModifyDesc(info.desc);
                                     setInfo(null)
                                 }}>팀 수정</Button>
-                                <Button onClick={() => handleEnsembleDelete(info, infoId)}>합주 삭제</Button>
+                                <Button onClick={() => handleDeleteEnsemble(info, infoId)}>합주 삭제</Button>
                             </InfoButtonContainer>
                         </>
                     )}
@@ -206,7 +206,7 @@ const Board = () => {
                         placeholder='팀원 목록이랑 선곡이랑 이것 저것 써요'
                     />
                     <SubmitButtonContainer>
-                        <SubmitButton disabled={modifyName.length === 0} onClick={handleTeamModify}>수정하기</SubmitButton>
+                        <SubmitButton disabled={modifyName.length === 0} onClick={handleModifyTeam}>수정하기</SubmitButton>
                     </SubmitButtonContainer>
                 </ModalFormContainer>
             </Modal>

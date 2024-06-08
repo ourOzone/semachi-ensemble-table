@@ -93,9 +93,10 @@ app.get('/', (req, res) => {
   fs.readFile(filePath, 'utf8', (err, data) => {
     if (err) {
       console.error('파일을 읽을 수 없습니다:', err);
-      return;
+      return res.status(500).send('Internal Server Error');
     }
-    res.send(data)
+    const lines = data.split('\n');
+    res.send(lines.join('<br>'));
     console.log(data);
   });
 });

@@ -4,7 +4,7 @@ import axios from 'axios';
 import Modal from 'react-modal';
 import { Radio } from '@mui/material';
 import { useCustomContext } from '../Context';
-import { idx2hour, getPublishDate, url } from '../global';
+import { idx2hour, url } from '../global';
 
 const getMonthDate = (year, month) => {
     const date = new Date(year, month, 1);
@@ -58,7 +58,7 @@ const TeamList = () => {
     const [ensembleDueMonth, setEnsembleDueMonth] = useState(today.getMonth() + 1);
     const [ensembleDueDate, setEnsembleDueDate] = useState(today.getDate());
 
-    const handleTeamAdd = async () => {
+    const handleAddTeam = async () => {
         if (!teamAddName) {
             return;
         }
@@ -79,19 +79,37 @@ const TeamList = () => {
         setTeamAddType('신입-정기/연말공연');
     };
 
-    const handleTeamDelete = async (e, team) => {
+    const handleDeleteTeam = async (e, team) => {
         e.stopPropagation();
 
-        if (!window.confirm(`"${team.name}" 팀을 삭제해요.\n진짜 삭제할래요?`)) {
-            return;
+        try {
+            await axios.get(`${url}/teamexist?id=${team.id}`);
+            
+            if (!window.confirm(`"${team.name}" 팀을 삭제해요.\n진짜 삭제할래요?`)) {
+                return;
+            }
+            await axios.get(`${url}/deleteteam?id=${team.id}`);
         }
-        
-        await axios.get(`${url}/deleteteam?id=${team.id}`)
-        
+        catch {
+            alert('이미 삭제된 팀이에요.');
+        }
+
         init();
     }
 
-    const handleEnsembleAdd = async () => {
+    const handleClickTeam = async (team) => {
+        try {
+            await axios.get(`${url}/teamexist?id=${team.id}`);
+            setEnsembleTeamId(team.id);
+            setEnsembleTeamName(team.name);
+        }
+        catch {
+            alert('이미 삭제된 팀이에요.');
+            init();
+        }
+    };
+
+    const handleAddEnsemble = async () => {
         let due = '';
         let day = 0;
 
@@ -113,7 +131,7 @@ const TeamList = () => {
             day = ensembleDay;
         }
 
-        const { data } = await axios.post(`${url}/ensembles`, {
+        await axios.post(`${url}/ensembles`, {
             teamId: ensembleTeamId,
             teamName: ensembleTeamName,
             day: day,
@@ -154,13 +172,10 @@ const TeamList = () => {
                     <TeamContainer
                         key={idx}
                         idx={idx}
-                        onClick={() => {
-                            setEnsembleTeamId(team.id);
-                            setEnsembleTeamName(team.name);
-                        }}
+                        onClick={() => handleClickTeam(team)}
                     >
                         <Team>{team.name}</Team>
-                        <TeamDeleteButton onClick={(e) => handleTeamDelete(e, team)}>✕</TeamDeleteButton>
+                        <TeamDeleteButton onClick={(e) => handleDeleteTeam(e, team)}>✕</TeamDeleteButton>
                     </TeamContainer>
                 ))}
             </TeamListContainer>
@@ -219,7 +234,7 @@ const TeamList = () => {
                         </RadioLabel>
                     </RadioContainer>
                     <SubmitButtonContainer>
-                        <SubmitButton disabled={teamAddName.length === 0} onClick={handleTeamAdd}>추가하기</SubmitButton>
+                        <SubmitButton disabled={teamAddName.length === 0} onClick={handleAddTeam}>추가하기</SubmitButton>
                     </SubmitButtonContainer>
                 </ModalFormContainer>
             </Modal>
@@ -347,7 +362,7 @@ const TeamList = () => {
                         </RadioContainer>
                     </ModalRowContainer>
                     <SubmitButtonContainer>
-                        <SubmitButton onClick={handleEnsembleAdd}>추가하기</SubmitButton>
+                        <SubmitButton onClick={handleAddEnsemble}>추가하기</SubmitButton>
                     </SubmitButtonContainer>
                 </ModalFormContainer>
             </Modal>

@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
-const PORT = 5000;
+const PORT = 8080;
 
 //Mongo DB 연결
 mongoose.connect('mongodb+srv://dion:kritoXkrito1!@semachi.58nyphe.mongodb.net/')

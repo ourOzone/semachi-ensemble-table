@@ -349,7 +349,7 @@ app.get('/deletenote', async (req, res) => {
 app.post('/notes', async (req, res) => {
     try {
       const data = req.body;
-      append_log(`${req.ip}_${getTime()}_deleteteam_${data.text}`)
+      append_log(`${req.ip}_${getTime()}_addnote_${data.text}`)
 
       if (data.text.length > 100) {
         return res.status(400).send('Text exceeds 100 characters');

@@ -75,7 +75,7 @@ const TeamList = () => {
         init();
 
         setTeamAddName('');
-        setTeamAddDesc('');
+        setTeamAddDesc('팀 설명: \n\nV. \nG1. \nG2. \nB. \nD. \nK. \nMgr. \n셋리스트:\n\n');
         setTeamAddType('신입-정기/연말공연');
     };
 

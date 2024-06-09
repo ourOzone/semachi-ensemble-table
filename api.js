@@ -296,6 +296,7 @@ app.get('/ensembleinfo', async (req, res) => {
       id: ensemble.teamId,
       name: team.name,
       desc: team.desc,
+      teamType: team.type,
       start_time: ensemble.startTime,
       end_time: ensemble.endTime,
       room: ensemble.room,

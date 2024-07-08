@@ -77,7 +77,7 @@ function append_log(contentToAdd) {
 
 function getTime() {
   const now = new Date();
-  const kstOffset = -540;
+  const kstOffset = 9 * 60; // 9 hours in minutes
   const kstTime = new Date(now.getTime() + (kstOffset * 60000));
   const year = kstTime.getFullYear();
   const month = String(kstTime.getMonth() + 1).padStart(2, '0');
@@ -88,6 +88,7 @@ function getTime() {
   return `${year}.${month}.${day}:${hour}:${minute}`;
 }
 
+
 app.get('/', (req, res) => {
   const filePath = __dirname + '/log.txt';
   fs.readFile(filePath, 'utf8', (err, data) => {
@@ -96,7 +97,7 @@ app.get('/', (req, res) => {
       return res.status(500).send('Internal Server Error');
     }
     const lines = data.split('\n');
-    res.send(lines.join('<br>'));
+    res.status(200).send(lines.join('<br>'));
     console.log(data);
   });
 });
@@ -349,23 +350,26 @@ app.get('/deletenote', async (req, res) => {
 //비고추가
 app.post('/notes', async (req, res) => {
     try {
-      const data = req.body;
-      append_log(`${req.ip}_${getTime()}_addnote_${data.text}`)
+        const data = req.body;
+        append_log(`${req.ip}_${getTime()}_addnote_${data.text}`);
 
-      if (data.text.length > 100) {
-        return res.status(400).send('Text exceeds 100 characters');
-      }
-  
-      const newNote = new Note({
-        text: data.text,
-      });
-  
-      await newNote.save();
-      res.send({ id: newNote._id });
+        const noteCount = await Note.countDocuments();
+
+        if (noteCount >= 100) {
+            return res.status(400).send('Note limit exceeded');
+        }
+
+        const newNote = new Note({
+            text: data.text,
+        });
+
+        await newNote.save();
+        res.send({ id: newNote._id });
     } catch (error) {
-      res.status(500).send('Internal Server Error');
+        res.status(500).send('Internal Server Error');
     }
-  });
+});
+
   
 
 

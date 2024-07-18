@@ -70,7 +70,7 @@ function append_log(contentToAdd) {
         console.error('파일에 쓰기 실패:', err);
         return;
       }
-      console.log('파일에 내용을 성공적으로 추가했습니다.');
+      // Removed console.log here
     });
   });
 }
@@ -98,7 +98,6 @@ app.get('/', (req, res) => {
     }
     const lines = data.split('\n');
     res.status(200).send(lines.join('<br>'));
-    console.log(data);
   });
 });
 
@@ -369,10 +368,6 @@ app.post('/notes', async (req, res) => {
         res.status(500).send('Internal Server Error');
     }
 });
-
-  
-
-
 
 app.listen(PORT, () => {
   console.log(`서버 실행 중: http://localhost:${PORT}`);

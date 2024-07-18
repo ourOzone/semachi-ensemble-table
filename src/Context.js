@@ -25,7 +25,8 @@ function ContextProvider({ children }) {
         const { data } = await axios.get(`${url}/teams`);
 		const teamsData = data.map((team) => ({
             name: team.name,
-            id: team._id
+            id: team._id,
+            teamType: team.type
         }))
         setTeams(teamsData);
 		return teamsData;

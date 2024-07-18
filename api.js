@@ -184,7 +184,6 @@ app.post('/teammodify', async (req, res) => {
 
     existingTeam.name = req.body.name;
     existingTeam.desc = req.body.desc;
-    existingTeam.type = req.body.type;
 
     await existingTeam.save();
     await Ensemble.updateMany({ teamId }, { $set: { teamName: req.body.name } });

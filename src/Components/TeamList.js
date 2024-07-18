@@ -13,6 +13,12 @@ const getMonthDate = (year, month) => {
     return date.getDate();
 }
 
+const getDay = (year, month, date) => {
+    const daysKor = ['일', '월', '화', '수', '목', '금', '토'];
+    const tempDate = new Date(year, month - 1, date);
+    return daysKor[tempDate.getDay()] + '요일';
+}
+
 function getNextDay(dayOfWeek) {
     const daysOfWeekMap = {
         0: 1,
@@ -45,7 +51,7 @@ const TeamList = () => {
     const { teams, getEnsembles, init } = useCustomContext();
     const [teamAddModal, setTeamAddModal] = useState(false);
     const [teamAddName, setTeamAddName] = useState('');
-    const [teamAddDesc, setTeamAddDesc] = useState('팀 설명: \n\nV. \nG1. \nG2. \nB. \nD. \nK. \nMgr. \n셋리스트:\n\n');
+    const [teamAddDesc, setTeamAddDesc] = useState(['', '', '', '', '', '', '']);
     const [teamAddType, setTeamAddType] = useState('신입-정기/연말공연');
     const [ensembleTeamId, setEnsembleTeamId] = useState('');
     const [ensembleTeamName, setEnsembleTeamName] = useState('');
@@ -62,7 +68,7 @@ const TeamList = () => {
         if (!teamAddName) {
             return;
         }
-
+        console.log(teamAddDesc)
         setTeamAddModal(false);
         
         await axios.post(`${url}/teams`, {
@@ -75,7 +81,7 @@ const TeamList = () => {
         init();
 
         setTeamAddName('');
-        setTeamAddDesc('팀 설명: \n\nV. \nG1. \nG2. \nB. \nD. \nK. \nMgr. \n셋리스트:\n\n');
+        setTeamAddDesc(['', '', '', '', '', '', '']);
         setTeamAddType('신입-정기/연말공연');
     };
 
@@ -200,12 +206,122 @@ const TeamList = () => {
                         }}
                         placeholder='팀명 입력해요 (~20 글자)'
                     />
-                    <ModalLabel>팀 소개</ModalLabel>
-                    <ModalTextArea
-                        value={teamAddDesc}
-                        onChange={e => setTeamAddDesc(e.target.value)}
-                        placeholder='팀원 목록이랑 선곡이랑 이것 저것 써요'
-                    />
+                    <DescContainer>
+                        <DescLeftSection>
+                            <LabelContentPair>
+                                <DescLabel>Vo.</DescLabel>
+                                <DescInput
+                                    value={teamAddDesc[0]}
+                                    onChange={e => {
+                                        if (e.target.value.length <= 16) {
+                                            setTeamAddDesc(prev => {
+                                                const newDesc = [...prev];
+                                                newDesc[0] = e.target.value;
+                                                return newDesc;
+                                            });
+                                        }
+                                    }}
+                                    placeholder='보컬 이름'
+                                />
+                            </LabelContentPair>
+                            <LabelContentPair>
+                                <DescLabel>Gt.</DescLabel>
+                                <DescInput
+                                    value={teamAddDesc[1]}
+                                    onChange={e => {
+                                        if (e.target.value.length <= 16) {
+                                            setTeamAddDesc(prev => {
+                                                const newDesc = [...prev];
+                                                newDesc[1] = e.target.value;
+                                                return newDesc;
+                                            });
+                                        }
+                                    }}
+                                    placeholder='기타(들) 이름'
+                                />
+                            </LabelContentPair>
+                            <LabelContentPair>
+                                <DescLabel>Ba.</DescLabel>
+                                <DescInput
+                                    value={teamAddDesc[2]}
+                                    onChange={e => {
+                                        if (e.target.value.length <= 16) {
+                                            setTeamAddDesc(prev => {
+                                                const newDesc = [...prev];
+                                                newDesc[2] = e.target.value;
+                                                return newDesc;
+                                            });
+                                        }
+                                    }}
+                                    placeholder='베이스 이름'
+                                />
+                            </LabelContentPair>
+                            <LabelContentPair>
+                                <DescLabel>Dr.</DescLabel>
+                                <DescInput
+                                    value={teamAddDesc[3]}
+                                    onChange={e => {
+                                        if (e.target.value.length <= 16) {
+                                            setTeamAddDesc(prev => {
+                                                const newDesc = [...prev];
+                                                newDesc[3] = e.target.value;
+                                                return newDesc;
+                                            });
+                                        }
+                                    }}
+                                    placeholder='드럼 이름'
+                                />
+                            </LabelContentPair>
+                            <LabelContentPair>
+                                <DescLabel>Key.</DescLabel>
+                                <DescInput
+                                    value={teamAddDesc[4]}
+                                    onChange={e => {
+                                        if (e.target.value.length <= 16) {
+                                            setTeamAddDesc(prev => {
+                                                const newDesc = [...prev];
+                                                newDesc[4] = e.target.value;
+                                                return newDesc;
+                                            });
+                                        }
+                                    }}
+                                    placeholder='키보드(들) 이름'
+                                />
+                            </LabelContentPair>
+                            <LabelContentPair>
+                                <DescLabel>Mgr.</DescLabel>
+                                <DescInput
+                                    value={teamAddDesc[5]}
+                                    onChange={e => {
+                                        if (e.target.value.length <= 16) {
+                                            setTeamAddDesc(prev => {
+                                                const newDesc = [...prev];
+                                                newDesc[5] = e.target.value;
+                                                return newDesc;
+                                            });
+                                        }
+                                    }}
+                                    placeholder='매니저(들) 이름'
+                                />
+                            </LabelContentPair>
+                        </DescLeftSection>
+                        <DescRightSection>
+                            <DescLabel>소개/셋리스트</DescLabel>
+                            <SetlistTextarea
+                                value={teamAddDesc[6]}
+                                onChange={e => {
+                                    if (e.target.value.length <= 100) {
+                                        setTeamAddDesc(prev => {
+                                            const newDesc = [...prev];
+                                            newDesc[6] = e.target.value;
+                                            return newDesc;
+                                        });
+                                    }
+                                }}
+                                placeholder='팀 소개랑 선곡이랑 이것 저것 써요'
+                            />
+                        </DescRightSection>
+                    </DescContainer>
                     <ModalLabel>팀 타입</ModalLabel>
                     <RadioContainer>
                         <RadioLabel
@@ -287,7 +403,7 @@ const TeamList = () => {
                                     <option key={day} value={idx}>{day}</option>
                                 ))}
                             </Select>
-                            <ModalText>&nbsp;&nbsp;{getNextDay(ensembleDay)}</ModalText>
+                            <ModalText highlight>&nbsp;&nbsp;{getNextDay(ensembleDay)}</ModalText>
                         </ModalRowContainer>
                     )}
                     {ensembleType !== '무기한' && (
@@ -321,6 +437,7 @@ const TeamList = () => {
                                 ))}
                             </Select>
                             <ModalText>일</ModalText>
+                            <ModalText highlight>&nbsp;&nbsp;({getDay(ensembleDueYear, ensembleDueMonth, ensembleDueDate)})</ModalText>
                         </ModalRowContainer>
                     )}
                     {ensembleType === '유기한' && (<ModalText style={{color: 'red', marginTop: '2px'}}>(합주 날짜가 아니에요!!!)</ModalText>)}
@@ -552,25 +669,7 @@ const ModalInput = styled.input`
 
     @media (max-width: 560px) {
         margin: 8px 0 16px;
-    }
-`;
-
-const ModalTextArea = styled.textarea`
-    resize: none;
-    border: none;
-    height: 200px;
-    margin: 16px 24px 32px;
-    padding: 16px;
-    background-color: ${({ theme }) => theme.background};
-    border-radius: 16px;
-    
-    &:focus {
-        outline: 2px solid ${({ theme }) => theme.primary};
-    }
-
-    @media (max-width: 560px) {
-        margin: 8px 0 16px;
-        height: 120px;
+        padding: 8px 16px;
     }
 `;
 
@@ -646,11 +745,105 @@ const Select = styled.select`
     }
     @media (max-width: 560px) {
         margin: 0 2px;
+        padding: 0 4px;
     }
 `;
 
 const ModalText = styled.div`
     user-select: none;
+    ${props => props.highlight && `
+        color: ${props.theme.primary};
+    `}
+`;
+
+const DescContainer = styled.div`
+    display: flex;
+    width: 100%;
+    padding-left: 16px;
+    margin-bottom: 16px;
+    @media (max-width: 560px) {
+        padding-left: 4px;
+        margin-bottom: 0;
+    }
+`;
+
+const DescLeftSection = styled.div`
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding-right: 8px;
+`;
+
+const DescRightSection = styled.div`
+    flex: 1;
+    padding-right: 24px;
+
+    @media (max-width: 560px) {
+        padding-right: 0;
+    }
+`;
+
+const LabelContentPair = styled.div`
+    display: flex;
+    margin-bottom: 8px;
+`;
+
+const DescLabel = styled.div`
+    display: flex;
+    align-items: center;
+    font-size: 125%;
+    user-select: none;
+    min-width: 60px;
+
+    @media (max-width: 560px) {
+        min-width: 40px;
+    }
+    @media (max-width: 560px) {
+        min-width: 32px;
+    }
+`;
+
+const DescInput = styled.input`
+    resize: none;
+    border: none;
+    overflow: hidden;
+    padding: 8px 12px;
+    background-color: ${({ theme }) => theme.background};
+    border-radius: 16px;
+    width: 160px;
+
+    &:focus {
+        outline: 2px solid ${({ theme }) => theme.primary};
+    }
+
+    @media (max-width: 560px) {
+        width: 128px;
+    }
+
+    @media (max-width: 380px) {
+        width: 80px;
+    }
+`;
+
+const SetlistTextarea = styled.textarea`
+    resize: none;
+    border: none;
+    width: 100%;
+    height: 204px;
+    margin-top: 16px;
+    padding: 16px;
+    background-color: ${({ theme }) => theme.background};
+    border-radius: 16px;
+    
+    &:focus {
+        outline: 2px solid ${({ theme }) => theme.primary};
+    }
+
+    @media (max-width: 560px) {
+        padding: 8px 16px;
+        margin: 8px 0 16px;
+        height: 188px;
+    }
 `;
 
 export default TeamList;

@@ -173,6 +173,7 @@ const NoteText = styled.div`
     padding: 16px;
     font-size: 125%;
     white-space: pre-line;
+    word-break: break-all;
     @media (max-width: 560px) {
         padding: 12px;
     }

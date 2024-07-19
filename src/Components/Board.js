@@ -43,12 +43,13 @@ const Board = () => {
     const [infoId, setInfoId] = useState('');
     const [modifyId, setModifyId] = useState('');
     const [modifyName, setModifyName] = useState('');
-    const [modifyDesc, setModifyDesc] = useState('');
+    const [modifyDesc, setModifyDesc] = useState(['', '', '', '', '', '', '']);
     const week = getWeek();
 
     const handleInfoModal = async (id) => {
         try {
             const { data } = await axios.get(`${url}/ensembleinfo?id=${id}`);
+            console.log(data)
             setInfo(data);
             setInfoId(id);
             
@@ -63,14 +64,14 @@ const Board = () => {
             return;
         }
 
-        const { data } = await axios.get(`${url}/deleteensemble?id=${id}`);
+        await axios.get(`${url}/deleteensemble?id=${id}`);
         getEnsembles(teams);
         
         setInfo(null);
     };
 
     const handleModifyTeam = async () => {
-        const { data } = await axios.post(`${url}/teammodify?id=${modifyId}`, {
+        await axios.post(`${url}/teammodify?id=${modifyId}`, {
             name: modifyName,
             desc: modifyDesc
         });
@@ -78,7 +79,7 @@ const Board = () => {
         init();
         setModifyId('');
         setModifyName('');
-        setModifyDesc('');
+        setModifyDesc(['', '', '', '', '', '', '']);
 
     };
     return (
@@ -102,7 +103,7 @@ const Board = () => {
                                         <Ensemble
                                             key={`${dayIdx}_${time}_${ensemble.id}`}
                                             teamcoloridx={ensemble.teamcoloridx}
-                                            alpha={ensemble.isOneTime ? Math.ceil(Math.abs(new Date(ensemble.due) - new Date()) / (1000 * 3600 * 24)) > 7 : undefined}
+                                            alpha={ensemble.isOneTime ? Math.ceil(Math.abs(new Date(ensemble.due) - new Date()) / (1000 * 3600 * 24)) >= 7 : undefined}
                                             onClick={() => handleInfoModal(ensemble.id)}
                                         >
                                             {block.length < 4 && ensemble.teamName}
@@ -131,8 +132,38 @@ const Board = () => {
                             <InfoLabel>{info && info.name}</InfoLabel>
                         </ModalRowContainer>
                         <ModalRowContainer>
-                            <ModalLabel>팀 소개</ModalLabel>
-                            <InfoLabel>{info && info.desc}</InfoLabel>
+                            <DescContainer>
+                                <DescLeftSection>
+                                    <LabelContentPair>
+                                        <DescLabel>Vo.</DescLabel>
+                                        <DescName>{info && info.desc[0]}</DescName>
+                                    </LabelContentPair>
+                                    <LabelContentPair>
+                                        <DescLabel>Gt.</DescLabel>
+                                        <DescName>{info && info.desc[1]}</DescName>
+                                    </LabelContentPair>
+                                    <LabelContentPair>
+                                        <DescLabel>Ba.</DescLabel>
+                                        <DescName>{info && info.desc[2]}</DescName>
+                                    </LabelContentPair>
+                                    <LabelContentPair>
+                                        <DescLabel>Dr.</DescLabel>
+                                        <DescName>{info && info.desc[3]}</DescName>
+                                    </LabelContentPair>
+                                    <LabelContentPair>
+                                        <DescLabel>Key.</DescLabel>
+                                        <DescName>{info && info.desc[4]}</DescName>
+                                    </LabelContentPair>
+                                    <LabelContentPair>
+                                        <DescLabel>Mgr.</DescLabel>
+                                        <DescName>{info && info.desc[5]}</DescName>
+                                    </LabelContentPair>
+                                </DescLeftSection>
+                                <DescRightSection>
+                                    <ModalLabel>소개/셋리스트</ModalLabel>
+                                    <Setlist>{info && info.desc[6]}</Setlist>
+                                </DescRightSection>
+                            </DescContainer>
                         </ModalRowContainer>
                         <ModalRowContainer>
                             <ModalLabel>팀 타입</ModalLabel>
@@ -150,10 +181,12 @@ const Board = () => {
                             <ModalLabel>합주 타입</ModalLabel>
                             <InfoLabel>{info && info.type}</InfoLabel>
                         </ModalRowContainer>
-                        <ModalRowContainer>
-                            <ModalLabel>{info && info.type !== '일회성' ? '공연 날짜' : '합주 날짜'}</ModalLabel>
-                            <InfoLabel>{info && info.due.split('T')[0]}</InfoLabel>
-                        </ModalRowContainer>
+                        {info && info.type !== '무기한' && (
+                            <ModalRowContainer>
+                                <ModalLabel>{info && info.type === '유기한' ? '공연 날짜' : '합주 날짜'}</ModalLabel>
+                                <InfoLabel>{info && info.due.split('T')[0]}</InfoLabel>
+                            </ModalRowContainer>
+                        )}
                     </InfoContainer>
                     {info && (
                         <>
@@ -175,7 +208,7 @@ const Board = () => {
                 onRequestClose={() => {
                     setModifyId('');
                     setModifyName('');
-                    setModifyDesc('');
+                    setModifyDesc(['', '', '', '', '', '', '']);
                 }}
                 style={modalStyle}
                 contentLabel='TeamModify'
@@ -185,7 +218,7 @@ const Board = () => {
                     <ModalExitButton onClick={() => {
                         setModifyId('');
                         setModifyName('');
-                        setModifyDesc('');
+                        setModifyDesc(['', '', '', '' ,'', '', '']);
                     }}>✕</ModalExitButton>
                 </ModalTitleContainer>
                 <ModalFormContainer>
@@ -199,12 +232,123 @@ const Board = () => {
                         }}
                         placeholder='팀명 입력해요 (~20 글자)'
                     />
-                    <ModalLabel>팀 소개</ModalLabel>
-                    <ModalTextArea
-                        value={modifyDesc}
-                        onChange={e => setModifyDesc(e.target.value)}
-                        placeholder='팀원 목록이랑 선곡이랑 이것 저것 써요'
-                    />
+                    
+                    <DescContainer>
+                        <DescLeftSection>
+                            <LabelContentPair>
+                                <DescLabel>Vo.</DescLabel>
+                                <DescInput
+                                    value={modifyDesc[0]}
+                                    onChange={e => {
+                                        if (e.target.value.length <= 16) {
+                                            setModifyDesc(prev => {
+                                                const newDesc = [...prev];
+                                                newDesc[0] = e.target.value;
+                                                return newDesc;
+                                            });
+                                        }
+                                    }}
+                                    placeholder='보컬 이름'
+                                />
+                            </LabelContentPair>
+                            <LabelContentPair>
+                                <DescLabel>Gt.</DescLabel>
+                                <DescInput
+                                    value={modifyDesc[1]}
+                                    onChange={e => {
+                                        if (e.target.value.length <= 16) {
+                                            setModifyDesc(prev => {
+                                                const newDesc = [...prev];
+                                                newDesc[1] = e.target.value;
+                                                return newDesc;
+                                            });
+                                        }
+                                    }}
+                                    placeholder='기타(들) 이름'
+                                />
+                            </LabelContentPair>
+                            <LabelContentPair>
+                                <DescLabel>Ba.</DescLabel>
+                                <DescInput
+                                    value={modifyDesc[2]}
+                                    onChange={e => {
+                                        if (e.target.value.length <= 16) {
+                                            setModifyDesc(prev => {
+                                                const newDesc = [...prev];
+                                                newDesc[2] = e.target.value;
+                                                return newDesc;
+                                            });
+                                        }
+                                    }}
+                                    placeholder='베이스 이름'
+                                />
+                            </LabelContentPair>
+                            <LabelContentPair>
+                                <DescLabel>Dr.</DescLabel>
+                                <DescInput
+                                    value={modifyDesc[3]}
+                                    onChange={e => {
+                                        if (e.target.value.length <= 16) {
+                                            setModifyDesc(prev => {
+                                                const newDesc = [...prev];
+                                                newDesc[3] = e.target.value;
+                                                return newDesc;
+                                            });
+                                        }
+                                    }}
+                                    placeholder='드럼 이름'
+                                />
+                            </LabelContentPair>
+                            <LabelContentPair>
+                                <DescLabel>Key.</DescLabel>
+                                <DescInput
+                                    value={modifyDesc[4]}
+                                    onChange={e => {
+                                        if (e.target.value.length <= 16) {
+                                            setModifyDesc(prev => {
+                                                const newDesc = [...prev];
+                                                newDesc[4] = e.target.value;
+                                                return newDesc;
+                                            });
+                                        }
+                                    }}
+                                    placeholder='키보드(들) 이름'
+                                />
+                            </LabelContentPair>
+                            <LabelContentPair>
+                                <DescLabel>Mgr.</DescLabel>
+                                <DescInput
+                                    value={modifyDesc[5]}
+                                    onChange={e => {
+                                        if (e.target.value.length <= 16) {
+                                            setModifyDesc(prev => {
+                                                const newDesc = [...prev];
+                                                newDesc[5] = e.target.value;
+                                                return newDesc;
+                                            });
+                                        }
+                                    }}
+                                    placeholder='매니저(들) 이름'
+                                />
+                            </LabelContentPair>
+                        </DescLeftSection>
+                        <DescRightSection>
+                            <DescLabel>소개/셋리스트</DescLabel>
+                            <SetlistTextarea
+                                value={modifyDesc[6]}
+                                onChange={e => {
+                                    if (e.target.value.length <= 100) {
+                                        setModifyDesc(prev => {
+                                            const newDesc = [...prev];
+                                            newDesc[6] = e.target.value;
+                                            return newDesc;
+                                        });
+                                    }
+                                }}
+                                placeholder='팀 소개랑 선곡이랑 이것 저것 써요'
+                            />
+                        </DescRightSection>
+                    </DescContainer>
                     <SubmitButtonContainer>
                         <SubmitButton disabled={modifyName.length === 0} onClick={handleModifyTeam}>수정하기</SubmitButton>
                     </SubmitButtonContainer>
@@ -514,6 +658,102 @@ const SubmitButton = styled.div`
         background-color: #cccccc;
         cursor: default;
     `}
+`;
+
+const DescContainer = styled.div`
+    display: flex;
+    width: 100%;
+    padding-left: 16px;
+    @media (max-width: 560px) {
+        padding-left: 4px;
+    }
+`;
+
+const DescLeftSection = styled.div`
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+`;
+
+const DescRightSection = styled.div`
+    flex: 1;
+`;
+
+const LabelContentPair = styled.div`
+    display: flex;
+    margin-bottom: 8px;
+`;
+
+const DescLabel = styled.div`
+    display: flex;
+    font-size: 125%;
+    user-select: none;
+    min-width: 104px;
+
+    @media (max-width: 560px) {
+        min-width: 60px;
+    }
+`;
+
+const DescName = styled.div`
+    font-family: Bold;
+    font-size: 125%;
+    white-space: pre-line;
+
+    /* @media (max-width: 560px) {
+        width: 
+    } */
+    @media (max-width: 380px) {
+        width: 52px;
+    }
+`;
+
+const Setlist = styled.div`
+    margin-top: 8px;
+    overflow-y: auto;
+`;
+
+const DescInput = styled.input`
+    resize: none;
+    border: none;
+    overflow: hidden;
+    padding: 8px 12px;
+    background-color: ${({ theme }) => theme.background};
+    border-radius: 16px;
+    width: 160px;
+
+    &:focus {
+        outline: 2px solid ${({ theme }) => theme.primary};
+    }
+
+    @media (max-width: 560px) {
+        width: 128px;
+    }
+
+    @media (max-width: 380px) {
+        width: 80px;
+    }
+`;
+
+const SetlistTextarea = styled.textarea`
+    resize: none;
+    border: none;
+    width: 100%;
+    height: 204px;
+    margin-top: 16px;
+    padding: 16px;
+    background-color: ${({ theme }) => theme.background};
+    border-radius: 16px;
+    
+    &:focus {
+        outline: 2px solid ${({ theme }) => theme.primary};
+    }
+
+    @media (max-width: 560px) {
+        padding: 8px 16px;
+        margin: 8px 0 16px;
+        height: 188px;
+    }
 `;
 
 export default Board;

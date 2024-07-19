@@ -609,6 +609,7 @@ const ModalInput = styled.input`
 
     @media (max-width: 560px) {
         margin: 8px 16px 16px;
+        padding: 8px 16px;
     }
 `;
 
@@ -673,10 +674,15 @@ const DescLeftSection = styled.div`
     flex: 1;
     display: flex;
     flex-direction: column;
+    padding-right: 2px;
 `;
 
 const DescRightSection = styled.div`
     flex: 1;
+    padding-right: 24px;
+    @media (max-width: 560px) {
+        padding-right: 16px;
+    }
 `;
 
 const LabelContentPair = styled.div`
@@ -688,10 +694,10 @@ const DescLabel = styled.div`
     display: flex;
     font-size: 125%;
     user-select: none;
-    min-width: 104px;
+    min-width: 80px;
 
     @media (max-width: 560px) {
-        min-width: 60px;
+        min-width: 40px;
     }
 `;
 
@@ -699,6 +705,7 @@ const DescName = styled.div`
     font-family: Bold;
     font-size: 125%;
     white-space: pre-line;
+    word-break: keep-all;
 
     /* @media (max-width: 560px) {
         width: 
@@ -709,8 +716,16 @@ const DescName = styled.div`
 `;
 
 const Setlist = styled.div`
-    margin-top: 8px;
-    overflow-y: auto;
+    margin: 8px 0 0 8px;
+    /* white-space: pre-wrap;
+    overflow-y: auto; */
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 8; /* 원하는 줄 수를 설정 */
+    -webkit-box-orient: vertical;
+    white-space: pre-wrap;
 `;
 
 const DescInput = styled.input`
@@ -727,11 +742,11 @@ const DescInput = styled.input`
     }
 
     @media (max-width: 560px) {
-        width: 128px;
+        width: 80px;
     }
 
     @media (max-width: 380px) {
-        width: 80px;
+        width: 60px;
     }
 `;
 

@@ -727,6 +727,10 @@ const Bold = styled.div`
     font-size: 125%;
     margin-left: 16px;
     user-select: none;
+
+    @media (max-width: 560px) {
+        margin-left: 0;
+    }
 `;
 
 const Select = styled.select`
@@ -817,7 +821,7 @@ const DescInput = styled.input`
     }
 
     @media (max-width: 560px) {
-        width: 128px;
+        width: 80px;
     }
 
     @media (max-width: 380px) {

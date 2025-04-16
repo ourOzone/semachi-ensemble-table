@@ -9,7 +9,11 @@ import { useCustomContext } from 'context';
 import { idx2hour, url } from 'constants';
 import { media } from 'styles/media';
 import { Container } from 'components/common/Container';
-import TeamAddDrawer from './TeamAddDrawer';
+import TeamAddDrawer1 from './TeamAddDrawer1';
+import TeamAddDrawer2 from './TeamAddDrawer2';
+import TeamAddDrawer3 from './TeamAddDrawer3';
+import TeamAddDrawer4 from './TeamAddDrawer4';
+import TeamAddDrawer5 from './TeamAddDrawer5';
 
 const getMonthDate = (year, month) => {
     const date = new Date(year, month, 1);
@@ -68,6 +72,12 @@ const Teams = () => {
     const [ensembleDueYear, setEnsembleDueYear] = useState(today.getFullYear());
     const [ensembleDueMonth, setEnsembleDueMonth] = useState(today.getMonth() + 1);
     const [ensembleDueDate, setEnsembleDueDate] = useState(today.getDate());
+
+    // new
+    const [type, setType] = useState('');
+    const [name, setName] = useState('');
+    const [desc, setDesc] = useState(['', '', '', '', '', '', '']); // [보컬, 기타, 베이스, 드럼, 키보드, 매니저, 소개/셋리스트]
+    const [pin, setPin] = useState('');
 
     const handleAddTeam = async () => {
         if (!teamAddName) {
@@ -179,13 +189,17 @@ const Teams = () => {
                     </TeamButton>
                 ))}
                 {/* <TeamAddButton onClick={() => setTeamAddModal(true)}> */}
-                <TeamAddButton onClick={() => openDrawer('teamAdd')}>
+                <TeamAddButton onClick={() => openDrawer('teamAdd1')}>
                     <PlusOutlined />
                     팀 추가
                 </TeamAddButton>
-                <TeamAddDrawer />
+                <TeamAddDrawer1 setType={setType} />
+                <TeamAddDrawer2 name={name} setName={setName} />
+                <TeamAddDrawer3 desc={desc} setDesc={setDesc} />
+                <TeamAddDrawer4 desc={desc} setDesc={setDesc} />
+                <TeamAddDrawer5 pin={pin} setPin={setPin} />
             </TeamsContainer>
-            <Divider />
+            <StyledDivider />
             <TeamsContainer>
                 <TeamButton isEvent idx={1}>보소</TeamButton>
                 <TeamButton isEvent idx={2}>기소</TeamButton>
@@ -199,6 +213,9 @@ const Teams = () => {
                 <TeamButton isEvent idx={0}>그냥 회의</TeamButton>
             </TeamsContainer>
             
+
+
+
             <Modal
                 isOpen={!!teamAddModal}
                 onRequestClose={() => setTeamAddModal(false)}
@@ -525,6 +542,10 @@ const modalStyle = {
 const TeamsContainer = styled.div`
     display: flex;
     flex-wrap: wrap;
+`;
+
+const StyledDivider = styled(Divider)`
+    margin: 1.5rem 0 1rem;
 `;
 
 const TeamButton = styled.div`

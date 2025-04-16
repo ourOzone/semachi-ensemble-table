@@ -4,11 +4,13 @@ const theme = {
     white: '#fdfdfd',
     black: '#212121',
     boardBackground: '#ebf1ff',
-    gray: '#8CA0B3',
+    gray: '#f2f4f6',
+    darkGray: '#b0b8c1',
     blueGray: '#6A7F9A',
     border: '#f0f0f0',
     primary: '#4096ff',
     title: '#033d8d',
+    danger: '#ff4d4f',
     
     teamColors: [
         '#f94144', // 빨강

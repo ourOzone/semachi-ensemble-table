@@ -36,9 +36,13 @@ const Container = styled.div`
 	gap: 1rem;
 	padding: 1rem 1rem 0;
 
-	// Drawer 열 때 트랜지션 (모바일도 -280px 해도 그냥 예쁨)
+	// Drawer 열 때 트랜지션 (384는 media large 기준인 767의 절반)
 	transition: transform 0.3s ease;
-	transform: translateX(${(props) => (props.openedDrawers.length > 0 ? '-280px' : '0')});
+	transform: translateX(${(props) => (props.openedDrawers.length > 0 ? '-384px' : '0')});
+	${media.large((props) => `
+		transform: translateX(${props.openedDrawers.length > 0 ? '-50%' : '0'});
+	`)}
+
 `;
 
 export default App;

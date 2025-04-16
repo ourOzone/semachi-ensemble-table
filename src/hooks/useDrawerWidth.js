@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 const useDrawerWidth = () => {
-  const getWidth = () => (window.innerWidth <= 560 ? '100%' : '560px'); // media large 기준
+  const getWidth = () => (window.innerWidth <= 767 ? '100%' : '767px'); // media large 기준
 
   const [drawerWidth, setDrawerWidth] = useState(getWidth);
 

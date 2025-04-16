@@ -110,13 +110,13 @@ const AddButton = styled(Button)`
     justify-content: flex-start;
     align-items: center;
     border-radius: 1rem;
-    border: 0.125rem dashed ${({ theme }) => theme.border};
+    border: 0.125rem dashed ${({ theme }) => theme.darkGray};
     height: 5.5rem;
     box-shadow: none;
 
     & * {
         font-size: 1.25rem;
-        color: ${({ theme }) => theme.gray};
+        color: ${({ theme }) => theme.darkGray};
         transition: color 0.3s ease;
     }
     & svg {
@@ -136,10 +136,10 @@ const Note = styled.div`
     justify-content: space-between;
     margin-top: 0.5rem;
     min-height: 5rem;
-    background-color: ${({ theme }) => theme.background};
+    /* background-color: ${({ theme }) => theme.background}; */
     border-radius: 1rem;
     border: 1px solid ${({ theme }) => theme.border};
-    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.02);
+    box-shadow: 0 0.125rem 0 rgba(0, 0, 0, 0.02);
 `;
 
 const NoteText = styled.div`

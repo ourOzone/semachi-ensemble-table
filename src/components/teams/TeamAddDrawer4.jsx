@@ -33,7 +33,7 @@ const TeamAddDrawer4 = ({ desc, setDesc }) => {
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>
-            <Title>셋리 정한 거 있나요</Title>
+            <Title>셋리 정한 거 있나요 🎵</Title>
             <StyledTextArea
                 value={text}
                 onChange={handleChange}

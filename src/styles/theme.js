@@ -6,6 +6,7 @@ const theme = {
     boardBackground: '#ebf1ff',
     gray: '#f2f4f6',
     darkGray: '#b0b8c1',
+    disabledGray: '#d1d5da',
     blueGray: '#6A7F9A',
     border: '#f0f0f0',
     primary: '#4096ff',

@@ -53,7 +53,7 @@ const TeamAddDrawer2 = ({ name, setName }) => {
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>
-            <Title>팀 이름을 지어요</Title>
+            <Title>팀 이름을 지어요 🔖</Title>
             <StyledInput
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -78,9 +78,10 @@ const Title = styled.span`
 
 const StyledInput = styled(Input)`
     margin: 4rem 0;
+    padding-left: 1.5rem;
     font-size: 3rem;
     font-family: Bold !important;
-    color: ${({ theme }) => theme.title};
+    color: ${({ theme, value }) => value.length <= maxInput ? theme.title : theme.danger};
     border-radius: 1.5rem;
 
     & * {

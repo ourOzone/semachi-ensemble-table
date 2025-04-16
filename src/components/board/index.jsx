@@ -101,7 +101,7 @@ const Board = () => {
                                         <Ensemble
                                             key={`${dayIdx}_${time}_${ensemble.id}`}
                                             teamColorIdx={ensemble.teamColorIdx}
-                                            alpha={ensemble.isOneTime ? Math.ceil(Math.abs(new Date(ensemble.due) - new Date()) / (1000 * 3600 * 24)) >= 7 : null}
+                                            gray={ensemble.isOneTime ? Math.ceil(Math.abs(new Date(ensemble.due) - new Date()) / (1000 * 3600 * 24)) >= 7 : null}
                                             onClick={() => handleInfoModal(ensemble.id)}
                                         >
                                             {block.length < 4 && ensemble.teamName}
@@ -441,10 +441,10 @@ const Block = styled.div`
 const Ensemble = styled.div`
     width: 100%;
     height: 2.5rem;
-    background-color: ${(props) => props.theme.teamColors[props.teamColorIdx % props.theme.teamColors.length]};
+    background-color: ${({ theme, teamColorIdx, gray }) => gray ? theme.disabledGray : theme.teamColors[teamColorIdx % theme.teamColors.length]};
     color: ${({ theme }) => theme.white};
 
-    opacity: ${({ alpha }) => alpha ? 0.3 : 1};
+    /* opacity: ${({ alpha }) => alpha ? 0.3 : 1}; */
     padding: 0.125rem;
     user-select: none;
     cursor: pointer;

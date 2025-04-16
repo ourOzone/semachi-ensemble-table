@@ -31,7 +31,7 @@ const TeamAddDrawer3 = ({ desc, setDesc }) => {
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>
-            <Title>누구누구 있나요</Title>
+            <Title>누구누구 있나요 🎸</Title>
             <InputWrapper>
                 {labels.map((label, index) => (
                     <RowWrapper key={index}>
@@ -81,9 +81,10 @@ const Label = styled.label`
 `;
 
 const StyledInput = styled(Input)`
+    padding-left: 1rem;
     font-size: 2rem;
     font-family: Bold !important;
-    color: ${({ theme }) => theme.title};
+    color: ${({ theme, value }) => value.length <= maxInput ? theme.title : theme.danger};
     border-radius: 1.5rem;
     /* width: 24rem; */
 

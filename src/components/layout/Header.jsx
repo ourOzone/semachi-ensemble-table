@@ -36,7 +36,6 @@ const StyledHeader = styled(AntHeader)`
     background-color: ${({ theme }) => theme.background}CC;
     backdrop-filter: blur(1rem);           /* 블러 효과 */
     -webkit-backdrop-filter: blur(1rem);   /* Safari 지원용 */
-    /* border-bottom: 1px solid rgba(255, 255, 255, 0.3); 경계선 (선택) */
 `;
 
 const StyledButton = styled(Button)`

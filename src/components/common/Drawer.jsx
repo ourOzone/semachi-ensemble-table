@@ -5,7 +5,7 @@ import { LeftOutlined } from '@ant-design/icons';
 import { useDrawerContext } from 'context';
 import { media } from 'styles/media';
 
-const Drawer = ({ children, drawerId, closable = true, onClose = undefined }) => {
+const Drawer = ({ children, drawerId, closable = true, onClose = undefined, background = false }) => {
     const { openedDrawers, onCloseDrawer } = useDrawerContext();
 
     const getWidth = () => (window.innerWidth <= 767 ? '100%' : '767px');
@@ -40,6 +40,7 @@ const Drawer = ({ children, drawerId, closable = true, onClose = undefined }) =>
             open={openedDrawers.includes(drawerId)}
             onClose={customOnClose}
             closeIcon={<LeftOutlined />}
+            background={background} // false면 흰색, true면 하늘색
         >
             {children}
         </StyledDrawer>
@@ -47,15 +48,23 @@ const Drawer = ({ children, drawerId, closable = true, onClose = undefined }) =>
 };
 
 const StyledDrawer = styled(AntDrawer)`
-    ${media.large((props) => {
-        const isOpened = props.openedDrawers.includes(props.drawerId);
-        const isTop = props.openedDrawers[props.openedDrawers.length - 1] === props.drawerId;
+    & > * {
+        background-color: ${({ theme, background }) => background ? theme.background : theme.white};
+    }
+
+    ${media.large(({ openedDrawers, drawerId }) => {
+        const isOpened = openedDrawers.includes(drawerId);
+        const isTop = openedDrawers[openedDrawers.length - 1] === drawerId;
         return isOpened ? `
                 transition: transform 0.3s ease;
                 transform: translateX(${isTop ? '0' : '-50%'});
             `
             : '';
     })}
+
+    & .ant-drawer-body {
+        padding-top: 0;
+    }
 
     & .ant-drawer-header {
         border: none;

@@ -1,10 +1,9 @@
-import { useState } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button } from "antd";
 import { useDrawerContext } from "context";
 
-const drawerId = 'teamAdd1';
+const drawerId = 'addTeam1';
 
 const options = [
     { value: '세마치공연(정기/연말)', label: '세마치공연', desc: '정기공연, 연말공연' },
@@ -13,12 +12,12 @@ const options = [
     { value: '기타 등등', label: '기타', desc: '등등'},
 ];
 
-const TeamAddDrawer1 = ({ setType }) => {
+const AddTeamDrawer1 = ({ setType }) => {
     const { openDrawer } = useDrawerContext();
 
     const handleClick = (value) => {
         setType(value);
-        openDrawer('teamAdd2');
+        openDrawer('addTeam2');
     };
 
     const onClose = () => {
@@ -51,10 +50,10 @@ const Title = styled.span`
 `;
 
 const GridContainer = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  margin-top: 8rem;
-  gap: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    margin-top: 8rem;
+    gap: 1.5rem;
 `;
 
 const OptionButton = styled(Button)`
@@ -80,4 +79,4 @@ const Desc = styled.span`
     font-size: 1.25rem;
 `;
 
-export default TeamAddDrawer1;
+export default AddTeamDrawer1;

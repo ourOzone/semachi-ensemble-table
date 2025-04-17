@@ -412,8 +412,8 @@ const LabelWrapper = styled.div`
 const DateLabel = styled.div`
     text-align: center;
     user-select: none;
-    ${(props) => props.isToday && `
-        color: ${props.theme.primary};
+    ${({ theme, isToday }) => isToday && `
+        color: ${theme.primary};
         font-family: Bold;
     `};
 `;

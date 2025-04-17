@@ -5,7 +5,7 @@ import { Input } from "antd";
 import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
-const drawerId = 'teamAdd2';
+const drawerId = 'addTeam2';
 
 const demoName = [
     "비틀즈",
@@ -35,7 +35,7 @@ const demoName = [
 
 const maxInput = 20;
 
-const TeamAddDrawer2 = ({ name, setName }) => {
+const AddTeamDrawer2 = ({ name, setName }) => {
     const { openDrawer } = useDrawerContext();
 
     const randomDemoName = useMemo(() => {
@@ -44,7 +44,7 @@ const TeamAddDrawer2 = ({ name, setName }) => {
     }, []);
 
     const handleClick = () => {
-        openDrawer('teamAdd3');
+        openDrawer('addTeam3');
     };
 
     const onClose = () => {
@@ -93,4 +93,4 @@ const StyledInput = styled(Input)`
     }
 `;
 
-export default TeamAddDrawer2;
+export default AddTeamDrawer2;

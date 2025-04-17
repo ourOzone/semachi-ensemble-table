@@ -22,5 +22,7 @@ export const getTeams = async () => {
 
 const getTeams = () => get('/teams');
 const addTeam = (team) => post('/teams', team);
+const deleteTeam = (id) => get(`/deleteteam?id=${id}`);
+const isTeamExist = (id) => get(`/teamexist?id=${id}`);
 
-export { getTeams, addTeam };
+export { getTeams, addTeam, deleteTeam, isTeamExist };

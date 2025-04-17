@@ -39,9 +39,9 @@ const Container = styled.div`
 
 	// Drawer 열 때 트랜지션 (384는 media large 기준인 767의 절반)
 	transition: transform 0.3s ease;
-	transform: translateX(${(props) => (props.openedDrawers.length > 0 ? '-384px' : '0')});
-	${media.large((props) => `
-		transform: translateX(${props.openedDrawers.length > 0 ? '-50%' : '0'});
+	transform: translateX(${({ openedDrawers }) => (openedDrawers.length > 0 ? '-384px' : '0')});
+	${media.large(({ openedDrawers }) => `
+		transform: translateX(${openedDrawers.length > 0 ? '-50%' : '0'});
 	`)}
 
 `;

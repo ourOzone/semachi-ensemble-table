@@ -5,18 +5,18 @@ import { Input } from "antd";
 import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
-const drawerId = 'teamAdd5';
+const drawerId = 'addTeam5';
 
 const maxInput = 4;
 
-const TeamAddDrawer5 = ({ pin, setPin, handleAddTeam }) => {
+const AddTeamDrawer5 = ({ type, name, desc, pin, setPin, handleAddTeam }) => {
     const { openDrawer } = useDrawerContext();
     const [confirmPin, setConfirmPin] = useState('');
     const [error, setError] = useState(true);
 
     const handleClick = () => {
-        handleAddTeam();
-        openDrawer('teamAdd6');
+        handleAddTeam(type, name, desc, pin);
+        openDrawer('addTeam6');
     };
 
     const onClose = () => {
@@ -74,7 +74,7 @@ const TeamAddDrawer5 = ({ pin, setPin, handleAddTeam }) => {
             <OkButton
                 onClick={handleClick}
                 disabled={error}
-                complete
+                label="완료"
             />
         </Drawer>
     );
@@ -116,4 +116,4 @@ const ConfirmInput = styled(StyledInput)`
     visibility: ${({ visible }) => (visible ? 'visible' : 'hidden')};
 `;
 
-export default TeamAddDrawer5;
+export default AddTeamDrawer5;

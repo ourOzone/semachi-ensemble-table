@@ -1,21 +1,21 @@
 import React, { useCallback, useState } from 'react';
 import styled from 'styled-components';
-import { Divider } from 'antd';
+import { Divider, Alert, message, Popconfirm } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import axios from 'axios';
-import { addTeam } from 'api/teams';
-import Modal from 'react-modal';
+import { addTeam, deleteTeam, isTeamExist } from 'api/teams';
 import { Radio } from '@mui/material';
 import { useFetchContext, useDrawerContext } from 'context';
 import { idx2hour, url } from 'constants';
 import { media } from 'styles/media';
 import { Container } from 'components/common/Container';
-import TeamAddDrawer1 from './TeamAddDrawer1';
-import TeamAddDrawer2 from './TeamAddDrawer2';
-import TeamAddDrawer3 from './TeamAddDrawer3';
-import TeamAddDrawer4 from './TeamAddDrawer4';
-import TeamAddDrawer5 from './TeamAddDrawer5';
-import TeamAddDrawer6 from './TeamAddDrawer6';
+import TeamInfoDrawer from './TeamInfoDrawer';
+import AddTeamDrawer1 from './AddTeamDrawer1';
+import AddTeamDrawer2 from './AddTeamDrawer2';
+import AddTeamDrawer3 from './AddTeamDrawer3';
+import AddTeamDrawer4 from './AddTeamDrawer4';
+import AddTeamDrawer5 from './AddTeamDrawer5';
+import AddTeamDrawer6 from './AddTeamDrawer6';
 
 const getMonthDate = (year, month) => {
     const date = new Date(year, month, 1);
@@ -59,8 +59,6 @@ function getNextDay(dayOfWeek) {
 const Teams = () => {
     const today = new Date();
 
-    const { teams, fetchData } = useFetchContext();
-    const { openDrawer } = useDrawerContext();
     const [ensembleTeamId, setEnsembleTeamId] = useState('');
     const [ensembleTeamName, setEnsembleTeamName] = useState('');
     const [ensembleDay, setEnsembleDay] = useState(0);
@@ -73,39 +71,67 @@ const Teams = () => {
     const [ensembleDueDate, setEnsembleDueDate] = useState(today.getDate());
 
     // new
+    const { teams, fetchData } = useFetchContext();
+    const { openDrawer, closeAllDrawers } = useDrawerContext();
+    // 각 state는 TeamInfo와 AddTeam 모두에 사용 (두 액션은 독립 보장)
+    const [id, setId] = useState(''); // AddTeam에는 사용 X
     const [type, setType] = useState('');
     const [name, setName] = useState('');
     const [desc, setDesc] = useState(['', '', '', '', '', '', '']); // [보컬, 기타, 베이스, 드럼, 키보드, 매니저, 소개/셋리스트]
     const [pin, setPin] = useState('');
 
-    const initAddTeamStates = useCallback(() => { // TODO 혹시 한 번만 사용하면 그냥 통합하기
-        setType('');
-        setName('');
-        setDesc(['', '', '', '', '', '', '']);
-        setPin('');
-    }, [])
+    const setAllState = useCallback((
+        id = '',
+        type = '',
+        name = '',
+        desc = ['', '', '', '', '', '', ''],
+        pin = ''
+    ) => {
+        setId(id);
+        setType(type);
+        setName(name);
+        setDesc(desc);
+        setPin(pin);
+    }, []);
 
-    const handleAddTeam = async () => {
+    const handleClickTeam = useCallback(async ({ id, type, name, desc, pin }) => {
+        try {
+            await isTeamExist(id); // 누른 팀이 이미 삭제됐으면 에러
+            setAllState(id, type, name, desc, pin);
+            openDrawer('teamInfo');
+        } catch {
+            message.error('이미 삭제된 팀이에요.');
+            fetchData();
+        }
+    }, [url, fetchData, setEnsembleTeamId, setEnsembleTeamName]);
+
+    const handleClickAddTeam = useCallback(() => {
+        openDrawer('addTeam1');
+    }, []);
+
+    const handleAddTeam = useCallback(async (type, name, desc, pin) => {
         try {
             await addTeam({ type, name, desc, pin, publishDate: new Date() });
-
             fetchData();
-            initAddTeamStates();
+            setAllState(); // 초기화
+
         } catch (err) {
             alert('팀 추가에 실패했어요. 인터넷 상태가 괜찮은데 이게 떴다면 초비상이니 빠르게 개발자나 회장에게 연락해주세요.'); // TODO 교체
         }
-    };
+    }, []);
 
-    const handleDeleteTeam = async (e, team) => {
-        e.stopPropagation();
+    const handleDeleteTeam = async (id) => {
+        // e.stopPropagation();
 
         try {
-            await axios.get(`${url}/teamexist?id=${team.id}`);
-            
-            if (!window.confirm(`"${team.name}" 팀을 삭제해요.\n진짜 삭제할래요?`)) {
-                return;
-            }
-            await axios.get(`${url}/deleteteam?id=${team.id}`);
+            await isTeamExist(id);
+            message.error('zzz')
+            // if (!window.confirm(`진짜 삭제해요?`)) {
+            //     return;
+            // }
+            // await deleteTeam(id);
+            // alert('삭제했어요');
+            // closeAllDrawers();
         }
         catch {
             alert('이미 삭제된 팀이에요.');
@@ -113,18 +139,6 @@ const Teams = () => {
 
         fetchData();
     }
-
-    const handleClickTeam = async (team) => {
-        try {
-            await axios.get(`${url}/teamexist?id=${team.id}`);
-            setEnsembleTeamId(team.id);
-            setEnsembleTeamName(team.name);
-        }
-        catch {
-            alert('이미 삭제된 팀이에요.');
-            fetchData();
-        }
-    };
 
     const handleAddEnsemble = async () => {
         let due = '';
@@ -185,188 +199,49 @@ const Teams = () => {
                         {team.name}
                     </TeamButton>
                 ))}
-                {/* <TeamAddButton onClick={() => setTeamAddModal(true)}> */}
-                <TeamAddButton onClick={() => openDrawer('teamAdd1')}>
+                <AddTeamButton onClick={handleClickAddTeam}>
                     <PlusOutlined />
                     팀 추가
-                </TeamAddButton>
-                <TeamAddDrawer1 setType={setType} />
-                <TeamAddDrawer2 name={name} setName={setName} />
-                <TeamAddDrawer3 desc={desc} setDesc={setDesc} />
-                <TeamAddDrawer4 desc={desc} setDesc={setDesc} />
-                <TeamAddDrawer5
-                    pin={pin}
-                    setPin={setPin}
-                    handleAddTeam={handleAddTeam}
-                />
-                <TeamAddDrawer6 type={type} name={name} desc={desc} />
+                </AddTeamButton>
             </TeamsContainer>
             <StyledDivider />
             <TeamsContainer>
-                <TeamButton isEvent idx={1}>보소</TeamButton>
-                <TeamButton isEvent idx={2}>기소</TeamButton>
-                <TeamButton isEvent idx={3}>베소</TeamButton>
-                <TeamButton isEvent idx={4}>드소</TeamButton>
-                <TeamButton isEvent idx={5}>키소</TeamButton>
+                <TeamButton isEvent idx={0}>보소</TeamButton>
+                <TeamButton isEvent idx={1}>기소</TeamButton>
+                <TeamButton isEvent idx={2}>베소</TeamButton>
+                <TeamButton isEvent idx={3}>드소</TeamButton>
+                <TeamButton isEvent idx={4}>키소</TeamButton>
             </TeamsContainer>
             <TeamsContainer>
-                <TeamButton isEvent idx={0}>메인 회의</TeamButton>
-                <TeamButton isEvent idx={0}>재학생 회의</TeamButton>
-                <TeamButton isEvent idx={0}>그냥 회의</TeamButton>
+                <TeamButton isEvent idx={5}>메인 회의</TeamButton>
+                <TeamButton isEvent idx={5}>재학생 회의</TeamButton>
+                <TeamButton isEvent idx={5}>그냥 회의</TeamButton>
             </TeamsContainer>
-        
-            <Modal
-                isOpen={!!ensembleTeamId}
-                onRequestClose={() => setEnsembleTeamId('')}
-                style={modalStyle}
-                contentLabel='EnsembleAdd'
-            >
-                <ModalTitleContainer>
-                    <ModalTitle>합주 추가</ModalTitle>
-                    <ModalExitButton onClick={() => setEnsembleTeamId('')}>✕</ModalExitButton>
-                </ModalTitleContainer>
-                <ModalFormContainer>
-                    <ModalRowContainer>
-                        <ModalLabel>팀 이름</ModalLabel>
-                        <Bold>{ensembleTeamName}</Bold>
-                    </ModalRowContainer>
-                    <ModalRowContainer  style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <ModalLabel>합주 타입</ModalLabel>
-                        <RadioContainer>
-                            <RadioLabel
-                                onClick={() => setEnsembleType('유기한')}
-                            >
-                                <Radio checked={ensembleType === '유기한'} />
-                                유기한 - 지정한 공연 날짜 이후 자동으로 삭제할 거예요
-                            </RadioLabel>
-                            <RadioLabel
-                                onClick={() => setEnsembleType('무기한')}
-                            >
-                                <Radio checked={ensembleType === '무기한'} />
-                                무기한 - 알아서 수동으로 삭제해야 해요
-                            </RadioLabel>
-                            <RadioLabel
-                                onClick={() => setEnsembleType('일회성')}
-                            >
-                                <Radio checked={ensembleType === '일회성'} />
-                                일회성 - 지정한 날에 하고 나면 사라져요
-                            </RadioLabel>
-                        </RadioContainer>
-                    </ModalRowContainer>
-                    {ensembleType !== '일회성' && (
-                        <ModalRowContainer>
-                            <ModalLabel>합주 요일</ModalLabel>
-                            <Select
-                                value={ensembleDay}
-                                onChange={(e) => setEnsembleDay(Number(e.target.value))}
-                            >
-                                {['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'].map((day, idx) => (
-                                    <option key={day} value={idx}>{day}</option>
-                                ))}
-                            </Select>
-                            <ModalText highlight>&nbsp;&nbsp;{getNextDay(ensembleDay)}</ModalText>
-                        </ModalRowContainer>
-                    )}
-                    {ensembleType !== '무기한' && (
-                        <ModalRowContainer>
-                            {ensembleType === '유기한' && (<ModalLabel>공연 날짜</ModalLabel>)}
-                            {ensembleType === '일회성' && (<ModalLabel>합주 날짜</ModalLabel>)}
-                            <Select
-                                value={ensembleDueYear}
-                                onChange={(e) => setEnsembleDueYear(Number(e.target.value))}
-                            >
-                                {Array.from({ length: 2 }, (_, i) => i + today.getFullYear()).map(year => (
-                                    <option key={year} value={year}>{year}</option>
-                                ))}
-                            </Select>
-                            <ModalText>년</ModalText>
-                            <Select
-                                value={ensembleDueMonth}
-                                onChange={(e) => setEnsembleDueMonth(Number(e.target.value))}
-                            >
-                                {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
-                                    <option key={month} value={month}>{month}</option>
-                                ))}
-                            </Select>
-                            <ModalText>월</ModalText>
-                            <Select
-                                value={ensembleDueDate}
-                                onChange={(e) => setEnsembleDueDate(Number(e.target.value))}
-                            >
-                                {Array.from({ length: getMonthDate(ensembleDueYear, ensembleDueMonth) }, (_, i) => i + 1).map(date => (
-                                    <option key={date} value={date}>{date}</option>
-                                ))}
-                            </Select>
-                            <ModalText>일</ModalText>
-                            <ModalText highlight>&nbsp;&nbsp;({getDay(ensembleDueYear, ensembleDueMonth, ensembleDueDate)})</ModalText>
-                        </ModalRowContainer>
-                    )}
-                    {ensembleType === '유기한' && (<ModalText style={{color: 'red', marginTop: '2px'}}>(합주 날짜가 아니에요!!!)</ModalText>)}
-                    <ModalRowContainer> 
-                    <ModalLabel>합주 시간</ModalLabel>
-                        <Select
-                            value={ensembleStartTime}
-                            onChange={(e) => setEnsembleStartTime(Number(e.target.value))}
-                        >
-                            {[...Array(idx2hour.length).keys()].map(time => (
-                                <option key={time} value={time}>{idx2hour[time]}</option>
-                            ))}
-                        </Select>
-                        <ModalText>~</ModalText>
-                        <Select
-                            value={ensembleEndTime}
-                            onChange={(e) => setEnsembleEndTime(Number(e.target.value))}
-                        >
-                            {Array.from({ length: idx2hour.length - ensembleStartTime - 1 }, (_, i) => i + ensembleStartTime).map(time => (
-                                <option key={time} value={time}>{idx2hour[time + 1]}</option>
-                            ))}
-                        </Select>
-                    </ModalRowContainer>
-                    <ModalRowContainer style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <ModalLabel>합주실</ModalLabel>
-                        <RadioContainer>
-                            <RadioLabel
-                                onClick={() => setEnsembleRoom('동방')}
-                            >
-                                <Radio checked={ensembleRoom === '동방'} />
-                                동방
-                            </RadioLabel>
-                            <RadioLabel
-                                onClick={() => setEnsembleRoom('외부')}
-                            >
-                                <Radio checked={ensembleRoom === '외부'} />
-                                외부 합주실
-                            </RadioLabel>
-                        </RadioContainer>
-                    </ModalRowContainer>
-                    <SubmitButtonContainer>
-                        <SubmitButton onClick={handleAddEnsemble}>추가하기</SubmitButton>
-                    </SubmitButtonContainer>
-                </ModalFormContainer>
-            </Modal>
+
+            <TeamInfoDrawer
+                id={id}
+                type={type}
+                name={name}
+                desc={desc}
+                pin={pin}
+                handleDeleteTeam={handleDeleteTeam}
+                setAllState={setAllState}
+            />
+            <AddTeamDrawer1 setType={setType} />
+            <AddTeamDrawer2 name={name} setName={setName} />
+            <AddTeamDrawer3 desc={desc} setDesc={setDesc} />
+            <AddTeamDrawer4 desc={desc} setDesc={setDesc} />
+            <AddTeamDrawer5
+                type={type}
+                name={name}
+                desc={desc}
+                pin={pin}
+                setPin={setPin}
+                handleAddTeam={handleAddTeam}
+            />
+            <AddTeamDrawer6 type={type} name={name} desc={desc} />
         </Container>
     )
-};
-
-const modalStyle = {
-    content: {
-        top: '50%',
-        left: '50%',
-        right: 'auto',
-        bottom: 'auto',
-        marginRight: '-50%',
-        transform: 'translate(-50%, -50%)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '90%',
-        maxWidth: '720px',
-        padding: '24px',
-        border: 'none',
-        borderRadius: '40px',
-        backgroundColor: '#f5f8ff',
-        boxShadow: '0px 0px 16px rgba(0, 0, 0, 0.1)'
-    }
 };
 
 const TeamsContainer = styled.div`
@@ -382,9 +257,9 @@ const TeamButton = styled.div`
     display: flex;
     align-items: center;
     margin: 0.5rem 0 0 0.5rem;
-    background-color: ${(props) => props.isEvent ? 
-        props.theme.eventColors[props.idx] : 
-        props.theme.teamColors[props.idx % props.theme.teamColors.length]
+    background-color: ${({ theme, isEvent, idx }) => isEvent ? 
+        theme.eventColors[idx] : 
+        theme.teamColors[idx % theme.teamColors.length]
     };
     padding: 0.75rem 1.5rem;
     border-radius: 100rem;
@@ -393,9 +268,9 @@ const TeamButton = styled.div`
     cursor: pointer;
     user-select: none;
     border: 0.0625rem solid ${({ theme }) => theme.border};
-    box-shadow: 0 0.25rem 0.125rem ${(props) => props.isEvent ? 
-        props.theme.eventColors[props.idx] : 
-        props.theme.teamColors[props.idx % props.theme.teamColors.length]
+    box-shadow: 0 0.25rem 0.125rem ${({ theme, isEvent, idx }) => isEvent ? 
+        theme.eventColors[idx] : 
+        theme.teamColors[idx % theme.teamColors.length]
     }33;
 
     opacity: 1;
@@ -406,7 +281,7 @@ const TeamButton = styled.div`
     }
 `;
 
-const TeamAddButton = styled(TeamButton)`
+const AddTeamButton = styled(TeamButton)`
     background-color: ${({ theme }) => theme.white};
     color: ${({ theme }) => theme.black};
     border: 0.0625rem dashed ${({ theme }) => theme.primary};
@@ -417,259 +292,6 @@ const TeamAddButton = styled(TeamButton)`
         font-size: 1.25rem;
         margin-right: 0.5rem;
     }
-`;
-
-// 이 밑으로 전부 모달
-
-const ModalTitleContainer = styled.div`
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 12px 24px;
-    width: 100%;
-
-    ${media.large`
-        padding: 0 4px 12px;
-    `}
-`;
-
-const ModalTitle = styled.div`
-    flex: 1;
-    margin: 0;
-    font-family: Bold;
-    font-size: 1.5rem;
-    color: ${({ theme }) => theme.title};
-    user-select: none;
-    text-align: center;
-`;
-
-const ModalExitButton = styled.button`
-    background: none;
-    border: none;
-    user-select: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-`;
-
-const ModalFormContainer = styled.div`
-    display: flex;
-    flex-direction: column;
-    background-color: ${({ theme }) => theme.white};
-    border-radius: 40px;
-    padding: 24px;
-    padding-top: 8px;
-    width: 100%;
-    ${media.large`
-        padding: 24px 24px 8px;
-    `}
-`;
-
-const ModalLabel = styled.div`
-    font-size: 1.25rem;
-    user-select: none;
-    min-width: 84px;
-    @media (max-width: 360px) {
-    min-width: 64px;
-    }
-    @media (max-width: 360px) {
-    min-width: 52px;
-    }
-`;
-
-const ModalInput = styled.input`
-    resize: none;
-    border: none;
-    overflow: hidden;
-    margin: 16px 24px 32px;
-    padding: 16px;
-    background-color: ${({ theme }) => theme.background};
-    border-radius: 16px;
-
-    &:focus {
-        outline: 2px solid ${({ theme }) => theme.primary};
-    }
-
-    ${media.large`
-        margin: 8px 0 16px;
-        padding: 8px 16px;
-    `}
-`;
-
-const RadioContainer = styled.div`
-    display: flex;
-    flex-direction: column;
-    margin: 16px 16px 0 16px;
-
-    ${media.large`
-        margin: 8px 8px 0 0;
-    `}
-`;
-
-const RadioLabel = styled.div`
-    display: flex;
-    align-items: center;
-    user-select: none;
-    cursor: pointer;
-`;
-
-const SubmitButtonContainer = styled.div`
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    margin: 16px 0;
-`;
-
-const SubmitButton = styled.div`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 160px;
-    background-color: ${({ theme }) => theme.primary};
-    padding: 8px 16px;
-    border-radius: 100px;
-    font-size: 1.25rem;
-    color: ${({ theme }) => theme.white};
-    user-select: none;
-    cursor: pointer;
-
-    ${({ disabled }) => disabled && `
-        background-color: #cccccc;
-        cursor: default;
-    `}
-`;
-
-const ModalRowContainer = styled.div`
-    display: flex;
-    align-items: center;
-    margin-top: 16px;
-`;
-
-const Bold = styled.div`
-    font-family: Bold;
-    font-size: 1.25rem;
-    margin-left: 16px;
-    user-select: none;
-
-    ${media.large`
-        margin-left: 0;
-    `}
-`;
-
-const Select = styled.select`
-    margin: 0 8px;
-    padding: 4px 8px;
-    border: none;
-    background-color: ${({ theme }) => theme.background};
-    border-radius: 8px;
-    cursor: pointer;
-    appearance: none;
-    text-align: center;
-    user-select: none;
-
-    &:focus {
-        outline: 2px solid ${({ theme }) => theme.primary};
-    }
-    ${media.large`
-        margin: 0 2px;
-        padding: 0 4px;
-    `}
-`;
-
-const ModalText = styled.div`
-    user-select: none;
-    ${props => props.highlight && `
-        color: ${props.theme.primary};
-    `}
-`;
-
-const DescContainer = styled.div`
-    display: flex;
-    width: 100%;
-    padding-left: 16px;
-    margin-bottom: 16px;
-    ${media.large`
-        padding-left: 4px;
-        margin-bottom: 0;
-    `}
-`;
-
-const DescLeftSection = styled.div`
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding-right: 8px;
-`;
-
-const DescRightSection = styled.div`
-    flex: 1;
-    padding-right: 24px;
-
-    ${media.large`
-        padding-right: 0;
-    `}
-`;
-
-const LabelContentPair = styled.div`
-    display: flex;
-    margin-bottom: 8px;
-`;
-
-const DescLabel = styled.div`
-    display: flex;
-    align-items: center;
-    font-size: 1.25rem;
-    user-select: none;
-    min-width: 60px;
-
-    ${media.large`
-        min-width: 40px;
-    `}
-    ${media.large`
-        min-width: 32px;
-    `}
-`;
-
-const DescInput = styled.input`
-    resize: none;
-    border: none;
-    overflow: hidden;
-    padding: 8px 12px;
-    background-color: ${({ theme }) => theme.background};
-    border-radius: 16px;
-    width: 160px;
-
-    &:focus {
-        outline: 2px solid ${({ theme }) => theme.primary};
-    }
-
-    ${media.large`
-        width: 80px;
-    `}
-
-    ${media.small`
-        width: 80px;
-    `}
-`;
-
-const SetlistTextarea = styled.textarea`
-    resize: none;
-    border: none;
-    width: 100%;
-    height: 204px;
-    margin-top: 16px;
-    padding: 16px;
-    background-color: ${({ theme }) => theme.background};
-    border-radius: 16px;
-    
-    &:focus {
-        outline: 2px solid ${({ theme }) => theme.primary};
-    }
-
-    ${media.large`
-        padding: 8px 16px;
-        margin: 8px 0 16px;
-        height: 188px;
-    `}
 `;
 
 export default Teams;

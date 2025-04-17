@@ -1,9 +1,12 @@
 import styled from 'styled-components';
 import { Button } from 'antd';
 
-const OkButton = ({ disabled, skip, complete, ...props }) => {
-    const label = skip ? '건너뛰기' : complete ? '완료' : '확인';
-    return (<StyledButton type="primary" visible={disabled} {...props}>{label}</StyledButton>)
+const OkButton = ({ disabled, label = '확인', ...props }) => {
+    return (
+        <Wrapper>
+            <StyledButton type="primary" visible={disabled} {...props}>{label}</StyledButton>
+        </Wrapper>
+    )
 };
 
 const StyledButton = styled(Button)`
@@ -19,6 +22,12 @@ const StyledButton = styled(Button)`
     transition: opacity 0.3s ease, visibility 0.3s ease;
     opacity: ${({ visible }) => (visible ? 0 : 1)};
     visibility: ${({ visible }) => (visible ? 'hidden' : 'visible')};
+`;
+
+const Wrapper = styled.div`
+    display: flex;
+    justify-content: center;
+    width: 100%;
 `;
 
 export default OkButton;

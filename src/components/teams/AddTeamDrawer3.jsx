@@ -5,39 +5,39 @@ import { Input } from "antd";
 import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
-const drawerId = 'teamAdd3';
+const drawerId = 'addTeam3';
 
 const maxInput = 12;
 
-const TeamAddDrawer3 = ({ desc, setDesc }) => {
+const AddTeamDrawer3 = ({ desc, setDesc }) => {
     const { openDrawer } = useDrawerContext();
 
-    const handleChange = (index, value) => {
+    const handleChange = (idx, value) => {
         const newDesc = [...desc];
-        newDesc[index] = value;
+        newDesc[idx] = value;
         setDesc(newDesc);
     };
 
-    const labels = ['보컬', '기타(들)', '베이스', '드럼', '키보드', '매니저(들)'];
+    const labels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
     const onClose = () => {
         setDesc(['', '', '', '', '', '', '']);
     }
 
     const handleClick = () => {
-        openDrawer('teamAdd4');
+        openDrawer('addTeam4');
     };
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>
             <Title>누구누구 있나요 🎸</Title>
             <InputWrapper>
-                {labels.map((label, index) => (
-                    <RowWrapper key={index}>
-                        <Label>{label}</Label>
+                {labels.map((label, idx) => (
+                    <RowWrapper key={idx}>
+                        <Label idx={idx}>{label}</Label>
                         <StyledInput
-                            value={desc[index]}
-                            onChange={(e) => handleChange(index, e.target.value)}
+                            value={desc[idx]}
+                            onChange={(e) => handleChange(idx, e.target.value)}
                             count={{
                                 show: true,
                                 max: maxInput,
@@ -49,7 +49,7 @@ const TeamAddDrawer3 = ({ desc, setDesc }) => {
             <OkButton
                 onClick={handleClick}
                 disabled={desc.slice(0, 6).some((v) => v.length > 12)}
-                skip={desc.slice(0, 6).every((v) => v.trim() === '')}
+                label={desc.slice(0, 6).every((v) => v.trim() === '') ? '다음에 쓸래요' : '확인'}
             />
         </Drawer>
       );      
@@ -75,8 +75,15 @@ const RowWrapper = styled.div`
 `;
 
 const Label = styled.label`
-    font-size: 1.5rem;
-    width: 10rem;
+    font-size: 2rem;
+    font-family: Bold;
+    min-width: 10rem;
+    background-color: ${({ theme, idx }) => theme.eventColors[idx]};
+    border-radius: 1rem;
+    padding: 0.5rem;
+    color: white;
+    text-align: center;
+    box-shadow: 0 0.25rem 0.125rem ${({ theme, isEvent, idx }) => theme.eventColors[idx]}33;
 `;
 
 const StyledInput = styled(Input)`
@@ -96,4 +103,4 @@ const StyledInput = styled(Input)`
     }
 `;
 
-export default TeamAddDrawer3;
+export default AddTeamDrawer3;

@@ -6,10 +6,10 @@ import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 const { TextArea } = Input;
 
-const drawerId = 'teamAdd4';
+const drawerId = 'addTeam4';
 const maxInput = 200;
 
-const TeamAddDrawer4 = ({ desc, setDesc }) => {
+const AddTeamDrawer4 = ({ desc, setDesc }) => {
     const { openDrawer } = useDrawerContext();
     const text = desc[6] || '';
 
@@ -28,7 +28,7 @@ const TeamAddDrawer4 = ({ desc, setDesc }) => {
     };
 
     const handleClick = () => {
-        openDrawer('teamAdd5');
+        openDrawer('addTeam5');
     };
 
     return (
@@ -43,7 +43,7 @@ const TeamAddDrawer4 = ({ desc, setDesc }) => {
             <OkButton
                 onClick={handleClick}
                 disabled={text.length > maxInput}
-                skip={text.trim() === ''}
+                label={text.trim() === '' ? '다음에 쓸래요' : '확인'}
             />
         </Drawer>
     );
@@ -72,4 +72,4 @@ const StyledTextArea = styled(TextArea)`
     }
 `;
 
-export default TeamAddDrawer4;
+export default AddTeamDrawer4;

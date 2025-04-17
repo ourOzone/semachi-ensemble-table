@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
-import { useCustomContext } from "context";
+import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
 const drawerId = 'teamAdd5';
@@ -10,22 +10,31 @@ const drawerId = 'teamAdd5';
 const maxInput = 4;
 
 const TeamAddDrawer5 = ({ pin, setPin }) => {
-    const { openDrawer } = useCustomContext();
+    const { openDrawer, init } = useDrawerContext();
     const [confirmPin, setConfirmPin] = useState('');
     const [error, setError] = useState(true);
 
     const handleClick = () => {
+        // TODO post 함수
+        // 성공 시
+        init();
+
+        // setTeamAddName('');
+        // setTeamAddDesc(['', '', '', '', '', '', '']);
+        // setTeamAddType('신입-정기/연말공연');
         openDrawer('teamAdd6');
     };
 
     const onClose = () => {
         setPin('');
+        setConfirmPin('');
+        setError(true);
     }
 
     const handlePinChange = (e) => {
         setConfirmPin('');
         const numeric = e.target.value.replace(/\D/g, '');
-        if (numeric.length <= 4) {
+        if (numeric.length <= maxInput) {
             setPin(numeric);
             setError(true);
         }
@@ -33,7 +42,7 @@ const TeamAddDrawer5 = ({ pin, setPin }) => {
 
     const handleConfirmChange = (e) => {
         const numeric = e.target.value.replace(/\D/g, '');
-        if (numeric.length <= 4) {
+        if (numeric.length <= maxInput) {
             setConfirmPin(numeric);
 
             if (pin === numeric) {
@@ -63,7 +72,7 @@ const TeamAddDrawer5 = ({ pin, setPin }) => {
                     inputMode="numeric"
                     controls={false}
                     placeholder="한 번 더"
-                    visible={pin.length === 4}
+                    visible={pin.length === maxInput}
                     error={error}
                     status={confirmPin.length === 4 && error ? 'error' : null}
                 />
@@ -71,6 +80,7 @@ const TeamAddDrawer5 = ({ pin, setPin }) => {
             <OkButton
                 onClick={handleClick}
                 disabled={error}
+                complete
             />
         </Drawer>
     );
@@ -105,7 +115,7 @@ const StyledInput = styled(Input)`
 `;
 
 const ConfirmInput = styled(StyledInput)`
-    color: ${({ theme, value, error }) => value.length === 4 && error ? theme.danger : theme.title};
+    color: ${({ theme, value, error }) => value.length === maxInput && error ? theme.danger : theme.title};
 
     transition: opacity 0.3s ease, visibility 0.3s ease;
     opacity: ${({ visible }) => (visible ? 1 : 0)};

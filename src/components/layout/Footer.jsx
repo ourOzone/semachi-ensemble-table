@@ -18,7 +18,7 @@ const Container = styled.div`
 `;
 
 const FooterText = styled.div`
-    color: ${({ theme }) => theme.gray};
+    color: ${({ theme }) => theme.darkGray};
 `;
 
 export default Footer;

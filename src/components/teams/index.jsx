@@ -5,7 +5,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import Modal from 'react-modal';
 import { Radio } from '@mui/material';
-import { useCustomContext } from 'context';
+import { useDataContext, useDrawerContext } from 'context';
 import { idx2hour, url } from 'constants';
 import { media } from 'styles/media';
 import { Container } from 'components/common/Container';
@@ -14,6 +14,7 @@ import TeamAddDrawer2 from './TeamAddDrawer2';
 import TeamAddDrawer3 from './TeamAddDrawer3';
 import TeamAddDrawer4 from './TeamAddDrawer4';
 import TeamAddDrawer5 from './TeamAddDrawer5';
+import TeamAddDrawer6 from './TeamAddDrawer6';
 
 const getMonthDate = (year, month) => {
     const date = new Date(year, month, 1);
@@ -57,7 +58,8 @@ function getNextDay(dayOfWeek) {
 const Teams = () => {
     const today = new Date();
 
-    const { teams, getEnsembles, openDrawer, init } = useCustomContext();
+    const { teams, fetchData } = useDataContext();
+    const { openDrawer } = useDrawerContext();
     const [teamAddModal, setTeamAddModal] = useState(false);
     const [teamAddName, setTeamAddName] = useState('');
     const [teamAddDesc, setTeamAddDesc] = useState(['', '', '', '', '', '', '']);
@@ -92,7 +94,7 @@ const Teams = () => {
             publishDate: new Date()
         });
 
-        init();
+        fetchData();
 
         setTeamAddName('');
         setTeamAddDesc(['', '', '', '', '', '', '']);
@@ -114,7 +116,7 @@ const Teams = () => {
             alert('이미 삭제된 팀이에요.');
         }
 
-        init();
+        fetchData();
     }
 
     const handleClickTeam = async (team) => {
@@ -125,7 +127,7 @@ const Teams = () => {
         }
         catch {
             alert('이미 삭제된 팀이에요.');
-            init();
+            fetchData();
         }
     };
 
@@ -173,7 +175,7 @@ const Teams = () => {
         setEnsembleDueMonth(today.getMonth() + 1);
         setEnsembleDueDate(today.getDate());
 
-        getEnsembles(teams);
+        fetchData();
     }
 
     return (
@@ -197,7 +199,15 @@ const Teams = () => {
                 <TeamAddDrawer2 name={name} setName={setName} />
                 <TeamAddDrawer3 desc={desc} setDesc={setDesc} />
                 <TeamAddDrawer4 desc={desc} setDesc={setDesc} />
-                <TeamAddDrawer5 pin={pin} setPin={setPin} />
+                <TeamAddDrawer5
+                    pin={pin}
+                    setPin={setPin}
+                    type={type}
+                    setType={setType}
+                    name={name}
+                    setName={setName}
+                    desc={desc} />
+                <TeamAddDrawer6 type={type} name={name} desc={desc} />
             </TeamsContainer>
             <StyledDivider />
             <TeamsContainer>

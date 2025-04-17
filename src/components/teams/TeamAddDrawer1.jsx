@@ -2,7 +2,7 @@ import { useState } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button } from "antd";
-import { useCustomContext } from "context";
+import { useDrawerContext } from "context";
 
 const drawerId = 'teamAdd1';
 
@@ -14,7 +14,7 @@ const options = [
 ];
 
 const TeamAddDrawer1 = ({ setType }) => {
-    const { openDrawer } = useCustomContext();
+    const { openDrawer } = useDrawerContext();
 
     const handleClick = (value) => {
         setType(value);

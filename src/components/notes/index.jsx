@@ -1,30 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
+import { useDataContext } from 'context';
 import { url } from 'constants';
 import { Button } from 'antd';
 import { PlusCircleOutlined } from '@ant-design/icons';
 import { Container } from 'components/common/Container';
 
 const Notes = () => {
+    const { notes, fetchData } = useDataContext();
     const [text, setText] = useState('');
     const [pin, setPin] = useState('');
-    const [notes, setNotes] = useState([]);
     const textRef = useRef();
-
-    useEffect(() => {
-        getNotes();
-    }, []);
-
-    const getNotes = async () => {
-        const { data } = await axios.get(`${url}/notes`);
-        const noteList = data.map(note => ({
-            id: note._id,
-            text: note.text
-        }))
-
-        setNotes(noteList);
-    };
 
     const handleSubmit = async () => {
         try {
@@ -35,7 +22,7 @@ const Notes = () => {
             
             setText('');
             textRef.current.style.height = '6rem';
-            getNotes();
+            fetchData();
         }
         catch {
             alert('너무 많아요. 100개 까지만 돼요.');
@@ -59,7 +46,7 @@ const Notes = () => {
             alert('이미 삭제된 비고예요.');
         }
 
-        getNotes();
+        fetchData();
     };
 
     const handlePinChange = (e) => {

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
-import { useCustomContext } from "context";
+import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
 const drawerId = 'teamAdd2';
@@ -36,7 +36,7 @@ const demoName = [
 const maxInput = 20;
 
 const TeamAddDrawer2 = ({ name, setName }) => {
-    const { openDrawer } = useCustomContext();
+    const { openDrawer } = useDrawerContext();
 
     const randomDemoName = useMemo(() => {
         const randomIndex = Math.floor(Math.random() * demoName.length);

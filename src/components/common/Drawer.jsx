@@ -2,12 +2,12 @@ import styled from 'styled-components';
 import { Drawer as AntDrawer } from 'antd';
 import { LeftOutlined } from '@ant-design/icons';
 import useDrawerWidth from 'hooks/useDrawerWidth';
-import { useCustomContext } from 'context';
+import { useDrawerContext } from 'context';
 import { media } from 'styles/media';
 
 const Drawer = ({ children, drawerId, onClose = undefined }) => {
     const drawerWidth = useDrawerWidth();
-    const { openedDrawers, onCloseDrawer } = useCustomContext();
+    const { openedDrawers, onCloseDrawer } = useDrawerContext();
 
     const customOnClose = () => {
         if (onClose) {

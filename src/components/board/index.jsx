@@ -2,13 +2,13 @@ import React, { useState, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
 import Modal from 'react-modal';
-import { useCustomContext } from 'context';
+import { useDataContext } from 'context';
 import { daysKor, hours, idx2hour, url } from 'constants';
 import { media } from 'styles/media';
 import { Container } from 'components/common/Container';
 
 const Board = () => {
-    const { teams, ensembles, init, getEnsembles } = useCustomContext();
+    const { ensembles, fetchData } = useDataContext();
     const [info, setInfo] = useState(null);
     const [infoId, setInfoId] = useState('');
     const [modifyId, setModifyId] = useState('');
@@ -51,7 +51,7 @@ const Board = () => {
             
         } catch {
             alert('이미 삭제된 합주예요.');
-            getEnsembles(teams);
+            fetchData();
         }
     };
 
@@ -61,7 +61,7 @@ const Board = () => {
         }
 
         await axios.get(`${url}/deleteensemble?id=${id}`);
-        getEnsembles(teams);
+        fetchData();
         
         setInfo(null);
     };
@@ -72,7 +72,7 @@ const Board = () => {
             desc: modifyDesc
         });
 
-        init();
+        fetchData();
         setModifyId('');
         setModifyName('');
         setModifyDesc(['', '', '', '', '', '', '']);

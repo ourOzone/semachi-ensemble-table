@@ -1,8 +1,9 @@
 import styled from 'styled-components';
 import { Button } from 'antd';
 
-const OkButton = ({ disabled, skip, ...props }) => {
-    return (<StyledButton type="primary" visible={disabled} {...props}>{skip ? '건너뛰기' : '확인'}</StyledButton>)
+const OkButton = ({ disabled, skip, complete, ...props }) => {
+    const label = skip ? '건너뛰기' : complete ? '완료' : '확인';
+    return (<StyledButton type="primary" visible={disabled} {...props}>{label}</StyledButton>)
 };
 
 const StyledButton = styled(Button)`

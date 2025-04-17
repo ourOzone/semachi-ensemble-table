@@ -2,7 +2,7 @@ import { useState } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
-import { useCustomContext } from "context";
+import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
 const drawerId = 'teamAdd3';
@@ -10,8 +10,7 @@ const drawerId = 'teamAdd3';
 const maxInput = 12;
 
 const TeamAddDrawer3 = ({ desc, setDesc }) => {
-    const { openDrawer } = useCustomContext();
-    const [name, setName] = useState('');
+    const { openDrawer } = useDrawerContext();
 
     const handleChange = (index, value) => {
         const newDesc = [...desc];

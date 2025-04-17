@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import styled, { ThemeProvider } from 'styled-components';
-import { useDataContext, useDrawerContext } from 'context';
+import styled from 'styled-components';
+import { useFetchContext, useDrawerContext } from 'context';
 import Header from 'components/layout/Header';
 import Footer from 'components/layout/Footer';
 import Teams from 'components/teams';
@@ -9,7 +9,7 @@ import Notes from 'components/notes';
 import { media } from 'styles/media';
 
 function App() {
-	const { fetchData } = useDataContext();
+	const { fetchData } = useFetchContext();
     const { openedDrawers } = useDrawerContext();
 
     useEffect(() => {

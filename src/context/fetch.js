@@ -1,29 +1,19 @@
 import React, { createContext, useState, useCallback } from 'react';
-import axios from 'axios';
-import { url } from 'constants';
+import { getTeams } from 'api/teams';
+import { getEnsembles } from 'api/ensembles';
+import { getNotes } from 'api/notes';
 
-const DataContext = createContext();
+const FetchContext = createContext();
 
-function DataContextProvider({ children }) {
+function FetchContextProvider({ children }) {
     const [teams, setTeams] = useState([]);
     const [ensembles, setEnsembles] = useState([]);
     const [notes, setNotes] = useState([]);
 
-    // API 호출 (TODO: 커스텀 훅 또는 react-query 적용 예정)
-    const getData = useCallback(async (endpoint) => {
-        try {
-            const { data } = await axios.get(`${url}/${endpoint}`);
-            return data;
-        } catch (error) {
-            console.error(`Failed to fetch ${endpoint}:`, error);
-            return [];
-        }
-    }, []);
-
     // 화면 전체 fetching 하는 함수
     const fetchData = useCallback(async () => {
         // teams fetch
-        const teamsRaw = await getData('teams');
+        const teamsRaw = await getTeams();
         const teamsData = teamsRaw.map(({ _id, type, name, desc }) => ({
             id: _id,
             type,
@@ -33,8 +23,8 @@ function DataContextProvider({ children }) {
         setTeams(teamsData);
         
         // ensembles fetch
-        const ensemblesRaw = await getData('ensembles');
-        const blocks = Array.from({ length: 7 }, () => Array.from({ length: 30 }, () => [])); // 직관적으로 blocks로 표기
+        const ensemblesRaw = await getEnsembles();
+        const blocks = Array.from({ length: 7 }, () => Array.from({ length: 30 }, () => [])); // 직관적으로 blocks로 표기 (7 x 30 사이즈 2차원 배열)
         
         ensemblesRaw.forEach(({ _id, teamId, teamName, startTime, endTime, day, room, type, due }) => {
             for (let hour = startTime; hour <= endTime; hour++) {
@@ -52,7 +42,7 @@ function DataContextProvider({ children }) {
         setEnsembles(blocks);
 
         // notes fetch
-        const notesRaw = await getData('notes');
+        const notesRaw = await getNotes();
         const notesData = notesRaw.map(({ _id, text }) => ({
             id: _id,
             text,
@@ -61,13 +51,13 @@ function DataContextProvider({ children }) {
 
         // TODO 공지 추가
 
-    }, [getData]);
+    }, []);
 
     return (
-        <DataContext.Provider value={{ teams, ensembles, notes, fetchData }}>
+        <FetchContext.Provider value={{ teams, ensembles, notes, fetchData }}>
             {children}
-        </DataContext.Provider>
+        </FetchContext.Provider>
     );
 }
 
-export { DataContextProvider, DataContext };
+export { FetchContextProvider, FetchContext };

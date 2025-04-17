@@ -1,14 +1,14 @@
 import React, { useState, useRef } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import { useDataContext } from 'context';
+import { useFetchContext } from 'context';
 import { url } from 'constants';
 import { Button } from 'antd';
 import { PlusCircleOutlined } from '@ant-design/icons';
 import { Container } from 'components/common/Container';
 
 const Notes = () => {
-    const { notes, fetchData } = useDataContext();
+    const { notes, fetchData } = useFetchContext();
     const [text, setText] = useState('');
     const [pin, setPin] = useState('');
     const textRef = useRef();

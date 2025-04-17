@@ -7,10 +7,10 @@ import { useDrawerContext } from "context";
 const drawerId = 'teamAdd1';
 
 const options = [
-    { value: 'regular', label: '세마치공연', desc: '정기공연, 연말공연' },
-    { value: 'internal', label: '교내공연', desc: '축제, 버스킹'},
-    { value: 'external', label: '외부공연', desc: '연합공연, 대외공연'},
-    { value: 'etc', label: '기타', desc: '등등'},
+    { value: '세마치공연(정기/연말)', label: '세마치공연', desc: '정기공연, 연말공연' },
+    { value: '교내공연(축제/버스킹)', label: '교내공연', desc: '축제, 버스킹'},
+    { value: '외부공연(연합/대외)', label: '외부공연', desc: '연합공연, 대외공연'},
+    { value: '기타 등등', label: '기타', desc: '등등'},
 ];
 
 const TeamAddDrawer1 = ({ setType }) => {

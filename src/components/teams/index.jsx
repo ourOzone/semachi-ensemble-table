@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import styled from 'styled-components';
 import { Divider } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import { addTeam } from 'api/teams';
 import Modal from 'react-modal';
 import { Radio } from '@mui/material';
-import { useDataContext, useDrawerContext } from 'context';
+import { useFetchContext, useDrawerContext } from 'context';
 import { idx2hour, url } from 'constants';
 import { media } from 'styles/media';
 import { Container } from 'components/common/Container';
@@ -58,12 +59,8 @@ function getNextDay(dayOfWeek) {
 const Teams = () => {
     const today = new Date();
 
-    const { teams, fetchData } = useDataContext();
+    const { teams, fetchData } = useFetchContext();
     const { openDrawer } = useDrawerContext();
-    const [teamAddModal, setTeamAddModal] = useState(false);
-    const [teamAddName, setTeamAddName] = useState('');
-    const [teamAddDesc, setTeamAddDesc] = useState(['', '', '', '', '', '', '']);
-    const [teamAddType, setTeamAddType] = useState('신입-정기/연말공연');
     const [ensembleTeamId, setEnsembleTeamId] = useState('');
     const [ensembleTeamName, setEnsembleTeamName] = useState('');
     const [ensembleDay, setEnsembleDay] = useState(0);
@@ -81,24 +78,22 @@ const Teams = () => {
     const [desc, setDesc] = useState(['', '', '', '', '', '', '']); // [보컬, 기타, 베이스, 드럼, 키보드, 매니저, 소개/셋리스트]
     const [pin, setPin] = useState('');
 
+    const initAddTeamStates = useCallback(() => { // TODO 혹시 한 번만 사용하면 그냥 통합하기
+        setType('');
+        setName('');
+        setDesc(['', '', '', '', '', '', '']);
+        setPin('');
+    }, [])
+
     const handleAddTeam = async () => {
-        if (!teamAddName) {
-            return;
+        try {
+            await addTeam({ type, name, desc, pin, publishDate: new Date() });
+
+            fetchData();
+            initAddTeamStates();
+        } catch (err) {
+            alert('팀 추가에 실패했어요. 인터넷 상태가 괜찮은데 이게 떴다면 초비상이니 빠르게 개발자나 회장에게 연락해주세요.'); // TODO 교체
         }
-        setTeamAddModal(false);
-        
-        await axios.post(`${url}/teams`, {
-            name: teamAddName,
-            desc: teamAddDesc,
-            type: teamAddType,
-            publishDate: new Date()
-        });
-
-        fetchData();
-
-        setTeamAddName('');
-        setTeamAddDesc(['', '', '', '', '', '', '']);
-        setTeamAddType('신입-정기/연말공연');
     };
 
     const handleDeleteTeam = async (e, team) => {
@@ -202,11 +197,8 @@ const Teams = () => {
                 <TeamAddDrawer5
                     pin={pin}
                     setPin={setPin}
-                    type={type}
-                    setType={setType}
-                    name={name}
-                    setName={setName}
-                    desc={desc} />
+                    handleAddTeam={handleAddTeam}
+                />
                 <TeamAddDrawer6 type={type} name={name} desc={desc} />
             </TeamsContainer>
             <StyledDivider />
@@ -222,179 +214,7 @@ const Teams = () => {
                 <TeamButton isEvent idx={0}>재학생 회의</TeamButton>
                 <TeamButton isEvent idx={0}>그냥 회의</TeamButton>
             </TeamsContainer>
-            
-
-
-
-            <Modal
-                isOpen={!!teamAddModal}
-                onRequestClose={() => setTeamAddModal(false)}
-                style={modalStyle}
-                contentLabel='TeamAdd'
-            >
-                <ModalTitleContainer>
-                    <ModalTitle>팀 추가</ModalTitle>
-                    <ModalExitButton onClick={() => setTeamAddModal(false)}>✕</ModalExitButton>
-                </ModalTitleContainer>
-                <ModalFormContainer style={{ paddingTop: '24px' }}>
-                    <ModalLabel>팀 이름</ModalLabel>
-                    <ModalInput
-                        value={teamAddName}
-                        onChange={e => {
-                            if (e.target.value.length <= 20) {
-                                setTeamAddName(e.target.value);
-                            }
-                        }}
-                        placeholder='팀명 입력해요 (~20 글자)'
-                    />
-                    <DescContainer>
-                        <DescLeftSection>
-                            <LabelContentPair>
-                                <DescLabel>Vo.</DescLabel>
-                                <DescInput
-                                    value={teamAddDesc[0]}
-                                    onChange={e => {
-                                        if (e.target.value.length <= 16) {
-                                            setTeamAddDesc(prev => {
-                                                const newDesc = [...prev];
-                                                newDesc[0] = e.target.value;
-                                                return newDesc;
-                                            });
-                                        }
-                                    }}
-                                    placeholder='보컬 이름'
-                                />
-                            </LabelContentPair>
-                            <LabelContentPair>
-                                <DescLabel>Gt.</DescLabel>
-                                <DescInput
-                                    value={teamAddDesc[1]}
-                                    onChange={e => {
-                                        if (e.target.value.length <= 16) {
-                                            setTeamAddDesc(prev => {
-                                                const newDesc = [...prev];
-                                                newDesc[1] = e.target.value;
-                                                return newDesc;
-                                            });
-                                        }
-                                    }}
-                                    placeholder='기타(들) 이름'
-                                />
-                            </LabelContentPair>
-                            <LabelContentPair>
-                                <DescLabel>Ba.</DescLabel>
-                                <DescInput
-                                    value={teamAddDesc[2]}
-                                    onChange={e => {
-                                        if (e.target.value.length <= 16) {
-                                            setTeamAddDesc(prev => {
-                                                const newDesc = [...prev];
-                                                newDesc[2] = e.target.value;
-                                                return newDesc;
-                                            });
-                                        }
-                                    }}
-                                    placeholder='베이스 이름'
-                                />
-                            </LabelContentPair>
-                            <LabelContentPair>
-                                <DescLabel>Dr.</DescLabel>
-                                <DescInput
-                                    value={teamAddDesc[3]}
-                                    onChange={e => {
-                                        if (e.target.value.length <= 16) {
-                                            setTeamAddDesc(prev => {
-                                                const newDesc = [...prev];
-                                                newDesc[3] = e.target.value;
-                                                return newDesc;
-                                            });
-                                        }
-                                    }}
-                                    placeholder='드럼 이름'
-                                />
-                            </LabelContentPair>
-                            <LabelContentPair>
-                                <DescLabel>Key.</DescLabel>
-                                <DescInput
-                                    value={teamAddDesc[4]}
-                                    onChange={e => {
-                                        if (e.target.value.length <= 16) {
-                                            setTeamAddDesc(prev => {
-                                                const newDesc = [...prev];
-                                                newDesc[4] = e.target.value;
-                                                return newDesc;
-                                            });
-                                        }
-                                    }}
-                                    placeholder='키보드(들) 이름'
-                                />
-                            </LabelContentPair>
-                            <LabelContentPair>
-                                <DescLabel>Mgr.</DescLabel>
-                                <DescInput
-                                    value={teamAddDesc[5]}
-                                    onChange={e => {
-                                        if (e.target.value.length <= 16) {
-                                            setTeamAddDesc(prev => {
-                                                const newDesc = [...prev];
-                                                newDesc[5] = e.target.value;
-                                                return newDesc;
-                                            });
-                                        }
-                                    }}
-                                    placeholder='매니저(들) 이름'
-                                />
-                            </LabelContentPair>
-                        </DescLeftSection>
-                        <DescRightSection>
-                            <DescLabel>소개/셋리스트</DescLabel>
-                            <SetlistTextarea
-                                value={teamAddDesc[6]}
-                                onChange={e => {
-                                    if (e.target.value.length <= 100) {
-                                        setTeamAddDesc(prev => {
-                                            const newDesc = [...prev];
-                                            newDesc[6] = e.target.value;
-                                            return newDesc;
-                                        });
-                                    }
-                                }}
-                                placeholder='팀 소개랑 선곡이랑 이것 저것 써요'
-                            />
-                        </DescRightSection>
-                    </DescContainer>
-                    <ModalLabel>팀 타입</ModalLabel>
-                    <RadioContainer>
-                        <RadioLabel
-                            onClick={() => setTeamAddType('신입-정기/연말공연')}
-                        >
-                            <Radio checked={teamAddType === '신입-정기/연말공연'} />
-                            신입-정기/연말공연
-                        </RadioLabel>
-                        <RadioLabel
-                            onClick={() => setTeamAddType('메인/재학생-정기/연말공연')}
-                        >
-                            <Radio checked={teamAddType === '메인/재학생-정기/연말공연'} />
-                            메인/재학생-정기/연말공연
-                        </RadioLabel>
-                        <RadioLabel
-                            onClick={() => setTeamAddType('신입-외부공연')}
-                        >
-                            <Radio checked={teamAddType === '신입-외부공연'} />
-                            신입-외부공연
-                        </RadioLabel>
-                        <RadioLabel
-                            onClick={() => setTeamAddType('메인/재학생-외부공연')}
-                        >
-                            <Radio checked={teamAddType === '메인/재학생-외부공연'} />
-                            메인/재학생-외부공연
-                        </RadioLabel>
-                    </RadioContainer>
-                    <SubmitButtonContainer>
-                        <SubmitButton disabled={teamAddName.length === 0} onClick={handleAddTeam}>추가하기</SubmitButton>
-                    </SubmitButtonContainer>
-                </ModalFormContainer>
-            </Modal>
+        
             <Modal
                 isOpen={!!ensembleTeamId}
                 onRequestClose={() => setEnsembleTeamId('')}

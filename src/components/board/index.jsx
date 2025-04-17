@@ -2,13 +2,13 @@ import React, { useState, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
 import Modal from 'react-modal';
-import { useDataContext } from 'context';
+import { useFetchContext } from 'context';
 import { daysKor, hours, idx2hour, url } from 'constants';
 import { media } from 'styles/media';
 import { Container } from 'components/common/Container';
 
 const Board = () => {
-    const { ensembles, fetchData } = useDataContext();
+    const { ensembles, fetchData } = useFetchContext();
     const [info, setInfo] = useState(null);
     const [infoId, setInfoId] = useState('');
     const [modifyId, setModifyId] = useState('');

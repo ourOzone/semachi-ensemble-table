@@ -9,19 +9,13 @@ const drawerId = 'teamAdd5';
 
 const maxInput = 4;
 
-const TeamAddDrawer5 = ({ pin, setPin }) => {
-    const { openDrawer, init } = useDrawerContext();
+const TeamAddDrawer5 = ({ pin, setPin, handleAddTeam }) => {
+    const { openDrawer } = useDrawerContext();
     const [confirmPin, setConfirmPin] = useState('');
     const [error, setError] = useState(true);
 
     const handleClick = () => {
-        // TODO post 함수
-        // 성공 시
-        init();
-
-        // setTeamAddName('');
-        // setTeamAddDesc(['', '', '', '', '', '', '']);
-        // setTeamAddType('신입-정기/연말공연');
+        handleAddTeam();
         openDrawer('teamAdd6');
     };
 

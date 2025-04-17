@@ -7,15 +7,19 @@ import OkButton from "components/common/OkButton";
 
 const drawerId = 'teamAdd6';
 
-const TeamAddDrawer6 = ({ pin, setPin, type, name, desc }) => {
+const TeamAddDrawer6 = ({ type, name, desc }) => {
     const { closeAllDrawers } = useDrawerContext();
 
     const handleClick = () => {
         closeAllDrawers();
     };
 
-    return (
-        <Drawer drawerId={drawerId}>
+    const onClose = () => {
+        closeAllDrawers();
+    };
+
+    return ( // TODO antd Result 이용해서 type/name/desc 표시
+        <Drawer drawerId={drawerId} closable={false} onClose={onClose}>
             <Title>끝</Title>
         </Drawer>
     );

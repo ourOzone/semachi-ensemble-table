@@ -1,5 +1,7 @@
 import React, { createContext, useState } from 'react';
 
+// Drawer의 상태는 App.jsx에서도 참조하는 등, 전역으로 관리 필요성 있어 Context로 구현
+
 const DrawerContext = createContext();
 
 function DrawerContextProvider({ children }) {

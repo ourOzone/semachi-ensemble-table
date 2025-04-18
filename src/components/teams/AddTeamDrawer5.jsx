@@ -6,7 +6,6 @@ import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
 const drawerId = 'addTeam5';
-
 const maxInput = 4;
 
 const AddTeamDrawer5 = ({ type, name, desc, pin, setPin, handleAddTeam }) => {
@@ -26,10 +25,10 @@ const AddTeamDrawer5 = ({ type, name, desc, pin, setPin, handleAddTeam }) => {
     }, [setPin]);
 
     const handlePinChange = useCallback((e) => {
-        setConfirmPin('');
         const numeric = e.target.value.replace(/\D/g, '');
         if (numeric.length <= maxInput) {
             setPin(numeric);
+            setConfirmPin('');
             setError(true);
         }
     }, [setPin]);
@@ -38,14 +37,12 @@ const AddTeamDrawer5 = ({ type, name, desc, pin, setPin, handleAddTeam }) => {
         const numeric = e.target.value.replace(/\D/g, '');
         if (numeric.length <= maxInput) {
             setConfirmPin(numeric);
-
-            if (pin === numeric) {
-                setError(false);
-            } else {
-                setError(true);
-            }
+            setError(pin !== numeric);
         }
     }, [pin]);
+
+    const isConfirmVisible = pin.length === maxInput;
+    const isConfirmError = confirmPin.length === maxInput && error;
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>
@@ -56,7 +53,6 @@ const AddTeamDrawer5 = ({ type, name, desc, pin, setPin, handleAddTeam }) => {
                     type="password"
                     onChange={handlePinChange}
                     inputMode="numeric"
-                    controls={false}
                     placeholder="숫자 4자리"
                 />
                 <ConfirmInput
@@ -64,11 +60,10 @@ const AddTeamDrawer5 = ({ type, name, desc, pin, setPin, handleAddTeam }) => {
                     type="password"
                     onChange={handleConfirmChange}
                     inputMode="numeric"
-                    controls={false}
                     placeholder="한 번 더"
-                    visible={pin.length === maxInput}
-                    error={error}
-                    status={confirmPin.length === maxInput && error ? 'error' : null}
+                    $visible={isConfirmVisible}
+                    $error={error}
+                    status={isConfirmError ? 'error' : null}
                 />
             </InputWrapper>
             <OkButton
@@ -94,7 +89,6 @@ const InputWrapper = styled.div`
     align-items: center;
 `;
 
-
 const StyledInput = styled(Input)`
     font-family: Bold !important;
     color: ${({ theme }) => theme.title};
@@ -109,11 +103,12 @@ const StyledInput = styled(Input)`
 `;
 
 const ConfirmInput = styled(StyledInput)`
-    color: ${({ theme, value, error }) => value.length === maxInput && error ? theme.danger : theme.title};
+    color: ${({ theme, $error, value }) =>
+        value?.length === maxInput && $error ? theme.danger : theme.title};
 
     transition: opacity 0.3s ease, visibility 0.3s ease;
-    opacity: ${({ visible }) => (visible ? 1 : 0)};
-    visibility: ${({ visible }) => (visible ? 'visible' : 'hidden')};
+    opacity: ${({ $visible }) => ($visible ? 1 : 0)};
+    visibility: ${({ $visible }) => ($visible ? 'visible' : 'hidden')};
 `;
 
 export default AddTeamDrawer5;

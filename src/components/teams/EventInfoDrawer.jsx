@@ -25,13 +25,9 @@ const EventInfoDrawer = ({ name, setAllState }) => {
     //     openDrawer('addTeam2');
     // };
 
-    const onClose = () => {
-        setAllState();
-    }
-
     return (
         <>
-            <Drawer drawerId={drawerId} onClose={onClose} background>
+            <Drawer drawerId={drawerId} onClose={setAllState} background>
                 <Card>
                     <Name>{name2FullName[name]}</Name>
                     <ButtonWrapper>

@@ -6,7 +6,7 @@ import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
 const { TextArea } = Input;
-const drawerId = 'addTeam4';
+const drawerId = 'updateTeam5';
 const maxInput = 200;
 const minRows = 4;
 const maxRows = 10;
@@ -16,7 +16,7 @@ const countLines = (value) => {
     return Math.min(Math.max(lines, minRows), maxRows);
 };
 
-const AddTeamDrawer4 = ({ desc, setDesc }) => {
+const UpdateTeamDrawer5 = ({ id, type, name, desc, setDesc, handleUpdateTeam }) => {
     const { openDrawer } = useDrawerContext();
 
     const text = useMemo(() => desc[6] || '', [desc]);
@@ -30,16 +30,12 @@ const AddTeamDrawer4 = ({ desc, setDesc }) => {
         setDesc(prev => [...prev.slice(0, 6), '']);
     }, [setDesc]);
 
-    const handleClick = useCallback(() => {
-        openDrawer('addTeam5');
-    }, [openDrawer]);
-
     const isOverLimit = text.length > maxInput;
-    const isEmpty = text.trim() === '';
+    // const isEmpty = text.trim() === '';
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>
-            <Title>셋리 정한 거 있나요 🎵</Title>
+            <Title>셋리가 바뀌었나요 🎵</Title>
             <StyledTextArea
                 value={text}
                 onChange={handleChange}
@@ -48,9 +44,9 @@ const AddTeamDrawer4 = ({ desc, setDesc }) => {
                 $isOverLimit={isOverLimit}
             />
             <OkButton
-                onClick={handleClick}
+                onClick={() => handleUpdateTeam(id, type, name, desc)}
                 disabled={isOverLimit}
-                label={isEmpty ? '다음에 쓸래요' : '확인'}
+                label='다 바꿨어요'
             />
         </Drawer>
     );
@@ -78,4 +74,4 @@ const StyledTextArea = styled(TextArea)`
     }
 `;
 
-export default AddTeamDrawer4;
+export default UpdateTeamDrawer5;

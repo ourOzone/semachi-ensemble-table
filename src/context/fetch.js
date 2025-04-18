@@ -22,6 +22,11 @@ function FetchContextProvider({ children }) {
         }));
         setTeams(teamsData);
         
+        // teamId → colorIndex 매핑 생성
+        const teamColorMap = Object.fromEntries(
+            teamsData.map((team, idx) => [team.id, idx])
+        );
+
         // ensembles fetch
         const ensemblesRaw = await getEnsembles();
         const blocks = Array.from({ length: 7 }, () => Array.from({ length: 30 }, () => [])); // 직관적으로 blocks로 표기 (7 x 30 사이즈 2차원 배열)
@@ -35,7 +40,7 @@ function FetchContextProvider({ children }) {
                     isExternal: room === '외부', // TODO 삭제
                     isOneTime: type === '일회성',
                     due,
-                    teamColorIdx: teamsData.findIndex(team => team.id === teamId)
+                    teamColorIdx: teamColorMap[teamId] ?? -1,
                 });
             }
         });
@@ -50,7 +55,6 @@ function FetchContextProvider({ children }) {
         setNotes(notesData);
 
         // TODO 공지 추가
-
     }, []);
 
     return (

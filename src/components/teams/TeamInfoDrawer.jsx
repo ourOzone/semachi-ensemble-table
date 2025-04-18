@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button, Divider, Segmented } from "antd";
@@ -9,18 +9,14 @@ const drawerId = 'teamInfo';
 
 const memberLabels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
-const TeamInfoDrawer = ({ id, type, name, desc, pin, handleDeleteTeam, setAllState }) => {
+const TeamInfoDrawer = ({ id, type, name, desc, setAllState }) => {
     const { openDrawer } = useDrawerContext();
     const [option, setOption] = useState('팀원');
 
-    // const handleClick = (value) => {
-    //     openDrawer('addTeam2');
-    // };
-
-    const onClose = () => {
+    const onClose = useCallback(() => {
         setOption('팀원');
         setAllState();
-    }
+    }, [setAllState]);
 
     return (
         <>
@@ -36,7 +32,7 @@ const TeamInfoDrawer = ({ id, type, name, desc, pin, handleDeleteTeam, setAllSta
                     </ButtonWrapper>
                     <ButtonWrapper>
                         <StyledButton onClick={() => openDrawer('updateTeam1')}><EditOutlined />팀 수정</StyledButton>
-                        <StyledButton danger onClick={() => handleDeleteTeam(id)}><DeleteOutlined />팀 삭제</StyledButton>
+                        <StyledButton danger onClick={() => openDrawer('deleteTeam')}><DeleteOutlined />팀 삭제</StyledButton>
                     </ButtonWrapper>
                 </Card>
                 <Card fixHeight>

@@ -1,4 +1,4 @@
-import React, { createContext, useState } from 'react';
+import React, { createContext, useState, useCallback } from 'react';
 
 // Drawer의 상태는 App.jsx에서도 참조하는 등, 전역으로 관리 필요성 있어 Context로 구현
 
@@ -8,18 +8,20 @@ function DrawerContextProvider({ children }) {
     const [openedDrawers, setOpenedDrawers] = useState([]);
 
     // Drawer의 open/close 관리 (모든 Drawer는 openedDrawers 배열 내에 자신의 drawId가 있으면 open로 판단)
-    const openDrawer = (drawId) => {
-        setOpenedDrawers([...openedDrawers, drawId]);
-    };
-    const closeAllDrawers = () => {
+    const openDrawer = useCallback((drawId) => {
+        setOpenedDrawers(prev => [...prev, drawId]);
+    }, []);
+    
+    const closeAllDrawers = useCallback(() => {
         setOpenedDrawers([]);
-    }
-    const onCloseDrawer = () => {
-        setOpenedDrawers(openedDrawers.slice(0, -1));
-    };
+    }, []);
+
+    const onCloseDrawer = useCallback(() => {
+        setOpenedDrawers(prev => prev.slice(0, -1));
+    }, []);
 
     return (
-        <DrawerContext.Provider value={{ openedDrawers, openDrawer, closeAllDrawers, onCloseDrawer }}>
+        <DrawerContext.Provider value={{ openedDrawers, openDrawer, setOpenedDrawers, closeAllDrawers, onCloseDrawer }}>
             {children}
         </DrawerContext.Provider>
     );

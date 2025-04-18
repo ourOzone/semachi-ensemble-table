@@ -3,12 +3,13 @@ import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
 import { useDrawerContext } from "context";
+import OkButton from "components/common/OkButton";
 
-const drawerId = 'updateTeam1';
+const drawerId = 'deleteTeam';
 
 const maxInput = 4;
 
-const UpdateTeamDrawer1 = ({ id, pin, setPin }) => {
+const DeleteTeamDrawer = ({ id, pin, setPin, handleDeleteTeam }) => {
     const { openDrawer } = useDrawerContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
 
@@ -27,20 +28,15 @@ const UpdateTeamDrawer1 = ({ id, pin, setPin }) => {
                 setPin(numeric);
                 // TODO PIN 판별
                 const dummy = true;
-                
-                if (dummy) {
-                    setPin('');
-                    openDrawer('updateTeam2');
-                } else {
-                    setError(true);
-                }
+
+                setError(!dummy);
             }
         }
     }, [setPin, openDrawer]);
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>
-            <Title>PIN 입력해요 🔑</Title>
+            <Title>PIN 입력해야 삭제돼요 🔑</Title>
             <InputWrapper>
                 <StyledInput
                     value={pin}
@@ -53,6 +49,8 @@ const UpdateTeamDrawer1 = ({ id, pin, setPin }) => {
                     status={pin.length === 4 && error ? 'error' : null}
                 />
             </InputWrapper>
+            
+            <OkButton onClick={() => handleDeleteTeam(id)} label="진짜 삭제해요" disabled={error || pin.length !== 4} />
         </Drawer>
     );
 };
@@ -85,4 +83,4 @@ const StyledInput = styled(Input)`
     }
 `;
 
-export default UpdateTeamDrawer1;
+export default DeleteTeamDrawer;

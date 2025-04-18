@@ -17,6 +17,11 @@ import AddTeamDrawer4 from './AddTeamDrawer4';
 import AddTeamDrawer5 from './AddTeamDrawer5';
 import AddTeamDrawer6 from './AddTeamDrawer6';
 import UpdateTeamDrawer1 from './UpdateTeamDrawer1';
+import UpdateTeamDrawer2 from './UpdateTeamDrawer2';
+import UpdateTeamDrawer3 from './UpdateTeamDrawer3';
+import UpdateTeamDrawer4 from './UpdateTeamDrawer4';
+import UpdateTeamDrawer5 from './UpdateTeamDrawer5';
+import DeleteTeamDrawer from './DeleteTeamDrawer';
 
 const eventNames1 = ['보소', '기소', '베소', '드소', '키소'];
 const eventNames2 = ['메인 회의', '재학생 회의', '그냥 회의'];
@@ -76,7 +81,7 @@ const Teams = () => {
 
     // new
     const { teams, fetchData } = useFetchContext();
-    const { openDrawer, closeAllDrawers } = useDrawerContext();
+    const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
     const [message, contextHolder] = useMessage();
     // 각 state는 TeamInfo와 AddTeam 모두에 사용 (두 액션은 독립 보장)
     const [id, setId] = useState(''); // AddTeam에는 사용 X
@@ -134,11 +139,12 @@ const Teams = () => {
         try {
             await updateTeam(id, { type, name, desc });
             fetchData();
-            setAllState();
+            message.success('잘 바꿔놨어요.');
+            setOpenedDrawers(['teamInfo']);
         } catch (err) {
             message.error('팀 수정에 실패했어요. 인터넷 상태가 괜찮은데 이게 떴다면 초비상이니 빠르게 개발자나 회장에게 연락해주세요.');
         }
-    }, [message, fetchData, setAllState]);
+    }, [message, fetchData, setOpenedDrawers]);
 
     const handleDeleteTeam = useCallback(async (id) => {
         try {
@@ -242,7 +248,6 @@ const Teams = () => {
                 name={name}
                 desc={desc}
                 pin={pin}
-                handleDeleteTeam={handleDeleteTeam}
                 setAllState={setAllState}
             />
             <EventInfoDrawer name={name} setAllState={setAllState} />
@@ -260,6 +265,18 @@ const Teams = () => {
             />
             <AddTeamDrawer6 />
             <UpdateTeamDrawer1 id={id} pin={pin} setPin={setPin} />
+            <UpdateTeamDrawer2 setType={setType} />
+            <UpdateTeamDrawer3 name={name} setName={setName} />
+            <UpdateTeamDrawer4 desc={desc} setDesc={setDesc} />
+            <UpdateTeamDrawer5
+                id={id}
+                type={type}
+                name={name}
+                desc={desc}
+                setDesc={setDesc}
+                handleUpdateTeam={handleUpdateTeam}
+            />
+            <DeleteTeamDrawer id={id} pin={pin} setPin={setPin} handleDeleteTeam={handleDeleteTeam} />
         </Container>
     )
 };

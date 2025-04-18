@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
@@ -14,27 +14,27 @@ const AddTeamDrawer5 = ({ type, name, desc, pin, setPin, handleAddTeam }) => {
     const [confirmPin, setConfirmPin] = useState('');
     const [error, setError] = useState(true);
 
-    const handleClick = () => {
+    const handleClick = useCallback(() => {
         handleAddTeam(type, name, desc, pin);
         openDrawer('addTeam6');
-    };
+    }, [handleAddTeam, type, name, desc, pin, openDrawer]);
 
-    const onClose = () => {
+    const onClose = useCallback(() => {
         setPin('');
         setConfirmPin('');
         setError(true);
-    }
+    }, [setPin]);
 
-    const handlePinChange = (e) => {
+    const handlePinChange = useCallback((e) => {
         setConfirmPin('');
         const numeric = e.target.value.replace(/\D/g, '');
         if (numeric.length <= maxInput) {
             setPin(numeric);
             setError(true);
         }
-    };
+    }, [setPin]);
 
-    const handleConfirmChange = (e) => {
+    const handleConfirmChange = useCallback((e) => {
         const numeric = e.target.value.replace(/\D/g, '');
         if (numeric.length <= maxInput) {
             setConfirmPin(numeric);
@@ -45,7 +45,7 @@ const AddTeamDrawer5 = ({ type, name, desc, pin, setPin, handleAddTeam }) => {
                 setError(true);
             }
         }
-    };
+    }, [pin]);
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>
@@ -68,12 +68,12 @@ const AddTeamDrawer5 = ({ type, name, desc, pin, setPin, handleAddTeam }) => {
                     placeholder="한 번 더"
                     visible={pin.length === maxInput}
                     error={error}
-                    status={confirmPin.length === 4 && error ? 'error' : null}
+                    status={confirmPin.length === maxInput && error ? 'error' : null}
                 />
             </InputWrapper>
             <OkButton
                 onClick={handleClick}
-                disabled={error}
+                disabled={error || confirmPin.length !== maxInput}
                 label="완료"
             />
         </Drawer>

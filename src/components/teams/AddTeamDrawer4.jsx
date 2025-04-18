@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
@@ -9,27 +9,27 @@ const { TextArea } = Input;
 const drawerId = 'addTeam4';
 const maxInput = 200;
 
+const countLines = (value) => {
+    const lines = value.split('\n').length;
+    return Math.min(Math.max(lines, 4), 10);
+};
+
 const AddTeamDrawer4 = ({ desc, setDesc }) => {
     const { openDrawer } = useDrawerContext();
     const text = desc[6] || '';
 
-    const handleChange = (e) => {
+    const handleChange = useCallback((e) => {
         const newText = e.target.value;
         setDesc([...desc.slice(0, 6), newText]);
-    };
+    }, [desc, setDesc]);
 
-    const countLines = (value) => {
-        const lines = value.split('\n').length;
-        return Math.min(Math.max(lines, 4), 10);
-    };
-
-    const onClose = () => {
+    const onClose = useCallback(() => {
         setDesc([...desc.slice(0, 6), '']);
-    };
+    }, [desc, setDesc]);
 
-    const handleClick = () => {
+    const handleClick = useCallback(() => {
         openDrawer('addTeam5');
-    };
+    }, [openDrawer]);
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>
@@ -48,7 +48,6 @@ const AddTeamDrawer4 = ({ desc, setDesc }) => {
         </Drawer>
     );
 };
-
 
 const Title = styled.span`
     font-size: 2.5rem;

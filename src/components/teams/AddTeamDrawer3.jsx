@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
@@ -6,30 +6,23 @@ import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
 const drawerId = 'addTeam3';
+const labels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
 const maxInput = 12;
 
 const AddTeamDrawer3 = ({ desc, setDesc }) => {
     const { openDrawer } = useDrawerContext();
 
-    const handleChange = (idx, value) => {
-        const newDesc = [...desc];
-        newDesc[idx] = value;
-        setDesc(newDesc);
-    };
-
-    const labels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
-
-    const onClose = () => {
-        setDesc(['', '', '', '', '', '', '']);
-    }
-
-    const handleClick = () => {
-        openDrawer('addTeam4');
-    };
+    const handleChange = useCallback((idx, value) => {
+        setDesc(prev => {
+            const newDesc = [...prev];
+            newDesc[idx] = value;
+            return newDesc;
+        });
+    }, [setDesc]);
 
     return (
-        <Drawer drawerId={drawerId} onClose={onClose}>
+        <Drawer drawerId={drawerId} onClose={() => setDesc(['', '', '', '', '', '', ''])}>
             <Title>누구누구 있나요 🎸</Title>
             <InputWrapper>
                 {labels.map((label, idx) => (
@@ -47,7 +40,7 @@ const AddTeamDrawer3 = ({ desc, setDesc }) => {
                 ))}
             </InputWrapper>
             <OkButton
-                onClick={handleClick}
+                onClick={() => openDrawer('addTeam4')}
                 disabled={desc.slice(0, 6).some((v) => v.length > 12)}
                 label={desc.slice(0, 6).every((v) => v.trim() === '') ? '다음에 쓸래요' : '확인'}
             />

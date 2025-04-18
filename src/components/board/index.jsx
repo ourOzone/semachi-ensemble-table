@@ -3,12 +3,14 @@ import styled from 'styled-components';
 import axios from 'axios';
 import Modal from 'react-modal';
 import { useFetchContext } from 'context';
+import useMessage from 'hooks/useMessage';
 import { daysKor, hours, idx2hour, url } from 'constants';
 import { media } from 'styles/media';
 import { Container } from 'components/common/Container';
 
 const Board = () => {
     const { ensembles, fetchData } = useFetchContext();
+    const [message, contextHolder] = useMessage();
     const [info, setInfo] = useState(null);
     const [infoId, setInfoId] = useState('');
     const [modifyId, setModifyId] = useState('');
@@ -50,7 +52,7 @@ const Board = () => {
             setInfoId(id);
             
         } catch {
-            alert('이미 삭제된 합주예요.');
+            message.warning('이미 삭제된 합주예요.');
             fetchData();
         }
     };
@@ -80,6 +82,7 @@ const Board = () => {
     };
     return (
         <Container row>
+            {contextHolder}
             <HourColumn>
                 {hours.map(hour => <Hour key={hour}>{hour}</Hour>)}
             </HourColumn>

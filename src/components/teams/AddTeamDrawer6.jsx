@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Result } from "antd";
@@ -7,16 +7,16 @@ import OkButton from "components/common/OkButton";
 
 const drawerId = 'addTeam6';
 
-const AddTeamDrawer6 = ({ type, name, desc }) => {
+const AddTeamDrawer6 = () => {
     const { closeAllDrawers } = useDrawerContext();
 
-    const handleClick = () => {
+    const handleClick = useCallback(() => {
         closeAllDrawers();
-    };
+    }, [closeAllDrawers]);
 
-    const onClose = () => {
+    const onClose = useCallback(() => {
         closeAllDrawers();
-    };
+    }, [closeAllDrawers]);
 
     return ( // TODO antd Result 이용해서 type/name/desc 표시
         <Drawer drawerId={drawerId} closable={false} onClose={onClose}>

@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button } from "antd";
@@ -15,32 +16,26 @@ const options = [
 const AddTeamDrawer1 = ({ setType }) => {
     const { openDrawer } = useDrawerContext();
 
-    const handleClick = (value) => {
+    const handleClick = useCallback((value) => {
         setType(value);
         openDrawer('addTeam2');
-    };
-
-    const onClose = () => {
-        setType('');
-    }
+    }, [setType, openDrawer]);
 
     return (
-        <>
-            <Drawer drawerId={drawerId} onClose={onClose}>
-                <Title>뭔 팀인가요 🤘</Title>
-                <GridContainer>
-                    {options.map((opt) => (
-                        <OptionButton
-                            key={opt.value}
-                            onClick={() => handleClick(opt.value)}
-                        >
-                            <Label>{opt.label}</Label>
-                            <Desc>{opt.desc}</Desc>
-                        </OptionButton>
-                    ))}
-                </GridContainer>
-            </Drawer>
-        </>
+        <Drawer drawerId={drawerId} onClose={() => setType('')}>
+            <Title>뭔 팀인가요 🤘</Title>
+            <GridContainer>
+                {options.map((opt) => (
+                    <OptionButton
+                        key={opt.value}
+                        onClick={() => handleClick(opt.value)}
+                    >
+                        <Label>{opt.label}</Label>
+                        <Desc>{opt.desc}</Desc>
+                    </OptionButton>
+                ))}
+            </GridContainer>
+        </Drawer>
     );
 };
 

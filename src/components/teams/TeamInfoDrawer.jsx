@@ -13,9 +13,9 @@ const TeamInfoDrawer = ({ id, type, name, desc, pin, handleDeleteTeam, setAllSta
     const { openDrawer } = useDrawerContext();
     const [option, setOption] = useState('팀원');
 
-    const handleClick = (value) => {
-        openDrawer('addTeam2');
-    };
+    // const handleClick = (value) => {
+    //     openDrawer('addTeam2');
+    // };
 
     const onClose = () => {
         setOption('팀원');
@@ -35,11 +35,11 @@ const TeamInfoDrawer = ({ id, type, name, desc, pin, handleDeleteTeam, setAllSta
                         <StyledButton><PauseOutlined />이번주 안 해요</StyledButton>
                     </ButtonWrapper>
                     <ButtonWrapper>
-                        <StyledButton><EditOutlined />팀 수정</StyledButton>
+                        <StyledButton onClick={() => openDrawer('updateTeam1')}><EditOutlined />팀 수정</StyledButton>
                         <StyledButton danger onClick={() => handleDeleteTeam(id)}><DeleteOutlined />팀 삭제</StyledButton>
                     </ButtonWrapper>
                 </Card>
-                <Card heightFix>
+                <Card fixHeight>
                     <StyledSegmented
                         block
                         options={['팀원', '셋리']}
@@ -77,7 +77,7 @@ const Card = styled.div`
     padding: 1rem;
     margin-bottom: 1rem;
     gap: 0.5rem;
-    ${({ heightFix }) => heightFix ? `height: 27.5rem` : ''};
+    ${({ fixHeight }) => fixHeight ? `height: 27.5rem` : ''};
 `;
 
 const ButtonWrapper = styled.div`
@@ -98,6 +98,7 @@ const Name = styled.span`
     font-size: 2rem;
     font-family: Bold;
     text-align: center;
+    margin-top: 0.5rem;
 `;
 
 const Type = styled.span`

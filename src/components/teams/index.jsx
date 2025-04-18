@@ -1,21 +1,25 @@
 import React, { useCallback, useState } from 'react';
 import styled from 'styled-components';
-import { Divider, Alert, message, Popconfirm } from 'antd';
+import { Divider } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import axios from 'axios';
-import { addTeam, deleteTeam, isTeamExist } from 'api/teams';
-import { Radio } from '@mui/material';
+import { addTeam, updateTeam, deleteTeam, isTeamExist } from 'api/teams';
+import useMessage from 'hooks/useMessage';
 import { useFetchContext, useDrawerContext } from 'context';
-import { idx2hour, url } from 'constants';
-import { media } from 'styles/media';
+import { url } from 'constants';
 import { Container } from 'components/common/Container';
 import TeamInfoDrawer from './TeamInfoDrawer';
+import EventInfoDrawer from './EventInfoDrawer';
 import AddTeamDrawer1 from './AddTeamDrawer1';
 import AddTeamDrawer2 from './AddTeamDrawer2';
 import AddTeamDrawer3 from './AddTeamDrawer3';
 import AddTeamDrawer4 from './AddTeamDrawer4';
 import AddTeamDrawer5 from './AddTeamDrawer5';
 import AddTeamDrawer6 from './AddTeamDrawer6';
+import UpdateTeamDrawer1 from './UpdateTeamDrawer1';
+
+const eventNames1 = ['보소', '기소', '베소', '드소', '키소'];
+const eventNames2 = ['메인 회의', '재학생 회의', '그냥 회의'];
 
 const getMonthDate = (year, month) => {
     const date = new Date(year, month, 1);
@@ -73,6 +77,7 @@ const Teams = () => {
     // new
     const { teams, fetchData } = useFetchContext();
     const { openDrawer, closeAllDrawers } = useDrawerContext();
+    const [message, contextHolder] = useMessage();
     // 각 state는 TeamInfo와 AddTeam 모두에 사용 (두 액션은 독립 보장)
     const [id, setId] = useState(''); // AddTeam에는 사용 X
     const [type, setType] = useState('');
@@ -103,11 +108,16 @@ const Teams = () => {
             message.error('이미 삭제된 팀이에요.');
             fetchData();
         }
-    }, [url, fetchData, setEnsembleTeamId, setEnsembleTeamName]);
+    }, [message, fetchData, openDrawer, setAllState]);
+
+    const handleClickEvent = useCallback((name) => {
+        setName(name);
+        openDrawer('eventInfo');
+    }, [openDrawer]);
 
     const handleClickAddTeam = useCallback(() => {
         openDrawer('addTeam1');
-    }, []);
+    }, [openDrawer]);
 
     const handleAddTeam = useCallback(async (type, name, desc, pin) => {
         try {
@@ -116,31 +126,39 @@ const Teams = () => {
             setAllState(); // 초기화
 
         } catch (err) {
-            alert('팀 추가에 실패했어요. 인터넷 상태가 괜찮은데 이게 떴다면 초비상이니 빠르게 개발자나 회장에게 연락해주세요.'); // TODO 교체
+            message.error('팀 추가에 실패했어요. 인터넷 상태가 괜찮은데 이게 떴다면 초비상이니 빠르게 개발자나 회장에게 연락해주세요.');
         }
-    }, []);
+    }, [message, fetchData, setAllState]);
 
-    const handleDeleteTeam = async (id) => {
-        // e.stopPropagation();
+    const handleUpdateTeam = useCallback(async (id, type, name, desc) => {
+        try {
+            await updateTeam(id, { type, name, desc });
+            fetchData();
+            setAllState();
+        } catch (err) {
+            message.error('팀 수정에 실패했어요. 인터넷 상태가 괜찮은데 이게 떴다면 초비상이니 빠르게 개발자나 회장에게 연락해주세요.');
+        }
+    }, [message, fetchData, setAllState]);
 
+    const handleDeleteTeam = useCallback(async (id) => {
         try {
             await isTeamExist(id);
-            message.error('zzz')
-            // if (!window.confirm(`진짜 삭제해요?`)) {
-            //     return;
-            // }
-            // await deleteTeam(id);
-            // alert('삭제했어요');
-            // closeAllDrawers();
+            // TODO PIN 입력 로직 추가
+            await deleteTeam(id);
+            message.success('삭제했어요.');
         }
         catch {
-            alert('이미 삭제된 팀이에요.');
+            message.warning('이미 삭제된 팀이에요.')
+        }
+        finally {
+            setAllState();
+            closeAllDrawers();
         }
 
         fetchData();
-    }
+    }, [closeAllDrawers, fetchData, message, setAllState]);
 
-    const handleAddEnsemble = async () => {
+    const handleAddEnsemble = async () => { // TODO 작성 완료 이후 useCallback 적용
         let due = '';
         let day = 0;
 
@@ -189,6 +207,7 @@ const Teams = () => {
 
     return (
         <Container>
+            {contextHolder}
             <TeamsContainer>
                 {teams && teams.map((team, idx) => (
                     <TeamButton
@@ -206,18 +225,17 @@ const Teams = () => {
             </TeamsContainer>
             <StyledDivider />
             <TeamsContainer>
-                <TeamButton isEvent idx={0}>보소</TeamButton>
-                <TeamButton isEvent idx={1}>기소</TeamButton>
-                <TeamButton isEvent idx={2}>베소</TeamButton>
-                <TeamButton isEvent idx={3}>드소</TeamButton>
-                <TeamButton isEvent idx={4}>키소</TeamButton>
+                {eventNames1.map((name, idx) => (
+                    <TeamButton key={name} isEvent idx={idx} onClick={() => handleClickEvent(name)}>{name}</TeamButton>
+                ))}
             </TeamsContainer>
             <TeamsContainer>
-                <TeamButton isEvent idx={5}>메인 회의</TeamButton>
-                <TeamButton isEvent idx={5}>재학생 회의</TeamButton>
-                <TeamButton isEvent idx={5}>그냥 회의</TeamButton>
+                {eventNames2.map((name) => (
+                    <TeamButton key={name} isEvent idx={5} onClick={() => handleClickEvent(name)}>{name}</TeamButton>
+                ))}
             </TeamsContainer>
 
+            {/* DRAWERS */}
             <TeamInfoDrawer
                 id={id}
                 type={type}
@@ -227,6 +245,7 @@ const Teams = () => {
                 handleDeleteTeam={handleDeleteTeam}
                 setAllState={setAllState}
             />
+            <EventInfoDrawer name={name} setAllState={setAllState} />
             <AddTeamDrawer1 setType={setType} />
             <AddTeamDrawer2 name={name} setName={setName} />
             <AddTeamDrawer3 desc={desc} setDesc={setDesc} />
@@ -239,7 +258,8 @@ const Teams = () => {
                 setPin={setPin}
                 handleAddTeam={handleAddTeam}
             />
-            <AddTeamDrawer6 type={type} name={name} desc={desc} />
+            <AddTeamDrawer6 />
+            <UpdateTeamDrawer1 id={id} pin={pin} setPin={setPin} />
         </Container>
     )
 };

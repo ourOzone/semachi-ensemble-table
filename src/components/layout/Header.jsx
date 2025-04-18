@@ -9,9 +9,6 @@ const { Header: AntHeader } = Layout;
 const Header = () => {
     const scrollPosition = useScrollPosition();
     return (
-        // <Container>
-        //     <H1>세마치 합주판</H1>
-        // </Container>
         <StyledHeader scrollPosition={scrollPosition}>
             <Title>세마치 합주판</Title>
             <ButtonWrapper>

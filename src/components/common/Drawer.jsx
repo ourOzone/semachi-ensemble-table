@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { Drawer as AntDrawer } from 'antd';
 import { LeftOutlined } from '@ant-design/icons';
@@ -21,13 +21,13 @@ const Drawer = ({ children, drawerId, closable = true, onClose = undefined, back
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    const customOnClose = () => {
+    const customOnClose = useCallback(() => {
         onCloseDrawer();
         
         if (onClose) {
             onClose();
         }
-    };
+    }, [onClose, onCloseDrawer]);
 
     return (
         <StyledDrawer

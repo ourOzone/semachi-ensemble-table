@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
 import { useFetchContext } from 'context';
+import useMessage from 'hooks/useMessage';
 import { url } from 'constants';
 import { Button } from 'antd';
 import { PlusCircleOutlined } from '@ant-design/icons';
@@ -9,6 +10,7 @@ import { Container } from 'components/common/Container';
 
 const Notes = () => {
     const { notes, fetchData } = useFetchContext();
+    const [message, contextHolder] = useMessage();
     const [text, setText] = useState('');
     const [pin, setPin] = useState('');
     const textRef = useRef();
@@ -25,7 +27,7 @@ const Notes = () => {
             fetchData();
         }
         catch {
-            alert('너무 많아요. 100개 까지만 돼요.');
+            message.error('실패했어요. (너무 많아서 그럴지도요. 100개 까지만 돼요.)');
         }
     };
 
@@ -43,7 +45,7 @@ const Notes = () => {
             const { data } = await axios.get(`${url}/deletenote?id=${id}`);
         }
         catch {
-            alert('이미 삭제된 비고예요.');
+            message.warning('이미 삭제된 글이에요.');
         }
 
         fetchData();
@@ -78,6 +80,7 @@ const Notes = () => {
                     <Button onClick={handleSubmit}>추가</Button>
                 </RightWrapper>
             </InputWrapper> */}
+            {contextHolder}
             <AddButton>
                 <PlusCircleOutlined />
                 멋진 한마디 남겨요

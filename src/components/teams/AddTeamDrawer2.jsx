@@ -1,58 +1,26 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
 import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
+import { demoName } from 'constants';
 
 const drawerId = 'addTeam2';
-
-const demoName = [
-    "비틀즈",
-    "레드제플린",
-    "롤링스톤즈",
-    "퀸",
-    "핑크플로이드",
-    "너바나",
-    "메탈리카",
-    "AC/DC",
-    "건즈앤로지스",
-    "콜드플레이",
-    "라디오헤드",
-    "레드핫칠리페퍼스",
-    "린킨파크",
-    "그린데이",
-    "비치보이스",
-    "오아시스",
-    "고릴라즈",
-    "악틱몽키즈",
-    "이매진드래곤스",
-    "스트록스",
-    "아이언메이든",
-    "마룬5",
-    "뮤즈",
-];
 
 const maxInput = 20;
 
 const AddTeamDrawer2 = ({ name, setName }) => {
     const { openDrawer } = useDrawerContext();
+    const [randomDemoName, setRandomDemoName] = useState('');
 
-    const randomDemoName = useMemo(() => {
+    useEffect(() => {
         const randomIndex = Math.floor(Math.random() * demoName.length);
-        return demoName[randomIndex];
+       setRandomDemoName(demoName[randomIndex]);
     }, []);
 
-    const handleClick = () => {
-        openDrawer('addTeam3');
-    };
-
-    const onClose = () => {
-        setName('');
-    }
-
     return (
-        <Drawer drawerId={drawerId} onClose={onClose}>
+        <Drawer drawerId={drawerId} onClose={() => setName('')}>
             <Title>팀 이름을 지어요 🔖</Title>
             <StyledInput
                 value={name}
@@ -64,7 +32,7 @@ const AddTeamDrawer2 = ({ name, setName }) => {
                 }}
             />
             <OkButton
-                onClick={handleClick}
+                onClick={() => openDrawer('addTeam3')}
                 disabled={name.length < 1 || name.length > 20}
             />
         </Drawer>

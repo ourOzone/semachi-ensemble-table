@@ -10,18 +10,22 @@ import { url } from 'constants';
 import { Container } from 'components/common/Container';
 import TeamInfoDrawer from './TeamInfoDrawer';
 import EventInfoDrawer from './EventInfoDrawer';
-import AddTeamDrawer1 from './AddTeamDrawer1';
-import AddTeamDrawer2 from './AddTeamDrawer2';
-import AddTeamDrawer3 from './AddTeamDrawer3';
-import AddTeamDrawer4 from './AddTeamDrawer4';
-import AddTeamDrawer5 from './AddTeamDrawer5';
-import AddTeamDrawer6 from './AddTeamDrawer6';
-import UpdateTeamDrawer1 from './UpdateTeamDrawer1';
-import UpdateTeamDrawer2 from './UpdateTeamDrawer2';
-import UpdateTeamDrawer3 from './UpdateTeamDrawer3';
-import UpdateTeamDrawer4 from './UpdateTeamDrawer4';
-import UpdateTeamDrawer5 from './UpdateTeamDrawer5';
+import AddTeamDrawer1 from './addTeamDrawers/AddTeamDrawer1';
+import AddTeamDrawer2 from './addTeamDrawers/AddTeamDrawer2';
+import AddTeamDrawer3 from './addTeamDrawers/AddTeamDrawer3';
+import AddTeamDrawer4 from './addTeamDrawers/AddTeamDrawer4';
+import AddTeamDrawer5 from './addTeamDrawers/AddTeamDrawer5';
+import AddTeamDrawer6 from './addTeamDrawers/AddTeamDrawer6';
+import UpdateTeamDrawer1 from './updateTeamDrawers/UpdateTeamDrawer1';
+import UpdateTeamDrawer2 from './updateTeamDrawers/UpdateTeamDrawer2';
+import UpdateTeamDrawer3 from './updateTeamDrawers/UpdateTeamDrawer3';
+import UpdateTeamDrawer4 from './updateTeamDrawers/UpdateTeamDrawer4';
+import UpdateTeamDrawer5 from './updateTeamDrawers/UpdateTeamDrawer5';
 import DeleteTeamDrawer from './DeleteTeamDrawer';
+import AddEnsembleDrawer1 from './addEnsembleDrawers/AddEnsembleDrawer1';
+import AddEnsembleDrawer2 from './addEnsembleDrawers/AddEnsembleDrawer2';
+import AddEnsembleDrawer3 from './addEnsembleDrawers/AddEnsembleDrawer3';
+// import AddEnsembleDrawer4 from './addEnsembleDrawers/AddEnsembleDrawer4';
 
 const eventNames1 = ['보소', '기소', '베소', '드소', '키소'];
 const eventNames2 = ['메인 회의', '재학생 회의', '그냥 회의'];
@@ -89,6 +93,9 @@ const Teams = () => {
     const [name, setName] = useState('');
     const [desc, setDesc] = useState(['', '', '', '', '', '', '']); // [보컬, 기타, 베이스, 드럼, 키보드, 매니저, 소개/셋리스트]
     const [pin, setPin] = useState('');
+
+    const [repeat, setRepeat] = useState(false);
+    const [startDate, setStartDate] = useState(null);
 
     const setAllState = useCallback((
         id = '',
@@ -168,12 +175,14 @@ const Teams = () => {
         let due = '';
         let day = 0;
 
+        // 무기한이면 due제한을 없애고, 아니라면 받은 날짜(유기한은 공연날짜, 일회성은 합주날짜)를 due로 설정
         if (ensembleType === '무기한') {
             due = '2099-12-31';
         } else {
             due = `${ensembleDueYear}-${String(ensembleDueMonth).padStart(2, 0)}-${String(ensembleDueDate).padStart(2, 0)}`;
 
         }
+        // 일회성이면 합주날짜의 요일을 day로 하고, 아니라면 받은 요일을 day로 설정
         if (ensembleType === '일회성') {
             const date = new Date(ensembleDueYear, ensembleDueMonth - 1, ensembleDueDate);
 
@@ -182,10 +191,12 @@ const Teams = () => {
             } else {
                 day = date.getDay() - 1;
             }
+
         } else {
             day = ensembleDay;
         }
 
+        // 팀ID, 팀명, 요일, 시작시간, 종료시간, 타입(유기한/무기한/일회성), 합주실, 합주 삭제 시간
         await axios.post(`${url}/ensembles`, {
             teamId: ensembleTeamId,
             teamName: ensembleTeamName,
@@ -210,6 +221,11 @@ const Teams = () => {
 
         fetchData();
     }
+
+    const handleSkip = useCallback((id) => {
+        // TODO skip api
+        message.success('알겠어요.');
+    }, [message]);
 
     return (
         <Container>
@@ -247,7 +263,7 @@ const Teams = () => {
                 type={type}
                 name={name}
                 desc={desc}
-                pin={pin}
+                handleSkip={handleSkip}
                 setAllState={setAllState}
             />
             <EventInfoDrawer name={name} setAllState={setAllState} />
@@ -277,6 +293,9 @@ const Teams = () => {
                 handleUpdateTeam={handleUpdateTeam}
             />
             <DeleteTeamDrawer id={id} pin={pin} setPin={setPin} handleDeleteTeam={handleDeleteTeam} />
+            <AddEnsembleDrawer1 setRepeat={setRepeat}/>
+            <AddEnsembleDrawer2 repeat={repeat} setStartDate={setStartDate} />
+            <AddEnsembleDrawer3 setStartDate={setStartDate} />
         </Container>
     )
 };

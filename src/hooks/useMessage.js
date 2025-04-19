@@ -36,6 +36,7 @@ const Content = styled.div`
     border-radius: 1rem;
     border: 1px solid ${({ type }) => borderColors[type]};
     background-color: ${({ type }) => bgColors[type]};
+    box-shadow: 0 0.25rem 0.25rem ${({ type }) => borderColors[type]}80;
 `;
 
 const useMessage = () => {

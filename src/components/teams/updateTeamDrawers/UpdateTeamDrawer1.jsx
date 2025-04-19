@@ -40,7 +40,7 @@ const UpdateTeamDrawer1 = ({ id, pin, setPin }) => {
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>
-            <Title>PIN 입력해요 🔑</Title>
+            <Title>PIN 입력해야 수정돼요 🔑</Title>
             <InputWrapper>
                 <StyledInput
                     value={pin}

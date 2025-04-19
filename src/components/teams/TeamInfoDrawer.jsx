@@ -9,7 +9,7 @@ const drawerId = 'teamInfo';
 
 const memberLabels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
-const TeamInfoDrawer = ({ id, type, name, desc, setAllState }) => {
+const TeamInfoDrawer = ({ id, type, name, desc, handleSkip, setAllState }) => {
     const { openDrawer } = useDrawerContext();
     const [option, setOption] = useState('팀원');
 
@@ -25,11 +25,11 @@ const TeamInfoDrawer = ({ id, type, name, desc, setAllState }) => {
                     <Name>{name}</Name>
                     <Type>{type}</Type>
                     <ButtonWrapper>
-                        <StyledButton type="primary"><PlusOutlined />합주 추가</StyledButton>
+                        <StyledButton type="primary" onClick={() => openDrawer('addEnsemble1')}><PlusOutlined />합주 추가</StyledButton>
                     </ButtonWrapper>
-                    <ButtonWrapper>
-                        <StyledButton><PauseOutlined />이번주 안 해요</StyledButton>
-                    </ButtonWrapper>
+                    {/* <ButtonWrapper>
+                        <StyledButton onClick={() => handleSkip(id)}><PauseOutlined />이번주 안 해요</StyledButton>
+                    </ButtonWrapper> */}
                     <ButtonWrapper>
                         <StyledButton onClick={() => openDrawer('updateTeam1')}><EditOutlined />팀 수정</StyledButton>
                         <StyledButton danger onClick={() => openDrawer('deleteTeam')}><DeleteOutlined />팀 삭제</StyledButton>

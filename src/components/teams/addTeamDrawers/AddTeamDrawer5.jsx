@@ -13,10 +13,10 @@ const AddTeamDrawer5 = ({ type, name, desc, pin, setPin, handleAddTeam }) => {
     const [confirmPin, setConfirmPin] = useState('');
     const [error, setError] = useState(true);
 
-    const handleClick = useCallback(() => {
+    const handleClick = useCallback((type, name, desc, pin) => {
         handleAddTeam(type, name, desc, pin);
         openDrawer('addTeam6');
-    }, [handleAddTeam, type, name, desc, pin, openDrawer]);
+    }, [handleAddTeam, openDrawer]);
 
     const onClose = useCallback(() => {
         setPin('');
@@ -67,7 +67,7 @@ const AddTeamDrawer5 = ({ type, name, desc, pin, setPin, handleAddTeam }) => {
                 />
             </InputWrapper>
             <OkButton
-                onClick={handleClick}
+                onClick={() => handleClick(type, name, desc, pin)}
                 disabled={error || confirmPin.length !== maxInput}
                 label="완료"
             />

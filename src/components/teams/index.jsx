@@ -3,7 +3,9 @@ import styled from 'styled-components';
 import { Divider } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import dayjs from 'dayjs';
 import { addTeam, updateTeam, deleteTeam, isTeamExist } from 'api/teams';
+import { addEnsemble } from 'api/ensembles';
 import useMessage from 'hooks/useMessage';
 import { useFetchContext, useDrawerContext } from 'context';
 import { url } from 'constants';
@@ -25,7 +27,7 @@ import DeleteTeamDrawer from './DeleteTeamDrawer';
 import AddEnsembleDrawer1 from './addEnsembleDrawers/AddEnsembleDrawer1';
 import AddEnsembleDrawer2 from './addEnsembleDrawers/AddEnsembleDrawer2';
 import AddEnsembleDrawer3 from './addEnsembleDrawers/AddEnsembleDrawer3';
-// import AddEnsembleDrawer4 from './addEnsembleDrawers/AddEnsembleDrawer4';
+import AddEnsembleDrawer4 from './addEnsembleDrawers/AddEnsembleDrawer4';
 
 const eventNames1 = ['보소', '기소', '베소', '드소', '키소'];
 const eventNames2 = ['메인 회의', '재학생 회의', '그냥 회의'];
@@ -95,7 +97,7 @@ const Teams = () => {
     const [pin, setPin] = useState('');
 
     const [repeat, setRepeat] = useState(false);
-    const [startDate, setStartDate] = useState(null); // Date (2025-05-27T00:00:00.000Z")
+    const [startDate, setStartDate] = useState(null); // dayjs (2025-05-27T00:00:00.000Z"), POST시 YYYY-MM-DD의 string으로 변환
     const [startTime, setStartTime] = useState(null); // idx값 (0 ~ 29)
     const [endTime, setEndTime] = useState(null); // idx값 (0 ~ 29)
 
@@ -104,13 +106,21 @@ const Teams = () => {
         type = '',
         name = '',
         desc = ['', '', '', '', '', '', ''],
-        pin = ''
+        pin = '',
+        repeat = false,
+        startDate = null,
+        startTime = null,
+        endTime = null,
     ) => {
         setId(id);
         setType(type);
         setName(name);
         setDesc(desc);
         setPin(pin);
+        setRepeat(repeat);
+        setStartDate(startDate);
+        setStartTime(startTime);
+        setEndTime(endTime);
     }, []);
 
     const handleClickTeam = useCallback(async ({ id, type, name, desc, pin }) => {
@@ -173,56 +183,26 @@ const Teams = () => {
         fetchData();
     }, [closeAllDrawers, fetchData, message, setAllState]);
 
-    const handleAddEnsemble = async () => { // TODO 작성 완료 이후 useCallback 적용
-        let due = '';
-        let day = 0;
+    const handleAddEnsemble = useCallback(async (id, name, repeat, startDate, startTime, endTime) => {
+        const formattedStartDate = startDate.format('YYYY-MM-DD');
 
-        // 무기한이면 due제한을 없애고, 아니라면 받은 날짜(유기한은 공연날짜, 일회성은 합주날짜)를 due로 설정
-        if (ensembleType === '무기한') {
-            due = '2099-12-31';
-        } else {
-            due = `${ensembleDueYear}-${String(ensembleDueMonth).padStart(2, 0)}-${String(ensembleDueDate).padStart(2, 0)}`;
-
+        try {
+            await addEnsemble({
+                teamId: id,
+                teamName: name,
+                day: (startDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
+                startDate: formattedStartDate,
+                startTime,
+                endTime,
+                type: repeat ? '매주 반복' : '이번 주만',
+                due: repeat ? '2099-12-31' : formattedStartDate,
+            });
+            fetchData();
+            setAllState(); // 초기화
+        } catch (err) {
+            message.error('합주 추가에 실패했어요. 인터넷 상태가 괜찮은데 이게 떴다면 초비상이니 빠르게 개발자나 회장에게 연락해주세요.');
         }
-        // 일회성이면 합주날짜의 요일을 day로 하고, 아니라면 받은 요일을 day로 설정
-        if (ensembleType === '일회성') {
-            const date = new Date(ensembleDueYear, ensembleDueMonth - 1, ensembleDueDate);
-
-            if (date.getDay() === 0) {
-                day = 6;
-            } else {
-                day = date.getDay() - 1;
-            }
-
-        } else {
-            day = ensembleDay;
-        }
-
-        // 팀ID, 팀명, 요일, 시작시간, 종료시간, 타입(유기한/무기한/일회성), 합주실, 합주 삭제 시간
-        await axios.post(`${url}/ensembles`, {
-            teamId: ensembleTeamId,
-            teamName: ensembleTeamName,
-            day: day,
-            startTime: ensembleStartTime,
-            endTime: ensembleEndTime,
-            type: ensembleType,
-            room: ensembleRoom,
-            due: due
-        });
-
-        setEnsembleTeamId('');
-        setEnsembleTeamName('');
-        setEnsembleDay(0);
-        setEnsembleStartTime(18);
-        setEnsembleEndTime(21);
-        setEnsembleRoom('동방');
-        setEnsembleType('유기한');
-        setEnsembleDueYear(today.getFullYear());
-        setEnsembleDueMonth(today.getMonth() + 1);
-        setEnsembleDueDate(today.getDate());
-
-        fetchData();
-    }
+    }, [message, fetchData, setAllState]);
 
     const handleSkip = useCallback((id) => {
         // TODO skip api
@@ -298,12 +278,17 @@ const Teams = () => {
             <AddEnsembleDrawer1 setRepeat={setRepeat}/>
             <AddEnsembleDrawer2 repeat={repeat} setStartDate={setStartDate} />
             <AddEnsembleDrawer3
+                id={id}
+                name={name}
+                repeat={repeat}
                 startDate={startDate}
                 startTime={startTime}
                 setStartTime={setStartTime}
                 endTime={endTime}
                 setEndTime={setEndTime}
+                handleAddEnsemble={handleAddEnsemble}
             />
+            <AddEnsembleDrawer4 />
         </Container>
     )
 };

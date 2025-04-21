@@ -26,6 +26,7 @@ const AddEnsembleDrawer2 = ({ repeat, setStartDate }) => {
 	}, [setStartDate, openDrawer]);
 
 	return (
+		// onClose시 startDate는 초기화 필요 없음
 		<Drawer drawerId={drawerId} onClose={() => setCurrentMonth(dayjs())}>
 		<Title>{repeat ? "언제부터 시작할래요" : "언제 할래요"} 🚀</Title>
 		<ConfigProvider locale={koKR}>

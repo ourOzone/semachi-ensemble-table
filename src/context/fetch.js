@@ -38,7 +38,7 @@ function FetchContextProvider({ children }) {
                     teamId,
                     teamName: hour === startTime ? teamName : '', // 맨 처음 블록에만 팀명 표시
                     isExternal: room === '외부', // TODO 삭제
-                    isOneTime: type === '일회성',
+                    isOneTime: type === '일회성', // TODO startTime 관련 로직으로 변경. 여기서 바꾸지 말고 컴포넌트에서 추가
                     due,
                     teamColorIdx: teamColorMap[teamId] ?? -1,
                 });

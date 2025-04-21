@@ -22,7 +22,8 @@ const AddTeamDrawer1 = ({ setType }) => {
     }, [setType, openDrawer]);
 
     return (
-        <Drawer drawerId={drawerId} onClose={() => setType('')}>
+        // onClose시 type 초기화 필요 없음
+        <Drawer drawerId={drawerId}>
             <Title>뭔 팀인가요 🤘</Title>
             <GridContainer>
                 {options.map((opt) => (

@@ -18,7 +18,7 @@ const AddTeamDrawer6 = () => {
         closeAllDrawers();
     }, [closeAllDrawers]);
 
-    return ( // TODO antd Result 이용해서 type/name/desc 표시
+    return (
         <Drawer drawerId={drawerId} closable={false} onClose={onClose}>
             <StyledResult
                 status="success"

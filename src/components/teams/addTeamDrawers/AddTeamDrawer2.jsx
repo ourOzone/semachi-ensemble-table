@@ -4,7 +4,7 @@ import styled from "styled-components";
 import { Input } from "antd";
 import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
-import { demoName } from 'constants';
+import { demoNames } from 'constants';
 
 const drawerId = 'addTeam2';
 
@@ -15,8 +15,8 @@ const AddTeamDrawer2 = ({ name, setName }) => {
     const [randomDemoName, setRandomDemoName] = useState('');
 
     useEffect(() => {
-        const randomIndex = Math.floor(Math.random() * demoName.length);
-       setRandomDemoName(demoName[randomIndex]);
+        const randomIndex = Math.floor(Math.random() * demoNames.length);
+       setRandomDemoName(demoNames[randomIndex]);
     }, []);
 
     return (

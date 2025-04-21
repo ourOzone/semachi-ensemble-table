@@ -15,6 +15,7 @@ const AddEnsembleDrawer1 = ({ setRepeat }) => {
     }, [setRepeat, openDrawer]);
 
     return (
+        // onClose시 repeat은 초기화 필요 없음
         <Drawer drawerId={drawerId}>
             <Title>매주 할 건가요 📆</Title>
             <ButtonWrapper>

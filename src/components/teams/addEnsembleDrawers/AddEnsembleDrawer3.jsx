@@ -1,20 +1,33 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { useDrawerContext } from "context";
 import { idx2hour } from "constants";
 import { Button } from 'antd';
 import dayjs from 'dayjs';
+import OkButton from "components/common/OkButton";
 
 const drawerId = 'addEnsemble3';
 
-const AddEnsembleDrawer3 = ({ startDate, startTime, setStartTime, endTime, setEndTime }) => {
+const AddEnsembleDrawer3 = ({ id, name, repeat, startDate, startTime, setStartTime, endTime, setEndTime, handleAddEnsemble }) => {
     const { openDrawer } = useDrawerContext();
 
     const [startTimeStr, setStartTimeStr] = useState('');
     const [endTimeStr, setEndTimeStr] = useState('');
 
-    const handleClick = (idx) => {
+    const onClose = useCallback(() => {
+        setStartTime(null);
+        setEndTime(null);
+        setStartTimeStr('');
+        setEndTimeStr('');
+    }, [setStartTime, setEndTime, setStartTimeStr, setEndTimeStr]);
+
+    const handleClick = useCallback((id, name, repeat, startDate, startTime, endTime) => {
+        handleAddEnsemble(id, name, repeat, startDate, startTime, endTime);
+        openDrawer('addEnsemble4');
+    }, [openDrawer]);
+
+    const handleClickTime = useCallback((idx, startTime, endTime, startTimeStr) => {
         // startTime과 endTime의 값은 모두 block의 index (0 ~ 29)
         // startIdx 설정
         if (startTime === null || endTime !== null) {
@@ -34,37 +47,44 @@ const AddEnsembleDrawer3 = ({ startDate, startTime, setStartTime, endTime, setEn
             }
             // 더 앞 시간을 고른 경우
             else if (idx < startTime) {
-                setEndTime(startTime);
+                setEndTime(startTime - 1);
                 setEndTimeStr(startTimeStr);
                 setStartTime(idx);
                 setStartTimeStr(idx2hour[idx]);
             // 일반적인 경우
             } else {
-                setEndTime(idx);
+                setEndTime(idx - 1);
                 setEndTimeStr(idx2hour[idx]);
             }
 
         }
-    };
+    }, [setStartTime, setEndTime]);
 
     const isSelected = (idx) => {
         if (startTime === null) return false;
         if (endTime === null) return idx === startTime;
-        return idx >= startTime && idx <= endTime;
+        return idx >= startTime && idx <= endTime + 1;
     }
 
     return (
-        <Drawer drawerId={drawerId}>
+        <Drawer drawerId={drawerId} onClose={onClose}>
             <Title>시간은요 🕗</Title>
-            <TimeHeader show={!!endTime}>
-                {`${dayjs(startDate).format("YYYY년 M월 D일")} ${startTimeStr}~${endTimeStr}`}
-            </TimeHeader>
+            <Header show={!!endTime}>
+                <Time>
+                    {`${dayjs(startDate).format("YYYY년 M월 D일 (ddd)")} ${repeat ? '부터' : '에만'}`}<br />
+                    {`${repeat ? '매주' : ''} ${startTimeStr}~${endTimeStr}에 🔥`}
+                </Time>
+                <OkButton
+                    label='이대로 할래요'
+                    onClick={() => handleClick(id, name, repeat, startDate, startTime, endTime)}
+                />
+            </Header>
             <TimeGridWrapper>
                 {idx2hour.map((time, idx) => (
                     <TimeButton
                         key={time}
                         selected={isSelected(idx)}
-                        onClick={() => handleClick(idx)}
+                        onClick={() => handleClickTime(idx, startTime, endTime, startTimeStr)}
                     >
                         {time}
                     </TimeButton>
@@ -79,14 +99,21 @@ const Title = styled.span`
     font-family: Bold;
 `;
 
-const TimeHeader = styled.div`
-    height: 2rem;
-    margin-top: 2rem;
-    font-size: 2rem;
+const Header = styled.div`
+    height: 8.5rem;
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    opacity: ${({ show }) => (show ? 1 : 0)};
+`;
+
+const Time = styled.div`
+    font-size: 1.75rem;
     font-family: Bold;
     width: 100%;
     text-align: center;
-    opacity: ${({ show }) => (show ? 1 : 0)};
+    color: ${({ theme }) => theme.title};
 `;
 
 const TimeGridWrapper = styled.div`
@@ -101,6 +128,7 @@ const TimeGridWrapper = styled.div`
 const TimeButton = styled(Button)`
     height: 4rem;
     border-radius: 1rem;
+    padding: 0;
     background-color: ${({ selected, theme }) => (selected ? theme.primary : theme.white)};
     color: ${({ selected, theme }) => (selected ? theme.white : theme.black)};
     &:hover, &:active {

@@ -95,7 +95,9 @@ const Teams = () => {
     const [pin, setPin] = useState('');
 
     const [repeat, setRepeat] = useState(false);
-    const [startDate, setStartDate] = useState(null);
+    const [startDate, setStartDate] = useState(null); // Date (2025-05-27T00:00:00.000Z")
+    const [startTime, setStartTime] = useState(null); // idx값 (0 ~ 29)
+    const [endTime, setEndTime] = useState(null); // idx값 (0 ~ 29)
 
     const setAllState = useCallback((
         id = '',
@@ -295,7 +297,13 @@ const Teams = () => {
             <DeleteTeamDrawer id={id} pin={pin} setPin={setPin} handleDeleteTeam={handleDeleteTeam} />
             <AddEnsembleDrawer1 setRepeat={setRepeat}/>
             <AddEnsembleDrawer2 repeat={repeat} setStartDate={setStartDate} />
-            <AddEnsembleDrawer3 setStartDate={setStartDate} />
+            <AddEnsembleDrawer3
+                startDate={startDate}
+                startTime={startTime}
+                setStartTime={setStartTime}
+                endTime={endTime}
+                setEndTime={setEndTime}
+            />
         </Container>
     )
 };

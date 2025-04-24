@@ -2,13 +2,11 @@ import React, { useCallback, useState } from 'react';
 import styled from 'styled-components';
 import { Divider } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import axios from 'axios';
-import dayjs from 'dayjs';
 import { addTeam, updateTeam, deleteTeam, isTeamExist } from 'api/teams';
 import { addEnsemble } from 'api/ensembles';
 import useMessage from 'hooks/useMessage';
 import { useFetchContext, useDrawerContext } from 'context';
-import { url } from 'constants';
+import { eventIds } from 'constants';
 import { Container } from 'components/common/Container';
 import TeamInfoDrawer from './TeamInfoDrawer';
 import EventInfoDrawer from './EventInfoDrawer';
@@ -30,65 +28,13 @@ import AddEnsembleDrawer3 from './addEnsembleDrawers/AddEnsembleDrawer3';
 import AddEnsembleDrawer4 from './addEnsembleDrawers/AddEnsembleDrawer4';
 
 const eventNames1 = ['보소', '기소', '베소', '드소', '키소'];
-const eventNames2 = ['메인 회의', '재학생 회의', '그냥 회의'];
-
-const getMonthDate = (year, month) => {
-    const date = new Date(year, month, 1);
-    date.setDate(date.getDate() - 1);
-
-    return date.getDate();
-}
-
-const getDay = (year, month, date) => {
-    const daysKor = ['일', '월', '화', '수', '목', '금', '토'];
-    const tempDate = new Date(year, month - 1, date);
-    return daysKor[tempDate.getDay()] + '요일';
-}
-
-function getNextDay(dayOfWeek) {
-    const daysOfWeekMap = {
-        0: 1,
-        1: 2,
-        2: 3,
-        3: 4,
-        4: 5,
-        5: 6,
-        6: 0
-    };
-  
-    const today = new Date();
-    const todayDayOfWeek = today.getDay();
-    const targetDayOfWeek = daysOfWeekMap[dayOfWeek];
-  
-    let daysUntilNext = (targetDayOfWeek - todayDayOfWeek + 7) % 7;
-  
-    const nextDate = new Date();
-    nextDate.setDate(today.getDate() + daysUntilNext);
-  
-    const month = nextDate.getMonth() + 1;
-    const date = nextDate.getDate();
-  
-    return `(${month}월 ${date}일~)`;
-}
+const eventNames2 = ['메인 회의', '재학생 회의', '회의', '오디션', '합주 불가'];
 
 const Teams = () => {
-    const today = new Date();
-
-    const [ensembleTeamId, setEnsembleTeamId] = useState('');
-    const [ensembleTeamName, setEnsembleTeamName] = useState('');
-    const [ensembleDay, setEnsembleDay] = useState(0);
-    const [ensembleStartTime, setEnsembleStartTime] = useState(18);
-    const [ensembleEndTime, setEnsembleEndTime] = useState(21);
-    const [ensembleRoom, setEnsembleRoom] = useState('동방');
-    const [ensembleType, setEnsembleType] = useState('유기한');
-    const [ensembleDueYear, setEnsembleDueYear] = useState(today.getFullYear());
-    const [ensembleDueMonth, setEnsembleDueMonth] = useState(today.getMonth() + 1);
-    const [ensembleDueDate, setEnsembleDueDate] = useState(today.getDate());
-
-    // new
     const { teams, fetchData } = useFetchContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
     const [message, contextHolder] = useMessage();
+
     // 각 state는 TeamInfo와 AddTeam 모두에 사용 (두 액션은 독립 보장)
     const [id, setId] = useState(''); // AddTeam에는 사용 X
     const [type, setType] = useState('');
@@ -97,7 +43,7 @@ const Teams = () => {
     const [pin, setPin] = useState('');
 
     const [repeat, setRepeat] = useState(false);
-    const [startDate, setStartDate] = useState(null); // dayjs (2025-05-27T00:00:00.000Z"), POST시 YYYY-MM-DD의 string으로 변환
+    const [nextDate, setNextDate] = useState(null); // dayjs (2025-05-27T00:00:00.000Z"), POST시 YYYY-MM-DD의 string으로 변환
     const [startTime, setStartTime] = useState(null); // idx값 (0 ~ 29)
     const [endTime, setEndTime] = useState(null); // idx값 (0 ~ 29)
 
@@ -108,7 +54,7 @@ const Teams = () => {
         desc = ['', '', '', '', '', '', ''],
         pin = '',
         repeat = false,
-        startDate = null,
+        nextDate = null,
         startTime = null,
         endTime = null,
     ) => {
@@ -118,7 +64,7 @@ const Teams = () => {
         setDesc(desc);
         setPin(pin);
         setRepeat(repeat);
-        setStartDate(startDate);
+        setNextDate(nextDate);
         setStartTime(startTime);
         setEndTime(endTime);
     }, []);
@@ -134,10 +80,11 @@ const Teams = () => {
         }
     }, [message, fetchData, openDrawer, setAllState]);
 
-    const handleClickEvent = useCallback((name) => {
-        setName(name);
+    // id값은 순서대로 event0~ 으로 지정
+    const handleClickEvent = useCallback((id, name) => {
+        setAllState(id, '', name);
         openDrawer('eventInfo');
-    }, [openDrawer]);
+    }, [openDrawer, setAllState]);
 
     const handleClickAddTeam = useCallback(() => {
         openDrawer('addTeam1');
@@ -183,19 +130,19 @@ const Teams = () => {
         fetchData();
     }, [closeAllDrawers, fetchData, message, setAllState]);
 
-    const handleAddEnsemble = useCallback(async (id, name, repeat, startDate, startTime, endTime) => {
-        const formattedStartDate = startDate.format('YYYY-MM-DD');
+    const handleAddEnsemble = useCallback(async (id, name, repeat, nextDate, startTime, endTime) => {
+        const formattednextDate = nextDate.format('YYYY-MM-DD');
 
         try {
             await addEnsemble({
                 teamId: id,
                 teamName: name,
-                day: (startDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
-                startDate: formattedStartDate,
+                day: (nextDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
+                nextDate: formattednextDate,
                 startTime,
                 endTime,
                 type: repeat ? '매주 반복' : '이번 주만',
-                due: repeat ? '2099-12-31' : formattedStartDate,
+                due: repeat ? '2099-12-31' : formattednextDate,
             });
             fetchData();
             setAllState(); // 초기화
@@ -230,24 +177,17 @@ const Teams = () => {
             <StyledDivider />
             <TeamsContainer>
                 {eventNames1.map((name, idx) => (
-                    <TeamButton key={name} isEvent idx={idx} onClick={() => handleClickEvent(name)}>{name}</TeamButton>
+                    <TeamButton key={name} isEvent idx={idx} onClick={() => handleClickEvent(eventIds[idx], name)}>{name}</TeamButton>
                 ))}
             </TeamsContainer>
             <TeamsContainer>
-                {eventNames2.map((name) => (
-                    <TeamButton key={name} isEvent idx={5} onClick={() => handleClickEvent(name)}>{name}</TeamButton>
+                {eventNames2.map((name, idx) => (
+                    <TeamButton key={name} isEvent idx={idx + eventNames1.length} onClick={() => handleClickEvent(eventIds[idx + eventNames1.length], name)}>{name}</TeamButton>
                 ))}
             </TeamsContainer>
 
             {/* DRAWERS */}
-            <TeamInfoDrawer
-                id={id}
-                type={type}
-                name={name}
-                desc={desc}
-                handleSkip={handleSkip}
-                setAllState={setAllState}
-            />
+            <TeamInfoDrawer type={type} name={name} desc={desc} setAllState={setAllState} />
             <EventInfoDrawer name={name} setAllState={setAllState} />
             <AddTeamDrawer1 setType={setType} />
             <AddTeamDrawer2 name={name} setName={setName} />
@@ -276,12 +216,12 @@ const Teams = () => {
             />
             <DeleteTeamDrawer id={id} pin={pin} setPin={setPin} handleDeleteTeam={handleDeleteTeam} />
             <AddEnsembleDrawer1 setRepeat={setRepeat}/>
-            <AddEnsembleDrawer2 repeat={repeat} setStartDate={setStartDate} />
+            <AddEnsembleDrawer2 repeat={repeat} setNextDate={setNextDate} />
             <AddEnsembleDrawer3
                 id={id}
                 name={name}
                 repeat={repeat}
-                startDate={startDate}
+                nextDate={nextDate}
                 startTime={startTime}
                 setStartTime={setStartTime}
                 endTime={endTime}

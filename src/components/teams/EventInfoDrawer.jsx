@@ -15,7 +15,9 @@ const name2FullName = {
     '키소': '키보드 소모임',
     '메인 회의': '메인 회의',
     '재학생 회의': '재학생 회의',
-    '그냥 회의': '회의',
+    '회의': '회의',
+    '오디션': '오디션',
+    '합주 불가': '합주 불가',
 }
 
 const EventInfoDrawer = ({ name, setAllState }) => {
@@ -31,7 +33,7 @@ const EventInfoDrawer = ({ name, setAllState }) => {
                 <Card>
                     <Name>{name2FullName[name]}</Name>
                     <ButtonWrapper>
-                        <StyledButton type="primary"><PlusOutlined />일정 추가</StyledButton>
+                        <StyledButton type="primary" onClick={() => openDrawer('addEnsemble1')}><PlusOutlined />일정 추가</StyledButton>
                     </ButtonWrapper>
                 </Card>
             </Drawer>

@@ -9,7 +9,7 @@ import OkButton from "components/common/OkButton";
 
 const drawerId = 'addEnsemble3';
 
-const AddEnsembleDrawer3 = ({ id, name, repeat, startDate, startTime, setStartTime, endTime, setEndTime, handleAddEnsemble }) => {
+const AddEnsembleDrawer3 = ({ id, name, repeat, nextDate, startTime, setStartTime, endTime, setEndTime, handleAddEnsemble }) => {
     const { openDrawer } = useDrawerContext();
 
     const [startTimeStr, setStartTimeStr] = useState('');
@@ -22,8 +22,8 @@ const AddEnsembleDrawer3 = ({ id, name, repeat, startDate, startTime, setStartTi
         setEndTimeStr('');
     }, [setStartTime, setEndTime, setStartTimeStr, setEndTimeStr]);
 
-    const handleClick = useCallback((id, name, repeat, startDate, startTime, endTime) => {
-        handleAddEnsemble(id, name, repeat, startDate, startTime, endTime);
+    const handleClick = useCallback((id, name, repeat, nextDate, startTime, endTime) => {
+        handleAddEnsemble(id, name, repeat, nextDate, startTime, endTime);
         openDrawer('addEnsemble4');
     }, [openDrawer]);
 
@@ -31,7 +31,7 @@ const AddEnsembleDrawer3 = ({ id, name, repeat, startDate, startTime, setStartTi
         // startTime과 endTime의 값은 모두 block의 index (0 ~ 29)
         // startIdx 설정
         if (startTime === null || endTime !== null) {
-            // setStartTime(dayjs(`${dayjs(startDate).format("YYYY-MM-DD")}T${time}`));
+            // setStartTime(dayjs(`${dayjs(nextDate).format("YYYY-MM-DD")}T${time}`));
             setStartTime(idx);
             setStartTimeStr(idx2hour[idx]);
             setEndTime(null);
@@ -71,12 +71,12 @@ const AddEnsembleDrawer3 = ({ id, name, repeat, startDate, startTime, setStartTi
             <Title>시간은요 🕗</Title>
             <Header show={!!endTime}>
                 <Time>
-                    {`${dayjs(startDate).format("YYYY년 M월 D일 (ddd)")} ${repeat ? '부터' : '에만'}`}<br />
+                    {`${dayjs(nextDate).format("YYYY년 M월 D일 (ddd)")} ${repeat ? '부터' : '에만'}`}<br />
                     {`${repeat ? '매주' : ''} ${startTimeStr}~${endTimeStr}에 🔥`}
                 </Time>
                 <OkButton
                     label='이대로 할래요'
-                    onClick={() => handleClick(id, name, repeat, startDate, startTime, endTime)}
+                    onClick={() => handleClick(id, name, repeat, nextDate, startTime, endTime)}
                 />
             </Header>
             <TimeGridWrapper>

@@ -5,7 +5,7 @@ import { ConfigProvider, Calendar, Button } from "antd";
 import koKR from "antd/locale/ko_KR";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { useDrawerContext } from "context";
-import dayjs, { Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import "dayjs/locale/ko";
 
@@ -16,17 +16,17 @@ const drawerId = 'addEnsemble2';
 
 const isBeforeToday = (date) => date.isBefore(dayjs(), "day");
 
-const AddEnsembleDrawer2 = ({ repeat, setStartDate }) => {
+const AddEnsembleDrawer2 = ({ repeat, setNextDate }) => {
 	const { openDrawer } = useDrawerContext();
 	const [currentMonth, setCurrentMonth] = useState(dayjs());
 
 	const handleClick = useCallback((date) => {
-		setStartDate(date);
+		setNextDate(date);
 		openDrawer('addEnsemble3');
-	}, [setStartDate, openDrawer]);
+	}, [setNextDate, openDrawer]);
 
 	return (
-		// onClose시 startDate는 초기화 필요 없음
+		// onClose시 nextDate는 초기화 필요 없음
 		<Drawer drawerId={drawerId} onClose={() => setCurrentMonth(dayjs())}>
 		<Title>{repeat ? "언제부터 시작할래요" : "언제 할래요"} 🚀</Title>
 		<ConfigProvider locale={koKR}>

@@ -2,6 +2,8 @@ import React, { createContext, useState, useCallback } from 'react';
 import { getTeams } from 'api/teams';
 import { getEnsembles } from 'api/ensembles';
 import { getNotes } from 'api/notes';
+import { eventIds } from 'constants';
+import theme from 'styles/theme';
 
 const FetchContext = createContext();
 
@@ -20,12 +22,21 @@ function FetchContextProvider({ children }) {
             name,
             desc
         }));
-        setTeams(teamsData);
+
+        // 소모임 및 회의는 제거
+        const filteredTeamsData = teamsData.filter((team) => !eventIds.includes(team.id));
+        setTeams(filteredTeamsData);
         
         // teamId → colorIndex 매핑 생성
         const teamColorMap = Object.fromEntries(
-            teamsData.map((team, idx) => [team.id, idx])
+            filteredTeamsData.map((team, idx) => [team.id, theme.teamColors[idx % theme.teamColors.length]])
         );
+        
+        // 소모임 및 회의 추가
+        const eventColorMap = Object.fromEntries(
+            eventIds.map((id, idx) => [id, theme.eventColors[idx]])
+        );
+        const colorMap = { ...teamColorMap, ...eventColorMap };
 
         // ensembles fetch
         const ensemblesRaw = await getEnsembles();
@@ -40,10 +51,11 @@ function FetchContextProvider({ children }) {
                     isExternal: room === '외부', // TODO 삭제
                     isOneTime: type === '일회성', // TODO startTime 관련 로직으로 변경. 여기서 바꾸지 말고 컴포넌트에서 추가
                     due,
-                    teamColorIdx: teamColorMap[teamId] ?? -1,
+                    teamColor: colorMap[teamId] ?? -1,
                 });
             }
         });
+        console.log(blocks)
         setEnsembles(blocks);
 
         // notes fetch

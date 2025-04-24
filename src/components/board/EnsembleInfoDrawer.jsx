@@ -2,21 +2,22 @@ import { useState, useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button, Divider, Segmented } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, PauseOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useDrawerContext } from "context";
 
-const drawerId = 'teamInfo';
+const drawerId = 'ensembleInfo';
 
 const memberLabels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
 const TeamInfoDrawer = ({ type, name, desc, setAllState }) => {
     const { openDrawer } = useDrawerContext();
-    const [option, setOption] = useState('팀원');
 
     const onClose = useCallback(() => {
         setOption('팀원');
         setAllState();
     }, [setAllState]);
+
+    const handleSkip = useCallback(() => {}, []);
 
     return (
         <>
@@ -27,35 +28,15 @@ const TeamInfoDrawer = ({ type, name, desc, setAllState }) => {
                     <ButtonWrapper>
                         <StyledButton type="primary" onClick={() => openDrawer('addEnsemble1')}><PlusOutlined />합주 추가</StyledButton>
                     </ButtonWrapper>
-                    {/* <ButtonWrapper>
+                    <ButtonWrapper>
                         <StyledButton onClick={() => handleSkip(id)}><PauseOutlined />이번주 안 해요</StyledButton>
-                    </ButtonWrapper> */}
+                    </ButtonWrapper>
                     <ButtonWrapper>
                         <StyledButton onClick={() => openDrawer('updateTeam1')}><EditOutlined />팀 수정</StyledButton>
                         <StyledButton danger onClick={() => openDrawer('deleteTeam')}><DeleteOutlined />팀 삭제</StyledButton>
                     </ButtonWrapper>
                 </Card>
-                <Card fixHeight>
-                    <StyledSegmented
-                        block
-                        options={['팀원', '셋리']}
-                        onChange={(opt) => setOption(opt)}
-                    />
-                    {option === '팀원' ? (
-                        <MemberWrapper>
-                            {memberLabels.map((label, idx) => (
-                            <>
-                                <Member>
-                                    <MemberLabel idx={idx}>{label}</MemberLabel>
-                                    <MemberName>{desc[idx]}</MemberName>
-                                </Member>
-                                {idx < memberLabels.length - 1 && <StyledDivider />}
-                            </>
-                            ))}
-                        </MemberWrapper>
-                    ) : (
-                        <Desc>{desc[6]}</Desc>
-                    )}
+                <Card>
                 </Card>
             </Drawer>
         </>
@@ -73,7 +54,6 @@ const Card = styled.div`
     padding: 1rem;
     margin-bottom: 1rem;
     gap: 0.5rem;
-    ${({ fixHeight }) => fixHeight ? `height: 27.5rem` : ''};
 `;
 
 const ButtonWrapper = styled.div`

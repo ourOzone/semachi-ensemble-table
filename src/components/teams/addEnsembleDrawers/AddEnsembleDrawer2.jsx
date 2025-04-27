@@ -1,10 +1,10 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { ConfigProvider, Calendar, Button } from "antd";
 import koKR from "antd/locale/ko_KR";
 import { LeftOutlined, RightOutlined } from "@ant-design/icons";
-import { useDrawerContext } from "context";
+import { useEnsembleContext, useDrawerContext } from "context";
 import dayjs from "dayjs";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import "dayjs/locale/ko";
@@ -12,13 +12,11 @@ import "dayjs/locale/ko";
 dayjs.extend(isSameOrBefore);
 dayjs.locale("ko");
 
-const drawerId = 'addEnsemble2';
-
 const isBeforeToday = (date) => date.isBefore(dayjs(), "day");
 
-const AddEnsembleDrawer2 = ({ repeat, setNextDate }) => {
+const AddEnsembleDrawer2 = ({ drawerId }) => {
+	const { repeat, setNextDate, currentMonth, setCurrentMonth } = useEnsembleContext();
 	const { openDrawer } = useDrawerContext();
-	const [currentMonth, setCurrentMonth] = useState(dayjs());
 
 	const handleClick = useCallback((date) => {
 		setNextDate(date);

@@ -2,11 +2,10 @@ import { useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button } from "antd";
-import { useDrawerContext } from "context";
+import { useEnsembleContext, useDrawerContext } from "context";
 
-const drawerId = 'addEnsemble1';
-
-const AddEnsembleDrawer1 = ({ setRepeat }) => {
+const AddEnsembleDrawer1 = ({ drawerId }) => {
+    const { setRepeat } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
 
     const handleClick = useCallback((repeat) => {

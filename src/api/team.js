@@ -1,4 +1,4 @@
-import { get, post } from '.';
+import { get, post, put, del } from '.';
 
 /*
 공부: getTeams등 에는 async/await 안해도 되는 이유
@@ -20,10 +20,9 @@ export const getTeams = async () => {
 2. 컴포넌트가 데이터 흐름의 출발점이기 때문 (어떤 식으로 가공해서 API에 보낼지는 컴포넌트에서 명확히 보여주는게 좋다는 패턴)
 */
 
-const getTeams = () => get('/teams');
-const addTeam = (team) => post('/teams', team);
-const updateTeam = (id, team) => post(`/teammodify?id=${id}`, team);
-const deleteTeam = (id) => get(`/deleteteam?id=${id}`);
-const isTeamExist = (id) => get(`/teamexist?id=${id}`);
-
-export { getTeams, addTeam, updateTeam, deleteTeam, isTeamExist };
+export const getTeams = () => get('/teams');
+export const addTeam = (team) => post('/team', team);
+export const updateTeam = (id, team) => put(`/team?id=${id}`, team);
+export const deleteTeam = (id) => del(`/team?id=${id}`);
+export const isTeamExist = (id) => get(`/team-exists?id=${id}`);
+export const checkTeamPin = (teamId, pin) => post('/check-team-pin', { teamId, pin });

@@ -3,9 +3,7 @@ import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import { useDrawerContext } from "context";
-
-const drawerId = 'eventInfo';
+import { useTeamContext, useDrawerContext } from "context";
 
 const name2FullName = {
     '보소': '보컬 소모임',
@@ -20,7 +18,8 @@ const name2FullName = {
     '합주 불가': '합주 불가',
 }
 
-const EventInfoDrawer = ({ name, setAllState }) => {
+const EventInfoDrawer = ({ drawerId }) => {
+    const { name, setTeamStates } = useTeamContext();
     const { openDrawer } = useDrawerContext();
 
     // const handleClick = (value) => {
@@ -29,7 +28,7 @@ const EventInfoDrawer = ({ name, setAllState }) => {
 
     return (
         <>
-            <Drawer drawerId={drawerId} onClose={setAllState} background>
+            <Drawer drawerId={drawerId} onClose={setTeamStates} background>
                 <Card>
                     <Name>{name2FullName[name]}</Name>
                     <ButtonWrapper>

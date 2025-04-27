@@ -2,11 +2,10 @@ import { useCallback, useMemo } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
-import { useDrawerContext } from "context";
+import { useTeamContext, useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
 const { TextArea } = Input;
-const drawerId = 'updateTeam5';
 const maxInput = 200;
 const minRows = 4;
 const maxRows = 10;
@@ -16,7 +15,8 @@ const countLines = (value) => {
     return Math.min(Math.max(lines, minRows), maxRows);
 };
 
-const UpdateTeamDrawer5 = ({ id, type, name, desc, setDesc, handleUpdateTeam }) => {
+const UpdateTeamDrawer5 = ({ drawerId, handleUpdateTeam }) => {
+    const { id, type, name, desc, setDesc } = useTeamContext();
     const { openDrawer } = useDrawerContext();
 
     const text = useMemo(() => desc[6] || '', [desc]);

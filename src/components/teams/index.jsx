@@ -2,10 +2,10 @@ import React, { useCallback, useState } from 'react';
 import styled from 'styled-components';
 import { Divider } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import { addTeam, updateTeam, deleteTeam, isTeamExist } from 'api/teams';
-import { addEnsemble } from 'api/ensembles';
+import { addTeam, updateTeam, deleteTeam, isTeamExist } from 'api/team';
+import { addEnsemble } from 'api/ensemble';
 import useMessage from 'hooks/useMessage';
-import { useFetchContext, useDrawerContext } from 'context';
+import { useFetchContext, useTeamContext, useEnsembleContext, useDrawerContext } from 'context';
 import { eventIds } from 'constants';
 import { Container } from 'components/common/Container';
 import TeamInfoDrawer from './TeamInfoDrawer';
@@ -32,59 +32,27 @@ const eventNames2 = ['메인 회의', '재학생 회의', '회의', '오디션',
 
 const Teams = () => {
     const { teams, fetchData } = useFetchContext();
+    const { setTeamStates } = useTeamContext();
+    const { setEnsembleStates } = useEnsembleContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
     const [message, contextHolder] = useMessage();
 
-    // 각 state는 TeamInfo와 AddTeam 모두에 사용 (두 액션은 독립 보장)
-    const [id, setId] = useState(''); // AddTeam에는 사용 X
-    const [type, setType] = useState('');
-    const [name, setName] = useState('');
-    const [desc, setDesc] = useState(['', '', '', '', '', '', '']); // [보컬, 기타, 베이스, 드럼, 키보드, 매니저, 소개/셋리스트]
-    const [pin, setPin] = useState('');
-
-    const [repeat, setRepeat] = useState(false);
-    const [nextDate, setNextDate] = useState(null); // dayjs (2025-05-27T00:00:00.000Z"), POST시 YYYY-MM-DD의 string으로 변환
-    const [startTime, setStartTime] = useState(null); // idx값 (0 ~ 29)
-    const [endTime, setEndTime] = useState(null); // idx값 (0 ~ 29)
-
-    const setAllState = useCallback((
-        id = '',
-        type = '',
-        name = '',
-        desc = ['', '', '', '', '', '', ''],
-        pin = '',
-        repeat = false,
-        nextDate = null,
-        startTime = null,
-        endTime = null,
-    ) => {
-        setId(id);
-        setType(type);
-        setName(name);
-        setDesc(desc);
-        setPin(pin);
-        setRepeat(repeat);
-        setNextDate(nextDate);
-        setStartTime(startTime);
-        setEndTime(endTime);
-    }, []);
-
-    const handleClickTeam = useCallback(async ({ id, type, name, desc, pin }) => {
+    const handleClickTeam = useCallback(async ({ id, type, name, desc }) => {
         try {
             await isTeamExist(id); // 누른 팀이 이미 삭제됐으면 에러
-            setAllState(id, type, name, desc, pin);
+            setTeamStates(id, type, name, desc);
             openDrawer('teamInfo');
         } catch {
-            message.error('이미 삭제된 팀이에요.');
+            message.warning('이미 삭제된 팀이에요.');
             fetchData();
         }
-    }, [message, fetchData, openDrawer, setAllState]);
+    }, [message, fetchData, openDrawer, setTeamStates]);
 
     // id값은 순서대로 event0~ 으로 지정
     const handleClickEvent = useCallback((id, name) => {
-        setAllState(id, '', name);
+        setTeamStates(id, '', name);
         openDrawer('eventInfo');
-    }, [openDrawer, setAllState]);
+    }, [openDrawer, setTeamStates]);
 
     const handleClickAddTeam = useCallback(() => {
         openDrawer('addTeam1');
@@ -94,12 +62,12 @@ const Teams = () => {
         try {
             await addTeam({ type, name, desc, pin, publishDate: new Date() });
             fetchData();
-            setAllState(); // 초기화
+            setTeamStates(); // 초기화
 
         } catch (err) {
             message.error('팀 추가에 실패했어요. 인터넷 상태가 괜찮은데 이게 떴다면 초비상이니 빠르게 개발자나 회장에게 연락해주세요.');
         }
-    }, [message, fetchData, setAllState]);
+    }, [message, fetchData, setTeamStates]);
 
     const handleUpdateTeam = useCallback(async (id, type, name, desc) => {
         try {
@@ -123,12 +91,12 @@ const Teams = () => {
             message.warning('이미 삭제된 팀이에요.')
         }
         finally {
-            setAllState();
+            setTeamStates();
             closeAllDrawers();
         }
 
         fetchData();
-    }, [closeAllDrawers, fetchData, message, setAllState]);
+    }, [closeAllDrawers, fetchData, message, setTeamStates]);
 
     const handleAddEnsemble = useCallback(async (id, name, repeat, nextDate, startTime, endTime) => {
         const formattednextDate = nextDate.format('YYYY-MM-DD');
@@ -142,19 +110,15 @@ const Teams = () => {
                 startTime,
                 endTime,
                 type: repeat ? '매주 반복' : '이번 주만',
-                due: repeat ? '2099-12-31' : formattednextDate,
+                due: repeat ? '2099-12-31' : formattednextDate, // TODO 삭제
             });
             fetchData();
-            setAllState(); // 초기화
+            setTeamStates(); // 초기화
+            setEnsembleStates();
         } catch (err) {
             message.error('합주 추가에 실패했어요. 인터넷 상태가 괜찮은데 이게 떴다면 초비상이니 빠르게 개발자나 회장에게 연락해주세요.');
         }
-    }, [message, fetchData, setAllState]);
-
-    const handleSkip = useCallback((id) => {
-        // TODO skip api
-        message.success('알겠어요.');
-    }, [message]);
+    }, [message, fetchData, setTeamStates, setEnsembleStates]);
 
     return (
         <Container>
@@ -187,48 +151,24 @@ const Teams = () => {
             </TeamsContainer>
 
             {/* DRAWERS */}
-            <TeamInfoDrawer type={type} name={name} desc={desc} setAllState={setAllState} />
-            <EventInfoDrawer name={name} setAllState={setAllState} />
-            <AddTeamDrawer1 setType={setType} />
-            <AddTeamDrawer2 name={name} setName={setName} />
-            <AddTeamDrawer3 desc={desc} setDesc={setDesc} />
-            <AddTeamDrawer4 desc={desc} setDesc={setDesc} />
-            <AddTeamDrawer5
-                type={type}
-                name={name}
-                desc={desc}
-                pin={pin}
-                setPin={setPin}
-                handleAddTeam={handleAddTeam}
-            />
-            <AddTeamDrawer6 />
-            <UpdateTeamDrawer1 id={id} pin={pin} setPin={setPin} />
-            <UpdateTeamDrawer2 setType={setType} />
-            <UpdateTeamDrawer3 name={name} setName={setName} />
-            <UpdateTeamDrawer4 desc={desc} setDesc={setDesc} />
-            <UpdateTeamDrawer5
-                id={id}
-                type={type}
-                name={name}
-                desc={desc}
-                setDesc={setDesc}
-                handleUpdateTeam={handleUpdateTeam}
-            />
-            <DeleteTeamDrawer id={id} pin={pin} setPin={setPin} handleDeleteTeam={handleDeleteTeam} />
-            <AddEnsembleDrawer1 setRepeat={setRepeat}/>
-            <AddEnsembleDrawer2 repeat={repeat} setNextDate={setNextDate} />
-            <AddEnsembleDrawer3
-                id={id}
-                name={name}
-                repeat={repeat}
-                nextDate={nextDate}
-                startTime={startTime}
-                setStartTime={setStartTime}
-                endTime={endTime}
-                setEndTime={setEndTime}
-                handleAddEnsemble={handleAddEnsemble}
-            />
-            <AddEnsembleDrawer4 />
+            <TeamInfoDrawer drawerId='teamInfo' />
+            <EventInfoDrawer drawerId='eventInfo' />
+            <AddTeamDrawer1 drawerId='addTeam1' />
+            <AddTeamDrawer2 drawerId='addTeam2' />
+            <AddTeamDrawer3 drawerId='addTeam3' />
+            <AddTeamDrawer4 drawerId='addTeam4' />
+            <AddTeamDrawer5 drawerId='addTeam5' handleAddTeam={handleAddTeam} />
+            <AddTeamDrawer6 drawerId='addTeam6' />
+            <UpdateTeamDrawer1 drawerId='updateTeam1' />
+            <UpdateTeamDrawer2 drawerId='updateTeam2' />
+            <UpdateTeamDrawer3 drawerId='updateTeam3' />
+            <UpdateTeamDrawer4 drawerId='updateTeam4' />
+            <UpdateTeamDrawer5 drawerId='updateTeam5' handleUpdateTeam={handleUpdateTeam} />
+            <DeleteTeamDrawer drawerId='deleteTeam' handleDeleteTeam={handleDeleteTeam} />
+            <AddEnsembleDrawer1 drawerId='addEnsemble1' />
+            <AddEnsembleDrawer2 drawerId='addEnsemble2' />
+            <AddEnsembleDrawer3 drawerId='addEnsemble3' handleAddEnsemble={handleAddEnsemble} />
+            <AddEnsembleDrawer4 drawerId='addEnsemble4' />
         </Container>
     )
 };

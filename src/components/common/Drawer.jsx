@@ -6,7 +6,7 @@ import { useDrawerContext } from 'context';
 import { media } from 'styles/media';
 
 const Drawer = ({ children, drawerId, closable = true, onClose = undefined, background = false }) => {
-    const { openedDrawers, onCloseDrawer } = useDrawerContext();
+    const { openedDrawers, closeDrawer } = useDrawerContext();
 
     const getWidth = () => (window.innerWidth <= 767 ? '100%' : '767px');
     const [drawerWidth, setDrawerWidth] = useState(getWidth);
@@ -22,12 +22,12 @@ const Drawer = ({ children, drawerId, closable = true, onClose = undefined, back
     }, []);
 
     const customOnClose = useCallback(() => {
-        onCloseDrawer();
+        closeDrawer();
         
         if (onClose) {
             onClose();
         }
-    }, [onClose, onCloseDrawer]);
+    }, [onClose, closeDrawer]);
 
     return (
         <StyledDrawer

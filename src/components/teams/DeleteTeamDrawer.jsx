@@ -1,15 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
-import { useDrawerContext } from "context";
+import { checkTeamPin } from "api/team";
+import { useTeamContext, useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
-
-const drawerId = 'deleteTeam';
 
 const maxInput = 4;
 
-const DeleteTeamDrawer = ({ id, pin, setPin, handleDeleteTeam }) => {
+const DeleteTeamDrawer = ({ drawerId, handleDeleteTeam }) => {
+    const { id, pin, setPin } = useTeamContext();
     const { openDrawer } = useDrawerContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
 
@@ -18,18 +18,19 @@ const DeleteTeamDrawer = ({ id, pin, setPin, handleDeleteTeam }) => {
         setError(false);
     }, [setPin]);
 
-    const handlePinChange = useCallback((e) => {
-        const numeric = e.target.value.replace(/\D/g, '');
+    const handlePinChange = useCallback(async (value, id) => {
+        const numeric = value.replace(/\D/g, '');
         if (numeric.length <= maxInput) {
             setPin(numeric);
 
             if (numeric.length === maxInput) {
                 // 4자리 모두 입력한 경우
                 setPin(numeric);
-                // TODO PIN 판별
-                const dummy = true;
 
-                setError(!dummy);
+                // PIN 판별
+                const result = await checkTeamPin(id, numeric);
+
+                setError(!result);
             }
         }
     }, [setPin, openDrawer]);
@@ -41,7 +42,7 @@ const DeleteTeamDrawer = ({ id, pin, setPin, handleDeleteTeam }) => {
                 <StyledInput
                     value={pin}
                     type="password"
-                    onChange={handlePinChange}
+                    onChange={(e) => handlePinChange(e.target.value, id)}
                     inputMode="numeric"
                     controls={false}
                     placeholder="숫자 4자리"

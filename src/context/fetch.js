@@ -1,6 +1,7 @@
 import React, { createContext, useState, useCallback } from 'react';
-import { getTeams } from 'api/teams';
-import { getEnsembles } from 'api/ensembles';
+import dayjs from 'dayjs';
+import { getTeams } from 'api/team';
+import { getEnsembles } from 'api/ensemble';
 import { getNotes } from 'api/notes';
 import { eventIds } from 'constants';
 import theme from 'styles/theme';
@@ -42,19 +43,25 @@ function FetchContextProvider({ children }) {
         const ensemblesRaw = await getEnsembles();
         const blocks = Array.from({ length: 7 }, () => Array.from({ length: 30 }, () => [])); // 직관적으로 blocks로 표기 (7 x 30 사이즈 2차원 배열)
         
-        ensemblesRaw.forEach(({ _id, teamId, teamName, startTime, endTime, day, room, type, due }) => {
+        // day, startTime, endTime에 따라 block 형식으로 정제
+        ensemblesRaw.forEach(({ _id, day, startTime, endTime, teamId, teamName, type, nextDate, due }) => {
             for (let hour = startTime; hour <= endTime; hour++) {
                 blocks[day][hour].push({
                     id: _id,
+                    day,
+                    startTime,
+                    endTime,
                     teamId,
-                    teamName: hour === startTime ? teamName : '', // 맨 처음 블록에만 팀명 표시
-                    isExternal: room === '외부', // TODO 삭제
-                    isOneTime: type === '일회성', // TODO startTime 관련 로직으로 변경. 여기서 바꾸지 말고 컴포넌트에서 추가
+                    name: teamName,
+                    repeat: type, // TODO 현재 로직은 isOneTime으로 되어있음, 백에서 repeat으로 바꾸면 대응(위에 forEach도)
+                    nextDate: dayjs(nextDate),
                     due,
+                    displayName: hour === startTime ? teamName : '', // 맨 처음 블록에만 팀명 표시
                     teamColor: colorMap[teamId] ?? -1,
                 });
             }
         });
+        
         console.log(blocks)
         setEnsembles(blocks);
 

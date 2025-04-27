@@ -2,9 +2,7 @@ import { useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button } from "antd";
-import { useDrawerContext } from "context";
-
-const drawerId = 'updateTeam2';
+import { useTeamContext, useDrawerContext } from "context";
 
 const options = [
     { value: '세마치공연(정기/연말)', label: '세마치공연', desc: '정기공연, 연말공연' },
@@ -13,7 +11,8 @@ const options = [
     { value: '기타 등등', label: '기타', desc: '등등'},
 ];
 
-const UpdateTeamDrawer2 = ({ setType }) => {
+const UpdateTeamDrawer2 = ({ drawerId }) => {
+    const { setType } = useTeamContext();
     const { openDrawer } = useDrawerContext();
 
     const handleClick = useCallback((value) => {

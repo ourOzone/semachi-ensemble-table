@@ -1,13 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Result } from "antd";
 import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
-const drawerId = 'addEnsemble4';
-
-const AddEnsembleDrawer4 = () => {
+const AddEnsembleDrawer4 = ({ drawerId }) => {
     const { closeAllDrawers } = useDrawerContext();
 
     const handleClick = useCallback(() => {

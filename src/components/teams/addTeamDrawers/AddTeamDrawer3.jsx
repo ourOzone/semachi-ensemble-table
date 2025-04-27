@@ -2,15 +2,15 @@ import { useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
-import { useDrawerContext } from "context";
+import { useTeamContext, useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
-const drawerId = 'addTeam3';
 const labels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
 const maxInput = 12;
 
-const AddTeamDrawer3 = ({ desc, setDesc }) => {
+const AddTeamDrawer3 = ({ drawerId }) => {
+    const { desc, setDesc } = useTeamContext();
     const { openDrawer } = useDrawerContext();
 
     const handleChange = useCallback((idx, value) => {

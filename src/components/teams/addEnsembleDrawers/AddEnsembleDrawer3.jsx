@@ -1,15 +1,15 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
-import { useDrawerContext } from "context";
+import { useTeamContext, useEnsembleContext, useDrawerContext } from "context";
 import { idx2hour } from "constants";
 import { Button } from 'antd';
 import dayjs from 'dayjs';
 import OkButton from "components/common/OkButton";
 
-const drawerId = 'addEnsemble3';
-
-const AddEnsembleDrawer3 = ({ id, name, repeat, nextDate, startTime, setStartTime, endTime, setEndTime, handleAddEnsemble }) => {
+const AddEnsembleDrawer3 = ({ drawerId, handleAddEnsemble }) => {
+    const { id, name } = useTeamContext();
+    const { repeat, nextDate, startTime, setStartTime, endTime, setEndTime } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
 
     const [startTimeStr, setStartTimeStr] = useState('');
@@ -25,7 +25,7 @@ const AddEnsembleDrawer3 = ({ id, name, repeat, nextDate, startTime, setStartTim
     const handleClick = useCallback((id, name, repeat, nextDate, startTime, endTime) => {
         handleAddEnsemble(id, name, repeat, nextDate, startTime, endTime);
         openDrawer('addEnsemble4');
-    }, [openDrawer]);
+    }, [handleAddEnsemble, openDrawer]);
 
     const handleClickTime = useCallback((idx, startTime, endTime, startTimeStr) => {
         // startTime과 endTime의 값은 모두 block의 index (0 ~ 29)
@@ -41,7 +41,6 @@ const AddEnsembleDrawer3 = ({ id, name, repeat, nextDate, startTime, setStartTim
         } else {
             // 같은 거 고른 경우 취소
             if (idx === startTime) {
-                console.log('brrbrr')
                 setStartTime(null);
                 setStartTimeStr('');
             }

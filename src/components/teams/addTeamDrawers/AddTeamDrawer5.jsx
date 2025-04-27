@@ -2,13 +2,13 @@ import { useState, useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
-import { useDrawerContext } from "context";
+import { useTeamContext, useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
-const drawerId = 'addTeam5';
 const maxInput = 4;
 
-const AddTeamDrawer5 = ({ type, name, desc, pin, setPin, handleAddTeam }) => {
+const AddTeamDrawer5 = ({ drawerId, handleAddTeam }) => {
+    const { type, name, desc, pin, setPin } = useTeamContext();
     const { openDrawer } = useDrawerContext();
     const [confirmPin, setConfirmPin] = useState('');
     const [error, setError] = useState(true);

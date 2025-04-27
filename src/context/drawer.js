@@ -16,12 +16,12 @@ function DrawerContextProvider({ children }) {
         setOpenedDrawers([]);
     }, []);
 
-    const onCloseDrawer = useCallback(() => {
+    const closeDrawer = useCallback(() => {
         setOpenedDrawers(prev => prev.slice(0, -1));
     }, []);
 
     return (
-        <DrawerContext.Provider value={{ openedDrawers, openDrawer, setOpenedDrawers, closeAllDrawers, onCloseDrawer }}>
+        <DrawerContext.Provider value={{ openedDrawers, openDrawer, setOpenedDrawers, closeAllDrawers, closeDrawer }}>
             {children}
         </DrawerContext.Provider>
     );

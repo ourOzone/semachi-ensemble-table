@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
-import { useDrawerContext } from "context";
-
-const drawerId = 'updateTeam1';
+import { checkTeamPin } from "api/team";
+import { useTeamContext, useDrawerContext } from "context";
 
 const maxInput = 4;
 
-const UpdateTeamDrawer1 = ({ id, pin, setPin }) => {
+const UpdateTeamDrawer1 = ({ drawerId }) => {
+    const { id, pin, setPin } = useTeamContext();
     const { openDrawer } = useDrawerContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
 
@@ -17,18 +17,18 @@ const UpdateTeamDrawer1 = ({ id, pin, setPin }) => {
         setError(false);
     }, [setPin]);
 
-    const handlePinChange = useCallback((e) => {
-        const numeric = e.target.value.replace(/\D/g, '');
+    const handlePinChange = useCallback(async (value, id) => {
+        const numeric = value.replace(/\D/g, '');
         if (numeric.length <= maxInput) {
             setPin(numeric);
 
             if (numeric.length === maxInput) {
                 // 4자리 모두 입력한 경우
                 setPin(numeric);
-                // TODO PIN 판별
-                const dummy = true;
+                // PIN 판별
+                const result = await checkTeamPin(id, numeric);
                 
-                if (dummy) {
+                if (result) {
                     setPin('');
                     openDrawer('updateTeam2');
                 } else {
@@ -45,7 +45,7 @@ const UpdateTeamDrawer1 = ({ id, pin, setPin }) => {
                 <StyledInput
                     value={pin}
                     type="password"
-                    onChange={handlePinChange}
+                    onChange={(e) => handlePinChange(e.target.value, id)}
                     inputMode="numeric"
                     controls={false}
                     placeholder="숫자 4자리"

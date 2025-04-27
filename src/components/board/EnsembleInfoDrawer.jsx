@@ -1,45 +1,40 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button, Divider, Segmented } from "antd";
-import { PlusOutlined, PauseOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useDrawerContext } from "context";
+import { PlusOutlined, PauseOutlined, EditOutlined, InfoCircleOutlined, DeleteOutlined } from "@ant-design/icons";
+import { useTeamContext, useEnsembleContext, useDrawerContext } from "context";
 
-const drawerId = 'ensembleInfo';
-
-const memberLabels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
-
-const TeamInfoDrawer = ({ type, name, desc, setAllState }) => {
+const EnsembleInfoDrawer = ({ drawerId, handleTeamInfoClick, handleSkip }) => {
+    const { id: teamId, name } = useTeamContext();
+    const { id, repeat } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
 
-    const onClose = useCallback(() => {
-        setOption('팀원');
-        setAllState();
-    }, [setAllState]);
-
-    const handleSkip = useCallback(() => {}, []);
+    // const onClose = useCallback(() => {
+    //     setEnsembleStates();
+    // }, [setEnsembleStates]);
 
     return (
-        <>
-            <Drawer drawerId={drawerId} onClose={onClose} background>
-                <Card>
-                    <Name>{name}</Name>
-                    <Type>{type}</Type>
-                    <ButtonWrapper>
-                        <StyledButton type="primary" onClick={() => openDrawer('addEnsemble1')}><PlusOutlined />합주 추가</StyledButton>
-                    </ButtonWrapper>
-                    <ButtonWrapper>
-                        <StyledButton onClick={() => handleSkip(id)}><PauseOutlined />이번주 안 해요</StyledButton>
-                    </ButtonWrapper>
-                    <ButtonWrapper>
-                        <StyledButton onClick={() => openDrawer('updateTeam1')}><EditOutlined />팀 수정</StyledButton>
-                        <StyledButton danger onClick={() => openDrawer('deleteTeam')}><DeleteOutlined />팀 삭제</StyledButton>
-                    </ButtonWrapper>
-                </Card>
-                <Card>
-                </Card>
-            </Drawer>
-        </>
+        <Drawer drawerId={drawerId} background>
+            <Card>
+                <Name>{name}</Name>
+                <Type>{repeat}</Type>
+                <ButtonWrapper>
+                    <StyledButton type="primary" onClick={() => handleTeamInfoClick(teamId)}>
+                        <InfoCircleOutlined />팀 정보 보기
+                    </StyledButton>
+                </ButtonWrapper>
+                <ButtonWrapper>
+                    <StyledButton onClick={() => handleSkip(id)}><PauseOutlined />이번주 안 해요</StyledButton>
+                </ButtonWrapper>
+                <ButtonWrapper>
+                    <StyledButton onClick={() => openDrawer('updateTeam1')}><EditOutlined />합주 수정</StyledButton>
+                    <StyledButton danger onClick={() => openDrawer('deleteTeam')}><DeleteOutlined />합주 삭제</StyledButton>
+                </ButtonWrapper>
+            </Card>
+            <Card>
+            </Card>
+        </Drawer>
     );
 };
 
@@ -155,4 +150,4 @@ const Desc = styled.div`
     line-height: 1.5;
 `;
 
-export default TeamInfoDrawer;
+export default EnsembleInfoDrawer;

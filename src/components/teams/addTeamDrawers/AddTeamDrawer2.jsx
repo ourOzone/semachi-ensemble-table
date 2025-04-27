@@ -1,16 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
-import { useDrawerContext } from "context";
+import { useTeamContext, useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 import { demoNames } from 'constants';
 
-const drawerId = 'addTeam2';
-
 const maxInput = 20;
 
-const AddTeamDrawer2 = ({ name, setName }) => {
+const AddTeamDrawer2 = ({ drawerId }) => {
+    const { name, setName } = useTeamContext();
     const { openDrawer } = useDrawerContext();
     const [randomDemoName, setRandomDemoName] = useState('');
 

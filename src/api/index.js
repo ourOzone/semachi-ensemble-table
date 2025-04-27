@@ -28,7 +28,6 @@ export const post = async (endpoint, body = {}) => {
     }
 };
 
-// 밑은 일단 쓸 일 없음 (수정/삭제 api도 모두 get)
 export const put = async (endpoint, body = {}) => {
     try {
         const { data } = await apiClient.put(endpoint, body);

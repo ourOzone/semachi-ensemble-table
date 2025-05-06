@@ -99,18 +99,17 @@ const Teams = () => {
     }, [closeAllDrawers, fetchData, message, setTeamStates]);
 
     const handleAddEnsemble = useCallback(async (id, name, repeat, nextDate, startTime, endTime) => {
-        const formattednextDate = nextDate.format('YYYY-MM-DD');
-
         try {
             await addEnsemble({
                 teamId: id,
                 teamName: name,
                 day: (nextDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
-                nextDate: formattednextDate,
+                nextDate,
                 startTime,
                 endTime,
-                type: repeat ? '매주 반복' : '이번 주만',
-                due: repeat ? '2099-12-31' : formattednextDate, // TODO 삭제
+                repeat,
+                type: repeat ? '무기한' : '일회성', // TODO 삭제
+                due: repeat ? '2099-12-31' : nextDate.format('YYYY-MM-DD'), // TODO 삭제
             });
             fetchData();
             setTeamStates(); // 초기화

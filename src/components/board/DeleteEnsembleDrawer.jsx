@@ -3,22 +3,23 @@ import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
 import { checkTeamPin } from "api/team";
-import { useTeamContext, useDrawerContext } from "context";
+import { useTeamContext, useEnsembleContext, useDrawerContext } from "context";
+import OkButton from "components/common/OkButton";
 
 const maxInput = 4;
 
-const UpdateTeamDrawer1 = ({ drawerId }) => {
-    const { id, orgType, orgName, orgDesc, pin, setPin, setTeamStates } = useTeamContext();
+const DeleteEnsembleDrawer = ({ drawerId, handleDeleteEnsemble }) => {
+    const { id: teamId, pin, setPin } = useTeamContext();
+    const { id } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
 
-    const onClose = useCallback((id, orgType, orgName, orgDesc) => {
-        // 수정하기 전 상태로 돌려놓기
-        setTeamStates(id, orgType, orgName, orgDesc, '');
+    const onClose = useCallback(() => {
+        setPin('');
         setError(false);
-    }, [setTeamStates]);
+    }, [setPin]);
 
-    const handlePinChange = useCallback(async (value, id) => {
+    const handlePinChange = useCallback(async (value, teamId) => {
         const numeric = value.replace(/\D/g, '');
         if (numeric.length <= maxInput) {
             setPin(numeric);
@@ -26,27 +27,23 @@ const UpdateTeamDrawer1 = ({ drawerId }) => {
             if (numeric.length === maxInput) {
                 // 4자리 모두 입력한 경우
                 setPin(numeric);
+
                 // PIN 판별
-                const result = await checkTeamPin(id, numeric);
-                
-                if (result) {
-                    setPin('');
-                    openDrawer('updateTeam2');
-                } else {
-                    setError(true);
-                }
+                const result = await checkTeamPin(teamId, numeric);
+
+                setError(!result);
             }
         }
     }, [setPin, openDrawer]);
 
     return (
-        <Drawer drawerId={drawerId} onClose={() => onClose(id, orgType, orgName, orgDesc)}>
-            <Title>PIN 입력해야 수정돼요 🔑</Title>
+        <Drawer drawerId={drawerId} onClose={onClose}>
+            <Title>PIN 입력해야 삭제돼요 🔑</Title>
             <InputWrapper>
                 <StyledInput
                     value={pin}
                     type="password"
-                    onChange={(e) => handlePinChange(e.target.value, id)}
+                    onChange={(e) => handlePinChange(e.target.value, teamId)}
                     inputMode="numeric"
                     controls={false}
                     placeholder="숫자 4자리"
@@ -54,6 +51,8 @@ const UpdateTeamDrawer1 = ({ drawerId }) => {
                     status={pin.length === 4 && error ? 'error' : null}
                 />
             </InputWrapper>
+            
+            <OkButton onClick={() => handleDeleteEnsemble(id)} label="진짜 삭제해요" disabled={error || pin.length !== 4} />
         </Drawer>
     );
 };
@@ -86,4 +85,4 @@ const StyledInput = styled(Input)`
     }
 `;
 
-export default UpdateTeamDrawer1;
+export default DeleteEnsembleDrawer;

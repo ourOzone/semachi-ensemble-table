@@ -10,7 +10,7 @@ const theme = {
     antGray: '#f5f5f5',
     blueGray: '#6A7F9A',
     border: '#f0f0f0',
-    primary: '#4096ff',
+    primary: '#1677ff',
     title: '#033d8d',
     danger: '#ff4d4f',
     

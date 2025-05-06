@@ -42,9 +42,9 @@ function FetchContextProvider({ children }) {
         // ensembles fetch
         const ensemblesRaw = await getEnsembles();
         const blocks = Array.from({ length: 7 }, () => Array.from({ length: 30 }, () => [])); // 직관적으로 blocks로 표기 (7 x 30 사이즈 2차원 배열)
-        
+
         // day, startTime, endTime에 따라 block 형식으로 정제
-        ensemblesRaw.forEach(({ _id, day, startTime, endTime, teamId, teamName, type, nextDate, due }) => {
+        ensemblesRaw.forEach(({ _id, day, startTime, endTime, teamId, teamName, repeat, nextDate, due }) => {
             for (let hour = startTime; hour <= endTime; hour++) {
                 blocks[day][hour].push({
                     id: _id,
@@ -53,7 +53,7 @@ function FetchContextProvider({ children }) {
                     endTime,
                     teamId,
                     name: teamName,
-                    repeat: type, // TODO 현재 로직은 isOneTime으로 되어있음, 백에서 repeat으로 바꾸면 대응(위에 forEach도)
+                    repeat,
                     nextDate: dayjs(nextDate),
                     due,
                     displayName: hour === startTime ? teamName : '', // 맨 처음 블록에만 팀명 표시
@@ -62,7 +62,6 @@ function FetchContextProvider({ children }) {
             }
         });
         
-        console.log(blocks)
         setEnsembles(blocks);
 
         // notes fetch

@@ -3,20 +3,21 @@ import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
 import { checkTeamPin } from "api/team";
-import { useTeamContext, useDrawerContext } from "context";
+import { useTeamContext, useEnsembleContext, useDrawerContext } from "context";
 
 const maxInput = 4;
 
-const UpdateTeamDrawer1 = ({ drawerId }) => {
-    const { id, orgType, orgName, orgDesc, pin, setPin, setTeamStates } = useTeamContext();
+const UpdateEnsembleDrawer1 = ({ drawerId }) => {
+    const { id, orgRepeat, orgNextDate, orgStartTime, orgEndTime, pin, setPin } = useTeamContext();
+    const { setEnsembleStates } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
 
-    const onClose = useCallback((id, orgType, orgName, orgDesc) => {
-        // 수정하기 전 상태로 돌려놓기
-        setTeamStates(id, orgType, orgName, orgDesc, '');
+    const onClose = useCallback(() => {
+        setEnsembleStates(id, orgRepeat, orgNextDate, orgStartTime, orgEndTime); // 수정하기 전 상태로 돌려놓기
+        setPin('');
         setError(false);
-    }, [setTeamStates]);
+    }, [setPin]);
 
     const handlePinChange = useCallback(async (value, id) => {
         const numeric = value.replace(/\D/g, '');
@@ -31,7 +32,7 @@ const UpdateTeamDrawer1 = ({ drawerId }) => {
                 
                 if (result) {
                     setPin('');
-                    openDrawer('updateTeam2');
+                    openDrawer('updateEnsemble2');
                 } else {
                     setError(true);
                 }
@@ -40,7 +41,7 @@ const UpdateTeamDrawer1 = ({ drawerId }) => {
     }, [setPin, openDrawer]);
 
     return (
-        <Drawer drawerId={drawerId} onClose={() => onClose(id, orgType, orgName, orgDesc)}>
+        <Drawer drawerId={drawerId} onClose={onClose}>
             <Title>PIN 입력해야 수정돼요 🔑</Title>
             <InputWrapper>
                 <StyledInput
@@ -86,4 +87,4 @@ const StyledInput = styled(Input)`
     }
 `;
 
-export default UpdateTeamDrawer1;
+export default UpdateEnsembleDrawer1;

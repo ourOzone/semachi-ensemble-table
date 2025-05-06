@@ -11,6 +11,11 @@ function TeamContextProvider({ children }) {
     const [desc, setDesc] = useState(['', '', '', '', '', '', '']); // [보컬, 기타, 베이스, 드럼, 키보드, 매니저, 셋리스트]
     const [pin, setPin] = useState('');
 
+    // 팀 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
+    const [orgType, setOrgType] = useState('');
+    const [orgName, setOrgName] = useState('');
+    const [orgDesc, setOrgDesc] = useState(['', '', '', '', '', '', '']);
+
     const setTeamStates = useCallback((
         id = '',
         type = '',
@@ -25,6 +30,16 @@ function TeamContextProvider({ children }) {
         setPin(pin);
     }, []);
 
+    const setTeamOrgStates = useCallback((
+        type = '',
+        name = '',
+        desc = ['', '', '', '', '', '', '']
+    ) => {
+        setOrgType(type);
+        setOrgName(name);
+        setOrgDesc(desc);
+    }, []);
+
     return (
         <TeamContext.Provider value={{ 
             id, setId,
@@ -32,7 +47,11 @@ function TeamContextProvider({ children }) {
             name, setName,
             desc, setDesc,
             pin, setPin,
+            orgType,
+            orgName,
+            orgDesc,
             setTeamStates,
+            setTeamOrgStates,
          }}>
             {children}
         </TeamContext.Provider>

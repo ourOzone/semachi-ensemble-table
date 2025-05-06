@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button, Divider, Segmented } from "antd";
@@ -8,9 +8,15 @@ import { useTeamContext, useDrawerContext } from "context";
 const memberLabels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
 const TeamInfoDrawer = ({ drawerId }) => {
-    const { type, name, desc } = useTeamContext();
+    const { type, name, desc, setTeamOrgStates } = useTeamContext();
     const { openDrawer } = useDrawerContext();
     const [option, setOption] = useState('팀원');
+
+    const handleUpdateTeam = useCallback((type, name, desc) => {
+        // team 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
+        setTeamOrgStates(type, name, desc);
+        openDrawer('updateTeam1');
+    }, [setTeamOrgStates, openDrawer]);
 
     return (
         <Drawer drawerId={drawerId} onClose={() => setOption('팀원')} background>
@@ -20,11 +26,8 @@ const TeamInfoDrawer = ({ drawerId }) => {
                 <ButtonWrapper>
                     <StyledButton type="primary" onClick={() => openDrawer('addEnsemble1')}><PlusOutlined />합주 추가</StyledButton>
                 </ButtonWrapper>
-                {/* <ButtonWrapper>
-                    <StyledButton onClick={() => handleSkip(id)}><PauseOutlined />이번주 안 해요</StyledButton>
-                </ButtonWrapper> */}
                 <ButtonWrapper>
-                    <StyledButton onClick={() => openDrawer('updateTeam1')}><EditOutlined />팀 수정</StyledButton>
+                    <StyledButton onClick={() => handleUpdateTeam(type, name, desc)}><EditOutlined />팀 수정</StyledButton>
                     <StyledButton danger onClick={() => openDrawer('deleteTeam')}><DeleteOutlined />팀 삭제</StyledButton>
                 </ButtonWrapper>
             </Card>
@@ -69,7 +72,7 @@ const Card = styled.div`
 
 const ButtonWrapper = styled.div`
     display: flex;
-    gap: 1.5rem;
+    gap: 0.5rem;
     width: 100%;
     justify-content: center;
 `;

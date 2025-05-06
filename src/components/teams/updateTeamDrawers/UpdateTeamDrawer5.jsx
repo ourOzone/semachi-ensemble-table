@@ -17,7 +17,6 @@ const countLines = (value) => {
 
 const UpdateTeamDrawer5 = ({ drawerId, handleUpdateTeam }) => {
     const { id, type, name, desc, setDesc } = useTeamContext();
-    const { openDrawer } = useDrawerContext();
 
     const text = useMemo(() => desc[6] || '', [desc]);
 
@@ -31,7 +30,6 @@ const UpdateTeamDrawer5 = ({ drawerId, handleUpdateTeam }) => {
     }, [setDesc]);
 
     const isOverLimit = text.length > maxInput;
-    // const isEmpty = text.trim() === '';
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>

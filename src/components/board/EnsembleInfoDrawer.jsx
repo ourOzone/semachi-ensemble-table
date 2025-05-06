@@ -4,21 +4,32 @@ import styled from "styled-components";
 import { Button, Divider, Segmented } from "antd";
 import { PlusOutlined, PauseOutlined, EditOutlined, InfoCircleOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useTeamContext, useEnsembleContext, useDrawerContext } from "context";
+import { idx2hour } from "constants";
+import dayjs from 'dayjs';
+import 'dayjs/locale/ko';
+
+dayjs.locale('ko');
 
 const EnsembleInfoDrawer = ({ drawerId, handleTeamInfoClick, handleSkip }) => {
     const { id: teamId, name } = useTeamContext();
-    const { id, repeat } = useEnsembleContext();
+    const { id, repeat, nextDate, startTime, endTime, setStartTime, setEndTime, setEnsembleOrgStates } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
 
-    // const onClose = useCallback(() => {
-    //     setEnsembleStates();
-    // }, [setEnsembleStates]);
+    const handleUpdateEnsemble = useCallback((repeat, nextDate, startTime, endTime) => {
+        // team 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
+        setEnsembleOrgStates(repeat, nextDate, startTime, endTime);
+
+        // 이 2개는 null 상태가 아니면 이미 선택 돼있음 (repeat과 nextDate는 값이 있어도 선택 안 돼있음)
+        setStartTime(null);
+        setEndTime(null);
+        
+        openDrawer('updateEnsemble1');
+    }, [setEnsembleOrgStates, openDrawer]);
 
     return (
         <Drawer drawerId={drawerId} background>
             <Card>
                 <Name>{name}</Name>
-                <Type>{repeat}</Type>
                 <ButtonWrapper>
                     <StyledButton type="primary" onClick={() => handleTeamInfoClick(teamId)}>
                         <InfoCircleOutlined />팀 정보 보기
@@ -28,11 +39,19 @@ const EnsembleInfoDrawer = ({ drawerId, handleTeamInfoClick, handleSkip }) => {
                     <StyledButton onClick={() => handleSkip(id)}><PauseOutlined />이번주 안 해요</StyledButton>
                 </ButtonWrapper>
                 <ButtonWrapper>
-                    <StyledButton onClick={() => openDrawer('updateTeam1')}><EditOutlined />합주 수정</StyledButton>
-                    <StyledButton danger onClick={() => openDrawer('deleteTeam')}><DeleteOutlined />합주 삭제</StyledButton>
+                    <StyledButton onClick={() => handleUpdateEnsemble(repeat, nextDate, startTime, endTime)}><EditOutlined />합주 수정</StyledButton>
+                    <StyledButton danger onClick={() => openDrawer('deleteEnsemble')}><DeleteOutlined />합주 삭제</StyledButton>
                 </ButtonWrapper>
             </Card>
             <Card>
+                <NextEnsemble>
+                    <NextEnsembleLabel>다음 합주</NextEnsembleLabel>
+                    <TimeWrapper>
+                        <Time>{nextDate?.format('YYYY-MM-DD')} ({nextDate?.format('dd')})</Time>
+                        <Time>{idx2hour[startTime]} - {idx2hour[endTime + 1]}</Time>
+                        <Repeat>{repeat ? '매주 이 시간에 반복' : '이거 한 번만 하고 삭제'}</Repeat>
+                    </TimeWrapper>
+                </NextEnsemble>
             </Card>
         </Drawer>
     );
@@ -53,53 +72,51 @@ const Card = styled.div`
 
 const ButtonWrapper = styled.div`
     display: flex;
-    gap: 1.5rem;
+    gap: 0.5rem;
     width: 100%;
     justify-content: center;
-`;
-
-const MemberWrapper = styled.div`
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    padding: 0.5rem;
 `;
 
 const Name = styled.span`
     font-size: 2rem;
     font-family: Bold;
     text-align: center;
-    margin-top: 0.5rem;
+    margin: 0.5rem 0 1rem;
 `;
 
-const Type = styled.span`
-    color: ${({ theme }) => theme.darkGray};
-    font-size: 1.25rem;
-    margin-bottom: 1rem;
-`;
-
-const Member = styled.div`
+const NextEnsemble = styled.div`
     display: flex;
     justify-content: space-between;
     align-items: center;
     width: 100%;
 `;
 
-const MemberLabel = styled.span`
+const NextEnsembleLabel = styled.span`
     font-size: 1.5rem;
     font-family: Bold;
-    min-width: 6rem;
-    background-color: ${({ theme, idx }) => theme.eventColors[idx]};
+    background-color: ${({ theme }) => theme.primary};
     border-radius: 1rem;
-    padding: 0.375rem;
+    padding: 0.75rem 1rem;
     color: white;
     text-align: center;
-    box-shadow: 0 0.25rem 0.125rem ${({ theme, idx }) => theme.eventColors[idx]}33;
+    box-shadow: 0 0.25rem 0.125rem ${({ theme }) => theme.black}33;
 `;
 
-const MemberName = styled.span`
+const TimeWrapper = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+`;
+
+const Time = styled.span`
     font-size: 1.5rem;
     color: ${({ theme }) => theme.black};
+`;
+
+const Repeat = styled(Time)`
+    color: ${({ theme }) => theme.darkGray};
+    font-size: 1.25rem;
 `;
 
 const StyledButton = styled(Button)`
@@ -118,36 +135,6 @@ const StyledButton = styled(Button)`
     & svg {
         font-size: 1.5rem;
     }
-`;
-
-const StyledSegmented = styled(Segmented)`
-    width: 100%;
-    border-radius: 1rem;
-    padding: 0.375rem;
-    & * {
-        border-radius: 1rem !important;
-    }
-    & .ant-segmented-item-label {
-        padding: 0.5rem;
-        font-size: 1.5rem;
-        font-family: Bold;
-    }
-`;
-
-const StyledDivider = styled(Divider)`
-    margin: 0.5rem 0;
-`;
-
-const Desc = styled.div`
-    font-size: 1.25rem;
-    white-space: pre-wrap; // 개행
-    padding: 1.25rem;
-    overflow: scroll;
-    width: 100%;
-    height: 100%;
-    background-color: ${({ theme }) => theme.antGray};
-    border-radius: 1rem;
-    line-height: 1.5;
 `;
 
 export default EnsembleInfoDrawer;

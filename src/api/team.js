@@ -24,5 +24,5 @@ export const getTeams = () => get('/teams');
 export const addTeam = (team) => post('/team', team);
 export const updateTeam = (id, team) => put(`/team?id=${id}`, team);
 export const deleteTeam = (id) => del(`/team?id=${id}`);
-export const isTeamExist = (id) => get(`/team-exists?id=${id}`);
+export const isTeamExist = (id) => get(`/team/${id}`);
 export const checkTeamPin = (teamId, pin) => post('/check-team-pin', { teamId, pin });

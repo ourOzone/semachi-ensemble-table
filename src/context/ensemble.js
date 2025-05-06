@@ -12,6 +12,12 @@ function EnsembleContextProvider({ children }) {
     const [endTime, setEndTime] = useState(null); // idx값 (0 ~ 29)
     const [currentMonth, setCurrentMonth] = useState(dayjs()); // 합주 추가시 달력에서 사용, drawer close시 초기화 위해 여기에 선언
 
+    // 합주 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
+    const [orgRepeat, setOrgRepeat] = useState(false);
+    const [orgNextDate, setOrgNextDate] = useState(null);
+    const [orgStartTime, setOrgStartTime] = useState(null);
+    const [orgEndTime, setOrgEndTime] = useState(null);
+
     const setEnsembleStates = useCallback((
         id = '',
         repeat = false,
@@ -27,6 +33,18 @@ function EnsembleContextProvider({ children }) {
         setEndTime(endTime);
         setCurrentMonth(currentMonth);
     }, []);
+    
+    const setEnsembleOrgStates = useCallback((
+        repeat = false,
+        nextDate = null,
+        startTime = null,
+        endTime = null,
+    ) => {
+        setOrgRepeat(repeat);
+        setOrgNextDate(nextDate);
+        setOrgStartTime(startTime);
+        setOrgEndTime(endTime);
+    }, []);
 
     return (
         <EnsembleContext.Provider value={{
@@ -36,7 +54,12 @@ function EnsembleContextProvider({ children }) {
             startTime, setStartTime,
             endTime, setEndTime,
             currentMonth, setCurrentMonth,
+            orgRepeat,
+            orgNextDate,
+            orgStartTime,
+            orgEndTime,
             setEnsembleStates,
+            setEnsembleOrgStates,
          }}>
             {children}
         </EnsembleContext.Provider>

@@ -9,6 +9,11 @@ import useMessage from 'hooks/useMessage';
 import { days, hours, idx2hour, url } from 'constants';
 import { Container } from 'components/common/Container';
 import EnsembleInfoDrawer from './EnsembleInfoDrawer';
+import UpdateEnsembleDrawer1 from './updateEnsembleDrawers/UpdateEnsembleDrawer1'
+import UpdateEnsembleDrawer2 from './updateEnsembleDrawers/UpdateEnsembleDrawer2'
+import UpdateEnsembleDrawer3 from './updateEnsembleDrawers/UpdateEnsembleDrawer3'
+import UpdateEnsembleDrawer4 from './updateEnsembleDrawers/UpdateEnsembleDrawer4'
+import DeleteEnsembleDrawer from './DeleteEnsembleDrawer';
 
 // 월요일 0 ~ 일요일 6 기준에서, 오늘의 idx값
 const todayIdx = dayjs().day() === 0 ? 6 : dayjs().day() - 1;
@@ -33,11 +38,11 @@ const Board = () => {
     // 이 합주가 "다음 번에 안 해요"에 해당하는지(회색인지) 판단
     const isSkipped = useCallback((nextDate) => nextDate.diff(dayjs().startOf('day'), 'day') >= 7, []);
 
-    const handleEnsembleClick = useCallback(async ({ id, teamId, name, repeat }) => {
+    const handleEnsembleClick = useCallback(async ({ id, teamId, name, repeat, nextDate, startTime, endTime }) => {
         try {
             await isEnsembleExist(id); // 누른 합주가 이미 삭제됐으면 에러
             setTeamStates(teamId, '', name);
-            setEnsembleStates(id, repeat); // TODO 화면에 띄울 state 추가
+            setEnsembleStates(id, repeat, nextDate, startTime, endTime); // TODO 화면에 띄울 state 추가
             openDrawer('ensembleInfo');
             
         } catch {
@@ -64,16 +69,51 @@ const Board = () => {
     // 이번주 안 해요
     const handleSkip = useCallback(() => {}, []);
 
-    const handleDeleteEnsemble = async (info, id) => {
-        if (!window.confirm(`"${info.name}" 팀의\n${`${days[info.day]}요일 ${idx2hour[info.start_time]} ~ ${idx2hour[info.end_time + 1]}`} 합주를 삭제해요.\n진짜 삭제할래요?`)) {
-            return;
+    const handleUpdateEnsemble = useCallback(async (id, repeat, nextDate, startTime, endTime) => {
+        console.log({
+            day: (nextDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
+            nextDate,
+            startTime,
+            endTime,
+            repeat,
+            type: repeat ? '무기한' : '일회성', // TODO 삭제
+            due: repeat ? '2099-12-31' : nextDate.format('YYYY-MM-DD'), // TODO 삭제
+        })
+        try {
+            await updateEnsemble(id, {
+                day: (nextDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
+                nextDate,
+                startTime,
+                endTime,
+                repeat,
+                type: repeat ? '무기한' : '일회성', // TODO 삭제
+                due: repeat ? '2099-12-31' : nextDate.format('YYYY-MM-DD'), // TODO 삭제
+            });
+            fetchData();
+            message.success('잘 바꿔놨어요.');
+            setOpenedDrawers(['ensembleInfo']);
+        } catch (err) {
+            message.error('합주 수정에 실패했어요. 인터넷 상태가 괜찮은데 이게 떴다면 초비상이니 빠르게 개발자나 회장에게 연락해주세요.');
+        }
+    }, [message, fetchData, setOpenedDrawers]);
+
+    const handleDeleteEnsemble = useCallback(async (id) => {
+        try {
+            await isEnsembleExist(id);
+            // TODO PIN 입력 로직 추가
+            await deleteEnsemble(id);
+            message.success('삭제했어요.');
+        }
+        catch {
+            message.warning('이미 삭제된 합주예요.')
+        }
+        finally {
+            setEnsembleStates();
+            closeAllDrawers();
         }
 
-        await axios.get(`${url}/deleteensemble?id=${id}`);
         fetchData();
-        
-        // setInfo(null);
-    };
+    }, [closeAllDrawers, fetchData, message, setTeamStates]);
 
     const handleModifyTeam = async () => {
         await axios.post(`${url}/teammodify?id=${modifyId}`, {
@@ -129,6 +169,11 @@ const Board = () => {
             
             {/* DRAWERS */}
             <EnsembleInfoDrawer drawerId='ensembleInfo' handleTeamInfoClick={handleTeamInfoClick} handleSkip={handleSkip} />
+            <UpdateEnsembleDrawer1 drawerId='updateEnsemble1' />
+            <UpdateEnsembleDrawer2 drawerId='updateEnsemble2' />
+            <UpdateEnsembleDrawer3 drawerId='updateEnsemble3' />
+            <UpdateEnsembleDrawer4 drawerId='updateEnsemble4' handleUpdateEnsemble={handleUpdateEnsemble} />
+            <DeleteEnsembleDrawer drawerId='deleteEnsemble' handleDeleteEnsemble={handleDeleteEnsemble} />
         </Container>
     )
 };

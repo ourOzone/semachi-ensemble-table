@@ -66,26 +66,15 @@ const Board = () => {
         }
     }, [message, fetchData, openDrawer, teams, setTeamStates, setEnsembleStates, closeAllDrawers]);
 
-    // 이번주 안 해요
-    const handleSkip = useCallback(() => {}, []);
-
-    const handleUpdateEnsemble = useCallback(async (id, repeat, nextDate, startTime, endTime) => {
-        console.log({
-            day: (nextDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
-            nextDate,
-            startTime,
-            endTime,
-            repeat,
-            type: repeat ? '무기한' : '일회성', // TODO 삭제
-            due: repeat ? '2099-12-31' : nextDate.format('YYYY-MM-DD'), // TODO 삭제
-        })
+    const handleUpdateEnsemble = useCallback(async (id, teamId, repeat, nextDate, startTime, endTime) => {
         try {
             await updateEnsemble(id, {
-                day: (nextDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
+                teamId,
+                repeat,
                 nextDate,
                 startTime,
                 endTime,
-                repeat,
+                day: (nextDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
                 type: repeat ? '무기한' : '일회성', // TODO 삭제
                 due: repeat ? '2099-12-31' : nextDate.format('YYYY-MM-DD'), // TODO 삭제
             });
@@ -113,7 +102,7 @@ const Board = () => {
         }
 
         fetchData();
-    }, [closeAllDrawers, fetchData, message, setTeamStates]);
+    }, [closeAllDrawers, fetchData, message, setEnsembleStates]);
 
     const handleModifyTeam = async () => {
         await axios.post(`${url}/teammodify?id=${modifyId}`, {
@@ -168,7 +157,7 @@ const Board = () => {
             </Table>
             
             {/* DRAWERS */}
-            <EnsembleInfoDrawer drawerId='ensembleInfo' handleTeamInfoClick={handleTeamInfoClick} handleSkip={handleSkip} />
+            <EnsembleInfoDrawer drawerId='ensembleInfo' handleTeamInfoClick={handleTeamInfoClick} handleUpdateEnsemble={handleUpdateEnsemble} />
             <UpdateEnsembleDrawer1 drawerId='updateEnsemble1' />
             <UpdateEnsembleDrawer2 drawerId='updateEnsemble2' />
             <UpdateEnsembleDrawer3 drawerId='updateEnsemble3' />

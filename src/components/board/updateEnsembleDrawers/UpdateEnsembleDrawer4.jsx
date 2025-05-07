@@ -8,8 +8,8 @@ import dayjs from 'dayjs';
 import OkButton from "components/common/OkButton";
 
 const UpdateEnsembleDrawer4 = ({ drawerId, handleUpdateEnsemble }) => {
-    const { id } = useTeamContext();
-    const { repeat, nextDate, startTime, setStartTime, endTime, setEndTime } = useEnsembleContext();
+    const { id: teamId } = useTeamContext();
+    const { id, repeat, nextDate, startTime, setStartTime, endTime, setEndTime } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
 
     const [startTimeStr, setStartTimeStr] = useState('');
@@ -21,10 +21,6 @@ const UpdateEnsembleDrawer4 = ({ drawerId, handleUpdateEnsemble }) => {
         setStartTimeStr('');
         setEndTimeStr('');
     }, [setStartTime, setEndTime, setStartTimeStr, setEndTimeStr]);
-
-    const handleClick = useCallback((id, repeat, nextDate, startTime, endTime) => {
-        
-    }, [handleUpdateEnsemble, openDrawer]);
 
     const handleClickTime = useCallback((idx, startTime, endTime, startTimeStr) => {
         // startTime과 endTime의 값은 모두 block의 index (0 ~ 29)
@@ -74,7 +70,7 @@ const UpdateEnsembleDrawer4 = ({ drawerId, handleUpdateEnsemble }) => {
                 </Time>
                 <OkButton
                     label='이대로 할래요'
-                    onClick={() => handleUpdateEnsemble(id, repeat, nextDate, startTime, endTime)}
+                    onClick={() => handleUpdateEnsemble(id, teamId, repeat, nextDate, startTime, endTime)}
                 />
             </Header>
             <TimeGridWrapper>

@@ -48,10 +48,18 @@ const DeleteTeamDrawer = ({ drawerId, handleDeleteTeam }) => {
                     placeholder="숫자 4자리"
                     error={error}
                     status={pin.length === 4 && error ? 'error' : null}
+                    onKeyDown={(e) => { // Enter 키 누를시
+                        if (e.key === 'Enter' && !error && pin.length === maxInput) {
+                            handleDeleteTeam(id);
+                        }
+                    }}
                 />
             </InputWrapper>
-            
-            <OkButton onClick={() => handleDeleteTeam(id)} label="진짜 삭제해요" disabled={error || pin.length !== 4} />
+            <OkButton
+                label="진짜 삭제해요"
+                onClick={() => handleDeleteTeam(id)}
+                disabled={error || pin.length !== maxInput}
+            />
         </Drawer>
     );
 };

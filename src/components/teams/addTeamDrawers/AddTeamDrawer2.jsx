@@ -29,10 +29,15 @@ const AddTeamDrawer2 = ({ drawerId }) => {
                     show: true,
                     max: maxInput,
                 }}
+                onKeyDown={(e) => { // Enter 키 누를시
+                    if (e.key === 'Enter' && name.length >= 1 && name.length <= maxInput) {
+                        openDrawer('addTeam3');
+                    }
+                }}
             />
             <OkButton
                 onClick={() => openDrawer('addTeam3')}
-                disabled={name.length < 1 || name.length > 20}
+                disabled={name.length < 1 || name.length > maxInput}
             />
         </Drawer>
     );

@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { Layout, Button } from 'antd';
 import { BellOutlined, BookOutlined } from '@ant-design/icons';
 import useScrollPosition from 'hooks/useScrollPosition';
+import Tooltip from 'components/common/Tooltip';
 
 const { Header: AntHeader } = Layout;
 
@@ -12,7 +13,13 @@ const Header = () => {
         <StyledHeader scrollPosition={scrollPosition}>
             <Title>세마치 합주판</Title>
             <ButtonWrapper>
-                <StyledButton variant="text" icon={<BookOutlined />}></StyledButton>
+                <Tooltip title="회칙 등 문서 구글 드라이브">
+                    <StyledButton
+                        variant="text"
+                        icon={<BookOutlined />}
+                        onClick={() => window.location.href = 'https://drive.google.com/drive/folders/1FneJEkXY-hSqpM_XOBic7ep8lJZ3tdFn?usp=sharing'}
+                    ></StyledButton>
+                </Tooltip>
                 <StyledButton variant="text" icon={<BellOutlined />}></StyledButton>
             </ButtonWrapper>
         </StyledHeader>

@@ -1,21 +1,36 @@
-import { useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button, Divider, Segmented } from "antd";
 import { PlusOutlined, PauseOutlined, EditOutlined, InfoCircleOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useTeamContext, useEnsembleContext, useDrawerContext } from "context";
-import { idx2hour } from "constants";
+import { idx2hour, eventIds } from "constants";
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 
 dayjs.locale('ko');
 
-const EnsembleInfoDrawer = ({ drawerId, handleTeamInfoClick, handleSkip }) => {
+const EnsembleInfoDrawer = ({ drawerId, handleTeamInfoClick, handleUpdateEnsemble }) => {
     const { id: teamId, name } = useTeamContext();
-    const { id, repeat, nextDate, startTime, endTime, setStartTime, setEndTime, setEnsembleOrgStates } = useEnsembleContext();
+    const { id, repeat, nextDate, setNextDate, startTime, endTime, setStartTime, setEndTime, setEnsembleOrgStates } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
 
-    const handleUpdateEnsemble = useCallback((repeat, nextDate, startTime, endTime) => {
+    useEffect(() => {
+        // 반복 합주인데 nextDate가 오늘보다 이전인 경우 (특별한 업데이트가 없었을 경우)
+        if (repeat && dayjs(nextDate).startOf('day').isBefore(dayjs().startOf('day'))) {
+            // 가장 가까운 같은 요일로 변경
+            setNextDate(dayjs().startOf('day').add((7 + dayjs(nextDate).day() - dayjs().day()) % 7, 'day').startOf('day'));
+        }
+        // nextDate가 오늘보다 이후이거나 일회성 합주인 경우는 그대로 둠
+        
+    }, [id, repeat, nextDate]); // TODO 이부분 생각
+
+    // repeat false거나 오늘보다 7일 이후라면 (오늘이 수요일이라면 다음주 수요일부터) 다음번 안해요 버튼을 disabled
+    const isDisabled = useCallback((repeat, nextDate) => {
+        return !repeat || dayjs(nextDate).isAfter(dayjs().startOf('day').add(6, 'day').endOf('day'))
+    }, []);
+
+    const handleClickUpdate = useCallback((repeat, nextDate, startTime, endTime) => {
         // team 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
         setEnsembleOrgStates(repeat, nextDate, startTime, endTime);
 
@@ -26,26 +41,43 @@ const EnsembleInfoDrawer = ({ drawerId, handleTeamInfoClick, handleSkip }) => {
         openDrawer('updateEnsemble1');
     }, [setEnsembleOrgStates, openDrawer]);
 
+    // 다음 번에 안 해요 클릭 시 nextDate를 7일 뒤로 변경하고 바로 렌더링
+    const handleClickSkip = useCallback((id, teamId, repeat, nextDate, startTime, endTime) => {
+        handleUpdateEnsemble(id, teamId, repeat, dayjs(nextDate).add(7, 'day'), startTime, endTime);
+        setNextDate((prev) => dayjs(prev).add(7, 'day'));
+    }, []);
+
     return (
         <Drawer drawerId={drawerId} background>
             <Card>
                 <Name>{name}</Name>
                 <ButtonWrapper>
-                    <StyledButton type="primary" onClick={() => handleTeamInfoClick(teamId)}>
-                        <InfoCircleOutlined />팀 정보 보기
+                    {!eventIds.includes(teamId) && (
+                        <StyledButton type="primary" onClick={() => handleTeamInfoClick(teamId)}>
+                            <InfoCircleOutlined />팀 정보 보기
+                        </StyledButton>
+                    )}
+                </ButtonWrapper>
+                <ButtonWrapper>
+                    <StyledButton
+                        disabled={isDisabled(repeat, nextDate)}
+                        onClick={() => handleClickSkip(id, teamId, repeat, nextDate, startTime, endTime)}
+                    >
+                        <PauseOutlined />
+                        다음 번에 안 해요
+                        {!isDisabled(repeat, nextDate) && (
+                            <ButtonSmallText>(다음 {eventIds.includes(teamId) ? '일정을' : '합주를'} {dayjs(dayjs(nextDate).add(7, 'day')).format('M/D(dd)')}로)</ButtonSmallText>
+                        )}
                     </StyledButton>
                 </ButtonWrapper>
                 <ButtonWrapper>
-                    <StyledButton onClick={() => handleSkip(id)}><PauseOutlined />이번주 안 해요</StyledButton>
-                </ButtonWrapper>
-                <ButtonWrapper>
-                    <StyledButton onClick={() => handleUpdateEnsemble(repeat, nextDate, startTime, endTime)}><EditOutlined />합주 수정</StyledButton>
-                    <StyledButton danger onClick={() => openDrawer('deleteEnsemble')}><DeleteOutlined />합주 삭제</StyledButton>
+                    <StyledButton onClick={() => handleClickUpdate(repeat, nextDate, startTime, endTime)}><EditOutlined />{eventIds.includes(teamId) ? '일정' : '합주'} 수정</StyledButton>
+                    <StyledButton danger onClick={() => openDrawer('deleteEnsemble')}><DeleteOutlined />{eventIds.includes(teamId) ? '일정' : '합주'} 삭제</StyledButton>
                 </ButtonWrapper>
             </Card>
             <Card>
                 <NextEnsemble>
-                    <NextEnsembleLabel>다음 합주</NextEnsembleLabel>
+                    <NextEnsembleLabel>다음 {eventIds.includes(teamId) ? '일정' : '합주'}</NextEnsembleLabel>
                     <TimeWrapper>
                         <Time>{nextDate?.format('YYYY-MM-DD')} ({nextDate?.format('dd')})</Time>
                         <Time>{idx2hour[startTime]} - {idx2hour[endTime + 1]}</Time>
@@ -136,5 +168,11 @@ const StyledButton = styled(Button)`
         font-size: 1.5rem;
     }
 `;
+
+const ButtonSmallText = styled.div`
+    font-size: 1rem !important;
+    color: ${({ theme }) => theme.darkGray};
+`;
+
 
 export default EnsembleInfoDrawer;

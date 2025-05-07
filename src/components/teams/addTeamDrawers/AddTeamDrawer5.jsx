@@ -64,6 +64,11 @@ const AddTeamDrawer5 = ({ drawerId, handleAddTeam }) => {
                     $visible={isConfirmVisible}
                     $error={error}
                     status={isConfirmError ? 'error' : null}
+                    onKeyDown={(e) => { // Enter 키 누를시
+                        if (e.key === 'Enter' && !error && confirmPin.length === maxInput) {
+                            handleClick(type, name, desc, pin);
+                        }
+                    }}
                 />
             </InputWrapper>
             <OkButton

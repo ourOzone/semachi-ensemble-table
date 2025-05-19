@@ -1,15 +1,15 @@
 import { useState, useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
-import { checkTeamPin } from "api/team";
-import { useTeamContext } from "context";
+import { checkNotePin } from "api/note";
+import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 import PinInput from "components/common/PinInput";
 
 const maxInput = 4;
 
-const DeleteTeamDrawer = ({ drawerId, handleDeleteTeam }) => {
-    const { id, pin, setPin } = useTeamContext();
+const DeleteNoteDrawer = ({ drawerId, id, pin, setPin, handleDeleteNote }) => {
+    const { openDrawer } = useDrawerContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
 
     const onClose = useCallback(() => {
@@ -27,12 +27,12 @@ const DeleteTeamDrawer = ({ drawerId, handleDeleteTeam }) => {
                 setPin(numeric);
 
                 // PIN 판별
-                const result = await checkTeamPin(id, numeric);
+                const result = await checkNotePin(id, numeric);
 
                 setError(!result);
             }
         }
-    }, [setPin]);
+    }, [setPin, openDrawer]);
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>
@@ -46,17 +46,18 @@ const DeleteTeamDrawer = ({ drawerId, handleDeleteTeam }) => {
                     controls={false}
                     placeholder="숫자 4자리"
                     error={error}
-                    status={pin.length === 4 && error ? 'error' : null}
+                    status={pin.length === maxInput && error ? 'error' : null}
                     onKeyDown={(e) => { // Enter 키 누를시
                         if (e.key === 'Enter' && !error && pin.length === maxInput) {
-                            handleDeleteTeam(id);
+                            handleDeleteNote(id);
                         }
                     }}
                 />
             </InputWrapper>
+            
             <OkButton
                 label="진짜 삭제해요"
-                onClick={() => handleDeleteTeam(id)}
+                onClick={() => handleDeleteNote(id)}
                 disabled={error || pin.length !== maxInput}
             />
         </Drawer>
@@ -82,4 +83,4 @@ const StyledInput = styled(PinInput)`
     color: ${({ theme, value, error }) => value.length === maxInput && error ? theme.danger : theme.title};
 `;
 
-export default DeleteTeamDrawer;
+export default DeleteNoteDrawer;

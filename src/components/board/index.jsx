@@ -25,15 +25,10 @@ const week = Array.from({ length: 7 }, (_, i) =>
 
 const Board = () => {
     const { teams, ensembles, fetchData } = useFetchContext();
-    const { name, setTeamStates } = useTeamContext();
-    const { id, repeat, setEnsembleStates } = useEnsembleContext();
+    const { setTeamStates } = useTeamContext();
+    const { setEnsembleStates } = useEnsembleContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
     const [message, contextHolder] = useMessage();
-
-    // TODO 삭제
-    const [modifyId, setModifyId] = useState('');
-    const [modifyName, setModifyName] = useState('');
-    const [modifyDesc, setModifyDesc] = useState(['', '', '', '', '', '', '']);
 
     // 이 합주가 "다음 번에 안 해요"에 해당하는지(회색인지) 판단
     const isSkipped = useCallback((nextDate) => nextDate.diff(dayjs().startOf('day'), 'day') >= 7, []);
@@ -89,7 +84,6 @@ const Board = () => {
     const handleDeleteEnsemble = useCallback(async (id) => {
         try {
             await isEnsembleExist(id);
-            // TODO PIN 입력 로직 추가
             await deleteEnsemble(id);
             message.success('삭제했어요.');
         }
@@ -103,19 +97,6 @@ const Board = () => {
 
         fetchData();
     }, [closeAllDrawers, fetchData, message, setEnsembleStates]);
-
-    const handleModifyTeam = async () => {
-        await axios.post(`${url}/teammodify?id=${modifyId}`, {
-            name: modifyName,
-            desc: modifyDesc
-        });
-
-        fetchData();
-        setModifyId('');
-        setModifyName('');
-        setModifyDesc(['', '', '', '', '', '', '']);
-
-    };
     
     return (
         <Container row>

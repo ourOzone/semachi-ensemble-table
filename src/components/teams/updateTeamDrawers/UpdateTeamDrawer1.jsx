@@ -4,6 +4,7 @@ import styled from "styled-components";
 import { Input } from "antd";
 import { checkTeamPin } from "api/team";
 import { useTeamContext, useDrawerContext } from "context";
+import PinInput from "components/common/PinInput";
 
 const maxInput = 4;
 
@@ -73,17 +74,8 @@ const InputWrapper = styled.div`
 `;
 
 
-const StyledInput = styled(Input)`
-    font-family: Bold !important;
+const StyledInput = styled(PinInput)`
     color: ${({ theme, value, error }) => value.length === maxInput && error ? theme.danger : theme.title};
-    border-radius: 1.5rem;
-    width: 20rem;
-    font-size: 3rem;
-    text-align: center;
-
-    & * {
-        font-family: Regular;
-    }
 `;
 
 export default UpdateTeamDrawer1;

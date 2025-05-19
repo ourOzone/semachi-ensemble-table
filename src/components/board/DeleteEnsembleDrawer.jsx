@@ -5,6 +5,7 @@ import { Input } from "antd";
 import { checkTeamPin } from "api/team";
 import { useTeamContext, useEnsembleContext, useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
+import PinInput from "components/common/PinInput";
 
 const maxInput = 4;
 
@@ -48,7 +49,7 @@ const DeleteEnsembleDrawer = ({ drawerId, handleDeleteEnsemble }) => {
                     controls={false}
                     placeholder="숫자 4자리"
                     error={error}
-                    status={pin.length === 4 && error ? 'error' : null}
+                    status={pin.length === maxInput && error ? 'error' : null}
                     onKeyDown={(e) => { // Enter 키 누를시
                         if (e.key === 'Enter' && !error && pin.length === maxInput) {
                             handleDeleteEnsemble(id);
@@ -81,17 +82,8 @@ const InputWrapper = styled.div`
 `;
 
 
-const StyledInput = styled(Input)`
-    font-family: Bold !important;
+const StyledInput = styled(PinInput)`
     color: ${({ theme, value, error }) => value.length === maxInput && error ? theme.danger : theme.title};
-    border-radius: 1.5rem;
-    width: 20rem;
-    font-size: 3rem;
-    text-align: center;
-
-    & * {
-        font-family: Regular;
-    }
 `;
 
 export default DeleteEnsembleDrawer;

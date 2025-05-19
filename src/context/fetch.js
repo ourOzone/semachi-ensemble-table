@@ -2,7 +2,7 @@ import React, { createContext, useState, useCallback } from 'react';
 import dayjs from 'dayjs';
 import { getTeams } from 'api/team';
 import { getEnsembles } from 'api/ensemble';
-import { getNotes } from 'api/notes';
+import { getNotes } from 'api/note';
 import { eventIds } from 'constants';
 import theme from 'styles/theme';
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import styled from 'styled-components';
 import { Divider } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
@@ -55,8 +55,9 @@ const Teams = () => {
     }, [openDrawer, setTeamStates]);
 
     const handleClickAddTeam = useCallback(() => {
+        setTeamStates(); // 초기화
         openDrawer('addTeam1');
-    }, [openDrawer]);
+    }, [setTeamStates, openDrawer]);
 
     const handleAddTeam = useCallback(async (type, name, desc, pin) => {
         try {

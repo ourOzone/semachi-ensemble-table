@@ -4,6 +4,7 @@ import styled from "styled-components";
 import { Input } from "antd";
 import { useTeamContext, useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
+import PinInput from "components/common/PinInput";
 
 const maxInput = 4;
 
@@ -48,7 +49,7 @@ const AddTeamDrawer5 = ({ drawerId, handleAddTeam }) => {
         <Drawer drawerId={drawerId} onClose={onClose}>
             <Title>PIN 만들어요 🔑</Title>
             <InputWrapper>
-                <StyledInput
+                <PinInput
                     value={pin}
                     type="password"
                     onChange={handlePinChange}
@@ -94,20 +95,7 @@ const InputWrapper = styled.div`
     align-items: center;
 `;
 
-const StyledInput = styled(Input)`
-    font-family: Bold !important;
-    color: ${({ theme }) => theme.title};
-    border-radius: 1.5rem;
-    width: 20rem;
-    font-size: 3rem;
-    text-align: center;
-
-    & * {
-        font-family: Regular;
-    }
-`;
-
-const ConfirmInput = styled(StyledInput)`
+const ConfirmInput = styled(PinInput)`
     color: ${({ theme, $error, value }) =>
         value?.length === maxInput && $error ? theme.danger : theme.title};
 

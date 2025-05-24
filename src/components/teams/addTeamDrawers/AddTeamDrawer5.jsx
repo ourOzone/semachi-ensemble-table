@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
-import { Input } from "antd";
 import { useTeamContext, useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 import PinInput from "components/common/PinInput";
@@ -16,6 +15,8 @@ const AddTeamDrawer5 = ({ drawerId, handleAddTeam }) => {
 
     const handleClick = useCallback((type, name, desc, pin) => {
         handleAddTeam(type, name, desc, pin);
+        setConfirmPin('');
+        setError(true);
         openDrawer('addTeam6');
     }, [handleAddTeam, openDrawer]);
 

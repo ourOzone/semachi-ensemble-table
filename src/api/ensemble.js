@@ -4,4 +4,4 @@ export const getEnsembles = () => get('/ensembles');
 export const addEnsemble = (ensemble) => post('/ensemble', ensemble);
 export const updateEnsemble = (id, ensemble) => put(`ensemble?id=${id}`, ensemble);
 export const deleteEnsemble = (id) => del(`ensemble?id=${id}`);
-export const isEnsembleExist = (id) => get(`/ensemble/${id}`);
+export const ensembleExists = (id) => get(`/ensemble/${id}`);

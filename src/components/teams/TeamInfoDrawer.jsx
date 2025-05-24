@@ -7,16 +7,30 @@ import { useTeamContext, useDrawerContext } from "context";
 
 const memberLabels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
-const TeamInfoDrawer = ({ drawerId }) => {
-    const { type, name, desc, setTeamOrgStates } = useTeamContext();
-    const { openDrawer } = useDrawerContext();
+const TeamInfoDrawer = ({ drawerId, checkTeamExists }) => {
+    const { id, type, name, desc, setTeamOrgStates } = useTeamContext();
+    const { openDrawer, closeAllDrawers } = useDrawerContext();
     const [option, setOption] = useState('팀원');
 
-    const handleUpdateTeam = useCallback((type, name, desc) => {
-        // team 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
-        setTeamOrgStates(type, name, desc);
-        openDrawer('updateTeam1');
+    const handleClickAddEnsemble = useCallback(async (id) => {
+        if (await checkTeamExists(id)) {
+            openDrawer('addEnsemble1');
+        }
+    }, [checkTeamExists, openDrawer]);
+
+    const handleClickUpdateTeam = useCallback(async (id, type, name, desc) => {
+        if (await checkTeamExists(id)) {
+            // team 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
+            setTeamOrgStates(type, name, desc);
+            openDrawer('updateTeam1');
+        }
     }, [setTeamOrgStates, openDrawer]);
+
+    const handleClickDeleteTeam = useCallback(async (id) => {
+        if (await checkTeamExists(id)) {
+            openDrawer('deleteTeam');
+        }
+    }, []);
 
     return (
         <Drawer drawerId={drawerId} onClose={() => setOption('팀원')} background>
@@ -24,11 +38,11 @@ const TeamInfoDrawer = ({ drawerId }) => {
                 <Name>{name}</Name>
                 <Type>{type}</Type>
                 <ButtonWrapper>
-                    <StyledButton type="primary" onClick={() => openDrawer('addEnsemble1')}><PlusOutlined />합주 추가</StyledButton>
+                    <StyledButton type="primary" onClick={() => handleClickAddEnsemble(id)}><PlusOutlined />합주 추가</StyledButton>
                 </ButtonWrapper>
                 <ButtonWrapper>
-                    <StyledButton onClick={() => handleUpdateTeam(type, name, desc)}><EditOutlined />팀 수정</StyledButton>
-                    <StyledButton danger onClick={() => openDrawer('deleteTeam')}><DeleteOutlined />팀 삭제</StyledButton>
+                    <StyledButton onClick={() => handleClickUpdateTeam(id, type, name, desc)}><EditOutlined />팀 수정</StyledButton>
+                    <StyledButton danger onClick={() => handleClickDeleteTeam(id)}><DeleteOutlined />팀 삭제</StyledButton>
                 </ButtonWrapper>
             </Card>
             <Card>

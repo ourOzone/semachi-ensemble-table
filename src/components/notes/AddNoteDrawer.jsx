@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button, Input } from "antd";
@@ -23,7 +23,6 @@ const AddNoteDrawer = ({ drawerId, text, setText, pin, setPin, handleAddNote }) 
         const numeric = e.target.value.replace(/\D/g, '');
         if (numeric.length <= maxPinInput) {
             setPin(numeric);
-            // setError(true);
         }
     }, [setPin]);
 
@@ -44,6 +43,11 @@ const AddNoteDrawer = ({ drawerId, text, setText, pin, setPin, handleAddNote }) 
                         onChange={handlePinChange}
                         inputMode="numeric"
                         placeholder="숫자 4자리"
+                        onKeyDown={(e) => { // Enter 키 누를시
+                            if (e.key === 'Enter' && pin.length === maxPinInput) {
+                                handleAddNote(text, pin);
+                            }
+                        }}
                     />
                     <OkButton
                         onClick={() => {handleAddNote(text, pin)}}

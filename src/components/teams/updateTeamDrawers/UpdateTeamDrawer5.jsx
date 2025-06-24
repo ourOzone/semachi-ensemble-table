@@ -1,8 +1,8 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
-import { useTeamContext, useDrawerContext } from "context";
+import { useTeamContext } from "context";
 import OkButton from "components/common/OkButton";
 
 const { TextArea } = Input;
@@ -17,6 +17,7 @@ const countLines = (value) => {
 
 const UpdateTeamDrawer5 = ({ drawerId, handleUpdateTeam }) => {
     const { id, type, name, desc, setDesc } = useTeamContext();
+    const focusInputRef = useRef(null);
 
     const text = useMemo(() => desc[6] || '', [desc]);
 
@@ -32,9 +33,10 @@ const UpdateTeamDrawer5 = ({ drawerId, handleUpdateTeam }) => {
     const isOverLimit = text.length > maxInput;
 
     return (
-        <Drawer drawerId={drawerId} onClose={onClose}>
+        <Drawer drawerId={drawerId} onClose={onClose} focusInputRef={focusInputRef}>
             <Title>셋리가 바뀌었나요 🎵</Title>
             <StyledTextArea
+                ref={focusInputRef}
                 value={text}
                 onChange={handleChange}
                 placeholder="팀 소개도 쓸라면 써요"

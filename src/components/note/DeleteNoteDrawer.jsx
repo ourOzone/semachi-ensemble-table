@@ -1,9 +1,8 @@
-import { useState, useCallback } from "react";
+import { useCallback, useRef } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { noteExists, checkNotePin } from "api/note";
 import useMessage from 'hooks/useMessage';
-import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 import PinInput from "components/common/PinInput";
 
@@ -19,8 +18,8 @@ const DeleteNoteDrawer = ({
     handleDeletePinChange,
     handleDeleteNote
 }) => {
-    const { openDrawer, closeAllDrawers } = useDrawerContext();
     const [message, contextHolder] = useMessage();
+    const focusInputRef = useRef(null);
 
     const onClose = useCallback(() => {
         setPin('');
@@ -28,11 +27,12 @@ const DeleteNoteDrawer = ({
     }, [setPin]);
 
     return (
-        <Drawer drawerId={drawerId} onClose={onClose}>
+        <Drawer drawerId={drawerId} onClose={onClose} focusInputRef={focusInputRef}>
             {contextHolder}
             <Title>PIN 입력해야 삭제돼요 🔑</Title>
             <InputWrapper>
                 <StyledInput
+                    ref={focusInputRef}
                     value={pin}
                     type="password"
                     onChange={(e) => handleDeletePinChange(e.target.value, id)}

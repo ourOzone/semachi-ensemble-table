@@ -5,7 +5,7 @@ import { useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 
 const AddTeamDrawer6 = ({ drawerId }) => {
-    const { closeAllDrawers } = useDrawerContext();
+    const { openedDrawers, closeAllDrawers } = useDrawerContext();
 
     return (
         <Drawer drawerId={drawerId} closable={false} onClose={closeAllDrawers}>

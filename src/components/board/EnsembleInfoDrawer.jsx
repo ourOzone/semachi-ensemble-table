@@ -10,7 +10,7 @@ import 'dayjs/locale/ko';
 
 dayjs.locale('ko');
 
-const EnsembleInfoDrawer = ({ drawerId, handleTeamInfoClick, handleUpdateEnsemble }) => {
+const EnsembleInfoDrawer = ({ drawerId, handleClickTeamInfo, handleUpdateEnsemble }) => {
     const { id: teamId, name } = useTeamContext();
     const { id, repeat, nextDate, setNextDate, startTime, endTime, setStartTime, setEndTime, setEnsembleOrgStates } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
@@ -53,7 +53,7 @@ const EnsembleInfoDrawer = ({ drawerId, handleTeamInfoClick, handleUpdateEnsembl
                 <Name>{name}</Name>
                 <ButtonWrapper>
                     {!eventIds.includes(teamId) && (
-                        <StyledButton type="primary" onClick={() => handleTeamInfoClick(teamId)}>
+                        <StyledButton type="primary" onClick={() => handleClickTeamInfo(teamId)}>
                             <InfoCircleOutlined />팀 정보 보기
                         </StyledButton>
                     )}

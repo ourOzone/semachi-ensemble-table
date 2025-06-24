@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button, Input } from "antd";
@@ -18,6 +18,7 @@ const countLines = (value) => {
 
 const AddNoteDrawer = ({ drawerId, text, setText, pin, setPin, handleAddNote }) => {
     const isOverLimit = text.length > maxInput;
+    const focusInputRef = useRef(null);
 
     const handlePinChange = useCallback((e) => {
         const numeric = e.target.value.replace(/\D/g, '');
@@ -28,9 +29,10 @@ const AddNoteDrawer = ({ drawerId, text, setText, pin, setPin, handleAddNote }) 
 
     return (
         <>
-            <Drawer drawerId={drawerId} onClose={() => setText('')}>
+            <Drawer drawerId={drawerId} onClose={() => setText('')} focusInputRef={focusInputRef}>
                 <Wrapper>
                     <StyledTextArea
+                        ref={focusInputRef}
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                         placeholder="내용 여따 써요"

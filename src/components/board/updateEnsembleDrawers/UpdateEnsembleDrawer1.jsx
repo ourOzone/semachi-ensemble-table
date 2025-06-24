@@ -1,7 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
-import { Input } from "antd";
 import { checkTeamPin } from "api/team";
 import { useTeamContext, useEnsembleContext, useDrawerContext } from "context";
 import PinInput from "components/common/PinInput";
@@ -13,6 +12,7 @@ const UpdateEnsembleDrawer1 = ({ drawerId }) => {
     const { setEnsembleStates } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
+    const focusInputRef = useRef(null);
 
     const onClose = useCallback(() => {
         setEnsembleStates(id, orgRepeat, orgNextDate, orgStartTime, orgEndTime); // 수정하기 전 상태로 돌려놓기
@@ -42,10 +42,11 @@ const UpdateEnsembleDrawer1 = ({ drawerId }) => {
     }, [setPin, openDrawer]);
 
     return (
-        <Drawer drawerId={drawerId} onClose={onClose}>
+        <Drawer drawerId={drawerId} onClose={onClose} focusInputRef={focusInputRef}>
             <Title>PIN 입력해야 수정돼요 🔑</Title>
             <InputWrapper>
                 <StyledInput
+                    ref={focusInputRef}
                     value={pin}
                     type="password"
                     onChange={(e) => handlePinChange(e.target.value, id)}

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
@@ -18,6 +18,7 @@ const countLines = (value) => {
 const AddTeamDrawer4 = ({ drawerId }) => {
     const { desc, setDesc } = useTeamContext();
     const { openDrawer } = useDrawerContext();
+    const focusInputRef = useRef(null);
 
     const text = useMemo(() => desc[6] || '', [desc]);
 
@@ -38,9 +39,10 @@ const AddTeamDrawer4 = ({ drawerId }) => {
     const isEmpty = text.trim() === '';
 
     return (
-        <Drawer drawerId={drawerId} onClose={onClose}>
+        <Drawer drawerId={drawerId} onClose={onClose} focusInputRef={focusInputRef}>
             <Title>셋리 정한 거 있나요 🎵</Title>
             <StyledTextArea
+                ref={focusInputRef}
                 value={text}
                 onChange={handleChange}
                 placeholder="팀 소개도 쓸라면 써요"

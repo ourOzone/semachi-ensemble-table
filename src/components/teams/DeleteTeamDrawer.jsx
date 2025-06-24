@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { checkTeamPin } from "api/team";
@@ -11,6 +11,7 @@ const maxInput = 4;
 const DeleteTeamDrawer = ({ drawerId, handleDeleteTeam }) => {
     const { id, pin, setPin } = useTeamContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
+    const focusInputRef = useRef(null);
 
     const onClose = useCallback(() => {
         setPin('');
@@ -35,10 +36,11 @@ const DeleteTeamDrawer = ({ drawerId, handleDeleteTeam }) => {
     }, [setPin]);
 
     return (
-        <Drawer drawerId={drawerId} onClose={onClose}>
+        <Drawer drawerId={drawerId} onClose={onClose} focusInputRef={focusInputRef}>
             <Title>PIN 입력해야 삭제돼요 🔑</Title>
             <InputWrapper>
                 <StyledInput
+                    ref={focusInputRef}
                     value={pin}
                     type="password"
                     onChange={(e) => handlePinChange(e.target.value, id)}

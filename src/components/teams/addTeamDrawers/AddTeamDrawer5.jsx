@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { useTeamContext, useDrawerContext } from "context";
@@ -12,6 +12,7 @@ const AddTeamDrawer5 = ({ drawerId, handleAddTeam }) => {
     const { openDrawer } = useDrawerContext();
     const [confirmPin, setConfirmPin] = useState('');
     const [error, setError] = useState(true);
+    const focusInputRef = useRef(null);
 
     const handleClick = useCallback((type, name, desc, pin) => {
         handleAddTeam(type, name, desc, pin);
@@ -47,10 +48,11 @@ const AddTeamDrawer5 = ({ drawerId, handleAddTeam }) => {
     const isConfirmError = confirmPin.length === maxInput && error;
 
     return (
-        <Drawer drawerId={drawerId} onClose={onClose}>
+        <Drawer drawerId={drawerId} onClose={onClose} focusInputRef={focusInputRef}>
             <Title>PIN 만들어요 🔑</Title>
             <InputWrapper>
                 <PinInput
+                    ref={focusInputRef}
                     value={pin}
                     type="password"
                     onChange={handlePinChange}

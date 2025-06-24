@@ -9,7 +9,7 @@ import { Container } from 'components/common/Container';
 import AddNoteDrawer from './AddNoteDrawer';
 import DeleteNoteDrawer from './DeleteNoteDrawer';
 
-const Notes = () => {
+const Note = () => {
     const { notes, fetchData } = useFetchContext();
     const [message, contextHolder] = useMessage();
     const [id, setId] = useState('');
@@ -105,10 +105,10 @@ const Notes = () => {
                 멋진 한마디 남겨요
             </AddButton>
             {notes && notes.map(note => (
-                <Note key={note.id}>
+                <NoteCard key={note.id}>
                     <NoteText>{note.text}</NoteText>
                     <NoteDeleteButton onClick={() => handleClickDelete(note.id)}><CloseOutlined /></NoteDeleteButton>
-                </Note>
+                </NoteCard>
             ))}
             <AddNoteDrawer
                 drawerId='addNote'
@@ -158,7 +158,7 @@ const AddButton = styled(Button)`
 
 `;
 
-const Note = styled.div`
+const NoteCard = styled.div`
     display: flex;
     justify-content: space-between;
     margin-top: 0.5rem;
@@ -185,4 +185,4 @@ const NoteDeleteButton = styled.div`
     }
 `;
 
-export default Notes;
+export default Note;

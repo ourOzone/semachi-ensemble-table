@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
@@ -12,6 +12,7 @@ const maxInput = 12;
 const AddTeamDrawer3 = ({ drawerId }) => {
     const { desc, setDesc } = useTeamContext();
     const { openDrawer } = useDrawerContext();
+    const focusInputRef = useRef(null);
 
     const handleChange = useCallback((idx, value) => {
         setDesc(prev => {
@@ -22,18 +23,24 @@ const AddTeamDrawer3 = ({ drawerId }) => {
     }, [setDesc]);
 
     return (
-        <Drawer drawerId={drawerId} onClose={() => setDesc(['', '', '', '', '', '', ''])}>
+        <Drawer drawerId={drawerId} onClose={() => setDesc(['', '', '', '', '', '', ''])} focusInputRef={focusInputRef}>
             <Title>누구누구 있나요 🎸</Title>
             <InputWrapper>
                 {labels.map((label, idx) => (
                     <RowWrapper key={idx}>
                         <Label idx={idx}>{label}</Label>
                         <StyledInput
+                            ref={idx === 0 ? focusInputRef : null}
                             value={desc[idx]}
                             onChange={(e) => handleChange(idx, e.target.value)}
                             count={{
                                 show: true,
                                 max: maxInput,
+                            }}
+                            onKeyDown={(e) => { // Enter 키 누를시
+                                if (e.key === 'Enter') {
+                                    openDrawer('addTeam4');
+                                }
                             }}
                         />
                     </RowWrapper>

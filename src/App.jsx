@@ -5,7 +5,7 @@ import Header from 'components/layout/Header';
 import Footer from 'components/layout/Footer';
 import Teams from 'components/teams';
 import Board from 'components/board';
-import Notes from 'components/notes';
+import Note from 'components/note';
 import { media } from 'styles/media';
 
 function App() {
@@ -22,7 +22,7 @@ function App() {
 			<Container openedDrawers={openedDrawers}>
 				<Teams />
 				<Board />
-				<Notes />
+				<Note />
 				<Footer />
 			</Container>
 		</>

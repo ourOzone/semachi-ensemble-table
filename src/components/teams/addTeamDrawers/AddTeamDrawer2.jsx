@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Input } from "antd";
@@ -12,6 +12,7 @@ const AddTeamDrawer2 = ({ drawerId }) => {
     const { name, setName } = useTeamContext();
     const { openDrawer } = useDrawerContext();
     const [randomDemoName, setRandomDemoName] = useState('');
+    const focusInputRef = useRef(null);
 
     useEffect(() => {
         const randomIndex = Math.floor(Math.random() * demoNames.length);
@@ -19,9 +20,10 @@ const AddTeamDrawer2 = ({ drawerId }) => {
     }, []);
 
     return (
-        <Drawer drawerId={drawerId} onClose={() => setName('')}>
+        <Drawer drawerId={drawerId} onClose={() => setName('')} focusInputRef={focusInputRef}>
             <Title>팀 이름을 지어요 🔖</Title>
             <StyledInput
+                ref={focusInputRef}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={randomDemoName}

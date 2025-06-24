@@ -5,7 +5,7 @@ import { LeftOutlined } from '@ant-design/icons';
 import { useDrawerContext } from 'context';
 import { media } from 'styles/media';
 
-const Drawer = ({ children, drawerId, closable = true, onClose = undefined, background = false }) => {
+const Drawer = ({ children, drawerId, closable = true, onClose = undefined, background = false, focusInputRef = undefined }) => {
     const { openedDrawers, closeDrawer } = useDrawerContext();
 
     const getWidth = () => (window.innerWidth <= 767 ? '100%' : '767px');
@@ -20,6 +20,17 @@ const Drawer = ({ children, drawerId, closable = true, onClose = undefined, back
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // props로 focusInputRef를 받은 경우, Drawer 열리면 해당 input에 포커스
+    const handleAfterOpenChange = (open) => {
+        if (focusInputRef && open && openedDrawers[openedDrawers.length - 1] === drawerId) {
+            setTimeout(() => {
+                focusInputRef.current?.focus({
+                    cursor: 'end'
+                });
+            }, 0); 
+        }
+    };
 
     const customOnClose = useCallback(() => {
         closeDrawer();
@@ -41,6 +52,8 @@ const Drawer = ({ children, drawerId, closable = true, onClose = undefined, back
             onClose={customOnClose}
             closeIcon={<LeftOutlined />}
             background={background} // false면 흰색, true면 하늘색
+            // afterOpenChange={afterOpenChange}
+            afterOpenChange={handleAfterOpenChange}
         >
             {children}
         </StyledDrawer>

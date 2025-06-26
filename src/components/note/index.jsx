@@ -18,6 +18,23 @@ const Note = () => {
     const [error, setError] = useState(false); // PIN 4자리 다 입력했는데 틀린 경우에만 true
     const { openDrawer, closeAllDrawers } = useDrawerContext();
 
+    // 이미 삭제된 노트인지 체크. 이미 있는 노트를 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
+    const checkNoteExists = useCallback(async (id) => {
+        try {
+            await noteExists(id);
+            return true;
+        } catch {
+            message.warning('이미 삭제된 한마디예요.');
+            setId('');
+            setText('');
+            setPin('');
+            setError(false);
+            closeAllDrawers();
+            fetchData();
+            return false;
+        }
+    }, [closeAllDrawers, fetchData, message]);
+
     const handleAddNote = useCallback(async (text, pin) => {
         try {
             addNote(text, pin);

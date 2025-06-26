@@ -5,34 +5,39 @@ import { checkTeamPin } from "api/team";
 import { useTeamContext, useEnsembleContext, useDrawerContext } from "context";
 import OkButton from "components/common/OkButton";
 import PinInput from "components/common/PinInput";
+import useMessage from 'hooks/useMessage';
 
 const maxInput = 4;
 
-const DeleteEnsembleDrawer = ({ drawerId, handleDeleteEnsemble }) => {
+const DeleteEnsembleDrawer = ({ drawerId, checkEnsembleExists, handleDeleteEnsemble }) => {
     const { id: teamId, pin, setPin } = useTeamContext();
     const { id } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
     const focusInputRef = useRef(null);
+    const [message, contextHolder] = useMessage();
 
     const onClose = useCallback(() => {
         setPin('');
         setError(false);
     }, [setPin]);
 
-    const handlePinChange = useCallback(async (value, teamId) => {
+    const handlePinChange = useCallback(async (id, teamId, value) => {
         const numeric = value.replace(/\D/g, '');
         if (numeric.length <= maxInput) {
             setPin(numeric);
 
             if (numeric.length === maxInput) {
                 // 4자리 모두 입력한 경우
-                setPin(numeric);
-
-                // PIN 판별
-                const result = await checkTeamPin(teamId, numeric);
-
-                setError(!result);
+                try {
+                    if (await checkEnsembleExists(id)) {
+                        // PIN 판별
+                        const result = await checkTeamPin(teamId, numeric);
+                        setError(!result);
+                    }
+                } catch {
+                    message.error('인터넷이 불안정하거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
+                }
             }
         }
     }, [setPin, openDrawer]);
@@ -45,7 +50,7 @@ const DeleteEnsembleDrawer = ({ drawerId, handleDeleteEnsemble }) => {
                     ref={focusInputRef}
                     value={pin}
                     type="password"
-                    onChange={(e) => handlePinChange(e.target.value, teamId)}
+                    onChange={(e) => handlePinChange(id, teamId, e.target.value)}
                     inputMode="numeric"
                     controls={false}
                     placeholder="숫자 4자리"

@@ -63,7 +63,9 @@ const Board = () => {
     // 합주 정보 Drawer에서 팀 정보 보기 클릭 (id는 team id)
     const handleClickTeamInfo = useCallback(async (id) => {
         try {
-            await teamExists(id); // 누른 팀이 이미 삭제됐으면 에러 (catch 매커니즘이 달라서 예외적으로 checkTeamExists는 사용 불가)
+            // 누른 팀이 이미 삭제됐으면 에러 (catch 매커니즘이 달라서 예외적으로 checkTeamExists는 사용 불가)
+            await teamExists(id);
+
             const { type, name, desc } = teams.find(team => team.id === id);
             setTeamStates(id, type, name, desc);
             openDrawer('teamInfo');
@@ -157,12 +159,17 @@ const Board = () => {
             </Table>
             
             {/* DRAWERS */}
-            <EnsembleInfoDrawer drawerId='ensembleInfo' handleClickTeamInfo={handleClickTeamInfo} handleUpdateEnsemble={handleUpdateEnsemble} />
-            <UpdateEnsembleDrawer1 drawerId='updateEnsemble1' />
+            <EnsembleInfoDrawer
+                drawerId='ensembleInfo'
+                checkEnsembleExists={checkEnsembleExists}
+                handleClickTeamInfo={handleClickTeamInfo}
+                handleUpdateEnsemble={handleUpdateEnsemble}
+            />
+            <UpdateEnsembleDrawer1 drawerId='updateEnsemble1' checkEnsembleExists={checkEnsembleExists} />
             <UpdateEnsembleDrawer2 drawerId='updateEnsemble2' />
             <UpdateEnsembleDrawer3 drawerId='updateEnsemble3' />
             <UpdateEnsembleDrawer4 drawerId='updateEnsemble4' handleUpdateEnsemble={handleUpdateEnsemble} />
-            <DeleteEnsembleDrawer drawerId='deleteEnsemble' handleDeleteEnsemble={handleDeleteEnsemble} />
+            <DeleteEnsembleDrawer drawerId='deleteEnsemble' checkEnsembleExists={checkEnsembleExists} handleDeleteEnsemble={handleDeleteEnsemble} />
         </Container>
     )
 };

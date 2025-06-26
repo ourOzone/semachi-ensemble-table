@@ -39,6 +39,7 @@ const Teams = () => {
     const [message, contextHolder] = useMessage();
 
     // 이미 삭제된 팀인지 체크. 이미 있는 팀을 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
+    // 해당 함수를 try -> if(else 없음) 에서 호출: false 리턴시 if문 넘긴채 그대로 try문 종료, 이후 try문 내에서 에러시 catch
     const checkTeamExists = useCallback(async (id) => {
         try {
             await teamExists(id);
@@ -184,7 +185,7 @@ const Teams = () => {
             <UpdateTeamDrawer3 drawerId='updateTeam3' />
             <UpdateTeamDrawer4 drawerId='updateTeam4' />
             <UpdateTeamDrawer5 drawerId='updateTeam5' handleUpdateTeam={handleUpdateTeam} />
-            <DeleteTeamDrawer drawerId='deleteTeam' handleDeleteTeam={handleDeleteTeam} />
+            <DeleteTeamDrawer drawerId='deleteTeam' checkTeamExists={checkTeamExists} handleDeleteTeam={handleDeleteTeam} />
             <AddEnsembleDrawer1 drawerId='addEnsemble1' />
             <AddEnsembleDrawer2 drawerId='addEnsemble2' />
             <AddEnsembleDrawer3 drawerId='addEnsemble3' handleAddEnsemble={handleAddEnsemble} />

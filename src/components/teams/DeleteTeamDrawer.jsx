@@ -5,12 +5,14 @@ import { checkTeamPin } from "api/team";
 import { useTeamContext } from "context";
 import OkButton from "components/common/OkButton";
 import PinInput from "components/common/PinInput";
+import useMessage from "hooks/useMessage";
 
 const maxInput = 4;
 
-const DeleteTeamDrawer = ({ drawerId, handleDeleteTeam }) => {
+const DeleteTeamDrawer = ({ drawerId, checkTeamExists, handleDeleteTeam }) => {
     const { id, pin, setPin } = useTeamContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
+    const [message, contextHolder] = useMessage();
     const focusInputRef = useRef(null);
 
     const onClose = useCallback(() => {
@@ -25,12 +27,16 @@ const DeleteTeamDrawer = ({ drawerId, handleDeleteTeam }) => {
 
             if (numeric.length === maxInput) {
                 // 4자리 모두 입력한 경우
-                setPin(numeric);
+                try {
+                    if (await checkTeamExists(id)) {
+                        // PIN 판별
+                        const result = await checkTeamPin(id, numeric);
+                        setError(!result);
+                    }
+                } catch {
+                    message.error('인터넷이 불안정하거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
+                }
 
-                // PIN 판별
-                const result = await checkTeamPin(id, numeric);
-
-                setError(!result);
             }
         }
     }, [setPin]);

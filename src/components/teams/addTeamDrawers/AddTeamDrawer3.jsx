@@ -25,6 +25,7 @@ const AddTeamDrawer3 = ({ drawerId }) => {
     return (
         <Drawer drawerId={drawerId} onClose={() => setDesc(['', '', '', '', '', '', ''])} focusInputRef={focusInputRef}>
             <Title>누구누구 있나요 🎸</Title>
+            <Subtitle>되도록 실명으로 써주세요 ㅠㅠ</Subtitle>
             <InputWrapper>
                 {labels.map((label, idx) => (
                     <RowWrapper key={idx}>
@@ -55,9 +56,15 @@ const AddTeamDrawer3 = ({ drawerId }) => {
       );      
 };
 
-const Title = styled.span`
+const Title = styled.div`
     font-size: 2.5rem;
     font-family: Bold;
+    margin-bottom: 0.5rem;
+`;
+
+const Subtitle = styled.div`
+    font-size: 1.5rem;
+    color: ${({ theme }) => theme.darkGray};
 `;
 
 const InputWrapper = styled.div`

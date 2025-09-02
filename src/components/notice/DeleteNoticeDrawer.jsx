@@ -1,20 +1,20 @@
 import { useState, useCallback, useRef } from "react";
 import Drawer from "components/common/Drawer";
 import styled from "styled-components";
-import { checkNotePin } from "api/note";
+import { checkNoticePin } from "api/notice";
 import useMessage from 'hooks/useMessage';
 import OkButton from "components/common/OkButton";
 import PinInput from "components/common/PinInput";
 
 const maxInput = 4;
 
-const DeleteNoteDrawer = ({
+const DeleteNoticeDrawer = ({
     drawerId,
     id,
     pin,
     setPin,
-    checkNoteExists,
-    handleDeleteNote
+    checkNoticeExists,
+    handleDeleteNotice
 }) => {
     const [message, contextHolder] = useMessage();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
@@ -33,9 +33,9 @@ const DeleteNoteDrawer = ({
             if (numeric.length === maxInput) {
                 // 4자리 모두 입력한 경우
                 try {
-                    if (await checkNoteExists(id)) {
+                    if (await checkNoticeExists(id)) {
                         // PIN 판별
-                        const result = await checkNotePin(id, numeric);
+                        const result = await checkNoticePin(numeric);
                         setError(!result);
                     }
                 } catch {
@@ -62,7 +62,7 @@ const DeleteNoteDrawer = ({
                     status={pin.length === maxInput && error ? 'error' : null}
                     onKeyDown={(e) => { // Enter 키 누를시
                         if (e.key === 'Enter' && !error && pin.length === maxInput) {
-                            handleDeleteNote(id);
+                            handleDeleteNotice(id);
                         }
                     }}
                 />
@@ -70,7 +70,7 @@ const DeleteNoteDrawer = ({
             
             <OkButton
                 label="진짜 삭제해요"
-                onClick={() => handleDeleteNote(id)}
+                onClick={() => handleDeleteNotice(id)}
                 disabled={error || pin.length !== maxInput}
             />
         </Drawer>
@@ -96,4 +96,4 @@ const StyledPinInput = styled(PinInput)`
     color: ${({ theme, value, error }) => value.length === maxInput && error ? theme.danger : theme.title};
 `;
 
-export default DeleteNoteDrawer;
+export default DeleteNoticeDrawer;

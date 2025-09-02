@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { getTeams } from 'api/team';
 import { getEnsembles } from 'api/ensemble';
 import { getNotes } from 'api/note';
+import { getNotices } from 'api/notice';
 import { eventIds } from 'constants';
 import theme from 'styles/theme';
 
@@ -12,6 +13,7 @@ function FetchContextProvider({ children }) {
     const [teams, setTeams] = useState([]);
     const [ensembles, setEnsembles] = useState([]);
     const [notes, setNotes] = useState([]);
+    const [notices, setNotices] = useState([]);
 
     // 화면 전체 fetching 하는 함수
     const fetchData = useCallback(async () => {
@@ -72,11 +74,18 @@ function FetchContextProvider({ children }) {
         }));
         setNotes(notesData);
 
-        // TODO 공지 추가
+        // notices fetch
+        const noticesRaw = await getNotices();
+        const noticesData = noticesRaw.map(({ _id, content }) => ({
+            id: _id,
+            text: content,
+        }));
+        setNotices(noticesData);
+
     }, []);
 
     return (
-        <FetchContext.Provider value={{ teams, ensembles, notes, fetchData }}>
+        <FetchContext.Provider value={{ teams, ensembles, notes, notices, fetchData }}>
             {children}
         </FetchContext.Provider>
     );

@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useFetchContext, useDrawerContext } from 'context';
 import Header from 'components/layout/Header';
 import Footer from 'components/layout/Footer';
+import Notice from 'components/notice';
 import Teams from 'components/teams';
 import Board from 'components/board';
 import Note from 'components/note';
@@ -20,6 +21,7 @@ function App() {
 		<>
 			<Header />
 			<Container openedDrawers={openedDrawers}>
+				<Notice />
 				<Teams />
 				<Board />
 				<Note />

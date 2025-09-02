@@ -15,7 +15,6 @@ const Note = () => {
     const [id, setId] = useState('');
     const [text, setText] = useState('');
     const [pin, setPin] = useState('');
-    const [error, setError] = useState(false); // PIN 4자리 다 입력했는데 틀린 경우에만 true
     const { openDrawer, closeAllDrawers } = useDrawerContext();
 
     // 이미 삭제된 노트인지 체크. 이미 있는 노트를 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
@@ -28,7 +27,6 @@ const Note = () => {
             setId('');
             setText('');
             setPin('');
-            setError(false);
             closeAllDrawers();
             fetchData();
             return false;
@@ -37,7 +35,7 @@ const Note = () => {
 
     const handleAddNote = useCallback(async (text, pin) => {
         try {
-            addNote(text, pin);
+            await addNote(text, pin);
             fetchData();
             setText('');
             setPin('');
@@ -51,60 +49,25 @@ const Note = () => {
     
     const handleClickDelete = useCallback(async (id) => {
         try {
-            await noteExists(id);
-            setId(id);
-            openDrawer('deleteNote');
+            if (await checkNoteExists(id)) {
+                setId(id);
+                openDrawer('deleteNote');
+            }
         }
         catch {
-            message.warning('이미 삭제된 글이에요.');
-            fetchData();
+            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
         }
     }, []);
 
-    // 삭제 시 PIN 입력 처리
-    const handleDeletePinChange = useCallback(async (value, id) => {
-        const maxInput = 4;
-
-        const numeric = value.replace(/\D/g, '');
-        if (numeric.length <= maxInput) {
-            setPin(numeric);
-
-            if (numeric.length === maxInput) {
-                // 4자리 모두 입력한 경우
-                try {
-                    await noteExists(id); // 누른 노트가 이미 삭제됐으면 에러
-                    setPin(numeric);
-                } catch {
-                    message.warning('이미 삭제된 글이에요.');
-                    setId('');
-                    setPin('');
-                    fetchData();
-                    closeAllDrawers();
-                    return;
-                }
-
-                try {
-                    // PIN 판별
-                    const result = await checkNotePin(id, numeric);
-                    setError(!result);
-                } catch {
-                    message.error('서버랑 연결이 잘 안 되네요. 나중에 다시 해보세요.');
-                    setError(true);
-                }
-
-            }
-        }
-    }, [setPin, openDrawer]);
-
     const handleDeleteNote = useCallback(async (id) => {
         try {
-            await noteExists(id);
-            await deleteNote(id);
-            message.success('삭제했어요.');
+            if (await checkNoteExists(id)) {
+                await deleteNote(id);
+                message.success('삭제했어요.');
+            }
         }
         catch {
-            message.warning('이미 삭제된 글이에요.')
-            fetchData();
+            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
         }
         finally {
             setId('');
@@ -140,9 +103,7 @@ const Note = () => {
                 id={id}
                 pin={pin}
                 setPin={setPin}
-                error={error}
-                setError={setError}
-                handleDeletePinChange={handleDeletePinChange}
+                checkNoteExists={checkNoteExists}
                 handleDeleteNote={handleDeleteNote}
             />
         </Container>

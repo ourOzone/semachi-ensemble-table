@@ -22,7 +22,7 @@ const UpdateTeamDrawer2 = ({ drawerId }) => {
 
     return (
         <Drawer drawerId={drawerId} onClose={() => setType('')}>
-            <Title>뭔 팀인가요 🤘</Title>
+            <Title>무슨 팀인가요 🤘</Title>
             <GridContainer>
                 {options.map((opt) => (
                     <OptionButton

@@ -20,7 +20,7 @@ const Header = () => {
                         onClick={() => window.location.href = 'https://drive.google.com/drive/folders/1FneJEkXY-hSqpM_XOBic7ep8lJZ3tdFn?usp=sharing'}
                     ></StyledButton>
                 </Tooltip>
-                <StyledButton variant="text" icon={<BellOutlined />}></StyledButton>
+                {/* <StyledButton variant="text" icon={<BellOutlined />}></StyledButton> */}
             </ButtonWrapper>
         </StyledHeader>
     )

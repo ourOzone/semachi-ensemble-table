@@ -40,7 +40,7 @@ const DeleteEnsembleDrawer = ({ drawerId, checkEnsembleExists, handleDeleteEnsem
                 }
             }
         }
-    }, [setPin, openDrawer]);
+    }, [setPin]);
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose} focusInputRef={focusInputRef}>

@@ -23,7 +23,7 @@ const AddTeamDrawer1 = ({ drawerId }) => {
     return (
         // onClose시 type 초기화 필요 없음
         <Drawer drawerId={drawerId}>
-            <Title>뭔 팀인가요 🤘</Title>
+            <Title>무슨 팀인가요 🤘</Title>
             <GridContainer>
                 {options.map((opt) => (
                     <OptionButton

@@ -45,7 +45,7 @@ const AddTeamDrawer4 = ({ drawerId }) => {
                 ref={focusInputRef}
                 value={text}
                 onChange={handleChange}
-                placeholder="팀 소개도 쓸라면 써요"
+                placeholder="되도록 꼭 써주세요 ㅠㅠ"
                 rows={countLines(text)}
                 $isOverLimit={isOverLimit}
             />

@@ -1,2 +1,5 @@
 npm start
 git add .
+git commit -m "check exists 작업중"
+git config --global user.email "furin1998@gmail.com"
+npm start

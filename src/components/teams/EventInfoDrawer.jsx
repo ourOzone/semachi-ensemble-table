@@ -16,6 +16,7 @@ const name2FullName = {
     '회의': '회의',
     '오디션': '오디션',
     '합주 불가': '합주 불가',
+    '동방 사용 불가': '동방 사용 불가',
 }
 
 const EventInfoDrawer = ({ drawerId }) => {

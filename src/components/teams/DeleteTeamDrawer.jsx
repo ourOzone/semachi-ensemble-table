@@ -24,6 +24,7 @@ const DeleteTeamDrawer = ({ drawerId, checkTeamExists, handleDeleteTeam }) => {
         const numeric = value.replace(/\D/g, '');
         if (numeric.length <= maxInput) {
             setPin(numeric);
+            setError(true);
 
             if (numeric.length === maxInput) {
                 // 4자리 모두 입력한 경우

@@ -4,7 +4,7 @@ import { Button } from 'antd';
 const OkButton = ({ disabled, label = '확인', ...props }) => {
     return (
         <Wrapper>
-            <StyledButton type="primary" visible={disabled} {...props}>{label}</StyledButton>
+            <StyledButton type="primary" disabled={disabled} visible={disabled} {...props}>{label}</StyledButton>
         </Wrapper>
     )
 };

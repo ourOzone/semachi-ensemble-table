@@ -12,20 +12,47 @@ import 'dayjs/locale/ko';
 dayjs.locale('ko');
 
 const EnsembleInfoDrawer = ({ drawerId, checkEnsembleExists, handleClickTeamInfo, handleUpdateEnsemble }) => {
-    const { id: teamId, name } = useTeamContext();
-    const { id, repeat, nextDate, setNextDate, startTime, endTime, setStartTime, setEndTime, setEnsembleOrgStates } = useEnsembleContext();
+    const { id: teamId, name, setTeamStates } = useTeamContext();
+    const {
+        id,
+        repeat,
+        nextDate,
+        setNextDate,
+        startTime,
+        endTime,
+        setStartTime,
+        setEndTime,
+        setEnsembleStates,
+        setEnsembleOrgStates 
+    } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
     const [message, contextHolder] = useMessage();
 
     useEffect(() => {
-        // 반복 합주인데 nextDate가 오늘보다 이전인 경우 (특별한 업데이트가 없었을 경우)
-        if (repeat && dayjs(nextDate).startOf('day').isBefore(dayjs().startOf('day'))) {
-            // 가장 가까운 같은 요일로 변경
-            setNextDate(dayjs().startOf('day').add((7 + dayjs(nextDate).day() - dayjs().day()) % 7, 'day').startOf('day'));
+        // 반복 합주인 경우
+        if (repeat) {
+            // nextDate가 오늘보다 이전인 경우 (특별한 업데이트가 없었을 경우)
+            if (dayjs(nextDate).startOf('day').isBefore(dayjs().startOf('day'))) {
+                // 가장 가까운 같은 요일로 변경
+                setNextDate(dayjs().startOf('day').add((7 + dayjs(nextDate).day() - dayjs().day()) % 7, 'day').startOf('day'));
+            }
+            // // 합주 당일인데 시간만 지났을 경우
+            // if (dayjs(`${dayjs().format("YYYY-MM-DD")} ${idx2hour[endTime]}`).add(30, "minute").isBefore(dayjs())) {
+            //     // 다음주 같은 요일로 변경
+            //     setNextDate(dayjs().startOf('day').add((7 + dayjs(nextDate).day() - dayjs().day()) % 7, 'day').startOf('day'));
+            // }
         }
+        
+        // endTime이 현재 시간보다 이전인 겨
+        
         // nextDate가 오늘보다 이후이거나 일회성 합주인 경우는 그대로 둠
         
     }, [id, repeat, nextDate]);
+
+    const onClose = useCallback(() => {
+        setTeamStates();
+        setEnsembleStates();
+    }, [setTeamStates, setEnsembleStates]);
 
     // repeat false거나 오늘보다 7일 이후라면 (오늘이 수요일이라면 다음주 수요일부터) 다음 번에 안해요 버튼을 disabled
     const isDisabled = useCallback((repeat, nextDate) => {
@@ -50,7 +77,6 @@ const EnsembleInfoDrawer = ({ drawerId, checkEnsembleExists, handleClickTeamInfo
                 // team 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
                 setEnsembleOrgStates(repeat, nextDate, startTime, endTime);
 
-                // 이 2개는 null 상태가 아니면 이미 선택 돼있음 (repeat과 nextDate는 값이 있어도 선택 안 돼있어서 null로 안 바꿔도 됨)
                 setStartTime(null);
                 setEndTime(null);
                 
@@ -72,7 +98,8 @@ const EnsembleInfoDrawer = ({ drawerId, checkEnsembleExists, handleClickTeamInfo
     }, []);
 
     return (
-        <Drawer drawerId={drawerId} background>
+        <Drawer drawerId={drawerId} onClose={onClose} background>
+            {contextHolder}
             <Card>
                 <Name>{name}</Name>
                 <ButtonWrapper>

@@ -34,19 +34,20 @@ const AddNoticeDrawer = ({
     const onClose = useCallback(() => {
         setText('');
         setPin('');
+        setError(false);
     }, []);
 
     const handlePinChange = useCallback(async (value) => {
         const numeric = value.replace(/\D/g, '');
         if (numeric.length <= maxPinInput) {
             setPin(numeric);
+            setError(true);
     
             if (numeric.length === maxPinInput) {
                 // 4자리 모두 입력한 경우
                 try {
                     // PIN 판별
                     const result = await checkNoticePin(numeric);
-                    console.log(result)
                     setError(!result);
                 } catch {
                     message.error('인터넷이 불안정하거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
@@ -78,7 +79,7 @@ const AddNoticeDrawer = ({
                         error={error}
                         status={pin.length === maxPinInput && error ? 'error' : null}
                         onKeyDown={(e) => { // Enter 키 누를시
-                            if (e.key === 'Enter' && pin.length === maxPinInput) {
+                            if (e.key === 'Enter' && !error && pin.length === maxPinInput) {
                                 handleAddNotice(text, pin);
                             }
                         }}

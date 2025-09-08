@@ -42,6 +42,7 @@ const Drawer = ({ children, drawerId, closable = true, onClose = undefined, back
 
     return (
         <StyledDrawer
+            mask={openedDrawers?.[0] === drawerId}
             openedDrawers={openedDrawers}
             drawerId={drawerId}
             width={drawerWidth}

@@ -29,7 +29,7 @@ import AddEnsembleDrawer3 from './addEnsembleDrawers/AddEnsembleDrawer3';
 import AddEnsembleDrawer4 from './addEnsembleDrawers/AddEnsembleDrawer4';
 
 const eventNames1 = ['보소', '기소', '베소', '드소', '키소'];
-const eventNames2 = ['메인 회의', '재학생 회의', '회의', '오디션', '합주 불가'];
+const eventNames2 = ['메인 회의', '재학생 회의', '회의', '오디션', '합주 불가', '동방 사용 불가'];
 
 const Teams = () => {
     const { teams, fetchData } = useFetchContext();
@@ -105,7 +105,7 @@ const Teams = () => {
         try {
             if (await checkTeamExists(id)) {
                 await deleteTeam(id);
-                message.success('삭제했어요.');
+                message.success('팀을 삭제했어요.');
             }
         } catch {
             message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');

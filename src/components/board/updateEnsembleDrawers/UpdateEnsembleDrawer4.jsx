@@ -63,12 +63,13 @@ const UpdateEnsembleDrawer4 = ({ drawerId, handleUpdateEnsemble }) => {
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>
             <Title>시간은요 🕗</Title>
-            <Header show={!!endTime}>
+            <Header show={endTime !== null}>
                 <Time>
                     {`${dayjs(nextDate).format("YYYY년 M월 D일 (ddd)")} ${repeat ? '부터' : '에만'}`}<br />
                     {`${repeat ? '매주' : ''} ${startTimeStr}~${endTimeStr}에 🔥`}
                 </Time>
                 <OkButton
+                    disabled={endTime === null}
                     label='이대로 할래요'
                     onClick={() => handleUpdateEnsemble(id, teamId, repeat, nextDate, startTime, endTime)}
                 />
@@ -99,7 +100,7 @@ const Header = styled.div`
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
-    opacity: ${({ show }) => (show ? 1 : 0)};
+    visibility: ${({ show }) => (show ? 'visible' : 'hidden')};
 `;
 
 const Time = styled.div`

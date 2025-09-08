@@ -31,7 +31,6 @@ const AddEnsembleDrawer3 = ({ drawerId, handleAddEnsemble }) => {
         // startTime과 endTime의 값은 모두 block의 index (0 ~ 29)
         // startIdx 설정
         if (startTime === null || endTime !== null) {
-            // setStartTime(dayjs(`${dayjs(nextDate).format("YYYY-MM-DD")}T${time}`));
             setStartTime(idx);
             setStartTimeStr(idx2hour[idx]);
             setEndTime(null);
@@ -55,7 +54,7 @@ const AddEnsembleDrawer3 = ({ drawerId, handleAddEnsemble }) => {
                 setEndTime(idx - 1);
                 setEndTimeStr(idx2hour[idx]);
             }
-
+        console.log(idx - 1, idx2hour[idx])
         }
     }, [setStartTime, setEndTime]);
 
@@ -68,12 +67,13 @@ const AddEnsembleDrawer3 = ({ drawerId, handleAddEnsemble }) => {
     return (
         <Drawer drawerId={drawerId} onClose={onClose}>
             <Title>시간은요 🕗</Title>
-            <Header show={!!endTime}>
+            <Header show={endTime !== null}>
                 <Time>
                     {`${dayjs(nextDate).format("YYYY년 M월 D일 (ddd)")} ${repeat ? '부터' : '에만'}`}<br />
                     {`${repeat ? '매주' : ''} ${startTimeStr}~${endTimeStr}에 🔥`}
                 </Time>
                 <OkButton
+                    disabled={endTime === null}
                     label='이대로 할래요'
                     onClick={() => handleClick(id, name, repeat, nextDate, startTime, endTime)}
                 />
@@ -104,7 +104,7 @@ const Header = styled.div`
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
-    opacity: ${({ show }) => (show ? 1 : 0)};
+    visibility: ${({ show }) => (show ? 'visible' : 'hidden')};
 `;
 
 const Time = styled.div`

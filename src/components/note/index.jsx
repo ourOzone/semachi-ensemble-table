@@ -63,7 +63,7 @@ const Note = () => {
         try {
             if (await checkNoteExists(id)) {
                 await deleteNote(id);
-                message.success('삭제했어요.');
+                message.success('한마디를 삭제했어요.');
             }
         }
         catch {

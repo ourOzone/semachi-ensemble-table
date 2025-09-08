@@ -63,7 +63,7 @@ const Notice = () => {
         try {
             if (await checkNoticeExists(id)) {
                 await deleteNotice(id);
-                message.success('삭제했어요.');
+                message.success('공지를 삭제했어요.');
             }
         }
         catch {

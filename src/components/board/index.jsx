@@ -51,7 +51,7 @@ const Board = () => {
         try {
             if (await checkEnsembleExists(id)) {
                 setTeamStates(teamId, '', name);
-                setEnsembleStates(id, repeat, nextDate, startTime, endTime); // TODO 화면에 띄울 state 추가
+                setEnsembleStates(id, repeat, nextDate, startTime, endTime);
                 openDrawer('ensembleInfo');
             }
             
@@ -105,7 +105,7 @@ const Board = () => {
         try {
             if (await checkEnsembleExists(id)) {
                 await deleteEnsemble(id);
-                message.success('삭제했어요.');
+                message.success('합주를 삭제했어요.');
             }
         }
         catch {

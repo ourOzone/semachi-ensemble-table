@@ -39,7 +39,7 @@ const AddTeamDrawer3 = ({ drawerId }) => {
                                 max: maxInput,
                             }}
                             onKeyDown={(e) => { // Enter 키 누를시
-                                if (e.key === 'Enter') {
+                                if (e.key === 'Enter' && !desc.slice(0, 6).some((v) => v.length > maxInput)) {
                                     openDrawer('addTeam4');
                                 }
                             }}

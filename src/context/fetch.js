@@ -25,6 +25,7 @@ function FetchContextProvider({ children }) {
             name,
             desc
         }));
+        console.log(teamsData)
 
         // 소모임 및 회의는 제거
         const filteredTeamsData = teamsData.filter((team) => !eventIds.includes(team.id));

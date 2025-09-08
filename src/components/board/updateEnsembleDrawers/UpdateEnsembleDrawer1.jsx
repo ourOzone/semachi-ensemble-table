@@ -13,7 +13,6 @@ const UpdateEnsembleDrawer1 = ({ drawerId, checkEnsembleExists }) => {
     const { id, orgRepeat, orgNextDate, orgStartTime, orgEndTime, setEnsembleStates } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
-    const [message, contextHolder] = useMessage();
     const focusInputRef = useRef(null);
 
     const onClose = useCallback((id, orgRepeat, orgNextDate, orgStartTime, orgEndTime) => {
@@ -26,6 +25,7 @@ const UpdateEnsembleDrawer1 = ({ drawerId, checkEnsembleExists }) => {
         const numeric = value.replace(/\D/g, '');
         if (numeric.length <= maxInput) {
             setPin(numeric);
+            setError(true);
 
             if (numeric.length === maxInput) {
                 // 4자리 모두 입력한 경우

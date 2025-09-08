@@ -3,17 +3,20 @@ import Drawer from "components/common/Drawer";
 import styled from "styled-components";
 import { Button, Divider, Segmented } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useTeamContext, useDrawerContext } from "context";
+import { useTeamContext, useEnsembleContext, useDrawerContext } from "context";
 
 const memberLabels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
 const TeamInfoDrawer = ({ drawerId, checkTeamExists }) => {
     const { id, type, name, desc, setTeamOrgStates } = useTeamContext();
+    const { setStartTime, setEndTime } = useEnsembleContext();
     const { openDrawer, closeAllDrawers } = useDrawerContext();
     const [option, setOption] = useState('팀원');
 
     const handleClickAddEnsemble = useCallback(async (id) => {
         if (await checkTeamExists(id)) {
+            setStartTime(null);
+            setEndTime(null);
             openDrawer('addEnsemble1');
         }
     }, [checkTeamExists, openDrawer]);

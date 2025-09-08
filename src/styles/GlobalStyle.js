@@ -43,6 +43,7 @@ const GlobalStyle = createGlobalStyle`
         background-color: #f5f8ff;
     }
 
+
     // message(alert) 커스텀 스타일을 위한 antd 자체 스타일 제거 및 아이콘 사이즈 변경
     .ant-message-notice-content {
         background-color: transparent !important;

@@ -28,7 +28,7 @@ export const demoNames = [
     "뮤즈",
 ];
 
-// 보소, 기소, 베소, 드소, 키소, 메인 회의, 재학생 회의, 회의, 오디션, 합주 불가
+// 보소, 기소, 베소, 드소, 키소, 메인 회의, 재학생 회의, 회의, 오디션, 합주 불가, 동방 사용 불가
 export const eventIds = [
     "67edfea26724937d8f2c4d4c",
     "67e363a96724937d8f2c25a1",
@@ -40,4 +40,5 @@ export const eventIds = [
     "68079d323eec014ddb5fc9e5",
     "68079d3f3eec014ddb5fc9ea",
     "68079d4e3eec014ddb5fc9ef",
+    "68befa438960589dfcb9637d"
 ];

@@ -82,7 +82,7 @@ const Note = () => {
             {contextHolder}
             <AddButton onClick={() => openDrawer('addNote')}>
                 <PlusCircleOutlined />
-                멋진 한마디 남겨요
+                멋진 한마디 남겨요 (일주일 후 자동 삭제돼요)
             </AddButton>
             {notes && notes.map(note => (
                 <NoteCard key={note.id}>

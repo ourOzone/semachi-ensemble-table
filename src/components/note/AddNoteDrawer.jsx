@@ -59,7 +59,7 @@ const AddNoteDrawer = ({ drawerId, text, setText, pin, setPin, handleAddNote }) 
                     <OkButton
                         onClick={() => {handleAddNote(text, pin)}}
                         disabled={!text || pin.length !== maxPinInput}
-                        label="완료"
+                        label="완료 (일주일 후 삭제)"
                     />
                 </Wrapper>
             </Drawer>

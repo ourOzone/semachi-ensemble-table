@@ -6,6 +6,7 @@ import { getNotes } from 'api/note';
 import { getNotices } from 'api/notice';
 import { eventIds } from 'constants';
 import theme from 'styles/theme';
+import { idx2hour } from "constants";
 
 const FetchContext = createContext();
 
@@ -57,7 +58,14 @@ function FetchContextProvider({ children }) {
                     teamId,
                     name: teamName,
                     repeat,
-                    nextDate: dayjs(nextDate),
+                    nextDate: !repeat || dayjs().isBefore(dayjs(nextDate), 'day') // 일회성 합주거나 nextDate가 오늘 이후인 경우
+                                ? dayjs(nextDate) // 그대로 둠, 그렇지 않은 경우
+                                : dayjs(nextDate).day() === dayjs().day() // nextDate가 오늘과 같은 요일인 경우
+                                ? dayjs().hour(parseInt(idx2hour[endTime + 1].split(':')[0])).minute(parseInt(idx2hour[endTime + 1].split(':')[1])).isAfter(dayjs()) // endTime이 현재 시간 이후라면 오늘로 설정
+                                    ? dayjs() 
+                                    : dayjs().add(7, 'day') // 아니라면 다음주 같은 요일로 설정
+                                : dayjs().add((7 + dayjs(nextDate).day() - dayjs().day()) % 7, 'day'), // (오늘과 다른 요일인 경우) 다음 가장 가까운 해당 요일로 설정
+
                     due,
                     displayName: hour === startTime ? teamName : '', // 맨 처음 블록에만 팀명 표시
                     teamColor: colorMap[teamId] ?? -1,

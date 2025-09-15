@@ -1,6 +1,5 @@
 import React, { useCallback } from 'react';
 import styled from 'styled-components';
-import dayjs from "dayjs";
 import { teamExists } from 'api/team';
 import { updateEnsemble, deleteEnsemble, ensembleExists } from 'api/ensemble';
 import { useFetchContext, useTeamContext, useEnsembleContext, useDrawerContext } from 'context';
@@ -13,6 +12,12 @@ import UpdateEnsembleDrawer2 from './updateEnsembleDrawers/UpdateEnsembleDrawer2
 import UpdateEnsembleDrawer3 from './updateEnsembleDrawers/UpdateEnsembleDrawer3'
 import UpdateEnsembleDrawer4 from './updateEnsembleDrawers/UpdateEnsembleDrawer4'
 import DeleteEnsembleDrawer from './DeleteEnsembleDrawer';
+import SkipEnsembleDrawer from './SkipEnsembleDrawer';
+import { idx2hour } from "constants";
+import dayjs from 'dayjs';
+import 'dayjs/locale/ko';
+
+dayjs.locale('ko');
 
 // 월요일 0 ~ 일요일 6 기준에서, 오늘의 idx값
 const todayIdx = dayjs().day() === 0 ? 6 : dayjs().day() - 1;
@@ -25,7 +30,7 @@ const week = Array.from({ length: 7 }, (_, i) =>
 const Board = () => {
     const { teams, ensembles, fetchData } = useFetchContext();
     const { setTeamStates } = useTeamContext();
-    const { setEnsembleStates } = useEnsembleContext();
+    const { setEnsembleStates, setNextDate } = useEnsembleContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
     const [message, contextHolder] = useMessage();
 
@@ -45,7 +50,8 @@ const Board = () => {
     }, [closeAllDrawers, fetchData, message, setEnsembleStates]);
 
     // 이 합주가 "다음 번에 안 해요"에 해당하는지(회색인지) 판단
-    const isSkipped = useCallback((nextDate) => nextDate.diff(dayjs().startOf('day'), 'day') >= 7, []);
+    // const isSkipped = useCallback((nextDate) => nextDate.diff(dayjs().startOf('day'), 'day') >= 7, []);
+    
 
     const handleEnsembleClick = useCallback(async ({ id, teamId, name, repeat, nextDate, startTime, endTime }) => {
         try {
@@ -119,6 +125,19 @@ const Board = () => {
 
     }, [closeAllDrawers, fetchData, message, setEnsembleStates]);
     
+    // 다음 번에 안 해요 클릭 시 nextDate를 7일 뒤로 변경
+    const handleSkipEnsemble = useCallback(async (id, teamId, repeat, nextDate, startTime, endTime) => {
+        try {
+            if (await checkEnsembleExists(id)) {
+                handleUpdateEnsemble(id, teamId, repeat, dayjs(nextDate).add(7, 'day'), startTime, endTime);
+                setNextDate((prev) => dayjs(prev).add(7, 'day'));
+                message.success('잘 미뤘어요.');
+            }
+        } catch {
+            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
+        }
+    }, [handleUpdateEnsemble, message, checkEnsembleExists]);
+    
     return (
         <Container row>
             {contextHolder}
@@ -143,8 +162,8 @@ const Board = () => {
                                         <Ensemble
                                             key={`${idx}_${time}_${ensemble.id}`}
                                             teamColor={ensemble.teamColor}
-                                            // nextDate가 일요일보다 이후면(즉 다음주면) 회색 처리
-                                            gray={isSkipped(ensemble.nextDate)}
+                                            // nextDate의 날짜 + endTime이 시간이 현재 날짜/시간보다 일주일 이상 멀면 회색 처리
+                                            gray={dayjs(ensemble.nextDate).hour(Number(idx2hour[ensemble.endTime + 1].split(':')[0])).minute(Number(idx2hour[ensemble.endTime + 1].split(':')[1])).diff(dayjs(), 'day') >= 7}
                                             onClick={() => handleEnsembleClick(ensemble)}
                                         >
                                             {/* 한 타임에 겹치는 팀이 5개 미만이면 팀명을 표시 */}
@@ -163,13 +182,14 @@ const Board = () => {
                 drawerId='ensembleInfo'
                 checkEnsembleExists={checkEnsembleExists}
                 handleClickTeamInfo={handleClickTeamInfo}
-                handleUpdateEnsemble={handleUpdateEnsemble}
+                handleSkipEnsemble={handleSkipEnsemble}
             />
             <UpdateEnsembleDrawer1 drawerId='updateEnsemble1' checkEnsembleExists={checkEnsembleExists} />
             <UpdateEnsembleDrawer2 drawerId='updateEnsemble2' />
             <UpdateEnsembleDrawer3 drawerId='updateEnsemble3' />
             <UpdateEnsembleDrawer4 drawerId='updateEnsemble4' handleUpdateEnsemble={handleUpdateEnsemble} />
             <DeleteEnsembleDrawer drawerId='deleteEnsemble' checkEnsembleExists={checkEnsembleExists} handleDeleteEnsemble={handleDeleteEnsemble} />
+            <SkipEnsembleDrawer drawerId='skipEnsemble' checkEnsembleExists={checkEnsembleExists} handleSkipEnsemble={handleSkipEnsemble} />
         </Container>
     )
 };

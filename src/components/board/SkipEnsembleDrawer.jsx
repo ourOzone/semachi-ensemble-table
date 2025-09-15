@@ -9,10 +9,9 @@ import useMessage from 'hooks/useMessage';
 
 const maxInput = 4;
 
-const DeleteEnsembleDrawer = ({ drawerId, checkEnsembleExists, handleDeleteEnsemble }) => {
+const SkipEnsembleDrawer = ({ drawerId, checkEnsembleExists, handleSkipEnsemble }) => {
     const { id: teamId, pin, setPin } = useTeamContext();
-    const { id } = useEnsembleContext();
-    const { openDrawer } = useDrawerContext();
+    const { id, repeat, nextDate, startTime, endTime } = useEnsembleContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
     const focusInputRef = useRef(null);
     const [message, contextHolder] = useMessage();
@@ -43,10 +42,16 @@ const DeleteEnsembleDrawer = ({ drawerId, checkEnsembleExists, handleDeleteEnsem
         }
     }, [setPin]);
 
+    const handleClickSkip = useCallback((id, teamId, repeat, nextDate, startTime, endTime) => {
+        setPin('');
+        setError(false);
+        handleSkipEnsemble(id, teamId, repeat, nextDate, startTime, endTime);
+    }, [handleSkipEnsemble, setPin]);
+
     return (
         <Drawer drawerId={drawerId} onClose={onClose} focusInputRef={focusInputRef}>
             {contextHolder}
-            <Title>PIN 입력해야 삭제돼요 🔑</Title>
+            <Title>PIN 입력해야 미룰 수 있어요 🔑</Title>
             <InputWrapper>
                 <StyledInput
                     ref={focusInputRef}
@@ -60,15 +65,15 @@ const DeleteEnsembleDrawer = ({ drawerId, checkEnsembleExists, handleDeleteEnsem
                     status={pin.length === maxInput && error ? 'error' : null}
                     onKeyDown={(e) => { // Enter 키 누를시
                         if (e.key === 'Enter' && !error && pin.length === maxInput) {
-                            handleDeleteEnsemble(id);
+                            handleClickSkip(id, teamId, repeat, nextDate, startTime, endTime);
                         }
                     }}
                 />
             </InputWrapper>
             
             <OkButton
-                label="진짜 삭제해요"
-                onClick={() => handleDeleteEnsemble(id)}
+                label="다음 번에 안 해요"
+                onClick={() => handleClickSkip(id, teamId, repeat, nextDate, startTime, endTime)}
                 disabled={error || pin.length !== maxInput}
             />
         </Drawer>
@@ -94,4 +99,4 @@ const StyledInput = styled(PinInput)`
     color: ${({ theme, value, error }) => value.length === maxInput && error ? theme.danger : theme.title};
 `;
 
-export default DeleteEnsembleDrawer;
+export default SkipEnsembleDrawer;

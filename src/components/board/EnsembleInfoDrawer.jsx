@@ -11,7 +11,12 @@ import 'dayjs/locale/ko';
 
 dayjs.locale('ko');
 
-const EnsembleInfoDrawer = ({ drawerId, checkEnsembleExists, handleClickTeamInfo, handleUpdateEnsemble }) => {
+const EnsembleInfoDrawer = ({
+    drawerId,
+    checkEnsembleExists,
+    handleClickTeamInfo,
+    handleSkip
+}) => {
     const { id: teamId, name, setTeamStates } = useTeamContext();
     const {
         id,
@@ -28,48 +33,10 @@ const EnsembleInfoDrawer = ({ drawerId, checkEnsembleExists, handleClickTeamInfo
     const { openDrawer } = useDrawerContext();
     const [message, contextHolder] = useMessage();
 
-    useEffect(() => {
-        // 반복 합주인 경우
-        if (repeat) {
-            // nextDate가 오늘보다 이전인 경우 (특별한 업데이트가 없었을 경우)
-            if (dayjs(nextDate).startOf('day').isBefore(dayjs().startOf('day'))) {
-                // 가장 가까운 같은 요일로 변경
-                setNextDate(dayjs().startOf('day').add((7 + dayjs(nextDate).day() - dayjs().day()) % 7, 'day').startOf('day'));
-            }
-            // // 합주 당일인데 시간만 지났을 경우
-            // if (dayjs(`${dayjs().format("YYYY-MM-DD")} ${idx2hour[endTime]}`).add(30, "minute").isBefore(dayjs())) {
-            //     // 다음주 같은 요일로 변경
-            //     setNextDate(dayjs().startOf('day').add((7 + dayjs(nextDate).day() - dayjs().day()) % 7, 'day').startOf('day'));
-            // }
-        }
-        
-        // endTime이 현재 시간보다 이전인 겨
-        
-        // nextDate가 오늘보다 이후이거나 일회성 합주인 경우는 그대로 둠
-        
-    }, [id, repeat, nextDate]);
-
     const onClose = useCallback(() => {
         setTeamStates();
         setEnsembleStates();
     }, [setTeamStates, setEnsembleStates]);
-
-    // repeat false거나 오늘보다 7일 이후라면 (오늘이 수요일이라면 다음주 수요일부터) 다음 번에 안해요 버튼을 disabled
-    const isDisabled = useCallback((repeat, nextDate) => {
-        return !repeat || dayjs(nextDate).isAfter(dayjs().startOf('day').add(6, 'day').endOf('day'))
-    }, []);
-
-    // 다음 번에 안 해요 클릭 시 nextDate를 7일 뒤로 변경하고 바로 렌더링
-    const handleClickSkip = useCallback(async (id, teamId, repeat, nextDate, startTime, endTime) => {
-        try {
-            if (await checkEnsembleExists(id)) {
-                handleUpdateEnsemble(id, teamId, repeat, dayjs(nextDate).add(7, 'day'), startTime, endTime);
-                setNextDate((prev) => dayjs(prev).add(7, 'day'));
-            }
-        } catch {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
-        }
-    }, []);
 
     const handleClickUpdate = useCallback(async (id, repeat, nextDate, startTime, endTime) => {
         try {
@@ -97,6 +64,16 @@ const EnsembleInfoDrawer = ({ drawerId, checkEnsembleExists, handleClickTeamInfo
         }
     }, []);
 
+    const handleClickSkip = useCallback(async (id) => {
+        try {
+            if (await checkEnsembleExists(id)) {
+                openDrawer('skipEnsemble');
+            }
+        } catch {
+            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
+        }
+    }, []);
+
     return (
         <Drawer drawerId={drawerId} onClose={onClose} background>
             {contextHolder}
@@ -111,12 +88,12 @@ const EnsembleInfoDrawer = ({ drawerId, checkEnsembleExists, handleClickTeamInfo
                 </ButtonWrapper>
                 <ButtonWrapper>
                     <StyledButton
-                        disabled={isDisabled(repeat, nextDate)}
-                        onClick={() => handleClickSkip(id, teamId, repeat, nextDate, startTime, endTime)}
+                        disabled={!repeat}
+                        onClick={() => handleClickSkip(id)}
                     >
                         <PauseOutlined />
                         다음 번에 안 해요
-                        {!isDisabled(repeat, nextDate) && (
+                        {repeat && (
                             <ButtonSmallText>(다음 {eventIds.includes(teamId) ? '일정을' : '합주를'} {dayjs(dayjs(nextDate).add(7, 'day')).format('M/D(dd)')}로)</ButtonSmallText>
                         )}
                     </StyledButton>

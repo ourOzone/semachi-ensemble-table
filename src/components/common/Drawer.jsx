@@ -5,8 +5,15 @@ import { LeftOutlined } from '@ant-design/icons';
 import { useDrawerContext } from 'context';
 import { media } from 'styles/media';
 
-const Drawer = ({ children, drawerId, closable = true, onClose = undefined, background = false, focusInputRef = undefined }) => {
-    const { openedDrawers, closeDrawer } = useDrawerContext();
+const Drawer = ({
+    children,
+    drawerId,
+    closable = true,
+    onClose = undefined,
+    background = false,
+    focusInputRef = undefined,
+}) => {
+    const { openedDrawers, closeDrawer, closeAllDrawers } = useDrawerContext();
 
     const getWidth = () => (window.innerWidth <= 767 ? '100%' : '767px');
     const [drawerWidth, setDrawerWidth] = useState(getWidth);
@@ -42,7 +49,7 @@ const Drawer = ({ children, drawerId, closable = true, onClose = undefined, back
 
     return (
         <StyledDrawer
-            mask={openedDrawers?.[0] === drawerId}
+            maskStyle={{ opacity: openedDrawers?.[0] === drawerId ? 1 : 0 }}
             openedDrawers={openedDrawers}
             drawerId={drawerId}
             width={drawerWidth}

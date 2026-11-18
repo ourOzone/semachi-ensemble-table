@@ -1,0 +1,10 @@
+# 줄바꿈을 LF로 고정 (Prettier endOfLine: "lf"와 일치)
+* text=auto eol=lf
+
+# 바이너리
+*.png binary
+*.jpg binary
+*.ico binary
+*.ttf binary
+*.woff binary
+*.woff2 binary

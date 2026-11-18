@@ -1,0 +1,13 @@
+# 백엔드 코드 (프론트엔드 작업 범위 밖)
+api.js
+
+# 빌드 산출물 / 의존성
+build
+dist
+node_modules
+package-lock.json
+pnpm-lock.yaml
+
+# 정적 파일 / 문서
+public
+*.md

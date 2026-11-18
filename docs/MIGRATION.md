@@ -34,6 +34,21 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 기존 코드의 에러 5건·경고 65건 (아래)
 
+### 2026-11-18 — 테스트 환경 (MODERNIZATION.md 4번)
+
+- Vitest 5.1 + jsdom 31 + React Testing Library 16 + user-event 14 + jest-dom 7 + MSW 3 설치
+- `vite.config.ts`에 `test` 설정 (`vitest/config`의 `defineConfig` 사용), 스크립트 `test`(watch) / `test:run`
+- `src/test/setup.ts`: jest-dom matcher, `matchMedia` polyfill(antd용), MSW 서버 lifecycle, RTL cleanup
+- `src/test/server.ts`(MSW), `src/test/render.tsx`(`renderWithTheme`)
+- 스모크 테스트: `src/api/index.test.ts`(axios 클라이언트 + MSW), `src/components/common/OkButton.test.tsx`(RTL + theme + antd)
+- Oxlint에 테스트 파일 대상 vitest 플러그인 추가
+- 트러블슈팅
+  - jsdom의 XHR은 mock 응답에도 CORS를 검사한다 → jsdom `url`을 API origin으로 맞춰 same-origin으로 처리
+  - MSW 3에서 `onUnhandledRequest` → `onUnhandledFrame`으로 이름 변경 (구 옵션은 런타임에서 조용히 무시됨)
+- 문서: `MODERNIZATION.md`를 `docs/`로 이동, pnpm 명령어 표를 `docs/PNPM.md`로 분리
+
+**검증:** `pnpm test:run` ✅ 6/6 / `pnpm typecheck` ✅ / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 기존 코드 에러 5·경고 65 (변동 없음)
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -57,5 +72,8 @@
 - `package.json`에 `"type": "module"` 없음 → Vite 빌드 시 config loader 경고
 - 폰트 TTF → woff2, `@font-face` `src` 중복
 
+### 환경
+- 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
+
 ### 다음 순서
-- MODERNIZATION.md 4번: Vitest + RTL v16 + MSW 설치 (현재 `test` 스크립트는 있으나 vitest 미설치)
+- 2단계 TS 전환 시작 (constants → hooks → context → components). 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성.

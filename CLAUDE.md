@@ -9,7 +9,13 @@
 - 빌드: `pnpm build`
 - 린트: `pnpm lint` (Oxlint, 설정은 `.oxlintrc.json`)
 - 포맷: `pnpm format` / 검사만: `pnpm format:check` (Prettier)
-- 테스트: `pnpm exec vitest run`
+- 테스트: `pnpm test:run` (watch 모드: `pnpm test`)
+
+## 테스트
+- Vitest + React Testing Library + MSW, 환경은 jsdom. 설정은 `vite.config.ts`의 `test`, 공통 setup은 `src/test/setup.ts`.
+- 테스트 파일은 대상 파일 옆에 `*.test.ts(x)`로 둔다.
+- API는 실제 서버로 보내지 않는다. 각 테스트에서 `server.use(http.get(...))`로 모킹한다 (`src/test/server.ts`). 핸들러 없는 요청은 에러가 난다.
+- styled-components theme이 필요한 컴포넌트는 `src/test/render.tsx`의 `renderWithTheme`으로 렌더링한다.
 
 ## 작업 범위
 - `src/` 아래 프론트엔드 코드만 수정한다.

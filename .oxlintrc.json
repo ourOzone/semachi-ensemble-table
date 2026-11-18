@@ -32,5 +32,11 @@
     "import/no-unassigned-import": "off",
     "import/no-named-as-default-member": "off"
   },
-  "ignorePatterns": ["api.js", "build/**", "dist/**", "node_modules/**"]
+  "ignorePatterns": ["api.js", "build/**", "dist/**", "node_modules/**"],
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "plugins": ["vitest"]
+    }
+  ]
 }

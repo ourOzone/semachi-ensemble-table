@@ -51,7 +51,7 @@ CRA에는 ESLint가 내장돼 있었는데, Vite로 옮기면서 **린트가 완
   다만 1인/소규모 프로젝트에서 npm이 막는 일은 없으므로 "해야 한다"까지는 아니다.
 - 전환 시 함께 할 것: `package.json`에 `packageManager` 필드, `.nvmrc`(Node 24) 추가, `package-lock.json` 삭제, `CLAUDE.md`의 명령어를 `pnpm`으로 갱신.
 
-### 4. 3단계(로직 수정) 전에 **Vitest**로 테스트 깔기 → **유지**
+### 4. 3단계(로직 수정) 전에 **Vitest**로 테스트 깔기 ✅ 적용 완료
 
 - `"test": "vitest"` 스크립트가 있고 `CLAUDE.md`에도 `npx vitest run`이 적혀 있지만 **vitest가 설치돼 있지 않다.** 남아 있는 `@testing-library/*@13`은 Jest 시절 버전이고, 테스트 파일도 없다.
 - `src/context/fetch.jsx`의 `nextDate` 계산(삼항 4단 중첩)과 시간 블록 정제 로직은 3단계에서 반드시 건드린다.

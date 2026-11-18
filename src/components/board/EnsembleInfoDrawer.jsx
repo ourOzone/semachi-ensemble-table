@@ -1,22 +1,23 @@
-import { useEffect, useCallback } from "react";
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { Button, Divider, Segmented } from "antd";
-import { PlusOutlined, PauseOutlined, EditOutlined, InfoCircleOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useTeamContext, useEnsembleContext, useDrawerContext } from "context";
-import { idx2hour, eventIds } from "constants";
-import useMessage from 'hooks/useMessage';
+import { useEffect, useCallback } from 'react';
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { Button, Divider, Segmented } from 'antd';
+import {
+    PlusOutlined,
+    PauseOutlined,
+    EditOutlined,
+    InfoCircleOutlined,
+    DeleteOutlined,
+} from '@ant-design/icons';
+import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
+import { idx2hour, eventIds } from '@/constants';
+import useMessage from '@/hooks/useMessage';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 
 dayjs.locale('ko');
 
-const EnsembleInfoDrawer = ({
-    drawerId,
-    checkEnsembleExists,
-    handleClickTeamInfo,
-    handleSkip
-}) => {
+const EnsembleInfoDrawer = ({ drawerId, checkEnsembleExists, handleClickTeamInfo, handleSkip }) => {
     const { id: teamId, name, setTeamStates } = useTeamContext();
     const {
         id,
@@ -28,7 +29,7 @@ const EnsembleInfoDrawer = ({
         setStartTime,
         setEndTime,
         setEnsembleStates,
-        setEnsembleOrgStates 
+        setEnsembleOrgStates,
     } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
     const [message, contextHolder] = useMessage();
@@ -38,21 +39,26 @@ const EnsembleInfoDrawer = ({
         setEnsembleStates();
     }, [setTeamStates, setEnsembleStates]);
 
-    const handleClickUpdate = useCallback(async (id, repeat, nextDate, startTime, endTime) => {
-        try {
-            if (await checkEnsembleExists(id)) {
-                // team 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
-                setEnsembleOrgStates(repeat, nextDate, startTime, endTime);
+    const handleClickUpdate = useCallback(
+        async (id, repeat, nextDate, startTime, endTime) => {
+            try {
+                if (await checkEnsembleExists(id)) {
+                    // team 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
+                    setEnsembleOrgStates(repeat, nextDate, startTime, endTime);
 
-                setStartTime(null);
-                setEndTime(null);
-                
-                openDrawer('updateEnsemble1');
+                    setStartTime(null);
+                    setEndTime(null);
+
+                    openDrawer('updateEnsemble1');
+                }
+            } catch {
+                message.error(
+                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
+                );
             }
-        } catch {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
-        }
-    }, [setEnsembleOrgStates, openDrawer]);
+        },
+        [setEnsembleOrgStates, openDrawer],
+    );
 
     const handleClickDelete = useCallback(async (id) => {
         try {
@@ -87,28 +93,42 @@ const EnsembleInfoDrawer = ({
                     )}
                 </ButtonWrapper>
                 <ButtonWrapper>
-                    <StyledButton
-                        disabled={!repeat}
-                        onClick={() => handleClickSkip(id)}
-                    >
+                    <StyledButton disabled={!repeat} onClick={() => handleClickSkip(id)}>
                         <PauseOutlined />
                         다음 번에 안 해요
                         {repeat && (
-                            <ButtonSmallText>(다음 {eventIds.includes(teamId) ? '일정을' : '합주를'} {dayjs(dayjs(nextDate).add(7, 'day')).format('M/D(dd)')}로)</ButtonSmallText>
+                            <ButtonSmallText>
+                                (다음 {eventIds.includes(teamId) ? '일정을' : '합주를'}{' '}
+                                {dayjs(dayjs(nextDate).add(7, 'day')).format('M/D(dd)')}로)
+                            </ButtonSmallText>
                         )}
                     </StyledButton>
                 </ButtonWrapper>
                 <ButtonWrapper>
-                    <StyledButton onClick={() => handleClickUpdate(id, repeat, nextDate, startTime, endTime)}><EditOutlined />{eventIds.includes(teamId) ? '일정' : '합주'} 수정</StyledButton>
-                    <StyledButton danger onClick={() => handleClickDelete(id)}><DeleteOutlined />{eventIds.includes(teamId) ? '일정' : '합주'} 삭제</StyledButton>
+                    <StyledButton
+                        onClick={() => handleClickUpdate(id, repeat, nextDate, startTime, endTime)}
+                    >
+                        <EditOutlined />
+                        {eventIds.includes(teamId) ? '일정' : '합주'} 수정
+                    </StyledButton>
+                    <StyledButton danger onClick={() => handleClickDelete(id)}>
+                        <DeleteOutlined />
+                        {eventIds.includes(teamId) ? '일정' : '합주'} 삭제
+                    </StyledButton>
                 </ButtonWrapper>
             </Card>
             <Card>
                 <NextEnsemble>
-                    <NextEnsembleLabel>다음 {eventIds.includes(teamId) ? '일정' : '합주'}</NextEnsembleLabel>
+                    <NextEnsembleLabel>
+                        다음 {eventIds.includes(teamId) ? '일정' : '합주'}
+                    </NextEnsembleLabel>
                     <TimeWrapper>
-                        <Time>{nextDate?.format('YYYY-MM-DD')} ({nextDate?.format('dd')})</Time>
-                        <Time>{idx2hour[startTime]} - {idx2hour[endTime + 1]}</Time>
+                        <Time>
+                            {nextDate?.format('YYYY-MM-DD')} ({nextDate?.format('dd')})
+                        </Time>
+                        <Time>
+                            {idx2hour[startTime]} - {idx2hour[endTime + 1]}
+                        </Time>
                         <Repeat>{repeat ? '매주 이 시간에 반복' : '이거 한 번만 하고 삭제'}</Repeat>
                     </TimeWrapper>
                 </NextEnsemble>
@@ -201,6 +221,5 @@ const ButtonSmallText = styled.div`
     font-size: 1rem !important;
     color: ${({ theme }) => theme.darkGray};
 `;
-
 
 export default EnsembleInfoDrawer;

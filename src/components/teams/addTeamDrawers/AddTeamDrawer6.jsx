@@ -1,8 +1,8 @@
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { Result } from "antd";
-import { useDrawerContext } from "context";
-import OkButton from "components/common/OkButton";
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { Result } from 'antd';
+import { useDrawerContext } from '@/context';
+import OkButton from '@/components/common/OkButton';
 
 const AddTeamDrawer6 = ({ drawerId }) => {
     const { openedDrawers, closeAllDrawers } = useDrawerContext();
@@ -13,9 +13,7 @@ const AddTeamDrawer6 = ({ drawerId }) => {
                 status="success"
                 title="락앤롤!"
                 subTitle="팀을 만들었어요"
-                extra={[
-                    <OkButton onClick={closeAllDrawers} label="알았어요" />
-                ]}
+                extra={[<OkButton onClick={closeAllDrawers} label="알았어요" />]}
             />
         </Drawer>
     );

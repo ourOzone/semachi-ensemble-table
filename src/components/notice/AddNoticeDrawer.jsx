@@ -1,11 +1,11 @@
-import { useState, useCallback, useRef } from "react";
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { checkNoticePin } from "api/notice";
-import { Button, Input } from "antd";
-import useMessage from 'hooks/useMessage';
-import OkButton from "components/common/OkButton";
-import PinInput from "components/common/PinInput";
+import { useState, useCallback, useRef } from 'react';
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { checkNoticePin } from '@/api/notice';
+import { Button, Input } from 'antd';
+import useMessage from '@/hooks/useMessage';
+import OkButton from '@/components/common/OkButton';
+import PinInput from '@/components/common/PinInput';
 
 const { TextArea } = Input;
 const maxInput = 200;
@@ -18,14 +18,7 @@ const countLines = (value) => {
     return Math.min(Math.max(lines, minRows), maxRows);
 };
 
-const AddNoticeDrawer = ({
-    drawerId,
-    text,
-    setText,
-    pin,
-    setPin,
-    handleAddNotice
-}) => {
+const AddNoticeDrawer = ({ drawerId, text, setText, pin, setPin, handleAddNotice }) => {
     const [message, contextHolder] = useMessage();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
     const isOverLimit = text.length > maxInput;
@@ -37,24 +30,29 @@ const AddNoticeDrawer = ({
         setError(false);
     }, []);
 
-    const handlePinChange = useCallback(async (value) => {
-        const numeric = value.replace(/\D/g, '');
-        if (numeric.length <= maxPinInput) {
-            setPin(numeric);
-            setError(true);
-    
-            if (numeric.length === maxPinInput) {
-                // 4자리 모두 입력한 경우
-                try {
-                    // PIN 판별
-                    const result = await checkNoticePin(numeric);
-                    setError(!result);
-                } catch {
-                    message.error('인터넷이 불안정하거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
+    const handlePinChange = useCallback(
+        async (value) => {
+            const numeric = value.replace(/\D/g, '');
+            if (numeric.length <= maxPinInput) {
+                setPin(numeric);
+                setError(true);
+
+                if (numeric.length === maxPinInput) {
+                    // 4자리 모두 입력한 경우
+                    try {
+                        // PIN 판별
+                        const result = await checkNoticePin(numeric);
+                        setError(!result);
+                    } catch {
+                        message.error(
+                            '인터넷이 불안정하거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
+                        );
+                    }
                 }
             }
-        }
-    }, [setPin]);
+        },
+        [setPin],
+    );
 
     return (
         <>
@@ -78,14 +76,17 @@ const AddNoticeDrawer = ({
                         placeholder="숫자 4자리"
                         error={error}
                         status={pin.length === maxPinInput && error ? 'error' : null}
-                        onKeyDown={(e) => { // Enter 키 누를시
+                        onKeyDown={(e) => {
+                            // Enter 키 누를시
                             if (e.key === 'Enter' && !error && pin.length === maxPinInput) {
                                 handleAddNotice(text, pin);
                             }
                         }}
                     />
                     <OkButton
-                        onClick={() => {handleAddNotice(text, pin)}}
+                        onClick={() => {
+                            handleAddNotice(text, pin);
+                        }}
                         disabled={error || !text || pin.length !== maxPinInput}
                         label="완료"
                     />
@@ -106,7 +107,7 @@ const StyledTextArea = styled(TextArea)`
     margin-top: 4rem;
     font-size: 1.5rem;
     font-family: Bold !important;
-    color: ${({ theme, $isOverLimit }) => $isOverLimit ? theme.danger : theme.title};
+    color: ${({ theme, $isOverLimit }) => ($isOverLimit ? theme.danger : theme.title)};
     border-radius: 1.5rem;
     resize: none !important;
 
@@ -120,7 +121,7 @@ const StyledTextArea = styled(TextArea)`
 `;
 
 const StyledPinInput = styled(PinInput)`
-    color: ${({ theme, value, error }) => value.length === maxPinInput && error ? theme.danger : theme.title};
+    color: ${({ theme, value, error }) => (value.length === maxPinInput && error ? theme.danger : theme.title)};
 `;
 
 const ButtonWrapper = styled.div`

@@ -1,8 +1,8 @@
 import { createGlobalStyle } from 'styled-components';
-import NanumSquareLight from '../assets/fonts/NanumSquareNeo-aLt.ttf';
-import NanumSquareRegular from '../assets/fonts/NanumSquareNeo-bRg.ttf';
-import NanumSquareBold from '../assets/fonts/NanumSquareNeo-cBd.ttf';
-import { media } from 'styles/media';
+import NanumSquareLight from '@/assets/fonts/NanumSquareNeo-aLt.ttf';
+import NanumSquareRegular from '@/assets/fonts/NanumSquareNeo-bRg.ttf';
+import NanumSquareBold from '@/assets/fonts/NanumSquareNeo-cBd.ttf';
+import { media } from '@/styles/media';
 
 const GlobalStyle = createGlobalStyle`
     @font-face {

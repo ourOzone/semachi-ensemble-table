@@ -4,9 +4,11 @@ import { Button } from 'antd';
 const OkButton = ({ disabled, label = '확인', ...props }) => {
     return (
         <Wrapper>
-            <StyledButton type="primary" disabled={disabled} visible={disabled} {...props}>{label}</StyledButton>
+            <StyledButton type="primary" disabled={disabled} visible={disabled} {...props}>
+                {label}
+            </StyledButton>
         </Wrapper>
-    )
+    );
 };
 
 const StyledButton = styled(Button)`
@@ -19,7 +21,9 @@ const StyledButton = styled(Button)`
     }
 
     // disabled시 아예 띄우지 않고, 토글 시 transition 적용
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition:
+        opacity 0.3s ease,
+        visibility 0.3s ease;
     opacity: ${({ visible }) => (visible ? 0 : 1)};
     visibility: ${({ visible }) => (visible ? 'hidden' : 'visible')};
 `;

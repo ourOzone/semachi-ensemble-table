@@ -1,31 +1,30 @@
-import { useCallback } from "react";
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { Button } from "antd";
-import { useEnsembleContext, useDrawerContext } from "context";
+import { useCallback } from 'react';
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { Button } from 'antd';
+import { useEnsembleContext, useDrawerContext } from '@/context';
 
 const UpdateEnsembleDrawer2 = ({ drawerId }) => {
     const { setRepeat } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
 
-    const handleClick = useCallback((repeat) => {
-        setRepeat(repeat);
-        openDrawer('updateEnsemble3');
-    }, [setRepeat, openDrawer]);
+    const handleClick = useCallback(
+        (repeat) => {
+            setRepeat(repeat);
+            openDrawer('updateEnsemble3');
+        },
+        [setRepeat, openDrawer],
+    );
 
     return (
         // onClose시 repeat은 초기화 필요 없음
         <Drawer drawerId={drawerId}>
             <Title>매주 할 건가요 📆</Title>
             <ButtonWrapper>
-                <OptionButton
-                    onClick={() => handleClick(true)}
-                >
+                <OptionButton onClick={() => handleClick(true)}>
                     <Label>매주 같은 타임에 할래요 🔁</Label>
                 </OptionButton>
-                <OptionButton
-                    onClick={() => handleClick(false)}
-                >
+                <OptionButton onClick={() => handleClick(false)}>
                     <Label>하루만 할래요 ☝️</Label>
                 </OptionButton>
             </ButtonWrapper>

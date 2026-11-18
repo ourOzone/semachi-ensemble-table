@@ -1,5 +1,5 @@
 // media query 용도로 사용
-// 사용법: 
+// 사용법:
 // const Container = styled.div`
 //   ...
 //   ${media.large`
@@ -15,8 +15,8 @@
 const sizes = {
     small: 425,
     large: 767,
-  };
-  
+};
+
 // export const media = Object.keys(sizes).reduce((acc, label) => {
 //   acc[label] = (...args) => `
 //     @media (max-width: ${sizes[label]}px) {
@@ -27,10 +27,10 @@ const sizes = {
 // }, {});
 
 export const media = Object.keys(sizes).reduce((acc, label) => {
-  acc[label] = (styles) => (props) => `
+    acc[label] = (styles) => (props) => `
     @media (max-width: ${sizes[label]}px) {
       ${typeof styles === 'function' ? styles(props) : styles}
     }
   `;
-  return acc;
+    return acc;
 }, {});

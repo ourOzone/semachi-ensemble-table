@@ -1,19 +1,19 @@
 import React, { useCallback } from 'react';
 import styled from 'styled-components';
-import { teamExists } from 'api/team';
-import { updateEnsemble, deleteEnsemble, ensembleExists } from 'api/ensemble';
-import { useFetchContext, useTeamContext, useEnsembleContext, useDrawerContext } from 'context';
-import useMessage from 'hooks/useMessage';
-import { days, hours } from 'constants';
-import { Container } from 'components/common/Container';
+import { teamExists } from '@/api/team';
+import { updateEnsemble, deleteEnsemble, ensembleExists } from '@/api/ensemble';
+import { useFetchContext, useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
+import useMessage from '@/hooks/useMessage';
+import { days, hours } from '@/constants';
+import { Container } from '@/components/common/Container';
 import EnsembleInfoDrawer from './EnsembleInfoDrawer';
-import UpdateEnsembleDrawer1 from './updateEnsembleDrawers/UpdateEnsembleDrawer1'
-import UpdateEnsembleDrawer2 from './updateEnsembleDrawers/UpdateEnsembleDrawer2'
-import UpdateEnsembleDrawer3 from './updateEnsembleDrawers/UpdateEnsembleDrawer3'
-import UpdateEnsembleDrawer4 from './updateEnsembleDrawers/UpdateEnsembleDrawer4'
+import UpdateEnsembleDrawer1 from './updateEnsembleDrawers/UpdateEnsembleDrawer1';
+import UpdateEnsembleDrawer2 from './updateEnsembleDrawers/UpdateEnsembleDrawer2';
+import UpdateEnsembleDrawer3 from './updateEnsembleDrawers/UpdateEnsembleDrawer3';
+import UpdateEnsembleDrawer4 from './updateEnsembleDrawers/UpdateEnsembleDrawer4';
 import DeleteEnsembleDrawer from './DeleteEnsembleDrawer';
 import SkipEnsembleDrawer from './SkipEnsembleDrawer';
-import { idx2hour } from "constants";
+import { idx2hour } from '@/constants';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 
@@ -23,9 +23,7 @@ dayjs.locale('ko');
 const todayIdx = dayjs().day() === 0 ? 6 : dayjs().day() - 1;
 
 // 이번주 날짜 7개 (시간은 현재 시간)
-const week = Array.from({ length: 7 }, (_, i) =>
-    dayjs().day(1).add(i, 'day')
-);
+const week = Array.from({ length: 7 }, (_, i) => dayjs().day(1).add(i, 'day'));
 
 const Board = () => {
     const { teams, ensembles, fetchData } = useFetchContext();
@@ -35,125 +33,150 @@ const Board = () => {
     const [message, contextHolder] = useMessage();
 
     // 이미 삭제된 합주인지 체크. 이미 있는 팀을 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
-    const checkEnsembleExists = useCallback(async (id) => {
-        try {
-            await ensembleExists(id);
-            return true;
-        } catch {
-            message.warning('이미 삭제된 합주예요.');
-            setTeamStates();
-            setEnsembleStates();
-            closeAllDrawers();
-            fetchData();
-            return false;
-        }
-    }, [closeAllDrawers, fetchData, message, setEnsembleStates]);
+    const checkEnsembleExists = useCallback(
+        async (id) => {
+            try {
+                await ensembleExists(id);
+                return true;
+            } catch {
+                message.warning('이미 삭제된 합주예요.');
+                setTeamStates();
+                setEnsembleStates();
+                closeAllDrawers();
+                fetchData();
+                return false;
+            }
+        },
+        [closeAllDrawers, fetchData, message, setEnsembleStates],
+    );
 
     // 이 합주가 "다음 번에 안 해요"에 해당하는지(회색인지) 판단
     // const isSkipped = useCallback((nextDate) => nextDate.diff(dayjs().startOf('day'), 'day') >= 7, []);
-    
 
-    const handleEnsembleClick = useCallback(async ({ id, teamId, name, repeat, nextDate, startTime, endTime }) => {
-        try {
-            if (await checkEnsembleExists(id)) {
-                setTeamStates(teamId, '', name);
-                setEnsembleStates(id, repeat, nextDate, startTime, endTime);
-                openDrawer('ensembleInfo');
+    const handleEnsembleClick = useCallback(
+        async ({ id, teamId, name, repeat, nextDate, startTime, endTime }) => {
+            try {
+                if (await checkEnsembleExists(id)) {
+                    setTeamStates(teamId, '', name);
+                    setEnsembleStates(id, repeat, nextDate, startTime, endTime);
+                    openDrawer('ensembleInfo');
+                }
+            } catch {
+                message.error(
+                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
+                );
             }
-            
-        } catch {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
-        }
-    }, [fetchData, message, openDrawer, setTeamStates, setEnsembleStates]);
+        },
+        [fetchData, message, openDrawer, setTeamStates, setEnsembleStates],
+    );
 
     // 합주 정보 Drawer에서 팀 정보 보기 클릭 (id는 team id)
-    const handleClickTeamInfo = useCallback(async (id) => {
-        try {
-            // 누른 팀이 이미 삭제됐으면 에러 (catch 매커니즘이 달라서 예외적으로 checkTeamExists는 사용 불가)
-            await teamExists(id);
+    const handleClickTeamInfo = useCallback(
+        async (id) => {
+            try {
+                // 누른 팀이 이미 삭제됐으면 에러 (catch 매커니즘이 달라서 예외적으로 checkTeamExists는 사용 불가)
+                await teamExists(id);
 
-            const { type, name, desc } = teams.find(team => team.id === id);
-            setTeamStates(id, type, name, desc);
-            openDrawer('teamInfo');
-        } catch {
-            message.warning('이미 삭제된 팀이에요.');
-            setTeamStates();
-            setEnsembleStates();
-            closeAllDrawers();
-            fetchData();
-        }
-
-    }, [message, fetchData, openDrawer, teams, setTeamStates, setEnsembleStates, closeAllDrawers]);
-
-    const handleUpdateEnsemble = useCallback(async (id, teamId, repeat, nextDate, startTime, endTime) => {
-        try {
-            if (await checkEnsembleExists(id)) {
-                await updateEnsemble(id, {
-                    teamId,
-                    repeat,
-                    nextDate,
-                    startTime,
-                    endTime,
-                    day: (nextDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
-                    type: repeat ? '무기한' : '일회성', // TODO 삭제
-                    due: repeat ? '2099-12-31' : nextDate.format('YYYY-MM-DD'), // TODO 삭제
-                });
+                const { type, name, desc } = teams.find((team) => team.id === id);
+                setTeamStates(id, type, name, desc);
+                openDrawer('teamInfo');
+            } catch {
+                message.warning('이미 삭제된 팀이에요.');
+                setTeamStates();
+                setEnsembleStates();
+                closeAllDrawers();
                 fetchData();
-                message.success('잘 바꿔놨어요.');
-                setOpenedDrawers(['ensembleInfo']);
             }
-        } catch {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
-        }
-    }, [message, fetchData, setOpenedDrawers]);
+        },
+        [message, fetchData, openDrawer, teams, setTeamStates, setEnsembleStates, closeAllDrawers],
+    );
 
-    const handleDeleteEnsemble = useCallback(async (id) => {
-        try {
-            if (await checkEnsembleExists(id)) {
-                await deleteEnsemble(id);
-                message.success('합주를 삭제했어요.');
+    const handleUpdateEnsemble = useCallback(
+        async (id, teamId, repeat, nextDate, startTime, endTime) => {
+            try {
+                if (await checkEnsembleExists(id)) {
+                    await updateEnsemble(id, {
+                        teamId,
+                        repeat,
+                        nextDate,
+                        startTime,
+                        endTime,
+                        day: (nextDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
+                        type: repeat ? '무기한' : '일회성', // TODO 삭제
+                        due: repeat ? '2099-12-31' : nextDate.format('YYYY-MM-DD'), // TODO 삭제
+                    });
+                    fetchData();
+                    message.success('잘 바꿔놨어요.');
+                    setOpenedDrawers(['ensembleInfo']);
+                }
+            } catch {
+                message.error(
+                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
+                );
             }
-        }
-        catch {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
-        }
-        finally {
-            setEnsembleStates();
-            closeAllDrawers();
-            fetchData();
-        }
+        },
+        [message, fetchData, setOpenedDrawers],
+    );
 
-    }, [closeAllDrawers, fetchData, message, setEnsembleStates]);
-    
+    const handleDeleteEnsemble = useCallback(
+        async (id) => {
+            try {
+                if (await checkEnsembleExists(id)) {
+                    await deleteEnsemble(id);
+                    message.success('합주를 삭제했어요.');
+                }
+            } catch {
+                message.error(
+                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
+                );
+            } finally {
+                setEnsembleStates();
+                closeAllDrawers();
+                fetchData();
+            }
+        },
+        [closeAllDrawers, fetchData, message, setEnsembleStates],
+    );
+
     // 다음 번에 안 해요 클릭 시 nextDate를 7일 뒤로 변경
-    const handleSkipEnsemble = useCallback(async (id, teamId, repeat, nextDate, startTime, endTime) => {
-        try {
-            if (await checkEnsembleExists(id)) {
-                handleUpdateEnsemble(id, teamId, repeat, dayjs(nextDate).add(7, 'day'), startTime, endTime);
-                setNextDate((prev) => dayjs(prev).add(7, 'day'));
-                message.success('잘 미뤘어요.');
+    const handleSkipEnsemble = useCallback(
+        async (id, teamId, repeat, nextDate, startTime, endTime) => {
+            try {
+                if (await checkEnsembleExists(id)) {
+                    handleUpdateEnsemble(
+                        id,
+                        teamId,
+                        repeat,
+                        dayjs(nextDate).add(7, 'day'),
+                        startTime,
+                        endTime,
+                    );
+                    setNextDate((prev) => dayjs(prev).add(7, 'day'));
+                    message.success('잘 미뤘어요.');
+                }
+            } catch {
+                message.error(
+                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
+                );
             }
-        } catch {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
-        }
-    }, [handleUpdateEnsemble, message, checkEnsembleExists]);
-    
+        },
+        [handleUpdateEnsemble, message, checkEnsembleExists],
+    );
+
     return (
         <Container row>
             {contextHolder}
             <HourColumn>
-                {hours.map(hour => <Hour key={hour}>{hour}</Hour>)}
+                {hours.map((hour) => (
+                    <Hour key={hour}>{hour}</Hour>
+                ))}
             </HourColumn>
             <Table>
                 {ensembles?.map((day, idx) => (
                     <ColumnWrapper key={idx}>
                         <LabelWrapper isToday={idx === todayIdx}>
-                            <DateLabel>
-                                {week[idx].date()}
-                            </DateLabel>
-                            <DayLabel>
-                                {days[idx]}
-                            </DayLabel>
+                            <DateLabel>{week[idx].date()}</DateLabel>
+                            <DayLabel>{days[idx]}</DayLabel>
                         </LabelWrapper>
                         <Column>
                             {day.map((block, time) => (
@@ -163,7 +186,24 @@ const Board = () => {
                                             key={`${idx}_${time}_${ensemble.id}`}
                                             teamColor={ensemble.teamColor}
                                             // nextDate의 날짜 + endTime이 시간이 현재 날짜/시간보다 일주일 이상 멀면 회색 처리
-                                            gray={dayjs(ensemble.nextDate).hour(Number(idx2hour[ensemble.endTime + 1].split(':')[0])).minute(Number(idx2hour[ensemble.endTime + 1].split(':')[1])).diff(dayjs(), 'day') >= 7}
+                                            gray={
+                                                dayjs(ensemble.nextDate)
+                                                    .hour(
+                                                        Number(
+                                                            idx2hour[ensemble.endTime + 1].split(
+                                                                ':',
+                                                            )[0],
+                                                        ),
+                                                    )
+                                                    .minute(
+                                                        Number(
+                                                            idx2hour[ensemble.endTime + 1].split(
+                                                                ':',
+                                                            )[1],
+                                                        ),
+                                                    )
+                                                    .diff(dayjs(), 'day') >= 7
+                                            }
                                             onClick={() => handleEnsembleClick(ensemble)}
                                         >
                                             {/* 한 타임에 겹치는 팀이 5개 미만이면 팀명을 표시 */}
@@ -176,22 +216,36 @@ const Board = () => {
                     </ColumnWrapper>
                 ))}
             </Table>
-            
+
             {/* DRAWERS */}
             <EnsembleInfoDrawer
-                drawerId='ensembleInfo'
+                drawerId="ensembleInfo"
                 checkEnsembleExists={checkEnsembleExists}
                 handleClickTeamInfo={handleClickTeamInfo}
                 handleSkipEnsemble={handleSkipEnsemble}
             />
-            <UpdateEnsembleDrawer1 drawerId='updateEnsemble1' checkEnsembleExists={checkEnsembleExists} />
-            <UpdateEnsembleDrawer2 drawerId='updateEnsemble2' />
-            <UpdateEnsembleDrawer3 drawerId='updateEnsemble3' />
-            <UpdateEnsembleDrawer4 drawerId='updateEnsemble4' handleUpdateEnsemble={handleUpdateEnsemble} />
-            <DeleteEnsembleDrawer drawerId='deleteEnsemble' checkEnsembleExists={checkEnsembleExists} handleDeleteEnsemble={handleDeleteEnsemble} />
-            <SkipEnsembleDrawer drawerId='skipEnsemble' checkEnsembleExists={checkEnsembleExists} handleSkipEnsemble={handleSkipEnsemble} />
+            <UpdateEnsembleDrawer1
+                drawerId="updateEnsemble1"
+                checkEnsembleExists={checkEnsembleExists}
+            />
+            <UpdateEnsembleDrawer2 drawerId="updateEnsemble2" />
+            <UpdateEnsembleDrawer3 drawerId="updateEnsemble3" />
+            <UpdateEnsembleDrawer4
+                drawerId="updateEnsemble4"
+                handleUpdateEnsemble={handleUpdateEnsemble}
+            />
+            <DeleteEnsembleDrawer
+                drawerId="deleteEnsemble"
+                checkEnsembleExists={checkEnsembleExists}
+                handleDeleteEnsemble={handleDeleteEnsemble}
+            />
+            <SkipEnsembleDrawer
+                drawerId="skipEnsemble"
+                checkEnsembleExists={checkEnsembleExists}
+                handleSkipEnsemble={handleSkipEnsemble}
+            />
         </Container>
-    )
+    );
 };
 
 const HourColumn = styled.div`
@@ -225,7 +279,9 @@ const LabelWrapper = styled.div`
     gap: 0.25rem;
 
     & > * {
-        ${({ theme, isToday }) => isToday && `
+        ${({ theme, isToday }) =>
+            isToday &&
+            `
             color: ${theme.primary};
             font-family: Bold;
         `};
@@ -244,7 +300,7 @@ const DayLabel = styled(DateLabel)`
 const Column = styled.div`
     display: flex;
     flex-direction: column;
-    
+
     & > *:nth-child(even) {
         margin-bottom: 0.25rem;
     }
@@ -260,7 +316,7 @@ const Block = styled.div`
 const Ensemble = styled.div`
     width: 100%;
     height: 2.5rem;
-    background-color: ${({ theme, teamColor, gray }) => gray ? theme.disabledGray : teamColor};
+    background-color: ${({ theme, teamColor, gray }) => (gray ? theme.disabledGray : teamColor)};
     color: ${({ theme }) => theme.white};
     padding: 0.125rem;
     user-select: none;

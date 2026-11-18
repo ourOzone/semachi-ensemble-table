@@ -6,7 +6,7 @@ const Footer = () => {
         <Container>
             <FooterText>32기 G.이승우 37기 B.고민재</FooterText>
         </Container>
-    )
+    );
 };
 
 const Container = styled.div`

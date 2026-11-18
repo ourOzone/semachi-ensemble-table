@@ -1,9 +1,9 @@
-import { useCallback, useRef } from "react";
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { Button, Input } from "antd";
-import OkButton from "components/common/OkButton";
-import PinInput from "components/common/PinInput";
+import { useCallback, useRef } from 'react';
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { Button, Input } from 'antd';
+import OkButton from '@/components/common/OkButton';
+import PinInput from '@/components/common/PinInput';
 
 const { TextArea } = Input;
 const maxInput = 200;
@@ -25,12 +25,15 @@ const AddNoteDrawer = ({ drawerId, text, setText, pin, setPin, handleAddNote }) 
         setPin('');
     }, []);
 
-    const handlePinChange = useCallback((e) => {
-        const numeric = e.target.value.replace(/\D/g, '');
-        if (numeric.length <= maxPinInput) {
-            setPin(numeric);
-        }
-    }, [setPin]);
+    const handlePinChange = useCallback(
+        (e) => {
+            const numeric = e.target.value.replace(/\D/g, '');
+            if (numeric.length <= maxPinInput) {
+                setPin(numeric);
+            }
+        },
+        [setPin],
+    );
 
     return (
         <>
@@ -50,14 +53,17 @@ const AddNoteDrawer = ({ drawerId, text, setText, pin, setPin, handleAddNote }) 
                         onChange={handlePinChange}
                         inputMode="numeric"
                         placeholder="숫자 4자리"
-                        onKeyDown={(e) => { // Enter 키 누를시
+                        onKeyDown={(e) => {
+                            // Enter 키 누를시
                             if (e.key === 'Enter' && pin.length === maxPinInput) {
                                 handleAddNote(text, pin);
                             }
                         }}
                     />
                     <OkButton
-                        onClick={() => {handleAddNote(text, pin)}}
+                        onClick={() => {
+                            handleAddNote(text, pin);
+                        }}
                         disabled={!text || pin.length !== maxPinInput}
                         label="완료 (일주일 후 삭제)"
                     />
@@ -78,7 +84,7 @@ const StyledTextArea = styled(TextArea)`
     margin-top: 4rem;
     font-size: 1.5rem;
     font-family: Bold !important;
-    color: ${({ theme, $isOverLimit }) => $isOverLimit ? theme.danger : theme.title};
+    color: ${({ theme, $isOverLimit }) => ($isOverLimit ? theme.danger : theme.title)};
     border-radius: 1.5rem;
     resize: none !important;
 

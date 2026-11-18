@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useRef } from "react";
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { Input } from "antd";
-import { useTeamContext } from "context";
-import OkButton from "components/common/OkButton";
+import { useCallback, useMemo, useRef } from 'react';
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { Input } from 'antd';
+import { useTeamContext } from '@/context';
+import OkButton from '@/components/common/OkButton';
 
 const { TextArea } = Input;
 const maxInput = 200;
@@ -21,13 +21,16 @@ const UpdateTeamDrawer5 = ({ drawerId, handleUpdateTeam }) => {
 
     const text = useMemo(() => desc[6] || '', [desc]);
 
-    const handleChange = useCallback((e) => {
-        const newText = e.target.value;
-        setDesc(prev => [...prev.slice(0, 6), newText]);
-    }, [setDesc]);
+    const handleChange = useCallback(
+        (e) => {
+            const newText = e.target.value;
+            setDesc((prev) => [...prev.slice(0, 6), newText]);
+        },
+        [setDesc],
+    );
 
     const onClose = useCallback(() => {
-        setDesc(prev => [...prev.slice(0, 6), '']);
+        setDesc((prev) => [...prev.slice(0, 6), '']);
     }, [setDesc]);
 
     const isOverLimit = text.length > maxInput;
@@ -46,7 +49,7 @@ const UpdateTeamDrawer5 = ({ drawerId, handleUpdateTeam }) => {
             <OkButton
                 onClick={() => handleUpdateTeam(id, type, name, desc)}
                 disabled={isOverLimit}
-                label='다 바꿨어요'
+                label="다 바꿨어요"
             />
         </Drawer>
     );
@@ -61,7 +64,7 @@ const StyledTextArea = styled(TextArea)`
     margin: 4rem 0;
     font-size: 1.5rem;
     font-family: Bold !important;
-    color: ${({ theme, $isOverLimit }) => $isOverLimit ? theme.danger : theme.title};
+    color: ${({ theme, $isOverLimit }) => ($isOverLimit ? theme.danger : theme.title)};
     border-radius: 1.5rem;
     resize: none !important;
 

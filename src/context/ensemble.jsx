@@ -4,7 +4,6 @@ import dayjs from 'dayjs';
 const EnsembleContext = createContext();
 
 function EnsembleContextProvider({ children }) {
-
     const [id, setId] = useState('');
     const [repeat, setRepeat] = useState(false);
     const [nextDate, setNextDate] = useState(null); // dayjs (2025-05-27T00:00:00.000Z"), POST시 YYYY-MM-DD의 string으로 변환
@@ -18,49 +17,58 @@ function EnsembleContextProvider({ children }) {
     const [orgStartTime, setOrgStartTime] = useState(null);
     const [orgEndTime, setOrgEndTime] = useState(null);
 
-    const setEnsembleStates = useCallback((
-        id = '',
-        repeat = false,
-        nextDate = null,
-        startTime = null,
-        endTime = null,
-        currentMonth = dayjs(),
-    ) => {
-        setId(id);
-        setRepeat(repeat);
-        setNextDate(nextDate);
-        setStartTime(startTime);
-        setEndTime(endTime);
-        setCurrentMonth(currentMonth);
-    }, []);
-    
-    const setEnsembleOrgStates = useCallback((
-        repeat = false,
-        nextDate = null,
-        startTime = null,
-        endTime = null,
-    ) => {
-        setOrgRepeat(repeat);
-        setOrgNextDate(nextDate);
-        setOrgStartTime(startTime);
-        setOrgEndTime(endTime);
-    }, []);
+    const setEnsembleStates = useCallback(
+        (
+            id = '',
+            repeat = false,
+            nextDate = null,
+            startTime = null,
+            endTime = null,
+            currentMonth = dayjs(),
+        ) => {
+            setId(id);
+            setRepeat(repeat);
+            setNextDate(nextDate);
+            setStartTime(startTime);
+            setEndTime(endTime);
+            setCurrentMonth(currentMonth);
+        },
+        [],
+    );
+
+    const setEnsembleOrgStates = useCallback(
+        (repeat = false, nextDate = null, startTime = null, endTime = null) => {
+            setOrgRepeat(repeat);
+            setOrgNextDate(nextDate);
+            setOrgStartTime(startTime);
+            setOrgEndTime(endTime);
+        },
+        [],
+    );
 
     return (
-        <EnsembleContext.Provider value={{
-            id, setId,
-            repeat, setRepeat,
-            nextDate, setNextDate,
-            startTime, setStartTime,
-            endTime, setEndTime,
-            currentMonth, setCurrentMonth,
-            orgRepeat,
-            orgNextDate,
-            orgStartTime,
-            orgEndTime,
-            setEnsembleStates,
-            setEnsembleOrgStates,
-         }}>
+        <EnsembleContext.Provider
+            value={{
+                id,
+                setId,
+                repeat,
+                setRepeat,
+                nextDate,
+                setNextDate,
+                startTime,
+                setStartTime,
+                endTime,
+                setEndTime,
+                currentMonth,
+                setCurrentMonth,
+                orgRepeat,
+                orgNextDate,
+                orgStartTime,
+                orgEndTime,
+                setEnsembleStates,
+                setEnsembleOrgStates,
+            }}
+        >
             {children}
         </EnsembleContext.Provider>
     );

@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { useTeamContext, useDrawerContext } from "context";
-import OkButton from "components/common/OkButton";
-import PinInput from "components/common/PinInput";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { useTeamContext, useDrawerContext } from '@/context';
+import OkButton from '@/components/common/OkButton';
+import PinInput from '@/components/common/PinInput';
 
 const maxInput = 4;
 
@@ -14,12 +14,15 @@ const AddTeamDrawer5 = ({ drawerId, handleAddTeam }) => {
     const [error, setError] = useState(true);
     const focusInputRef = useRef(null);
 
-    const handleClick = useCallback((type, name, desc, pin) => {
-        handleAddTeam(type, name, desc, pin);
-        setConfirmPin('');
-        setError(true);
-        openDrawer('addTeam6');
-    }, [handleAddTeam, openDrawer]);
+    const handleClick = useCallback(
+        (type, name, desc, pin) => {
+            handleAddTeam(type, name, desc, pin);
+            setConfirmPin('');
+            setError(true);
+            openDrawer('addTeam6');
+        },
+        [handleAddTeam, openDrawer],
+    );
 
     const onClose = useCallback(() => {
         setPin('');
@@ -27,22 +30,28 @@ const AddTeamDrawer5 = ({ drawerId, handleAddTeam }) => {
         setError(true);
     }, [setPin]);
 
-    const handlePinChange = useCallback((e) => {
-        const numeric = e.target.value.replace(/\D/g, '');
-        if (numeric.length <= maxInput) {
-            setPin(numeric);
-            setConfirmPin('');
-            setError(true);
-        }
-    }, [setPin]);
+    const handlePinChange = useCallback(
+        (e) => {
+            const numeric = e.target.value.replace(/\D/g, '');
+            if (numeric.length <= maxInput) {
+                setPin(numeric);
+                setConfirmPin('');
+                setError(true);
+            }
+        },
+        [setPin],
+    );
 
-    const handleConfirmChange = useCallback((e) => {
-        const numeric = e.target.value.replace(/\D/g, '');
-        if (numeric.length <= maxInput) {
-            setConfirmPin(numeric);
-            setError(pin !== numeric);
-        }
-    }, [pin]);
+    const handleConfirmChange = useCallback(
+        (e) => {
+            const numeric = e.target.value.replace(/\D/g, '');
+            if (numeric.length <= maxInput) {
+                setConfirmPin(numeric);
+                setError(pin !== numeric);
+            }
+        },
+        [pin],
+    );
 
     const isConfirmVisible = pin.length === maxInput;
     const isConfirmError = confirmPin.length === maxInput && error;
@@ -68,7 +77,8 @@ const AddTeamDrawer5 = ({ drawerId, handleAddTeam }) => {
                     $visible={isConfirmVisible}
                     $error={error}
                     status={isConfirmError ? 'error' : null}
-                    onKeyDown={(e) => { // Enter 키 누를시
+                    onKeyDown={(e) => {
+                        // Enter 키 누를시
                         if (e.key === 'Enter' && !error && confirmPin.length === maxInput) {
                             handleClick(type, name, desc, pin);
                         }
@@ -102,7 +112,9 @@ const ConfirmInput = styled(PinInput)`
     color: ${({ theme, $error, value }) =>
         value?.length === maxInput && $error ? theme.danger : theme.title};
 
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition:
+        opacity 0.3s ease,
+        visibility 0.3s ease;
     opacity: ${({ $visible }) => ($visible ? 1 : 0)};
     visibility: ${({ $visible }) => ($visible ? 'visible' : 'hidden')};
 `;

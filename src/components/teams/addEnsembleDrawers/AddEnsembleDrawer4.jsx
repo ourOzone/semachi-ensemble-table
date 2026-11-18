@@ -1,9 +1,9 @@
-import { useCallback } from "react";
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { Result } from "antd";
-import { useDrawerContext } from "context";
-import OkButton from "components/common/OkButton";
+import { useCallback } from 'react';
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { Result } from 'antd';
+import { useDrawerContext } from '@/context';
+import OkButton from '@/components/common/OkButton';
 
 const AddEnsembleDrawer4 = ({ drawerId }) => {
     const { closeAllDrawers } = useDrawerContext();
@@ -14,7 +14,7 @@ const AddEnsembleDrawer4 = ({ drawerId }) => {
 
     const onClose = useCallback(() => {
         closeAllDrawers();
-        console.log('zzzz')
+        console.log('zzzz');
     }, [closeAllDrawers]);
 
     return (
@@ -23,9 +23,7 @@ const AddEnsembleDrawer4 = ({ drawerId }) => {
                 status="success"
                 title="락앤롤!"
                 subTitle="등록했어요. 혹시 모르니 한 번 더 확인해요"
-                extra={[
-                    <OkButton onClick={handleClick} label="알았어요" />
-                ]}
+                extra={[<OkButton onClick={handleClick} label="알았어요" />]}
             />
         </Drawer>
     );

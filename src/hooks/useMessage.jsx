@@ -1,29 +1,29 @@
 import { message as antMessage } from 'antd';
 import styled from 'styled-components';
 import {
-        InfoCircleFilled,
-        CheckCircleFilled,
-        ExclamationCircleFilled,
-        CloseCircleFilled,
-    } from '@ant-design/icons';
+    InfoCircleFilled,
+    CheckCircleFilled,
+    ExclamationCircleFilled,
+    CloseCircleFilled,
+} from '@ant-design/icons';
 
 const bgColors = {
     info: '#e6f4ff',
     success: '#f6ffed',
     warning: '#fffbe6',
-    error: '#fff2f0'
+    error: '#fff2f0',
 };
 const borderColors = {
     info: '#91caff',
     success: '#b7eb8f',
     warning: '#ffe58f',
-    error: '#ffccc7'
-}
+    error: '#ffccc7',
+};
 const iconColors = {
     info: '#1890ff',
     success: '#52c41a',
     warning: '#faad14',
-    error: '#ff4d4f'
+    error: '#ff4d4f',
 };
 
 const Content = styled.div`
@@ -47,10 +47,10 @@ const useMessage = () => {
         messageApi.destroy();
         messageApi.open({
             content: (
-            <Content type='success'>
-                <CheckCircleFilled style={{ color: iconColors.success }} />
-                {text}
-            </Content>
+                <Content type="success">
+                    <CheckCircleFilled style={{ color: iconColors.success }} />
+                    {text}
+                </Content>
             ),
             icon: null,
         });
@@ -60,10 +60,10 @@ const useMessage = () => {
         messageApi.destroy();
         messageApi.open({
             content: (
-            <Content type='error'>
-                <CloseCircleFilled style={{ color: iconColors.error }} />
-                {text}
-            </Content>
+                <Content type="error">
+                    <CloseCircleFilled style={{ color: iconColors.error }} />
+                    {text}
+                </Content>
             ),
             icon: null,
         });
@@ -73,10 +73,10 @@ const useMessage = () => {
         messageApi.destroy();
         messageApi.open({
             content: (
-            <Content type='warning'>
-                <ExclamationCircleFilled style={{ color: iconColors.warning }} />
-                {text}
-            </Content>
+                <Content type="warning">
+                    <ExclamationCircleFilled style={{ color: iconColors.warning }} />
+                    {text}
+                </Content>
             ),
             icon: null,
         });
@@ -86,16 +86,16 @@ const useMessage = () => {
         messageApi.destroy();
         messageApi.open({
             content: (
-            <Content type='info'>
-                <InfoCircleFilled style={{ color: iconColors.info }} />
-                {text}
-            </Content>
+                <Content type="info">
+                    <InfoCircleFilled style={{ color: iconColors.info }} />
+                    {text}
+                </Content>
             ),
             icon: null,
         });
     };
 
-        const message = { success, error, warning, info };
+    const message = { success, error, warning, info };
 
     return [message, contextHolder];
 };

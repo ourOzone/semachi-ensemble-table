@@ -1,24 +1,27 @@
-import { useCallback } from "react";
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { Button } from "antd";
-import { useTeamContext, useDrawerContext } from "context";
+import { useCallback } from 'react';
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { Button } from 'antd';
+import { useTeamContext, useDrawerContext } from '@/context';
 
 const options = [
     { value: '세마치공연(정기/연말)', label: '세마치공연', desc: '정기공연, 연말공연' },
-    { value: '교내공연(축제/버스킹)', label: '교내공연', desc: '축제, 버스킹'},
-    { value: '외부공연(연합/대외)', label: '외부공연', desc: '연합공연, 대외공연'},
-    { value: '기타 등등', label: '기타', desc: '등등'},
+    { value: '교내공연(축제/버스킹)', label: '교내공연', desc: '축제, 버스킹' },
+    { value: '외부공연(연합/대외)', label: '외부공연', desc: '연합공연, 대외공연' },
+    { value: '기타 등등', label: '기타', desc: '등등' },
 ];
 
 const AddTeamDrawer1 = ({ drawerId }) => {
     const { setType } = useTeamContext();
     const { openDrawer } = useDrawerContext();
 
-    const handleClick = useCallback((value) => {
-        setType(value);
-        openDrawer('addTeam2');
-    }, [setType, openDrawer]);
+    const handleClick = useCallback(
+        (value) => {
+            setType(value);
+            openDrawer('addTeam2');
+        },
+        [setType, openDrawer],
+    );
 
     return (
         // onClose시 type 초기화 필요 없음
@@ -26,10 +29,7 @@ const AddTeamDrawer1 = ({ drawerId }) => {
             <Title>무슨 팀인가요 🤘</Title>
             <GridContainer>
                 {options.map((opt) => (
-                    <OptionButton
-                        key={opt.value}
-                        onClick={() => handleClick(opt.value)}
-                    >
+                    <OptionButton key={opt.value} onClick={() => handleClick(opt.value)}>
                         <Label>{opt.label}</Label>
                         <Desc>{opt.desc}</Desc>
                     </OptionButton>

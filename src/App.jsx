@@ -1,51 +1,52 @@
 import { useEffect } from 'react';
 import styled from 'styled-components';
-import { useFetchContext, useDrawerContext } from 'context';
-import Header from 'components/layout/Header';
-import Footer from 'components/layout/Footer';
-import Notice from 'components/notice';
-import Teams from 'components/teams';
-import Board from 'components/board';
-import Note from 'components/note';
-import { media } from 'styles/media';
+import { useFetchContext, useDrawerContext } from '@/context';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
+import Notice from '@/components/notice';
+import Teams from '@/components/teams';
+import Board from '@/components/board';
+import Note from '@/components/note';
+import { media } from '@/styles/media';
 
 function App() {
-	const { fetchData } = useFetchContext();
+    const { fetchData } = useFetchContext();
     const { openedDrawers } = useDrawerContext();
 
     useEffect(() => {
-		fetchData();
+        fetchData();
     }, []);
 
-	return (
-		<>
-			<Header />
-			<Container openedDrawers={openedDrawers}>
-				<Notice />
-				<Teams />
-				<Board />
-				<Note />
-				<Footer />
-			</Container>
-		</>
-	);
+    return (
+        <>
+            <Header />
+            <Container openedDrawers={openedDrawers}>
+                <Notice />
+                <Teams />
+                <Board />
+                <Note />
+                <Footer />
+            </Container>
+        </>
+    );
 }
 
 const Container = styled.div`
-	display: flex;
-	flex-direction: column;
-	width: 100%;
-	align-items: center;
-	gap: 1rem;
-	padding: 1rem 1rem 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1rem 0;
 
-	// Drawer 열 때 트랜지션 (384는 media large 기준인 767의 절반)
-	transition: transform 0.3s ease;
-	transform: translateX(${({ openedDrawers }) => (openedDrawers.length > 0 ? '-384px' : '0')});
-	${media.large(({ openedDrawers }) => `
+    // Drawer 열 때 트랜지션 (384는 media large 기준인 767의 절반)
+    transition: transform 0.3s ease;
+    transform: translateX(${({ openedDrawers }) => (openedDrawers.length > 0 ? '-384px' : '0')});
+    ${media.large(
+        ({ openedDrawers }) => `
 		transform: translateX(${openedDrawers.length > 0 ? '-50%' : '0'});
-	`)}
-
+	`,
+    )}
 `;
 
 export default App;

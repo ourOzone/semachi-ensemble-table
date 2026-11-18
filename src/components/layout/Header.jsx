@@ -2,8 +2,8 @@ import React from 'react';
 import styled from 'styled-components';
 import { Layout, Button } from 'antd';
 import { BellOutlined, BookOutlined } from '@ant-design/icons';
-import useScrollPosition from 'hooks/useScrollPosition';
-import Tooltip from 'components/common/Tooltip';
+import useScrollPosition from '@/hooks/useScrollPosition';
+import Tooltip from '@/components/common/Tooltip';
 
 const { Header: AntHeader } = Layout;
 
@@ -17,13 +17,16 @@ const Header = () => {
                     <StyledButton
                         variant="text"
                         icon={<BookOutlined />}
-                        onClick={() => window.location.href = 'https://drive.google.com/drive/folders/1FneJEkXY-hSqpM_XOBic7ep8lJZ3tdFn?usp=sharing'}
+                        onClick={() =>
+                            (window.location.href =
+                                'https://drive.google.com/drive/folders/1FneJEkXY-hSqpM_XOBic7ep8lJZ3tdFn?usp=sharing')
+                        }
                     ></StyledButton>
                 </Tooltip>
                 {/* <StyledButton variant="text" icon={<BellOutlined />}></StyledButton> */}
             </ButtonWrapper>
         </StyledHeader>
-    )
+    );
 };
 
 const StyledHeader = styled(AntHeader)`
@@ -38,8 +41,8 @@ const StyledHeader = styled(AntHeader)`
     padding: 1.5rem 1rem 1.5rem 1.5rem;
 
     background-color: ${({ theme }) => theme.background}CC;
-    backdrop-filter: blur(1rem);           /* 블러 효과 */
-    -webkit-backdrop-filter: blur(1rem);   /* Safari 지원용 */
+    backdrop-filter: blur(1rem); /* 블러 효과 */
+    -webkit-backdrop-filter: blur(1rem); /* Safari 지원용 */
 `;
 
 const StyledButton = styled(Button)`

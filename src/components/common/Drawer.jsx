@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { Drawer as AntDrawer } from 'antd';
 import { LeftOutlined } from '@ant-design/icons';
-import { useDrawerContext } from 'context';
-import { media } from 'styles/media';
+import { useDrawerContext } from '@/context';
+import { media } from '@/styles/media';
 
 const Drawer = ({
     children,
@@ -33,15 +33,15 @@ const Drawer = ({
         if (focusInputRef && open && openedDrawers[openedDrawers.length - 1] === drawerId) {
             setTimeout(() => {
                 focusInputRef.current?.focus({
-                    cursor: 'end'
+                    cursor: 'end',
                 });
-            }, 0); 
+            }, 0);
         }
     };
 
     const customOnClose = useCallback(() => {
         closeDrawer();
-        
+
         if (onClose) {
             onClose();
         }
@@ -70,13 +70,14 @@ const Drawer = ({
 
 const StyledDrawer = styled(AntDrawer)`
     & > * {
-        background-color: ${({ theme, background }) => background ? theme.background : theme.white};
+        background-color: ${({ theme, background }) => (background ? theme.background : theme.white)};
     }
 
     ${media.large(({ openedDrawers, drawerId }) => {
         const isOpened = openedDrawers.includes(drawerId);
         const isTop = openedDrawers[openedDrawers.length - 1] === drawerId;
-        return isOpened ? `
+        return isOpened
+            ? `
                 transition: transform 0.3s ease;
                 transform: translateX(${isTop ? '0' : '-50%'});
             `

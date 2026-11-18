@@ -3,12 +3,12 @@ import styled from 'styled-components';
 import { Divider } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { addTeam, updateTeam, deleteTeam, teamExists } from 'api/team';
-import { addEnsemble } from 'api/ensemble';
-import useMessage from 'hooks/useMessage';
-import { useFetchContext, useTeamContext, useEnsembleContext, useDrawerContext } from 'context';
-import { eventIds } from 'constants';
-import { Container } from 'components/common/Container';
+import { addTeam, updateTeam, deleteTeam, teamExists } from '@/api/team';
+import { addEnsemble } from '@/api/ensemble';
+import useMessage from '@/hooks/useMessage';
+import { useFetchContext, useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
+import { eventIds } from '@/constants';
+import { Container } from '@/components/common/Container';
 import TeamInfoDrawer from './TeamInfoDrawer';
 import EventInfoDrawer from './EventInfoDrawer';
 import AddTeamDrawer1 from './addTeamDrawers/AddTeamDrawer1';
@@ -40,36 +40,47 @@ const Teams = () => {
 
     // 이미 삭제된 팀인지 체크. 이미 있는 팀을 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
     // 해당 함수를 try -> if(else 없음) 에서 호출: false 리턴시 if문 넘긴채 그대로 try문 종료, 이후 try문 내에서 에러시 catch
-    const checkTeamExists = useCallback(async (id) => {
-        try {
-            await teamExists(id);
-            return true;
-        } catch {
-            message.warning('이미 삭제된 팀이에요.');
-            setTeamStates();
-            closeAllDrawers();
-            fetchData();
-            return false;
-        }
-    }, [closeAllDrawers, fetchData, message, setTeamStates]);
+    const checkTeamExists = useCallback(
+        async (id) => {
+            try {
+                await teamExists(id);
+                return true;
+            } catch {
+                message.warning('이미 삭제된 팀이에요.');
+                setTeamStates();
+                closeAllDrawers();
+                fetchData();
+                return false;
+            }
+        },
+        [closeAllDrawers, fetchData, message, setTeamStates],
+    );
 
     // 팀 클릭
-    const handleClickTeam = useCallback(async ({ id, type, name, desc }) => {
-        try {
-            if (await checkTeamExists(id)) {
-                setTeamStates(id, type, name, desc);
-                openDrawer('teamInfo');
+    const handleClickTeam = useCallback(
+        async ({ id, type, name, desc }) => {
+            try {
+                if (await checkTeamExists(id)) {
+                    setTeamStates(id, type, name, desc);
+                    openDrawer('teamInfo');
+                }
+            } catch {
+                message.error(
+                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
+                );
             }
-        } catch {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
-        }
-    }, [message, fetchData, openDrawer, setTeamStates, checkTeamExists]);
+        },
+        [message, fetchData, openDrawer, setTeamStates, checkTeamExists],
+    );
 
     // 소모임 및 회의 클릭 (id값은 순서대로 event0~ 으로 지정)
-    const handleClickEvent = useCallback((id, name) => {
-        setTeamStates(id, '', name);
-        openDrawer('eventInfo');
-    }, [openDrawer, setTeamStates]);
+    const handleClickEvent = useCallback(
+        (id, name) => {
+            setTeamStates(id, '', name);
+            openDrawer('eventInfo');
+        },
+        [openDrawer, setTeamStates],
+    );
 
     // 팀 추가 버튼
     const handleClickAddTeam = useCallback(() => {
@@ -77,121 +88,152 @@ const Teams = () => {
         openDrawer('addTeam1');
     }, [setTeamStates, openDrawer]);
 
-    const handleAddTeam = useCallback(async (type, name, desc, pin) => {
-        try {
-            await addTeam({ type, name, desc, pin, publishDate: dayjs() });
-            fetchData();
-            setTeamStates(); // 초기화
-
-        } catch (err) {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
-        }
-    }, [message, fetchData, setTeamStates]);
-
-    const handleUpdateTeam = useCallback(async (id, type, name, desc) => {
-        try {
-            if (await checkTeamExists(id)) {
-                await updateTeam(id, { type, name, desc });
-                fetchData();
-                message.success('잘 바꿔놨어요.');
-                setOpenedDrawers(['teamInfo']);
-            }
-        } catch (err) {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
-        }
-    }, [message, fetchData, setOpenedDrawers, checkTeamExists]);
-
-    const handleDeleteTeam = useCallback(async (id) => {
-        try {
-            if (await checkTeamExists(id)) {
-                await deleteTeam(id);
-                message.success('팀을 삭제했어요.');
-            }
-        } catch {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
-        }
-        finally {
-            setTeamStates();
-            closeAllDrawers();
-            fetchData();
-        }
-
-    }, [closeAllDrawers, fetchData, message, setTeamStates, checkTeamExists]);
-
-    const handleAddEnsemble = useCallback(async (id, name, repeat, nextDate, startTime, endTime) => {
-        try {
-            if (await checkTeamExists(id)) {
-                await addEnsemble({
-                    teamId: id,
-                    teamName: name,
-                    day: (nextDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
-                    nextDate,
-                    startTime,
-                    endTime,
-                    repeat,
-                    type: repeat ? '무기한' : '일회성', // TODO 삭제
-                    due: repeat ? '2099-12-31' : nextDate.format('YYYY-MM-DD'), // TODO 삭제
-                });
+    const handleAddTeam = useCallback(
+        async (type, name, desc, pin) => {
+            try {
+                await addTeam({ type, name, desc, pin, publishDate: dayjs() });
                 fetchData();
                 setTeamStates(); // 초기화
-                setEnsembleStates();
+            } catch (err) {
+                message.error(
+                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
+                );
             }
-        } catch (err) {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
-        }
-    }, [message, fetchData, setTeamStates, setEnsembleStates, checkTeamExists]);
+        },
+        [message, fetchData, setTeamStates],
+    );
+
+    const handleUpdateTeam = useCallback(
+        async (id, type, name, desc) => {
+            try {
+                if (await checkTeamExists(id)) {
+                    await updateTeam(id, { type, name, desc });
+                    fetchData();
+                    message.success('잘 바꿔놨어요.');
+                    setOpenedDrawers(['teamInfo']);
+                }
+            } catch (err) {
+                message.error(
+                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
+                );
+            }
+        },
+        [message, fetchData, setOpenedDrawers, checkTeamExists],
+    );
+
+    const handleDeleteTeam = useCallback(
+        async (id) => {
+            try {
+                if (await checkTeamExists(id)) {
+                    await deleteTeam(id);
+                    message.success('팀을 삭제했어요.');
+                }
+            } catch {
+                message.error(
+                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
+                );
+            } finally {
+                setTeamStates();
+                closeAllDrawers();
+                fetchData();
+            }
+        },
+        [closeAllDrawers, fetchData, message, setTeamStates, checkTeamExists],
+    );
+
+    const handleAddEnsemble = useCallback(
+        async (id, name, repeat, nextDate, startTime, endTime) => {
+            try {
+                if (await checkTeamExists(id)) {
+                    await addEnsemble({
+                        teamId: id,
+                        teamName: name,
+                        day: (nextDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
+                        nextDate,
+                        startTime,
+                        endTime,
+                        repeat,
+                        type: repeat ? '무기한' : '일회성', // TODO 삭제
+                        due: repeat ? '2099-12-31' : nextDate.format('YYYY-MM-DD'), // TODO 삭제
+                    });
+                    fetchData();
+                    setTeamStates(); // 초기화
+                    setEnsembleStates();
+                }
+            } catch (err) {
+                message.error(
+                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
+                );
+            }
+        },
+        [message, fetchData, setTeamStates, setEnsembleStates, checkTeamExists],
+    );
 
     return (
         <Container>
             {contextHolder}
             <TeamsContainer>
-                {teams && teams.map((team, idx) => (
-                    <TeamButton
-                        key={idx}
-                        idx={idx}
-                        onClick={() => handleClickTeam(team)}
-                    >
-                        {team.name}
-                    </TeamButton>
-                ))}
+                {teams &&
+                    teams.map((team, idx) => (
+                        <TeamButton key={idx} idx={idx} onClick={() => handleClickTeam(team)}>
+                            {team.name}
+                        </TeamButton>
+                    ))}
                 <AddTeamButton onClick={handleClickAddTeam}>
-                    <PlusOutlined />
-                    팀 추가
+                    <PlusOutlined />팀 추가
                 </AddTeamButton>
             </TeamsContainer>
             <StyledDivider />
             <TeamsContainer>
                 {eventNames1.map((name, idx) => (
-                    <TeamButton key={name} isEvent idx={idx} onClick={() => handleClickEvent(eventIds[idx], name)}>{name}</TeamButton>
+                    <TeamButton
+                        key={name}
+                        isEvent
+                        idx={idx}
+                        onClick={() => handleClickEvent(eventIds[idx], name)}
+                    >
+                        {name}
+                    </TeamButton>
                 ))}
             </TeamsContainer>
             <TeamsContainer>
                 {eventNames2.map((name, idx) => (
-                    <TeamButton key={name} isEvent idx={idx + eventNames1.length} onClick={() => handleClickEvent(eventIds[idx + eventNames1.length], name)}>{name}</TeamButton>
+                    <TeamButton
+                        key={name}
+                        isEvent
+                        idx={idx + eventNames1.length}
+                        onClick={() => handleClickEvent(eventIds[idx + eventNames1.length], name)}
+                    >
+                        {name}
+                    </TeamButton>
                 ))}
             </TeamsContainer>
 
             {/* DRAWERS */}
-            <TeamInfoDrawer drawerId='teamInfo' checkTeamExists={checkTeamExists} />
-            <EventInfoDrawer drawerId='eventInfo' />
-            <AddTeamDrawer1 drawerId='addTeam1' />
-            <AddTeamDrawer2 drawerId='addTeam2' />
-            <AddTeamDrawer3 drawerId='addTeam3' />
-            <AddTeamDrawer4 drawerId='addTeam4' />
-            <AddTeamDrawer5 drawerId='addTeam5' handleAddTeam={handleAddTeam} />
-            <AddTeamDrawer6 drawerId='addTeam6' />
-            <UpdateTeamDrawer1 drawerId='updateTeam1' checkTeamExists={checkTeamExists} />
-            <UpdateTeamDrawer2 drawerId='updateTeam2' />
-            <UpdateTeamDrawer3 drawerId='updateTeam3' />
-            <UpdateTeamDrawer4 drawerId='updateTeam4' />
-            <UpdateTeamDrawer5 drawerId='updateTeam5' handleUpdateTeam={handleUpdateTeam} />
-            <DeleteTeamDrawer drawerId='deleteTeam' checkTeamExists={checkTeamExists} handleDeleteTeam={handleDeleteTeam} />
-            <AddEnsembleDrawer1 drawerId='addEnsemble1' />
-            <AddEnsembleDrawer2 drawerId='addEnsemble2' />
-            <AddEnsembleDrawer3 drawerId='addEnsemble3' handleAddEnsemble={handleAddEnsemble} />
-            <AddEnsembleDrawer4 drawerId='addEnsemble4' />
+            <TeamInfoDrawer drawerId="teamInfo" checkTeamExists={checkTeamExists} />
+            <EventInfoDrawer drawerId="eventInfo" />
+            <AddTeamDrawer1 drawerId="addTeam1" />
+            <AddTeamDrawer2 drawerId="addTeam2" />
+            <AddTeamDrawer3 drawerId="addTeam3" />
+            <AddTeamDrawer4 drawerId="addTeam4" />
+            <AddTeamDrawer5 drawerId="addTeam5" handleAddTeam={handleAddTeam} />
+            <AddTeamDrawer6 drawerId="addTeam6" />
+            <UpdateTeamDrawer1 drawerId="updateTeam1" checkTeamExists={checkTeamExists} />
+            <UpdateTeamDrawer2 drawerId="updateTeam2" />
+            <UpdateTeamDrawer3 drawerId="updateTeam3" />
+            <UpdateTeamDrawer4 drawerId="updateTeam4" />
+            <UpdateTeamDrawer5 drawerId="updateTeam5" handleUpdateTeam={handleUpdateTeam} />
+            <DeleteTeamDrawer
+                drawerId="deleteTeam"
+                checkTeamExists={checkTeamExists}
+                handleDeleteTeam={handleDeleteTeam}
+            />
+            <AddEnsembleDrawer1 drawerId="addEnsemble1" />
+            <AddEnsembleDrawer2 drawerId="addEnsemble2" />
+            <AddEnsembleDrawer3 drawerId="addEnsemble3" handleAddEnsemble={handleAddEnsemble} />
+            <AddEnsembleDrawer4 drawerId="addEnsemble4" />
         </Container>
-    )
+    );
 };
 
 const TeamsContainer = styled.div`
@@ -207,10 +249,8 @@ const TeamButton = styled.div`
     display: flex;
     align-items: center;
     margin: 0.5rem 0 0 0.5rem;
-    background-color: ${({ theme, isEvent, idx }) => isEvent ? 
-        theme.eventColors[idx] : 
-        theme.teamColors[idx % theme.teamColors.length]
-    };
+    background-color: ${({ theme, isEvent, idx }) =>
+        isEvent ? theme.eventColors[idx] : theme.teamColors[idx % theme.teamColors.length]};
     padding: 0.75rem 1.5rem;
     border-radius: 100rem;
     font-size: 1.25rem;
@@ -218,10 +258,9 @@ const TeamButton = styled.div`
     cursor: pointer;
     user-select: none;
     border: 0.0625rem solid ${({ theme }) => theme.border};
-    box-shadow: 0 0.25rem 0.125rem ${({ theme, isEvent, idx }) => isEvent ? 
-        theme.eventColors[idx] : 
-        theme.teamColors[idx % theme.teamColors.length]
-    }33;
+    box-shadow: 0 0.25rem 0.125rem
+        ${({ theme, isEvent, idx }) =>
+            isEvent ? theme.eventColors[idx] : theme.teamColors[idx % theme.teamColors.length]}33;
 
     opacity: 1;
     transition: opacity 0.3s ease;

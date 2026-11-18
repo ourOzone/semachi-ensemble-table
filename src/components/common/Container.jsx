@@ -2,7 +2,7 @@ import styled from 'styled-components';
 
 export const Container = styled.div`
     display: flex;
-    flex-direction: ${({ row }) => row ? 'row' : 'column'};
+    flex-direction: ${({ row }) => (row ? 'row' : 'column')};
     background-color: ${({ theme }) => theme.container};
     box-shadow: 0 2px 10px 2px rgba(0, 0, 0, 0.1);
     border-radius: 1.5rem;

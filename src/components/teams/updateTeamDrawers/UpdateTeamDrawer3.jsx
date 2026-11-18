@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from "react";
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { Input } from "antd";
-import { useTeamContext, useDrawerContext } from "context";
-import OkButton from "components/common/OkButton";
-import { demoNames } from 'constants';
+import { useState, useEffect, useRef } from 'react';
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { Input } from 'antd';
+import { useTeamContext, useDrawerContext } from '@/context';
+import OkButton from '@/components/common/OkButton';
+import { demoNames } from '@/constants';
 
 const maxInput = 20;
 
@@ -16,7 +16,7 @@ const UpdateTeam3 = ({ drawerId }) => {
 
     useEffect(() => {
         const randomIndex = Math.floor(Math.random() * demoNames.length);
-       setRandomDemoName(demoNames[randomIndex]);
+        setRandomDemoName(demoNames[randomIndex]);
     }, []);
 
     return (
@@ -31,7 +31,8 @@ const UpdateTeam3 = ({ drawerId }) => {
                     show: true,
                     max: maxInput,
                 }}
-                onKeyDown={(e) => { // Enter 키 누를시
+                onKeyDown={(e) => {
+                    // Enter 키 누를시
                     if (e.key === 'Enter' && name.length >= 1 && name.length <= maxInput) {
                         openDrawer('updateTeam4');
                     }
@@ -55,7 +56,7 @@ const StyledInput = styled(Input)`
     padding-left: 1.5rem;
     font-size: 3rem;
     font-family: Bold !important;
-    color: ${({ theme, value }) => value.length <= maxInput ? theme.title : theme.danger};
+    color: ${({ theme, value }) => (value.length <= maxInput ? theme.title : theme.danger)};
     border-radius: 1.5rem;
 
     & * {

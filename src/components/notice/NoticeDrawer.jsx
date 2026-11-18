@@ -1,8 +1,8 @@
-import { useCallback } from "react";
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { Button } from "antd";
-import { useDrawerContext } from 'context';
+import { useCallback } from 'react';
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { Button } from 'antd';
+import { useDrawerContext } from '@/context';
 import { PlusCircleOutlined, CloseOutlined } from '@ant-design/icons';
 
 const NoticeDrawer = ({ drawerId, notices, handleClickDelete }) => {
@@ -16,12 +16,15 @@ const NoticeDrawer = ({ drawerId, notices, handleClickDelete }) => {
                         <PlusCircleOutlined />
                         공지를 추가해요 (관리자 전용)
                     </AddButton>
-                    {notices && notices.map(notice => (
-                        <NoticeCard key={notice.id}>
-                            <NoticeText>{notice.text}</NoticeText>
-                            <NoticeDeleteButton onClick={() => handleClickDelete(notice.id)}><CloseOutlined /></NoticeDeleteButton>
-                        </NoticeCard>
-                    ))}
+                    {notices &&
+                        notices.map((notice) => (
+                            <NoticeCard key={notice.id}>
+                                <NoticeText>{notice.text}</NoticeText>
+                                <NoticeDeleteButton onClick={() => handleClickDelete(notice.id)}>
+                                    <CloseOutlined />
+                                </NoticeDeleteButton>
+                            </NoticeCard>
+                        ))}
                 </Wrapper>
             </Drawer>
         </>
@@ -55,11 +58,11 @@ const AddButton = styled(Button)`
     }
 
     &:hover {
-        & *, svg {
+        & *,
+        svg {
             color: ${({ theme }) => theme.primary};
         }
     }
-
 `;
 
 const NoticeCard = styled.div`

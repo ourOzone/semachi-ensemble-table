@@ -1,11 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import styled from 'styled-components';
-import { useFetchContext, useDrawerContext } from 'context';
-import useMessage from 'hooks/useMessage';
-import { addNote, deleteNote, noteExists, checkNotePin } from 'api/note';
+import { useFetchContext, useDrawerContext } from '@/context';
+import useMessage from '@/hooks/useMessage';
+import { addNote, deleteNote, noteExists, checkNotePin } from '@/api/note';
 import { Button } from 'antd';
 import { PlusCircleOutlined, CloseOutlined } from '@ant-design/icons';
-import { Container } from 'components/common/Container';
+import { Container } from '@/components/common/Container';
 import AddNoteDrawer from './AddNoteDrawer';
 import DeleteNoteDrawer from './DeleteNoteDrawer';
 
@@ -18,64 +18,71 @@ const Note = () => {
     const { openDrawer, closeAllDrawers } = useDrawerContext();
 
     // 이미 삭제된 노트인지 체크. 이미 있는 노트를 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
-    const checkNoteExists = useCallback(async (id) => {
-        try {
-            await noteExists(id);
-            return true;
-        } catch {
-            message.warning('이미 삭제된 한마디예요.');
-            setId('');
-            setText('');
-            setPin('');
-            closeAllDrawers();
-            fetchData();
-            return false;
-        }
-    }, [closeAllDrawers, fetchData, message]);
+    const checkNoteExists = useCallback(
+        async (id) => {
+            try {
+                await noteExists(id);
+                return true;
+            } catch {
+                message.warning('이미 삭제된 한마디예요.');
+                setId('');
+                setText('');
+                setPin('');
+                closeAllDrawers();
+                fetchData();
+                return false;
+            }
+        },
+        [closeAllDrawers, fetchData, message],
+    );
 
-    const handleAddNote = useCallback(async (text, pin) => {
-        try {
-            await addNote(text, pin);
-            fetchData();
-            setText('');
-            setPin('');
-            closeAllDrawers();
-            message.success('잘 등록했어요.');
-        }
-        catch {
-            message.error('실패했어요. 너무 많아서 그럴지도요. 100개 까지만 돼요.');
-        }
-    }, [fetchData, message]);
-    
+    const handleAddNote = useCallback(
+        async (text, pin) => {
+            try {
+                await addNote(text, pin);
+                fetchData();
+                setText('');
+                setPin('');
+                closeAllDrawers();
+                message.success('잘 등록했어요.');
+            } catch {
+                message.error('실패했어요. 너무 많아서 그럴지도요. 100개 까지만 돼요.');
+            }
+        },
+        [fetchData, message],
+    );
+
     const handleClickDelete = useCallback(async (id) => {
         try {
             if (await checkNoteExists(id)) {
                 setId(id);
                 openDrawer('deleteNote');
             }
-        }
-        catch {
+        } catch {
             message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
         }
     }, []);
 
-    const handleDeleteNote = useCallback(async (id) => {
-        try {
-            if (await checkNoteExists(id)) {
-                await deleteNote(id);
-                message.success('한마디를 삭제했어요.');
+    const handleDeleteNote = useCallback(
+        async (id) => {
+            try {
+                if (await checkNoteExists(id)) {
+                    await deleteNote(id);
+                    message.success('한마디를 삭제했어요.');
+                }
+            } catch {
+                message.error(
+                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
+                );
+            } finally {
+                setId('');
+                setPin('');
+                closeAllDrawers();
+                fetchData();
             }
-        }
-        catch {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
-        }
-        finally {
-            setId('');
-            setPin('');
-            closeAllDrawers();
-            fetchData();
-        }
-    }, [closeAllDrawers, fetchData, message]);
+        },
+        [closeAllDrawers, fetchData, message],
+    );
 
     return (
         <Container>
@@ -84,14 +91,17 @@ const Note = () => {
                 <PlusCircleOutlined />
                 멋진 한마디 남겨요 (일주일 후 자동 삭제돼요)
             </AddButton>
-            {notes && notes.map(note => (
-                <NoteCard key={note.id}>
-                    <NoteText>{note.text}</NoteText>
-                    <NoteDeleteButton onClick={() => handleClickDelete(note.id)}><CloseOutlined /></NoteDeleteButton>
-                </NoteCard>
-            ))}
+            {notes &&
+                notes.map((note) => (
+                    <NoteCard key={note.id}>
+                        <NoteText>{note.text}</NoteText>
+                        <NoteDeleteButton onClick={() => handleClickDelete(note.id)}>
+                            <CloseOutlined />
+                        </NoteDeleteButton>
+                    </NoteCard>
+                ))}
             <AddNoteDrawer
-                drawerId='addNote'
+                drawerId="addNote"
                 text={text}
                 setText={setText}
                 pin={pin}
@@ -99,7 +109,7 @@ const Note = () => {
                 handleAddNote={handleAddNote}
             />
             <DeleteNoteDrawer
-                drawerId='deleteNote'
+                drawerId="deleteNote"
                 id={id}
                 pin={pin}
                 setPin={setPin}
@@ -107,7 +117,7 @@ const Note = () => {
                 handleDeleteNote={handleDeleteNote}
             />
         </Container>
-    )
+    );
 };
 
 const AddButton = styled(Button)`
@@ -129,11 +139,11 @@ const AddButton = styled(Button)`
     }
 
     &:hover {
-        & *, svg {
+        & *,
+        svg {
             color: ${({ theme }) => theme.primary};
         }
     }
-
 `;
 
 const NoteCard = styled.div`

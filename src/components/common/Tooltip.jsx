@@ -9,5 +9,5 @@ const Tooltip = ({ children, ...props }) => {
             {children}
         </AntdTooltip>
     );
-}
+};
 export default Tooltip;

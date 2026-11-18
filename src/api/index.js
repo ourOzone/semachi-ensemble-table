@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { url } from 'constants';
+import { url } from '@/constants';
 
 const apiClient = axios.create({
     baseURL: url,

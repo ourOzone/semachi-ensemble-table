@@ -1,9 +1,9 @@
-import { useCallback, useRef } from "react";
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { Input } from "antd";
-import { useTeamContext, useDrawerContext } from "context";
-import OkButton from "components/common/OkButton";
+import { useCallback, useRef } from 'react';
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { Input } from 'antd';
+import { useTeamContext, useDrawerContext } from '@/context';
+import OkButton from '@/components/common/OkButton';
 
 const labels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
@@ -14,16 +14,23 @@ const UpdateTeamDrawer4 = ({ drawerId }) => {
     const { openDrawer } = useDrawerContext();
     const focusInputRef = useRef(null);
 
-    const handleChange = useCallback((idx, value) => {
-        setDesc(prev => {
-            const newDesc = [...prev];
-            newDesc[idx] = value;
-            return newDesc;
-        });
-    }, [setDesc]);
+    const handleChange = useCallback(
+        (idx, value) => {
+            setDesc((prev) => {
+                const newDesc = [...prev];
+                newDesc[idx] = value;
+                return newDesc;
+            });
+        },
+        [setDesc],
+    );
 
     return (
-        <Drawer drawerId={drawerId} onClose={() => setDesc(['', '', '', '', '', '', ''])} focusInputRef={focusInputRef}>
+        <Drawer
+            drawerId={drawerId}
+            onClose={() => setDesc(['', '', '', '', '', '', ''])}
+            focusInputRef={focusInputRef}
+        >
             <Title>누가 바뀌었나요 🎸</Title>
             <Subtitle>되도록 실명으로 써주세요 ㅠㅠ</Subtitle>
             <InputWrapper>
@@ -38,8 +45,12 @@ const UpdateTeamDrawer4 = ({ drawerId }) => {
                                 show: true,
                                 max: maxInput,
                             }}
-                            onKeyDown={(e) => { // Enter 키 누를시
-                                if (e.key === 'Enter' && !desc.slice(0, 6).some((v) => v.length > maxInput)) {
+                            onKeyDown={(e) => {
+                                // Enter 키 누를시
+                                if (
+                                    e.key === 'Enter' &&
+                                    !desc.slice(0, 6).some((v) => v.length > maxInput)
+                                ) {
                                     openDrawer('updateTeam5');
                                 }
                             }}
@@ -53,7 +64,7 @@ const UpdateTeamDrawer4 = ({ drawerId }) => {
                 label={desc.slice(0, 6).every((v) => v.trim() === '') ? '다음에 쓸래요' : '확인'}
             />
         </Drawer>
-      );      
+    );
 };
 
 const Title = styled.div`
@@ -97,7 +108,7 @@ const StyledInput = styled(Input)`
     padding-left: 1rem;
     font-size: 2rem;
     font-family: Bold !important;
-    color: ${({ theme, value }) => value.length <= maxInput ? theme.title : theme.danger};
+    color: ${({ theme, value }) => (value.length <= maxInput ? theme.title : theme.danger)};
     border-radius: 1.5rem;
     /* width: 24rem; */
 

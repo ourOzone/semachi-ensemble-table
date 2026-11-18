@@ -9,19 +9,21 @@ function DrawerContextProvider({ children }) {
 
     // Drawer의 open/close 관리 (모든 Drawer는 openedDrawers 배열 내에 자신의 drawId가 있으면 open로 판단)
     const openDrawer = useCallback((drawId) => {
-        setOpenedDrawers(prev => [...prev, drawId]);
+        setOpenedDrawers((prev) => [...prev, drawId]);
     }, []);
-    
+
     const closeAllDrawers = useCallback(() => {
         setOpenedDrawers([]);
     }, []);
 
     const closeDrawer = useCallback(() => {
-        setOpenedDrawers(prev => prev.slice(0, -1));
+        setOpenedDrawers((prev) => prev.slice(0, -1));
     }, []);
 
     return (
-        <DrawerContext.Provider value={{ openedDrawers, openDrawer, setOpenedDrawers, closeAllDrawers, closeDrawer }}>
+        <DrawerContext.Provider
+            value={{ openedDrawers, openDrawer, setOpenedDrawers, closeAllDrawers, closeDrawer }}
+        >
             {children}
         </DrawerContext.Provider>
     );

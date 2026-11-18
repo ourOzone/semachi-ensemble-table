@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useRef } from "react";
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { Input } from "antd";
-import { useTeamContext, useDrawerContext } from "context";
-import OkButton from "components/common/OkButton";
+import { useCallback, useMemo, useRef } from 'react';
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { Input } from 'antd';
+import { useTeamContext, useDrawerContext } from '@/context';
+import OkButton from '@/components/common/OkButton';
 
 const { TextArea } = Input;
 const maxInput = 200;
@@ -22,13 +22,16 @@ const AddTeamDrawer4 = ({ drawerId }) => {
 
     const text = useMemo(() => desc[6] || '', [desc]);
 
-    const handleChange = useCallback((e) => {
-        const newText = e.target.value;
-        setDesc(prev => [...prev.slice(0, 6), newText]);
-    }, [setDesc]);
+    const handleChange = useCallback(
+        (e) => {
+            const newText = e.target.value;
+            setDesc((prev) => [...prev.slice(0, 6), newText]);
+        },
+        [setDesc],
+    );
 
     const onClose = useCallback(() => {
-        setDesc(prev => [...prev.slice(0, 6), '']);
+        setDesc((prev) => [...prev.slice(0, 6), '']);
     }, [setDesc]);
 
     const handleClick = useCallback(() => {
@@ -67,7 +70,7 @@ const StyledTextArea = styled(TextArea)`
     margin: 4rem 0;
     font-size: 1.5rem;
     font-family: Bold !important;
-    color: ${({ theme, $isOverLimit }) => $isOverLimit ? theme.danger : theme.title};
+    color: ${({ theme, $isOverLimit }) => ($isOverLimit ? theme.danger : theme.title)};
     border-radius: 1.5rem;
     resize: none !important;
 

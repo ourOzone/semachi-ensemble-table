@@ -1,9 +1,9 @@
-import { useState, useCallback } from "react";
-import Drawer from "components/common/Drawer";
-import styled from "styled-components";
-import { Button, Divider, Segmented } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { useTeamContext, useEnsembleContext, useDrawerContext } from "context";
+import { useState, useCallback } from 'react';
+import Drawer from '@/components/common/Drawer';
+import styled from 'styled-components';
+import { Button, Divider, Segmented } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
 
 const memberLabels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
@@ -13,21 +13,27 @@ const TeamInfoDrawer = ({ drawerId, checkTeamExists }) => {
     const { openDrawer, closeAllDrawers } = useDrawerContext();
     const [option, setOption] = useState('팀원');
 
-    const handleClickAddEnsemble = useCallback(async (id) => {
-        if (await checkTeamExists(id)) {
-            setStartTime(null);
-            setEndTime(null);
-            openDrawer('addEnsemble1');
-        }
-    }, [checkTeamExists, openDrawer]);
+    const handleClickAddEnsemble = useCallback(
+        async (id) => {
+            if (await checkTeamExists(id)) {
+                setStartTime(null);
+                setEndTime(null);
+                openDrawer('addEnsemble1');
+            }
+        },
+        [checkTeamExists, openDrawer],
+    );
 
-    const handleClickUpdateTeam = useCallback(async (id, type, name, desc) => {
-        if (await checkTeamExists(id)) {
-            // team 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
-            setTeamOrgStates(type, name, desc);
-            openDrawer('updateTeam1');
-        }
-    }, [setTeamOrgStates, openDrawer]);
+    const handleClickUpdateTeam = useCallback(
+        async (id, type, name, desc) => {
+            if (await checkTeamExists(id)) {
+                // team 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
+                setTeamOrgStates(type, name, desc);
+                openDrawer('updateTeam1');
+            }
+        },
+        [setTeamOrgStates, openDrawer],
+    );
 
     const handleClickDeleteTeam = useCallback(async (id) => {
         if (await checkTeamExists(id)) {
@@ -41,11 +47,18 @@ const TeamInfoDrawer = ({ drawerId, checkTeamExists }) => {
                 <Name>{name}</Name>
                 <Type>{type}</Type>
                 <ButtonWrapper>
-                    <StyledButton type="primary" onClick={() => handleClickAddEnsemble(id)}><PlusOutlined />합주 추가</StyledButton>
+                    <StyledButton type="primary" onClick={() => handleClickAddEnsemble(id)}>
+                        <PlusOutlined />
+                        합주 추가
+                    </StyledButton>
                 </ButtonWrapper>
                 <ButtonWrapper>
-                    <StyledButton onClick={() => handleClickUpdateTeam(id, type, name, desc)}><EditOutlined />팀 수정</StyledButton>
-                    <StyledButton danger onClick={() => handleClickDeleteTeam(id)}><DeleteOutlined />팀 삭제</StyledButton>
+                    <StyledButton onClick={() => handleClickUpdateTeam(id, type, name, desc)}>
+                        <EditOutlined />팀 수정
+                    </StyledButton>
+                    <StyledButton danger onClick={() => handleClickDeleteTeam(id)}>
+                        <DeleteOutlined />팀 삭제
+                    </StyledButton>
                 </ButtonWrapper>
             </Card>
             <Card>
@@ -57,13 +70,13 @@ const TeamInfoDrawer = ({ drawerId, checkTeamExists }) => {
                 {option === '팀원' ? (
                     <MemberWrapper>
                         {memberLabels.map((label, idx) => (
-                        <>
-                            <Member>
-                                <MemberLabel idx={idx}>{label}</MemberLabel>
-                                <MemberName>{desc[idx]}</MemberName>
-                            </Member>
-                            {idx < memberLabels.length - 1 && <StyledDivider />}
-                        </>
+                            <>
+                                <Member>
+                                    <MemberLabel idx={idx}>{label}</MemberLabel>
+                                    <MemberName>{desc[idx]}</MemberName>
+                                </Member>
+                                {idx < memberLabels.length - 1 && <StyledDivider />}
+                            </>
                         ))}
                     </MemberWrapper>
                 ) : (

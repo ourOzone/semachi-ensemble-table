@@ -1,3 +1,5 @@
+// antd v5의 React 19 호환 패치. antd보다 먼저 로드돼야 한다. antd를 shadcn/ui로 교체하면 제거한다.
+import '@ant-design/v5-patch-for-react-19';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from 'styled-components';

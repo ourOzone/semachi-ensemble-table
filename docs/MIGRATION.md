@@ -6,7 +6,7 @@
 
 | 단계 | 상태 |
 |---|---|
-| 1. CRA → Vite | ✅ 완료 (잔여물 일부 남음, 아래 "남은 일" 참고) |
+| 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ⏳ 시작 전 (`.ts/.tsx` 4개: `index.tsx`, `vite-env.d.ts`, `styles/theme.ts`, `styles/styled.d.ts`) |
 | 3. 내부 로직 개선 | ⏳ 시작 전 |
 
@@ -49,6 +49,18 @@
 
 **검증:** `pnpm test:run` ✅ 6/6 / `pnpm typecheck` ✅ / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 기존 코드 에러 5·경고 65 (변동 없음)
 
+### 2026-11-18 — 1단계 잔여물 정리
+
+- `index.html`: CRA 주석 제거, `lang="ko"`, description 한국어, 중복 favicon 링크 정리, `theme-color` → `#f5f8ff`
+- `public/manifest.json`: 앱 이름 "세마치 합주판", 색상 `#f5f8ff`
+- env 분리: `envDir: 'env'`, `env/.env`(커밋)에 `VITE_API_URL`. `constants`의 하드코딩 URL 제거, 미설정 시 에러
+- `vite.config.ts` → `vite.config.mts` (config loader 경고 해결, `"type": "module"`은 CommonJS인 `api.js` 때문에 사용 안 함)
+- 폰트 TTF → woff2 (약 6.5MB → 1.16MB), `@font-face`의 죽은 `src: local(...)` 제거
+- 디버그 `console.log` 3건 제거
+- `.gitignore` CRA 템플릿 정리 + env 규칙
+
+**검증:** `pnpm typecheck` ✅ / `pnpm build` ✅ (config loader 경고 사라짐, 번들에 env의 API 주소 반영 확인) / `pnpm test:run` ✅ 6/6 / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -61,19 +73,34 @@
 | `react(set-state-in-effect)` ❌ | 3 | `Drawer`(resize 초기값), `AddTeamDrawer2`, `UpdateTeamDrawer3`(랜덤 데모 이름) |
 | `react-hooks/exhaustive-deps` | 31 | stale closure 가능성. 일부는 실제 버그(`notice/index.jsx`의 `handleClickDelete` deps `[]` 등) |
 | `no-unused-vars` | 29 | 사용하지 않는 import·변수 |
-| `no-console` | 3 | 디버그용 `console.log` |
+| ~~`no-console`~~ | ~~3~~ → 0 | ✅ 1단계 잔여물 정리 때 제거 |
 | `react(exhaustive-effect-dependencies)` | 2 | `App`의 `fetchData` effect 등 |
 
-### 1단계 잔여물
-- `index.html`: CRA 안내 주석, description 문구, `lang="en"`
-- `public/manifest.json`: CRA 기본 앱 이름
-- `VITE_API_URL` 선언만 있고 실제로는 `constants`에 하드코딩된 URL 사용
-- 프론트엔드 env를 백엔드 `.env`에서 분리
-- `package.json`에 `"type": "module"` 없음 → Vite 빌드 시 config loader 경고
-- 폰트 TTF → woff2, `@font-face` `src` 중복
+### 1단계 잔여물 ✅ 모두 처리
+- ✅ `index.html`: CRA 안내 주석, description 문구, `lang="en"`
+- ✅ `public/manifest.json`: CRA 기본 앱 이름
+- ✅ `VITE_API_URL` 선언만 있고 실제로는 `constants`에 하드코딩된 URL 사용
+- ✅ 프론트엔드 env를 백엔드 `.env`에서 분리
+- ✅ Vite config loader 경고 (`"type": "module"` 대신 `vite.config.mts`로 해결)
+- ✅ 폰트 TTF → woff2, `@font-face` `src` 중복
+- ✅ 디버그용 `console.log`
+
+### 적용 예정 (상세는 `docs/MODERNIZATION.md`)
+
+| 항목 | 대체 대상 | 시점 |
+|---|---|---|
+| React 19 (+ `@ant-design/v5-patch-for-react-19`) | React 18 | 2단계 TS 전환 **전** |
+| Zod | 수동 응답 정제 | 2단계 (API 응답 타입 정의 시) |
+| TanStack Query | `context/fetch` (`fetchData`, `xxxExists` 사전 확인) | 3단계 |
+| Zustand | `context/team`, `ensemble`, `drawer` | 3단계 |
+| Tailwind CSS v4 | styled-components | View 개편 |
+| shadcn/ui | antd (`useMessage` → Sonner, `PinInput` → input-otp) | View 개편 |
+| (검토) React Compiler | 수동 `useCallback`/`useMemo` | 3단계 이후 |
 
 ### 환경
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
 
 ### 다음 순서
-- 2단계 TS 전환 시작 (constants → hooks → context → components). 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성.
+1. React 19 업그레이드 (승인 대기)
+2. 2단계 TS 전환 (constants → hooks → context → components)
+3. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성

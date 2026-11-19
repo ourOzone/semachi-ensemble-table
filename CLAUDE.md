@@ -12,7 +12,7 @@
 - 테스트: `pnpm test:run` (watch 모드: `pnpm test`)
 
 ## 테스트
-- Vitest + React Testing Library + MSW, 환경은 jsdom. 설정은 `vite.config.ts`의 `test`, 공통 setup은 `src/test/setup.ts`.
+- Vitest + React Testing Library + MSW, 환경은 jsdom. 설정은 `vite.config.mts`의 `test`, 공통 setup은 `src/test/setup.ts`.
 - 테스트 파일은 대상 파일 옆에 `*.test.ts(x)`로 둔다.
 - API는 실제 서버로 보내지 않는다. 각 테스트에서 `server.use(http.get(...))`로 모킹한다 (`src/test/server.ts`). 핸들러 없는 요청은 에러가 난다.
 - styled-components theme이 필요한 컴포넌트는 `src/test/render.tsx`의 `renderWithTheme`으로 렌더링한다.
@@ -20,6 +20,7 @@
 ## 작업 범위
 - `src/` 아래 프론트엔드 코드만 수정한다.
 - 루트의 `api.js`는 백엔드 코드다. 읽는 것은 괜찮지만 수정·이동·삭제하지 않는다.
+- 루트 `.env`는 백엔드 전용(비밀값 포함)이다. 프론트엔드 환경변수는 `env/.env`에 `VITE_` 접두사로 두고, 타입은 `src/vite-env.d.ts`에 추가한다.
 
 ## 마이그레이션 단계
 1. CRA → Vite: 완료. CRA 잔여물(react-scripts 관련 설정, 서비스워커, 사용하지 않는 템플릿 파일)을 발견하면 삭제를 제안한다.

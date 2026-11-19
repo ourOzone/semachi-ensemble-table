@@ -1,6 +1,7 @@
 # 프론트엔드 최신화 검토
 
-> 마이그레이션 1~3단계(CRA → Vite, JS → TS, 내부 로직 개선) **외에** 추가로 최신화할 만한 항목을 정리한 문서.
+> 마이그레이션 1~3단계(CRA → Vite, JS → TS, 내부 로직 개선) **외에** 추가로 최신화할 항목을 정리한 문서.
+> 표기: ✅ 적용 완료 · 📌 적용 예정 · 🔍 검토 · ❌ 제외
 > 진행 상황 기록은 `docs/MIGRATION.md`, pnpm 명령어는 `docs/PNPM.md`에서 따로 관리한다.
 >
 > 기준 시점: 2026-11 / Node 24, npm 10, TypeScript 7.0.2, Vite 8
@@ -61,9 +62,9 @@ CRA에는 ESLint가 내장돼 있었는데, Vite로 옮기면서 **린트가 완
 
 ---
 
-## 🟡 아키텍처: 3단계와 함께 들어가면 효과가 큰 것
+## 🟡 적용 예정: 아키텍처 (3단계와 함께)
 
-### 5. 서버 상태는 TanStack Query로
+### 5. 서버 상태: TanStack Query 📌 적용 예정
 
 현재 `fetchData()` 패턴의 문제:
 
@@ -72,75 +73,90 @@ CRA에는 ESLint가 내장돼 있었는데, Vite로 옮기면서 **린트가 완
 - loading과 error 상태가 없고, 요청 취소나 중복 제거도 안 된다.
 - 매번 `xxxExists()`로 확인 요청을 한 번 더 보낸 다음 실제 요청을 보낸다.
 
-리소스별 query, mutation 후 해당 데이터만 invalidate, 404를 mutation 에러로 처리하는 방식으로 정리된다. 3단계 작업 범위와 상당 부분 겹친다.
+적용 방향: 리소스별 query로 분리하고, mutation 후 해당 데이터만 invalidate한다. 삭제된 리소스(404)는 사전 확인 요청 대신 mutation 에러로 처리한다.
 
-### 6. 클라이언트 상태는 Zustand로 (Context 4개 대체)
+### 6. 클라이언트 상태: Zustand 📌 적용 예정 (Context 4개 대체)
 
-- 각 Provider가 `value={{...}}`를 매번 새 객체로 넘겨서, **팀 이름 입력 한 글자마다 TeamContext를 구독하는 Drawer 수십 개가 전부 다시 렌더링된다.** 드로어 하나를 열고 닫을 때도 마찬가지다.
-- `orgXxx` 상태 복제 패턴(수정 취소 시 복원용)도 store 안에서 "draft와 원본"으로 깔끔하게 표현할 수 있다.
-- selector로 필요한 값만 구독하므로 리렌더링 문제가 구조적으로 해결된다.
+- 각 Provider가 `value={{...}}`를 매번 새 객체로 넘겨서, **팀 이름 입력 한 글자마다 TeamContext를 구독하는 컴포넌트 전체가 다시 렌더링된다.**
+- `orgXxx` 상태 복제 패턴(수정 취소 시 복원용)은 store 안에서 "draft와 원본"으로 표현한다.
+- selector로 필요한 값만 구독해 리렌더링 문제를 구조적으로 해결한다.
+- 서버 데이터(teams, ensembles, notes, notices)는 5번(TanStack Query)으로 가고, Zustand에는 UI·폼 상태만 남긴다.
 
-### 7. API 경계에 Zod 두기
+### 7. API 경계 검증: Zod 📌 적용 예정
 
 2단계에서 API 응답 타입을 `interface`로만 적으면 런타임에는 아무것도 보장되지 않는다.
-Zod 스키마로 응답을 parse하면서 `_id → id` 같은 변환도 같이 처리하면, 타입과 데이터 정제가 한 곳에 모인다.
+Zod 스키마로 응답을 parse하면서 `_id → id` 같은 변환도 같이 처리해, 타입과 데이터 정제를 한 곳에 모은다.
+타입은 `z.infer`로 스키마에서 뽑아 `src/types/`의 도메인 타입과 일치시킨다.
 
 ---
 
-## 🟢 View 개편과 함께 결정할 것
+## 🟢 적용 예정: View 개편
 
-### 8. 스타일링: styled-components 대신 Tailwind CSS v4
+### 8. 스타일링: Tailwind CSS v4 📌 적용 예정 (styled-components 대체)
 
 - styled-components는 공식적으로 **유지보수 모드**다. 런타임 CSS-in-JS라 React 19 / RSC 흐름과 맞지 않는다.
-- 지금 코드에는 `.ant-drawer-close svg`처럼 **antd 내부 클래스를 덮어쓰는 코드와 `!important`가 많다.** UI 라이브러리를 바꾸면 결국 다 버리게 된다.
-- 추천은 **Tailwind v4**. 런타임 없는 CSS-in-JS를 원하면 Panda CSS나 vanilla-extract, 보수적으로 가려면 CSS Modules.
+- 지금 코드에는 `.ant-drawer-close svg`처럼 **antd 내부 클래스를 덮어쓰는 코드와 `!important`가 많다.** UI 라이브러리 교체와 함께 정리된다.
 
-### 9. UI 라이브러리
+### 9. UI 라이브러리: shadcn/ui 📌 적용 예정 (antd 대체)
 
-**MUI와 Emotion은 설치만 돼 있고 사용처가 0건이다.** 실제로는 antd만 쓴다.
+- Radix/Base UI + Tailwind 기반이고, 컴포넌트 코드를 직접 소유한다.
+- 대체 대상: 자체 `useMessage` 훅 → Sonner, `PinInput` → input-otp.
+- 전제 조건: **React 19** (10번 참고), 기본 alias `@/` (적용 완료).
 
-| 선택지 | 장점 | 단점 |
-|---|---|---|
-| **shadcn/ui** (Radix/Base UI + Tailwind) ⭐ | 사실상 표준, 코드를 직접 소유. 이 앱의 핵심인 **모바일 Drawer(vaul)**, **Toast(Sonner)**, **PIN 입력(input-otp)** 이 모두 준비돼 있음 | 초기 세팅 작업 |
-| antd v6 유지 | 마이그레이션 비용 최소 | 번들이 크고 커스텀 디자인과 계속 충돌 |
+### 10. React 19 📌 업그레이드 필요 / React Compiler 🔍 검토
 
-View를 크게 갈아엎을 예정이라면 **Tailwind + shadcn/ui** 추천. `useMessage` 훅은 Sonner로, `PinInput`은 input-otp로 바로 대체 가능.
+**결론: React 19로 올려야 한다. 시점은 2단계(TS 전환) 시작 전을 권장한다.**
 
-### 10. React 19와 React Compiler
+올려야 하는 이유:
+
+1. **shadcn/ui가 React 19를 전제로 한다.** 현재 shadcn/ui 컴포넌트는 `forwardRef` 없이 `ref`를 일반 prop으로 받는 React 19 문법으로 작성돼 있다.
+   React 18에서는 `ref`가 prop으로 전달되지 않아 ref가 조용히 동작하지 않는다. 이 앱은 `focusInputRef`로 입력 포커스를 많이 다루므로 직접 영향을 받는다.
+2. **TS 전환 전에 올려야 재작업이 없다.** `@types/react` 19는 타입 수준의 변경이 있다(`useRef()`에 초기값 필수, 전역 `JSX` 네임스페이스 제거 → `React.JSX`, `ReactElement` props 기본값 `unknown` 등).
+   18 타입으로 전환을 마친 뒤 올리면 타입을 한 번 더 고쳐야 한다.
+3. **React 18은 더 이상 기능 개발이 없다.** 현재 최신은 19.3이고, 생태계(TanStack Query, Zustand, shadcn/ui, React Compiler)가 19를 기준으로 움직인다.
+
+비용은 낮다:
+
+- React 19에서 제거된 API(`defaultProps`, `propTypes`, `forwardRef` 필요성, `findDOMNode`, `ReactDOM.render`, string ref) 사용처가 **0건**이다.
+- antd v5는 공식 지원 범위가 React 16~18이라 `@ant-design/v5-patch-for-react-19`를 진입점에 한 줄 import해야 한다. antd를 shadcn/ui로 교체하면 제거한다.
+- styled-components 6은 React 19를 지원한다.
+
+React Compiler는 별도로 검토한다:
 
 - 코드 전체에 `useCallback`이 깔려 있지만, `useMessage`가 렌더링마다 새 `message` 객체를 반환해서 **실제로는 메모이제이션이 거의 효과가 없다.**
-- React Compiler(1.0)를 쓰면 수동 `useCallback`/`useMemo`를 대부분 지울 수 있고, deps 버그도 같이 사라진다.
-- 주의: antd v5는 React 19에서 패치가 필요하다. UI 라이브러리를 정한 뒤 업그레이드한다.
+- Compiler(1.0)를 쓰면 수동 `useCallback`/`useMemo`를 대부분 지울 수 있다. 다만 3단계에서 Context → Zustand, fetch → TanStack Query로 바뀌면 수동 메모이제이션 자체가 많이 줄어들므로, 그 이후에 도입 여부를 판단한다.
 
-### 11. (선택) Drawer 스택을 URL과 동기화
+### ~~11. Drawer 스택을 URL과 동기화~~ ❌ 제외
 
-지금은 모바일에서 **뒤로가기를 누르면 드로어가 닫히지 않고 사이트를 벗어난다.**
-Drawer 30여 개가 사실상 페이지 역할을 하므로, 상태를 search params(nuqs 등)와 동기화하면 UX가 좋아진다. 이 경우 react-router가 다시 필요할 수 있다.
+Drawer 기반 UI 자체를 View 개편에서 걷어낼 예정이므로 다루지 않는다.
 
 ---
 
-## 🧹 참고: 1단계(Vite 전환) 잔여물
+## 🧹 1단계(Vite 전환) 잔여물 ✅ 처리 완료
 
-- **사용하지 않는 패키지:** `@mui/*`, `@emotion/*`, `react-modal`, `react-router-dom`, `web-vitals`, `@testing-library/*`(구버전)
-- **`index.html`:** CRA 안내 주석, `content="Web site created using create-react-app"`, `lang="en"`(→ `ko`)
-- **`public/manifest.json`:** `"React App"`, `"Create React App Sample"` 문구
-- **API 주소:** `src/vite-env.d.ts`에 `VITE_API_URL`을 선언해 놓고, 실제로는 `src/constants/index.js`에 하드코딩된 URL을 쓴다.
-- **루트 `.env`:** 백엔드용 변수(`MONGO_DB`, `MASTER_PIN`)와 같은 파일을 쓴다. `VITE_` 접두사만 노출되니 당장 유출되진 않지만, 프론트엔드 전용 env로 분리(`envDir` 등) 권장.
-- **디버그 코드:** `console.log(teamsData)`, `console.log('zzzz')` 등
-- **폰트:** TTF 3개 → woff2 변환. `@font-face`에 `src`가 중복 선언돼 있다.
+- ✅ **사용하지 않는 패키지:** `@mui/*`, `@emotion/*`, `react-modal`, `react-router-dom`, `web-vitals`, `@testing-library/*`(구버전) 제거
+- ✅ **`index.html`:** CRA 안내 주석 제거, description 한국어로 교체, `lang="ko"`, 중복 favicon 링크 정리, `theme-color`를 앱 배경색(`#f5f8ff`)으로
+- ✅ **`public/manifest.json`:** 앱 이름을 "세마치 합주판"으로, 색상을 앱 배경색으로
+- ✅ **API 주소:** 하드코딩 제거 → `env/.env`의 `VITE_API_URL` 사용 (없으면 시작 시 에러)
+- ✅ **env 분리:** Vite `envDir`를 `env/`로 지정. 루트 `.env`는 백엔드 전용으로 남고 Vite는 읽지 않는다.
+- ✅ **디버그 코드:** `console.log` 3건 제거
+- ✅ **폰트:** TTF → woff2 변환(파일당 약 2.1MB → 0.36~0.40MB, 글리프·cmap 동일 검증). 덮어써져 동작하지 않던 `src: local(...)` 중복 제거
+- ✅ **Vite config loader 경고:** `"type": "module"` 대신 `vite.config.ts` → `vite.config.mts`로 해결 (루트의 CommonJS 백엔드 `api.js` 보호)
+- ✅ **`.gitignore`:** CRA 템플릿(yarn PnP, npm/yarn 로그) 정리, env 규칙 추가
 
 ---
 
 ## 💡 진행 순서
 
 ```
-1단계 잔여물 정리 + dayjs 명시
-  → (선택) pnpm 전환
-  → Oxlint + Prettier, @/ alias 치환 (CLAUDE.md 규칙 변경 후)
-  → 2단계 TS 전환 (+ Zod)
-  → Vitest로 현재 동작 고정
+✅ 개발 도구 정비 (Oxlint + Prettier, @/ alias, pnpm, Vitest)
+✅ 1단계 잔여물 정리
+  → React 19 업그레이드 (+ antd 패치)
+  → 2단계 TS 전환 (+ Zod 스키마)
+  → 로직 개선 전 characterization test 작성
   → 3단계 로직 개선 (+ TanStack Query, Zustand)
-  → View 개편 (Tailwind + shadcn/ui, React 19 + Compiler)
+  → View 개편 (Tailwind v4 + shadcn/ui, antd·styled-components 제거)
+  → (검토) React Compiler
 ```
 
 ---

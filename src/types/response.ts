@@ -49,3 +49,20 @@ export type TeamResponse = z.infer<typeof teamResponseSchema>;
 export type EnsembleResponse = z.infer<typeof ensembleResponseSchema>;
 export type NoteResponse = z.infer<typeof noteResponseSchema>;
 export type NoticeResponse = z.infer<typeof noticeResponseSchema>;
+
+// 변경 요청(POST/PUT/DELETE)의 응답. 현재 호출부에서 쓰지 않으므로 스키마 없이 타입만 둔다.
+
+/** 생성·수정·삭제된 문서의 id */
+export interface IdResponse {
+    id: string;
+}
+
+export interface MessageResponse {
+    message: string;
+}
+
+/** check-xxx-pin 응답. PIN이 맞으면 true */
+export type PinCheckResponse = boolean;
+
+/** xxx/:id 존재 확인 응답. 존재하면 true, 없으면 404 에러로 거부된다 */
+export type ExistsResponse = boolean;

@@ -1,3 +1,11 @@
+import type {
+    ExistsResponse,
+    IdResponse,
+    PinCheckResponse,
+    TeamCreateRequest,
+    TeamResponse,
+    TeamUpdateRequest,
+} from '@/types';
 import { get, post, put, del } from '.';
 
 /*
@@ -20,9 +28,11 @@ export const getTeams = async () => {
 2. 컴포넌트가 데이터 흐름의 출발점이기 때문 (어떤 식으로 가공해서 API에 보낼지는 컴포넌트에서 명확히 보여주는게 좋다는 패턴)
 */
 
-export const getTeams = () => get('/teams');
-export const addTeam = (team) => post('/team', team);
-export const updateTeam = (id, team) => put(`/team?id=${id}`, team);
-export const deleteTeam = (id) => del(`/team?id=${id}`);
-export const teamExists = (id) => get(`/team/${id}`);
-export const checkTeamPin = (teamId, pin) => post('/check-team-pin', { teamId, pin });
+export const getTeams = () => get<TeamResponse[]>('/teams');
+export const addTeam = (team: TeamCreateRequest) => post<IdResponse>('/team', team);
+export const updateTeam = (id: string, team: TeamUpdateRequest) =>
+    put<IdResponse>(`/team?id=${id}`, team);
+export const deleteTeam = (id: string) => del<IdResponse>(`/team?id=${id}`);
+export const teamExists = (id: string) => get<ExistsResponse>(`/team/${id}`);
+export const checkTeamPin = (teamId: string, pin: string) =>
+    post<PinCheckResponse>('/check-team-pin', { teamId, pin });

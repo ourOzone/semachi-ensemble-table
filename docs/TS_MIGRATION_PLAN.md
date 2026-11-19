@@ -20,7 +20,7 @@
 |---|---|---|---|---|
 | ✅ **2-0** | 사전 결정 + `src/types/` 도메인 타입 | 신규 | – | `2-0 진행해줘` |
 | ✅ **2-1** | `constants`, `styles` (media, GlobalStyle) | 3 | 187 | `2-1 진행해줘` |
-| **2-2** | `api` (index, team, ensemble, note, notice) | 5 | 99 | `2-2 진행해줘` |
+| ✅ **2-2** | `api` (index, team, ensemble, note, notice) | 5 | 99 | `2-2 진행해줘` |
 | **2-3** | `hooks` (useMessage, useScrollPosition) | 2 | 126 | `2-3 진행해줘` |
 | **2-4** | `context` (drawer, team, ensemble, fetch, index) | 5 | 321 | `2-4 진행해줘` |
 | **2-5** | `components/common` | 5 | 185 | `2-5 진행해줘` |

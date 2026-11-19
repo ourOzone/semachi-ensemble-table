@@ -61,6 +61,20 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm build` ✅ (config loader 경고 사라짐, 번들에 env의 API 주소 반영 확인) / `pnpm test:run` ✅ 6/6 / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62
 
+### 2026-11-19 — React 19 업그레이드
+
+- `react`·`react-dom` 18.3.1 → 19.3.1, `@types/react`·`@types/react-dom` → 19.3.0
+- `@ant-design/v5-patch-for-react-19` 추가, `src/index.tsx` 최상단에서 import (antd 교체 시 제거)
+- React 19에서 제거된 API 사용처 0건 → 코드 수정 없음. 기존 TS 파일도 19 타입으로 타입 체크 통과
+- `src/App.test.tsx` 추가: 실제 Provider 구성으로 App 전체 렌더링(API는 MSW) → 데이터 표시, 팀 클릭 시 Drawer 열림 확인
+- 콘솔 경고 비교: React 18과 19에서 같은 테스트를 돌려 경고 종류가 동일함을 확인(새 경고 0건). 기존 경고 4종은 App 테스트에 허용 목록으로 두고, 그 외 경고가 생기면 실패하도록 함
+  - styled-components props가 DOM으로 전달됨(`scrollPosition`, `isEvent`, `openedDrawers`, `row` 등) → View 개편 시 해소
+  - `TeamInfoDrawer`의 key 없는 Fragment map
+  - antd Drawer `maskStyle` deprecated
+- 개발 서버에서 진입점·patch·React 19 모듈 로드 확인
+
+**검증:** `pnpm test:run` ✅ 8/8 / `pnpm typecheck` ✅ / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -89,7 +103,7 @@
 
 | 항목 | 대체 대상 | 시점 |
 |---|---|---|
-| React 19 (+ `@ant-design/v5-patch-for-react-19`) | React 18 | 2단계 TS 전환 **전** |
+| ~~React 19 (+ `@ant-design/v5-patch-for-react-19`)~~ | ~~React 18~~ | ✅ 완료 (2026-11-19) |
 | Zod | 수동 응답 정제 | 2단계 (API 응답 타입 정의 시) |
 | TanStack Query | `context/fetch` (`fetchData`, `xxxExists` 사전 확인) | 3단계 |
 | Zustand | `context/team`, `ensemble`, `drawer` | 3단계 |
@@ -101,6 +115,5 @@
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
 
 ### 다음 순서
-1. React 19 업그레이드 (승인 대기)
-2. 2단계 TS 전환 (constants → hooks → context → components)
-3. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성
+1. 2단계 TS 전환 (constants → hooks → context → components)
+2. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성

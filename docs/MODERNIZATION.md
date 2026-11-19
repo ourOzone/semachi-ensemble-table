@@ -103,7 +103,7 @@ Zod 스키마로 응답을 parse하면서 `_id → id` 같은 변환도 같이 �
 - 대체 대상: 자체 `useMessage` 훅 → Sonner, `PinInput` → input-otp.
 - 전제 조건: **React 19** (10번 참고), 기본 alias `@/` (적용 완료).
 
-### 10. React 19 📌 업그레이드 필요 / React Compiler 🔍 검토
+### 10. React 19 ✅ 적용 완료 (2026-11-19) / React Compiler 🔍 검토
 
 **결론: React 19로 올려야 한다. 시점은 2단계(TS 전환) 시작 전을 권장한다.**
 
@@ -151,7 +151,7 @@ Drawer 기반 UI 자체를 View 개편에서 걷어낼 예정이므로 다루지
 ```
 ✅ 개발 도구 정비 (Oxlint + Prettier, @/ alias, pnpm, Vitest)
 ✅ 1단계 잔여물 정리
-  → React 19 업그레이드 (+ antd 패치)
+✅ React 19 업그레이드 (+ antd 패치)
   → 2단계 TS 전환 (+ Zod 스키마)
   → 로직 개선 전 characterization test 작성
   → 3단계 로직 개선 (+ TanStack Query, Zustand)

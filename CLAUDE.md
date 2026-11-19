@@ -28,6 +28,7 @@
 3. 내부 로직 개선
 
 진행 상황은 @docs/MIGRATION.md 에 기록하고, 작업이 끝날 때마다 갱신한다.
+2단계(TS 전환)의 단계 구성(2-0 ~ 2-15), 단계별 주의점, 멈추고 보고할 조건은 `docs/TS_MIGRATION_PLAN.md`를 따른다.
 
 ## TS 전환 규칙
 - 의존성이 적은 파일부터: utils/constants → hooks → context → components → pages

@@ -18,7 +18,8 @@
       "warn",
       {
         "caughtErrors": "none",
-        "argsIgnorePattern": "^_"
+        "argsIgnorePattern": "^_",
+        "ignoreRestSiblings": true
       }
     ],
     "no-console": [

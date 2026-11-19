@@ -7,7 +7,7 @@
 | 단계 | 상태 |
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
-| 2. JS → TS 100% 전환 | ⏳ 시작 전 (`.ts/.tsx` 4개: `index.tsx`, `vite-env.d.ts`, `styles/theme.ts`, `styles/styled.d.ts`) |
+| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-0 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ⏳ 시작 전 |
 
 ## 작업 로그
@@ -75,6 +75,24 @@
 
 **검증:** `pnpm test:run` ✅ 8/8 / `pnpm typecheck` ✅ / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
+### 2026-11-19 — 2-0: 사전 결정 + 도메인 타입
+
+- 사전 결정 (모두 추천안 채택)
+  1. Zod: 스키마 정의 + `z.infer` 타입만. 응답 `parse`는 3단계에서 적용
+  2. styled-components 커스텀 props: 이름 유지, 타입만 부여
+  3. `noUncheckedIndexedAccess` 등 추가 엄격 옵션: 끄기 (2단계 완료 후 재검토)
+  4. Drawer ID: union 타입 `DrawerId`
+- `zod` 4.6 설치
+- `src/types/` 추가 (아직 사용처 없음, 2-1부터 적용)
+  - `response.ts`: 서버 응답 Zod 스키마 4개(team, ensemble, note, notice)와 `XxxResponse` 타입. `api.js`의 mongoose 스키마 기준
+  - `domain.ts`: `Team`, `EnsembleBlock`, `EnsembleBoard`, `Note`, `Notice`, `TeamType`, `DayIndex`, `TimeSlot`
+  - `drawer.ts`: `DrawerId` (30개, 코드의 `drawerId`·`openDrawer` 호출과 일치 확인)
+  - `index.ts`: 재export
+- `src/types/response.test.ts`: 실제 응답 형태(`__v`, ISO 날짜 포함)를 스키마가 받아들이는지 검증
+- Oxlint `no-unused-vars`에 `ignoreRestSiblings` 추가 (rest 구조분해로 필드를 빼는 패턴 허용, 기존 경고 수 변화 없음)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 11/11 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -115,5 +133,5 @@
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
 
 ### 다음 순서
-1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (2-0부터)
+1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-1)
 2. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성

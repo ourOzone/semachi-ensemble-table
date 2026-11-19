@@ -1,0 +1,37 @@
+// Drawer ID. context/drawer의 openedDrawers 스택과 각 Drawer 컴포넌트의 drawerId prop에 쓴다.
+
+export type DrawerId =
+    // 공지
+    | 'notice'
+    | 'addNotice'
+    | 'deleteNotice'
+    // 메모
+    | 'addNote'
+    | 'deleteNote'
+    // 팀
+    | 'teamInfo'
+    | 'eventInfo'
+    | 'deleteTeam'
+    | 'addTeam1'
+    | 'addTeam2'
+    | 'addTeam3'
+    | 'addTeam4'
+    | 'addTeam5'
+    | 'addTeam6'
+    | 'updateTeam1'
+    | 'updateTeam2'
+    | 'updateTeam3'
+    | 'updateTeam4'
+    | 'updateTeam5'
+    // 합주
+    | 'ensembleInfo'
+    | 'deleteEnsemble'
+    | 'skipEnsemble'
+    | 'addEnsemble1'
+    | 'addEnsemble2'
+    | 'addEnsemble3'
+    | 'addEnsemble4'
+    | 'updateEnsemble1'
+    | 'updateEnsemble2'
+    | 'updateEnsemble3'
+    | 'updateEnsemble4';

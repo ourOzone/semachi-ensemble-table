@@ -1,4 +1,6 @@
-export const days = ['월', '화', '수', '목', '금', '토', '일'];
+/** 요일 라벨. DayIndex(월요일 0 ~ 일요일 6) 순서 */
+export const days = ['월', '화', '수', '목', '금', '토', '일'] as const;
+/** 합주표 왼쪽의 시간 라벨 */
 export const hours = [
     '09',
     '10',
@@ -15,7 +17,8 @@ export const hours = [
     '21',
     '22',
     '23',
-];
+] as const;
+/** 시간칸 인덱스(TimeSlot) → 시각. 마지막 '24:00'은 종료 시각 표시용이라 칸 수(30)보다 하나 많다 */
 export const idx2hour = [
     '09:00',
     '09:30',
@@ -48,13 +51,16 @@ export const idx2hour = [
     '23:00',
     '23:30',
     '24:00',
-];
+] as const;
 // API 서버 주소. env/.env 의 VITE_API_URL 에서 읽는다.
-export const url = import.meta.env.VITE_API_URL;
-if (!url) {
+const apiUrl: string | undefined = import.meta.env.VITE_API_URL;
+if (!apiUrl) {
     throw new Error('VITE_API_URL이 설정되지 않았어요. env/.env 를 확인해주세요.');
 }
-export const demoNames = [
+export const url = apiUrl;
+
+/** 팀 이름 입력란의 placeholder로 무작위 표시하는 예시 이름 */
+export const demoNames: readonly string[] = [
     '비틀즈',
     '레드제플린',
     '롤링스톤즈',
@@ -81,7 +87,9 @@ export const demoNames = [
 ];
 
 // 보소, 기소, 베소, 드소, 키소, 메인 회의, 재학생 회의, 회의, 오디션, 합주 불가, 동방 사용 불가
-export const eventIds = [
+// 팀 목록에서 빠지고 소모임·회의 버튼으로 따로 표시되는 "팀"의 id.
+// eventIds.includes(임의의 string)으로 비교하므로 as const(리터럴 타입)로 만들지 않는다.
+export const eventIds: readonly string[] = [
     '67edfea26724937d8f2c4d4c',
     '67e363a96724937d8f2c25a1',
     '67e543106724937d8f2c29a7',

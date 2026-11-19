@@ -7,7 +7,7 @@
 | 단계 | 상태 |
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
-| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-0 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
+| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-1까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ⏳ 시작 전 |
 
 ## 작업 로그
@@ -93,6 +93,22 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 11/11 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
+### 2026-11-19 — 2-1: constants, styles
+
+- `git mv`: `constants/index.js`, `styles/media.js`, `styles/GlobalStyle.js` → `.ts`
+- `constants`
+  - `days`, `hours`, `idx2hour`: `as const`
+  - `eventIds`, `demoNames`: `readonly string[]`. `eventIds`를 `as const`로 하면 이후 `eventIds.includes(string)` 7곳이 타입 에러가 나서 리터럴 타입을 쓰지 않음 (계획 문서 메모에서 변경)
+  - `url`: `string`으로 좁혀지도록 env 값을 지역 변수로 받아 검사 후 export (동작 동일)
+- `media`: `reduce` 대신 사이즈별로 명시한 객체 + 제네릭 시그니처
+  - 함수 형태는 styled 컴포넌트 props가 인자로 추론됨
+  - tagged template에 `${}` 보간을 넣으면 값이 사라지는 기존 동작이 있어, 보간 값을 넣으면 타입 에러가 나게 함
+  - 주석 처리돼 있던 옛 구현 제거
+  - 이전 `media.js`와 출력 문자열이 같음을 임시 테스트로 확인 (small·large × tagged template·함수·문자열)
+- `GlobalStyle`: 확장자만 변경 (woff2 import는 `vite/client` 타입이 처리)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 11/11 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -133,5 +149,5 @@
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
 
 ### 다음 순서
-1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-1)
+1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-2)
 2. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성

@@ -19,7 +19,7 @@
 | 단계 | 범위 | 파일 | 줄 | 지시 예시 |
 |---|---|---|---|---|
 | ✅ **2-0** | 사전 결정 + `src/types/` 도메인 타입 | 신규 | – | `2-0 진행해줘` |
-| **2-1** | `constants`, `styles` (media, GlobalStyle) | 3 | 187 | `2-1 진행해줘` |
+| ✅ **2-1** | `constants`, `styles` (media, GlobalStyle) | 3 | 187 | `2-1 진행해줘` |
 | **2-2** | `api` (index, team, ensemble, note, notice) | 5 | 99 | `2-2 진행해줘` |
 | **2-3** | `hooks` (useMessage, useScrollPosition) | 2 | 126 | `2-3 진행해줘` |
 | **2-4** | `context` (drawer, team, ensemble, fetch, index) | 5 | 321 | `2-4 진행해줘` |
@@ -81,7 +81,7 @@ DrawerId      = 'teamInfo' | 'addTeam1' | ... // 30개
 ## 단계별 메모 (작업 시 주의할 점)
 
 ### 2-1. constants, styles
-- `constants`: `days`, `hours`, `idx2hour`, `eventIds`를 `as const`로 고정해 리터럴 타입을 얻는다.
+- `constants`: `days`, `hours`, `idx2hour`는 `as const`. `eventIds`는 `includes(string)` 비교 때문에 `readonly string[]`로 둔다. (2-1에서 확정)
 - `styles/media.js`: tagged template과 `(props) => ...` 함수를 모두 받는 헬퍼라 타입이 가장 까다롭다. styled-components의 `css`/`Interpolation` 타입으로 표현하고, 호출하는 쪽 코드는 바꾸지 않는다.
 - `GlobalStyle`: woff2 import는 `vite/client` 타입이 처리한다.
 

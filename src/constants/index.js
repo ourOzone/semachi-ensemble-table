@@ -49,7 +49,11 @@ export const idx2hour = [
     '23:30',
     '24:00',
 ];
-export const url = 'https://semachi.net:8081';
+// API 서버 주소. env/.env 의 VITE_API_URL 에서 읽는다.
+export const url = import.meta.env.VITE_API_URL;
+if (!url) {
+    throw new Error('VITE_API_URL이 설정되지 않았어요. env/.env 를 확인해주세요.');
+}
 export const demoNames = [
     '비틀즈',
     '레드제플린',

@@ -1,27 +1,24 @@
 import { createGlobalStyle } from 'styled-components';
-import NanumSquareLight from '@/assets/fonts/NanumSquareNeo-aLt.ttf';
-import NanumSquareRegular from '@/assets/fonts/NanumSquareNeo-bRg.ttf';
-import NanumSquareBold from '@/assets/fonts/NanumSquareNeo-cBd.ttf';
+import NanumSquareLight from '@/assets/fonts/NanumSquareNeo-aLt.woff2';
+import NanumSquareRegular from '@/assets/fonts/NanumSquareNeo-bRg.woff2';
+import NanumSquareBold from '@/assets/fonts/NanumSquareNeo-cBd.woff2';
 import { media } from '@/styles/media';
 
 const GlobalStyle = createGlobalStyle`
     @font-face {
         font-family: 'Light';
-        src: local('NanumSquareLight'), local('NanumSquareLight');
         font-style: normal;
-        src: url(${NanumSquareLight}) format('truetype');
+        src: url(${NanumSquareLight}) format('woff2');
     }
     @font-face {
         font-family: 'Regular';
-        src: local('NanumSquareRegular'), local('NanumSquareRegular');
         font-style: normal;
-        src: url(${NanumSquareRegular}) format('truetype');
+        src: url(${NanumSquareRegular}) format('woff2');
     }
     @font-face {
         font-family: 'Bold';
-        src: local('NanumSquareBold'), local('NanumSquareBold');
         font-style: normal;
-        src: url(${NanumSquareBold}) format('truetype');
+        src: url(${NanumSquareBold}) format('woff2');
     }
     * {
         margin: 0;

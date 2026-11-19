@@ -58,7 +58,6 @@ const AddEnsembleDrawer3 = ({ drawerId, handleAddEnsemble }) => {
                     setEndTime(idx - 1);
                     setEndTimeStr(idx2hour[idx]);
                 }
-                console.log(idx - 1, idx2hour[idx]);
             }
         },
         [setStartTime, setEndTime],

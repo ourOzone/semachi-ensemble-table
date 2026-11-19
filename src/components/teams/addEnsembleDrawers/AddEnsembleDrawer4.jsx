@@ -14,7 +14,6 @@ const AddEnsembleDrawer4 = ({ drawerId }) => {
 
     const onClose = useCallback(() => {
         closeAllDrawers();
-        console.log('zzzz');
     }, [closeAllDrawers]);
 
     return (

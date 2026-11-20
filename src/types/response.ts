@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // 서버(api.js) 응답 원본의 스키마. mongoose 스키마를 기준으로 한다.
-// 2단계에서는 타입 추출(z.infer)에만 쓰고, 응답 parse는 3단계(TanStack Query 도입)에서 적용한다.
+// src/api에서 응답을 이 스키마로 검증한다 (목록은 항목 단위: api/index.ts의 getList). 모르는 필드(__v 등)는 버린다.
 // 날짜 필드는 JSON 직렬화된 ISO 8601 문자열로 온다.
 
 export const teamResponseSchema = z.object({
@@ -62,7 +62,9 @@ export interface MessageResponse {
 }
 
 /** check-xxx-pin 응답. PIN이 맞으면 true */
-export type PinCheckResponse = boolean;
+export const pinCheckResponseSchema = z.boolean();
+export type PinCheckResponse = z.infer<typeof pinCheckResponseSchema>;
 
 /** xxx/:id 존재 확인 응답. 존재하면 true, 없으면 404 에러로 거부된다 */
-export type ExistsResponse = boolean;
+export const existsResponseSchema = z.boolean();
+export type ExistsResponse = z.infer<typeof existsResponseSchema>;

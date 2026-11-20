@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { z } from 'zod';
 import { url } from '@/constants';
 
 const apiClient = axios.create({
@@ -9,7 +10,8 @@ const apiClient = axios.create({
     withCredentials: true,
 });
 
-// 응답 타입 T는 런타임 검증 없이 호출부가 지정한다. (응답 parse는 3단계에서 Zod 스키마로 적용)
+// get/post/put/del의 응답 타입 T는 런타임 검증 없이 호출부가 지정한다.
+// 화면에서 쓰는 응답은 리소스별 함수(team.ts 등)가 Zod 스키마로 검증한다: 목록은 getList, 단일 값은 schema.parse
 
 /** 서버가 404로 응답한 요청 에러인지. 대상이 이미 삭제된 경우를 판별한다 (서버의 수정·삭제·PIN 확인 API는 대상이 없으면 404) */
 export const isNotFound = (err: unknown): boolean =>
@@ -56,4 +58,32 @@ export const del = async <T>(endpoint: string): Promise<T> => {
         console.error(`DELETE ${endpoint} 실패:`, err);
         throw err;
     }
+};
+
+/**
+ * 목록 응답을 받아 항목 단위로 검증한다 (3단계 결정 4 수정: 2026-11-20).
+ * - 응답이 배열이 아니면 에러 (조회 실패)
+ * - 형식이 맞지 않는 항목은 빼고 콘솔에 경고한다. 오래된 데이터 한 건 때문에 목록 전체가 안 보이지 않도록 하기 위함
+ *   (예: 실제 서버에 endTime이 null인 합주가 있다. 검증 전에도 칸이 만들어지지 않아 화면에 보이지 않던 데이터)
+ * 경고에는 값 없이 위치·이유만 남긴다 (응답에 PIN이 들어 있을 수 있음: ISSUES B3)
+ */
+export const getList = async <S extends z.ZodType>(
+    endpoint: string,
+    itemSchema: S,
+): Promise<z.output<S>[]> => {
+    const list = z.array(z.unknown()).parse(await get<unknown>(endpoint));
+    const valid: z.output<S>[] = [];
+    list.forEach((item, idx) => {
+        const result = itemSchema.safeParse(item);
+        if (result.success) {
+            valid.push(result.data);
+        } else {
+            const reasons = result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
+            console.warn(
+                `GET ${endpoint}: ${idx}번째 항목이 형식에 맞지 않아 제외했어요.`,
+                reasons,
+            );
+        }
+    });
+    return valid;
 };

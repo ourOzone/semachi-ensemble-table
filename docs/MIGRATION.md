@@ -8,7 +8,7 @@
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
-| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-3 ✅) |
+| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-4 ✅) |
 
 ## 작업 로그
 
@@ -395,6 +395,21 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 미루기 흐름 영향 (F7): 미루기는 블록의 `nextDate`에 7일을 더해 저장하므로, 이제 0시 날짜가 저장된다. Board 흐름 테스트는 날짜만 비교해 그대로 통과
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 84/84 (2회) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
+### 2026-11-20 — 3-4: API 층 (P6, P8)
+
+- P8 (동작 동일): `ensemble?id=` → `/ensemble?id=`. 수정 전 코드에서 최종 URL을 고정하는 테스트를 먼저 통과시킨 뒤 수정
+- `isNotFound(err)`: 서버가 404로 응답한 요청 에러인지 (3-7·3-8에서 "이미 삭제됨" 처리에 사용)
+- P6 (동작 변경, 사전 결정 4를 수정해 적용)
+  - 적용 전 실제 서버의 GET 4개 응답을 스키마로 검증 (값은 출력하지 않고 개수·실패 위치·필드 이름만 확인): teams 39·notes 1·notices 2 통과, **합주 18개 중 1개가 `endTime: null`로 실패** (ISSUES P9)
+  - 결정 4(검증 실패 = 조회 실패)대로면 이 1건 때문에 합주표 전체가 안 보인다 → 사용자 승인으로 **항목 단위 검증**으로 변경
+  - `getList(endpoint, itemSchema)`: 배열이 아니면 에러(조회 실패), 형식이 맞지 않는 항목은 제외하고 위치·이유만 콘솔 경고 (값은 남기지 않음, 응답에 PIN이 있을 수 있음). 모르는 필드(`__v`)는 버림
+  - 존재 확인·PIN 확인 응답은 `z.boolean()`으로 검증. 이전에는 PIN 확인 응답이 boolean이 아니어도 truthy면 맞는 PIN으로 처리됐다
+  - 문제의 합주는 검증 전에도 칸이 만들어지지 않아 보이지 않던 데이터라, 화면 결과는 그대로
+- 테스트 5개 추가 (`src/api/index.test.ts`): 필드 정리, 잘못된 항목 제외·경고에 값 없음, 배열 아님, 실제 서버 형태(`endTime: null`), PIN 응답 형식. 변형 검사: 목록 전체 검증으로 되돌리기·경고에 값 포함·PIN 검증 제거 모두 검출
+- 번들: JS 961kB → 1,047kB (gzip 301kB → 325kB). Zod가 이제 실제로 번들에 포함됨. `zod/mini`로 줄일 수 있지만, View 개편 때 폼 검증(react-hook-form + Zod)에서 일반 Zod를 쓰게 되므로 바꾸지 않음
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 91/91 (2회) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
 ## 남은 일
 

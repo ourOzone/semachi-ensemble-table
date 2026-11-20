@@ -14,7 +14,7 @@
 |---|---|---|---|---|---|
 | 🔴 Major | 3 | 3 | – | – | – |
 | 🟡 Minor | – | 7 | 7 | 5 | 3 |
-| ⚪ 참고 | 1 | 1 | 1 | – | 2 |
+| ⚪ 참고 | 1 | 1 | 2 | – | 2 |
 
 ---
 
@@ -55,7 +55,8 @@
 | P3 | 🟡 | Context Provider의 `value`가 매 렌더링 새 객체라, 입력 한 글자마다 구독하는 컴포넌트 전체가 다시 렌더링된다 | View (입력값이 폼 로컬 상태로 이동). Drawer 상태만 3-9에서 Zustand |
 | P4 | 🟡 | `useMessage`가 렌더링마다 새 객체를 반환해 이를 의존하는 `useCallback`이 사실상 무의미. 거의 같은 알림 함수 4개가 반복 | `lib/notify` 중앙화 (3-6), View 개편 때 Sonner로 교체 |
 | P5 | 🟡 | 수정 취소 복원용 `orgXxx` 상태를 따로 복제해 관리 (team·ensemble context) | View (단일 Drawer 폼의 초기값으로 대체) |
-| P6 | 🟡 | 서버 응답을 런타임 검증 없이 사용 (Zod 스키마는 정의만 됨) | Zod `parse` (3-4) |
+| P6 | 🟡 | 서버 응답을 런타임 검증 없이 사용 (Zod 스키마는 정의만 됨) | ✅ 3-4 (2026-11-20). 목록은 항목 단위 검증(`getList`), 존재 확인·PIN 확인은 boolean 검증 |
+| P9 | ⚪ | 실제 서버 데이터에 `endTime`이 `null`인 합주가 1건 있다 (반복 합주, `startTime` 26, `type` '일회성'·`due` 2025-09-13으로 레거시 필드도 서로 맞지 않음). 검증 전에도 칸이 만들어지지 않아 화면에 보이지 않았다 | 3-4에서 해당 항목만 제외하고 콘솔 경고. DB 정리 여부는 별도 판단 |
 | P7 | 🟡 | `noUncheckedIndexedAccess`를 켜면 타입 에러 21개 (teams 9, context 6, board 6). 대부분 배열 인덱스 접근. 3-2 이후 19개 (lib/board 6, board/index 1, teams/index 2, Drawer 10) | 3-10에서 켜기 (로직 11곳은 가드, Drawer 10곳은 `!`) |
 | P8 | ⚪ | API 경로 오타: `ensemble?id=`(앞의 `/` 누락). baseURL과 합쳐져 동작은 함 | ✅ 3-4 (2026-11-20). 최종 요청 URL이 같음을 테스트로 확인 |
 

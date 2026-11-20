@@ -1,12 +1,12 @@
-import type {
-    ExistsResponse,
-    IdResponse,
-    PinCheckResponse,
-    TeamCreateRequest,
-    TeamResponse,
-    TeamUpdateRequest,
+import {
+    existsResponseSchema,
+    pinCheckResponseSchema,
+    teamResponseSchema,
+    type IdResponse,
+    type TeamCreateRequest,
+    type TeamUpdateRequest,
 } from '@/types';
-import { get, post, put, del } from '.';
+import { get, getList, post, put, del } from '.';
 
 /*
 공부: getTeams등 에는 async/await 안해도 되는 이유
@@ -28,11 +28,12 @@ export const getTeams = async () => {
 2. 컴포넌트가 데이터 흐름의 출발점이기 때문 (어떤 식으로 가공해서 API에 보낼지는 컴포넌트에서 명확히 보여주는게 좋다는 패턴)
 */
 
-export const getTeams = () => get<TeamResponse[]>('/teams');
+export const getTeams = () => getList('/teams', teamResponseSchema);
 export const addTeam = (team: TeamCreateRequest) => post<IdResponse>('/team', team);
 export const updateTeam = (id: string, team: TeamUpdateRequest) =>
     put<IdResponse>(`/team?id=${id}`, team);
 export const deleteTeam = (id: string) => del<IdResponse>(`/team?id=${id}`);
-export const teamExists = (id: string) => get<ExistsResponse>(`/team/${id}`);
-export const checkTeamPin = (teamId: string, pin: string) =>
-    post<PinCheckResponse>('/check-team-pin', { teamId, pin });
+export const teamExists = async (id: string) =>
+    existsResponseSchema.parse(await get(`/team/${id}`));
+export const checkTeamPin = async (teamId: string, pin: string) =>
+    pinCheckResponseSchema.parse(await post('/check-team-pin', { teamId, pin }));

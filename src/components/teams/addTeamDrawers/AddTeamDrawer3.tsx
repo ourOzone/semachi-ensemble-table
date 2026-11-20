@@ -3,19 +3,25 @@ import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { Input } from 'antd';
 import { useTeamContext, useDrawerContext } from '@/context';
+import type { InputRef } from 'antd';
+import type { DrawerId } from '@/types';
 import OkButton from '@/components/common/OkButton';
 
 const labels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
 const maxInput = 12;
 
-const AddTeamDrawer3 = ({ drawerId }) => {
+interface AddTeamDrawer3Props {
+    drawerId: DrawerId;
+}
+
+const AddTeamDrawer3 = ({ drawerId }: AddTeamDrawer3Props) => {
     const { desc, setDesc } = useTeamContext();
     const { openDrawer } = useDrawerContext();
-    const focusInputRef = useRef(null);
+    const focusInputRef = useRef<InputRef>(null);
 
     const handleChange = useCallback(
-        (idx, value) => {
+        (idx: number, value: string) => {
             setDesc((prev) => {
                 const newDesc = [...prev];
                 newDesc[idx] = value;
@@ -92,7 +98,13 @@ const RowWrapper = styled.div`
     gap: 1rem;
 `;
 
-const Label = styled.label`
+interface LabelProps {
+    idx: number;
+    /** 스타일에서 구조분해하지만 사용하지 않음 */
+    isEvent?: boolean;
+}
+
+const Label = styled.label<LabelProps>`
     font-size: 2rem;
     font-family: Bold;
     min-width: 10rem;
@@ -104,7 +116,12 @@ const Label = styled.label`
     box-shadow: 0 0.25rem 0.125rem ${({ theme, isEvent, idx }) => theme.eventColors[idx]}33;
 `;
 
-const StyledInput = styled(Input)`
+interface StyledInputProps {
+    /** 항상 문자열 (antd Input의 value 타입을 좁힘) */
+    value: string;
+}
+
+const StyledInput = styled(Input)<StyledInputProps>`
     padding-left: 1rem;
     font-size: 2rem;
     font-family: Bold !important;

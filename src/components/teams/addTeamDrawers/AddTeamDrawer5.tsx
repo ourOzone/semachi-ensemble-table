@@ -1,21 +1,30 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react';
 import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { useTeamContext, useDrawerContext } from '@/context';
+import type { InputRef } from 'antd';
+import type { DrawerId } from '@/types';
+import type { HandleAddTeam } from '../types';
 import OkButton from '@/components/common/OkButton';
 import PinInput from '@/components/common/PinInput';
 
 const maxInput = 4;
 
-const AddTeamDrawer5 = ({ drawerId, handleAddTeam }) => {
+interface AddTeamDrawer5Props {
+    drawerId: DrawerId;
+    handleAddTeam: HandleAddTeam;
+}
+
+const AddTeamDrawer5 = ({ drawerId, handleAddTeam }: AddTeamDrawer5Props) => {
     const { type, name, desc, pin, setPin } = useTeamContext();
     const { openDrawer } = useDrawerContext();
     const [confirmPin, setConfirmPin] = useState('');
     const [error, setError] = useState(true);
-    const focusInputRef = useRef(null);
+    const focusInputRef = useRef<InputRef>(null);
 
     const handleClick = useCallback(
-        (type, name, desc, pin) => {
+        (type: string, name: string, desc: string[], pin: string) => {
+            // await하지 않아 저장 성공 여부와 관계없이 완료 화면(addTeam6)을 연다 (3단계 정리 대상)
             handleAddTeam(type, name, desc, pin);
             setConfirmPin('');
             setError(true);
@@ -31,7 +40,7 @@ const AddTeamDrawer5 = ({ drawerId, handleAddTeam }) => {
     }, [setPin]);
 
     const handlePinChange = useCallback(
-        (e) => {
+        (e: ChangeEvent<HTMLInputElement>) => {
             const numeric = e.target.value.replace(/\D/g, '');
             if (numeric.length <= maxInput) {
                 setPin(numeric);
@@ -43,7 +52,7 @@ const AddTeamDrawer5 = ({ drawerId, handleAddTeam }) => {
     );
 
     const handleConfirmChange = useCallback(
-        (e) => {
+        (e: ChangeEvent<HTMLInputElement>) => {
             const numeric = e.target.value.replace(/\D/g, '');
             if (numeric.length <= maxInput) {
                 setConfirmPin(numeric);
@@ -76,7 +85,7 @@ const AddTeamDrawer5 = ({ drawerId, handleAddTeam }) => {
                     placeholder="한 번 더"
                     $visible={isConfirmVisible}
                     $error={error}
-                    status={isConfirmError ? 'error' : null}
+                    status={isConfirmError ? 'error' : undefined}
                     onKeyDown={(e) => {
                         // Enter 키 누를시
                         if (e.key === 'Enter' && !error && confirmPin.length === maxInput) {
@@ -108,7 +117,15 @@ const InputWrapper = styled.div`
     align-items: center;
 `;
 
-const ConfirmInput = styled(PinInput)`
+interface ConfirmInputProps {
+    /** 항상 PIN 문자열 (antd Input의 value 타입을 좁힘) */
+    value: string;
+    $visible: boolean;
+    /** 첫 PIN과 다르면 true */
+    $error: boolean;
+}
+
+const ConfirmInput = styled(PinInput)<ConfirmInputProps>`
     color: ${({ theme, $error, value }) =>
         value?.length === maxInput && $error ? theme.danger : theme.title};
 

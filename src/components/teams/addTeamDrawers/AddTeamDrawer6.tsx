@@ -2,9 +2,14 @@ import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { Result } from 'antd';
 import { useDrawerContext } from '@/context';
+import type { DrawerId } from '@/types';
 import OkButton from '@/components/common/OkButton';
 
-const AddTeamDrawer6 = ({ drawerId }) => {
+interface AddTeamDrawer6Props {
+    drawerId: DrawerId;
+}
+
+const AddTeamDrawer6 = ({ drawerId }: AddTeamDrawer6Props) => {
     const { openedDrawers, closeAllDrawers } = useDrawerContext();
 
     return (

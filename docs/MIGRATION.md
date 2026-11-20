@@ -7,7 +7,7 @@
 | 단계 | 상태 |
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
-| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-11까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
+| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-12까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ⏳ 시작 전 |
 
 ## 작업 로그
@@ -244,6 +244,19 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 31/31 (3회 반복) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
+### 2026-11-20 — 2-12: components/teams/addTeamDrawers
+
+- `git mv`: `AddTeamDrawer1~6.jsx` → `.tsx`
+- `AddTeamDrawer1`: 선택지 `options`의 `value`를 `TeamType`으로
+- `AddTeamDrawer2·3`의 `StyledInput`: `value: string`으로 좁힘 / `AddTeamDrawer3`의 `Label`: `idx`, 스타일에서 구조분해만 하는 `isEvent?`
+- `AddTeamDrawer4`: TextArea ref(`GetRef`), `ChangeEvent<HTMLTextAreaElement>`
+- `AddTeamDrawer5`: `ConfirmInput`의 `$visible`·`$error`, `status`의 `null` → `undefined`
+- 발견한 기존 버그 (3단계 대상, 동작 변경이라 손대지 않음)
+  - `AddTeamDrawer5`: `handleAddTeam()`을 await하지 않고 바로 완료 화면(addTeam6)을 열어, 저장이 실패해도 "팀을 만들었어요"가 표시됨 (코드에 주석)
+- 실제 동작은 2-11의 `Teams.test.tsx` 팀 추가 흐름 테스트로 검증
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 31/31 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -284,5 +297,5 @@
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
 
 ### 다음 순서
-1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-12)
+1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-13)
 2. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성

@@ -3,16 +3,22 @@ import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { Input } from 'antd';
 import { useTeamContext, useDrawerContext } from '@/context';
+import type { InputRef } from 'antd';
+import type { DrawerId } from '@/types';
 import OkButton from '@/components/common/OkButton';
 import { demoNames } from '@/constants';
 
 const maxInput = 20;
 
-const AddTeamDrawer2 = ({ drawerId }) => {
+interface AddTeamDrawer2Props {
+    drawerId: DrawerId;
+}
+
+const AddTeamDrawer2 = ({ drawerId }: AddTeamDrawer2Props) => {
     const { name, setName } = useTeamContext();
     const { openDrawer } = useDrawerContext();
     const [randomDemoName, setRandomDemoName] = useState('');
-    const focusInputRef = useRef(null);
+    const focusInputRef = useRef<InputRef>(null);
 
     useEffect(() => {
         const randomIndex = Math.floor(Math.random() * demoNames.length);
@@ -51,7 +57,12 @@ const Title = styled.span`
     font-family: Bold;
 `;
 
-const StyledInput = styled(Input)`
+interface StyledInputProps {
+    /** 항상 문자열 (antd Input의 value 타입을 좁힘) */
+    value: string;
+}
+
+const StyledInput = styled(Input)<StyledInputProps>`
     margin: 4rem 0;
     padding-left: 1.5rem;
     font-size: 3rem;

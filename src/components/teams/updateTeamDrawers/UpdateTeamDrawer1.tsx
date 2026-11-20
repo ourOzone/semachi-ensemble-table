@@ -1,22 +1,30 @@
 import { useState, useRef, useCallback } from 'react';
+import type { InputRef } from 'antd';
 import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { checkTeamPin } from '@/api/team';
 import { useTeamContext, useDrawerContext } from '@/context';
 import PinInput from '@/components/common/PinInput';
 import useMessage from '@/hooks/useMessage';
+import type { DrawerId } from '@/types';
+import type { CheckTeamExists } from '../types';
 
 const maxInput = 4;
 
-const UpdateTeamDrawer1 = ({ drawerId, checkTeamExists }) => {
+interface UpdateTeamDrawer1Props {
+    drawerId: DrawerId;
+    checkTeamExists: CheckTeamExists;
+}
+
+const UpdateTeamDrawer1 = ({ drawerId, checkTeamExists }: UpdateTeamDrawer1Props) => {
     const { id, orgType, orgName, orgDesc, pin, setPin, setTeamStates } = useTeamContext();
     const { openDrawer } = useDrawerContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
     const [message, contextHolder] = useMessage();
-    const focusInputRef = useRef(null);
+    const focusInputRef = useRef<InputRef>(null);
 
     const onClose = useCallback(
-        (id, orgType, orgName, orgDesc) => {
+        (id: string, orgType: string, orgName: string, orgDesc: string[]) => {
             // 수정하기 전 상태로 돌려놓기
             setTeamStates(id, orgType, orgName, orgDesc, '');
             setError(false);
@@ -25,7 +33,7 @@ const UpdateTeamDrawer1 = ({ drawerId, checkTeamExists }) => {
     );
 
     const handlePinChange = useCallback(
-        async (value, id) => {
+        async (value: string, id: string) => {
             const numeric = value.replace(/\D/g, '');
             if (numeric.length <= maxInput) {
                 setPin(numeric);
@@ -74,7 +82,7 @@ const UpdateTeamDrawer1 = ({ drawerId, checkTeamExists }) => {
                     controls={false}
                     placeholder="숫자 4자리"
                     error={error}
-                    status={pin.length === 4 && error ? 'error' : null}
+                    status={pin.length === 4 && error ? 'error' : undefined}
                 />
             </InputWrapper>
         </Drawer>
@@ -95,7 +103,16 @@ const InputWrapper = styled.div`
     align-items: center;
 `;
 
-const StyledInput = styled(PinInput)`
+interface StyledInputProps {
+    /** 항상 PIN 문자열 (antd Input의 value 타입을 좁힘) */
+    value: string;
+    /** PIN 4자리를 다 입력했는데 틀린 경우 true */
+    error: boolean;
+    /** Input에는 없는 prop(InputNumber 전용)이라 효과 없이 DOM으로 전달됨 (3단계 정리 대상) */
+    controls?: boolean;
+}
+
+const StyledInput = styled(PinInput)<StyledInputProps>`
     color: ${({ theme, value, error }) => (value.length === maxInput && error ? theme.danger : theme.title)};
 `;
 

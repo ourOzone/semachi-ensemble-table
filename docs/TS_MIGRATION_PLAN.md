@@ -31,7 +31,7 @@
 | ✅ **2-10** | `components/board/updateEnsembleDrawers` | 4 | 479 | `2-10 진행해줘` |
 | ✅ **2-11** | `components/teams` (index + Drawer 3개) | 4 | 679 | `2-11 진행해줘` |
 | ✅ **2-12** | `components/teams/addTeamDrawers` | 6 | 509 | `2-12 진행해줘` |
-| **2-13** | `components/teams/updateTeamDrawers` | 5 | 453 | `2-13 진행해줘` |
+| ✅ **2-13** | `components/teams/updateTeamDrawers` | 5 | 453 | `2-13 진행해줘` |
 | **2-14** | `components/teams/addEnsembleDrawers` | 4 | 419 | `2-14 진행해줘` |
 | **2-15** | `App.jsx` + 마무리 (`allowJs` 끄기 등) | 1 | 52 | `2-15 진행해줘` |
 

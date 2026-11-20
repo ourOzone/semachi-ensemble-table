@@ -7,7 +7,7 @@
 | 단계 | 상태 |
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
-| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-12까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
+| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-13까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ⏳ 시작 전 |
 
 ## 작업 로그
@@ -257,6 +257,18 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 31/31 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
+### 2026-11-20 — 2-13: components/teams/updateTeamDrawers
+
+- `git mv`: `UpdateTeamDrawer1~5.jsx` → `.tsx`
+- 2-12(addTeamDrawers)와 같은 방식: PIN·이름·멤버·셋리 Drawer의 props와 styled props 타입, `status`의 `null` → `undefined` 1곳
+- `UpdateTeamDrawer1`: 원래 값 복원용 `onClose` 인자 타입, `CheckTeamExists` / `UpdateTeamDrawer5`: `HandleUpdateTeam`
+- `UpdateTeamDrawer3`의 컴포넌트 상수 이름은 `UpdateTeam3`(기존 그대로), props 인터페이스는 파일명에 맞춰 `UpdateTeamDrawer3Props`
+- 테스트 (`Teams.test.tsx`에 추가)
+  - 팀 수정 5단계: 기존 값이 채워지는지, `PUT /team?id=` 본문 `{ type, name, desc }`
+  - 합주 추가 4단계(2-14 검증 겸함): 반복 여부 → 달력 → 시간 → `POST /ensemble` 본문(요일·시간칸·레거시 `type`·`due` 포함), 완료 화면. `Date`만 가짜로 고정
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 33/33 (3회 반복, 팀 테스트는 3회 추가 반복) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -297,5 +309,5 @@
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
 
 ### 다음 순서
-1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-13)
+1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-14)
 2. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성

@@ -1,28 +1,36 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, type ChangeEvent } from 'react';
 import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
-import { Input } from 'antd';
+import { Input, type GetRef } from 'antd';
 import { useTeamContext } from '@/context';
+import type { DrawerId } from '@/types';
+import type { HandleUpdateTeam } from '../types';
 import OkButton from '@/components/common/OkButton';
 
 const { TextArea } = Input;
+type TextAreaRef = GetRef<typeof TextArea>;
 const maxInput = 200;
 const minRows = 4;
 const maxRows = 10;
 
-const countLines = (value) => {
+const countLines = (value: string): number => {
     const lines = value.split('\n').length;
     return Math.min(Math.max(lines, minRows), maxRows);
 };
 
-const UpdateTeamDrawer5 = ({ drawerId, handleUpdateTeam }) => {
+interface UpdateTeamDrawer5Props {
+    drawerId: DrawerId;
+    handleUpdateTeam: HandleUpdateTeam;
+}
+
+const UpdateTeamDrawer5 = ({ drawerId, handleUpdateTeam }: UpdateTeamDrawer5Props) => {
     const { id, type, name, desc, setDesc } = useTeamContext();
-    const focusInputRef = useRef(null);
+    const focusInputRef = useRef<TextAreaRef>(null);
 
     const text = useMemo(() => desc[6] || '', [desc]);
 
     const handleChange = useCallback(
-        (e) => {
+        (e: ChangeEvent<HTMLTextAreaElement>) => {
             const newText = e.target.value;
             setDesc((prev) => [...prev.slice(0, 6), newText]);
         },
@@ -60,7 +68,11 @@ const Title = styled.span`
     font-family: Bold;
 `;
 
-const StyledTextArea = styled(TextArea)`
+interface StyledTextAreaProps {
+    $isOverLimit: boolean;
+}
+
+const StyledTextArea = styled(TextArea)<StyledTextAreaProps>`
     margin: 4rem 0;
     font-size: 1.5rem;
     font-family: Bold !important;

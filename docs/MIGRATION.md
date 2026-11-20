@@ -7,7 +7,7 @@
 | 단계 | 상태 |
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
-| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-9까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
+| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-10까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ⏳ 시작 전 |
 
 ## 작업 로그
@@ -218,6 +218,16 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 27/27 (2회 반복, 합주 테스트는 4회 반복) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
+### 2026-11-20 — 2-10: components/board/updateEnsembleDrawers
+
+- `git mv`: `UpdateEnsembleDrawer1~4.jsx` → `.tsx`
+- `Drawer1`(PIN): 2-7과 같은 `StyledInput` props 타입, `status`의 `null` → `undefined`. `onClose`의 원래 값 복원 인자 타입
+- `Drawer2`(반복 여부): `repeat: boolean` / `Drawer3`(달력): `Dayjs` 인자, `isSameOrBefore` 플러그인 타입은 플러그인 import로 자동 확장
+- `Drawer4`(시간): `HandleUpdateEnsemble` 콜백 타입. 시간 선택 로직은 `if`의 null 검사로 타입이 좁혀져 코드 변경 없음. `Header`·`TimeButton`의 `show`·`selected` props 타입
+- 실제 동작은 2-9의 `Board.test.tsx` 수정 흐름 테스트로 검증
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 27/27 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -258,5 +268,5 @@
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
 
 ### 다음 순서
-1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-10)
+1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-11)
 2. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성

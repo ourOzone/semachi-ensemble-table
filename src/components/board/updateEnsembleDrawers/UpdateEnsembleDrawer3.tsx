@@ -5,21 +5,26 @@ import { ConfigProvider, Calendar, Button } from 'antd';
 import koKR from 'antd/locale/ko_KR';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { useEnsembleContext, useDrawerContext } from '@/context';
-import dayjs from 'dayjs';
+import type { DrawerId } from '@/types';
+import dayjs, { type Dayjs } from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import 'dayjs/locale/ko';
 
 dayjs.extend(isSameOrBefore);
 dayjs.locale('ko');
 
-const isBeforeToday = (date) => date.isBefore(dayjs(), 'day');
+const isBeforeToday = (date: Dayjs): boolean => date.isBefore(dayjs(), 'day');
 
-const UpdateEnsembleDrawer3 = ({ drawerId }) => {
+interface UpdateEnsembleDrawer3Props {
+    drawerId: DrawerId;
+}
+
+const UpdateEnsembleDrawer3 = ({ drawerId }: UpdateEnsembleDrawer3Props) => {
     const { repeat, setNextDate, currentMonth, setCurrentMonth } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
 
     const handleClick = useCallback(
-        (date) => {
+        (date: Dayjs) => {
             setNextDate(date);
             openDrawer('updateEnsemble4');
         },

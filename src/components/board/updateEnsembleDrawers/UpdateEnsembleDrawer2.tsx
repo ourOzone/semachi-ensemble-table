@@ -3,13 +3,18 @@ import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { Button } from 'antd';
 import { useEnsembleContext, useDrawerContext } from '@/context';
+import type { DrawerId } from '@/types';
 
-const UpdateEnsembleDrawer2 = ({ drawerId }) => {
+interface UpdateEnsembleDrawer2Props {
+    drawerId: DrawerId;
+}
+
+const UpdateEnsembleDrawer2 = ({ drawerId }: UpdateEnsembleDrawer2Props) => {
     const { setRepeat } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
 
     const handleClick = useCallback(
-        (repeat) => {
+        (repeat: boolean) => {
             setRepeat(repeat);
             openDrawer('updateEnsemble3');
         },

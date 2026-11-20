@@ -7,7 +7,7 @@
 | 단계 | 상태 |
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
-| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-10까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
+| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-11까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ⏳ 시작 전 |
 
 ## 작업 로그
@@ -228,6 +228,22 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 27/27 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
+### 2026-11-20 — 2-11: components/teams
+
+- `git mv`: `teams/index·TeamInfoDrawer·EventInfoDrawer·DeleteTeamDrawer.jsx` → `.tsx`
+- `src/components/teams/types.ts` 추가: `CheckTeamExists`, `HandleAddTeam`, `HandleUpdateTeam`, `HandleDeleteTeam`, `HandleAddEnsemble` (2-12~2-14에서 쓸 타입 포함)
+- `handleAddEnsemble`: 2-9의 `handleUpdateEnsemble`과 같은 이유로 non-null 단언(`!`), 근거 주석
+- `TeamButton`: `idx?: number`. `AddTeamButton`은 idx 없이 렌더링되지만 배경·그림자를 자체 값으로 덮어써 영향 없음 → 스타일 안에서만 `idx!`
+- `TeamInfoDrawer`: `styled(Segmented<string>)`로 제네릭 지정 (styled로 감싸면 onChange 인자가 unknown이 됨, 타입 단언 대신 instantiation expression 사용)
+- `EventInfoDrawer`: `name2FullName: Record<string, string>`
+- 발견한 기존 버그 (3단계 대상, 동작 변경이라 손대지 않음)
+  - `DeleteTeamDrawer`: `useMessage()`의 `contextHolder`를 렌더링하지 않아 네트워크 오류 알림이 표시되지 않음
+- 테스트
+  - `src/components/teams/Teams.test.tsx` 추가: 팀 추가 6단계(서버에 보내는 `{ type, name, desc, pin, publishDate }`), 팀 정보 탭 전환, 팀 삭제(PIN `{ teamId, pin }`, `DELETE /team?id=`), 소모임 전체 이름. 팀 추가 흐름은 2-12의 addTeamDrawers 검증도 겸함
+  - `vite.config.mts`: `testTimeout` 15초. 여러 단계 흐름 테스트가 병렬 실행 시 기본값 5초를 넘김(단독 실행은 통과)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 31/31 (3회 반복) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -268,5 +284,5 @@
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
 
 ### 다음 순서
-1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-11)
+1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-12)
 2. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성

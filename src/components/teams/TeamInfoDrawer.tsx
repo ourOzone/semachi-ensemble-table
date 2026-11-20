@@ -4,17 +4,24 @@ import styled from 'styled-components';
 import { Button, Divider, Segmented } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
+import type { DrawerId } from '@/types';
+import type { CheckTeamExists } from './types';
 
 const memberLabels = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
-const TeamInfoDrawer = ({ drawerId, checkTeamExists }) => {
+interface TeamInfoDrawerProps {
+    drawerId: DrawerId;
+    checkTeamExists: CheckTeamExists;
+}
+
+const TeamInfoDrawer = ({ drawerId, checkTeamExists }: TeamInfoDrawerProps) => {
     const { id, type, name, desc, setTeamOrgStates } = useTeamContext();
     const { setStartTime, setEndTime } = useEnsembleContext();
     const { openDrawer, closeAllDrawers } = useDrawerContext();
     const [option, setOption] = useState('팀원');
 
     const handleClickAddEnsemble = useCallback(
-        async (id) => {
+        async (id: string) => {
             if (await checkTeamExists(id)) {
                 setStartTime(null);
                 setEndTime(null);
@@ -25,7 +32,7 @@ const TeamInfoDrawer = ({ drawerId, checkTeamExists }) => {
     );
 
     const handleClickUpdateTeam = useCallback(
-        async (id, type, name, desc) => {
+        async (id: string, type: string, name: string, desc: string[]) => {
             if (await checkTeamExists(id)) {
                 // team 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
                 setTeamOrgStates(type, name, desc);
@@ -35,7 +42,7 @@ const TeamInfoDrawer = ({ drawerId, checkTeamExists }) => {
         [setTeamOrgStates, openDrawer],
     );
 
-    const handleClickDeleteTeam = useCallback(async (id) => {
+    const handleClickDeleteTeam = useCallback(async (id: string) => {
         if (await checkTeamExists(id)) {
             openDrawer('deleteTeam');
         }
@@ -134,7 +141,11 @@ const Member = styled.div`
     width: 100%;
 `;
 
-const MemberLabel = styled.span`
+interface MemberLabelProps {
+    idx: number;
+}
+
+const MemberLabel = styled.span<MemberLabelProps>`
     font-size: 1.5rem;
     font-family: Bold;
     min-width: 6rem;
@@ -169,7 +180,7 @@ const StyledButton = styled(Button)`
     }
 `;
 
-const StyledSegmented = styled(Segmented)`
+const StyledSegmented = styled(Segmented<string>)`
     width: 100%;
     border-radius: 1rem;
     padding: 0.375rem;

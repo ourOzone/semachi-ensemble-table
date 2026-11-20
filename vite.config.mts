@@ -26,6 +26,8 @@ export default defineConfig(({ mode }) => {
             setupFiles: ['./src/test/setup.ts'],
             include: ['src/**/*.test.{ts,tsx}'],
             restoreMocks: true,
+            // antd Drawer를 여러 단계 거치는 흐름 테스트는 병렬 실행 시 기본값(5초)을 넘길 수 있다
+            testTimeout: 15_000,
         },
     };
 });

@@ -1,8 +1,9 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import styled from 'styled-components';
 import { Divider } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
+import type { Team, TimeSlot } from '@/types';
 import { addTeam, updateTeam, deleteTeam, teamExists } from '@/api/team';
 import { addEnsemble } from '@/api/ensemble';
 import useMessage from '@/hooks/useMessage';
@@ -41,7 +42,7 @@ const Teams = () => {
     // 이미 삭제된 팀인지 체크. 이미 있는 팀을 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
     // 해당 함수를 try -> if(else 없음) 에서 호출: false 리턴시 if문 넘긴채 그대로 try문 종료, 이후 try문 내에서 에러시 catch
     const checkTeamExists = useCallback(
-        async (id) => {
+        async (id: string) => {
             try {
                 await teamExists(id);
                 return true;
@@ -58,7 +59,7 @@ const Teams = () => {
 
     // 팀 클릭
     const handleClickTeam = useCallback(
-        async ({ id, type, name, desc }) => {
+        async ({ id, type, name, desc }: Team) => {
             try {
                 if (await checkTeamExists(id)) {
                     setTeamStates(id, type, name, desc);
@@ -75,7 +76,7 @@ const Teams = () => {
 
     // 소모임 및 회의 클릭 (id값은 순서대로 event0~ 으로 지정)
     const handleClickEvent = useCallback(
-        (id, name) => {
+        (id: string, name: string) => {
             setTeamStates(id, '', name);
             openDrawer('eventInfo');
         },
@@ -89,7 +90,7 @@ const Teams = () => {
     }, [setTeamStates, openDrawer]);
 
     const handleAddTeam = useCallback(
-        async (type, name, desc, pin) => {
+        async (type: string, name: string, desc: string[], pin: string) => {
             try {
                 await addTeam({ type, name, desc, pin, publishDate: dayjs() });
                 fetchData();
@@ -104,7 +105,7 @@ const Teams = () => {
     );
 
     const handleUpdateTeam = useCallback(
-        async (id, type, name, desc) => {
+        async (id: string, type: string, name: string, desc: string[]) => {
             try {
                 if (await checkTeamExists(id)) {
                     await updateTeam(id, { type, name, desc });
@@ -122,7 +123,7 @@ const Teams = () => {
     );
 
     const handleDeleteTeam = useCallback(
-        async (id) => {
+        async (id: string) => {
             try {
                 if (await checkTeamExists(id)) {
                     await deleteTeam(id);
@@ -142,19 +143,27 @@ const Teams = () => {
     );
 
     const handleAddEnsemble = useCallback(
-        async (id, name, repeat, nextDate, startTime, endTime) => {
+        async (
+            id: string,
+            name: string,
+            repeat: boolean,
+            nextDate: Dayjs | null,
+            startTime: TimeSlot | null,
+            endTime: TimeSlot | null,
+        ) => {
             try {
                 if (await checkTeamExists(id)) {
+                    // 선택을 마친 뒤에만 호출되어 null이 아님 (null이면 nextDate.day()에서 TypeError → catch, 기존 동작)
                     await addEnsemble({
                         teamId: id,
                         teamName: name,
-                        day: (nextDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
-                        nextDate,
-                        startTime,
-                        endTime,
+                        day: (nextDate!.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
+                        nextDate: nextDate!,
+                        startTime: startTime!,
+                        endTime: endTime!,
                         repeat,
                         type: repeat ? '무기한' : '일회성', // TODO 삭제
-                        due: repeat ? '2099-12-31' : nextDate.format('YYYY-MM-DD'), // TODO 삭제
+                        due: repeat ? '2099-12-31' : nextDate!.format('YYYY-MM-DD'), // TODO 삭제
                     });
                     fetchData();
                     setTeamStates(); // 초기화
@@ -245,12 +254,19 @@ const StyledDivider = styled(Divider)`
     margin: 1.5rem 0 1rem;
 `;
 
-const TeamButton = styled.div`
+interface TeamButtonProps {
+    /** 소모임·회의 버튼이면 true (eventColors 사용) */
+    isEvent?: boolean;
+    /** 색상 인덱스. AddTeamButton은 넘기지 않지만 배경·그림자를 자체 값으로 덮어써 영향 없음 */
+    idx?: number;
+}
+
+const TeamButton = styled.div<TeamButtonProps>`
     display: flex;
     align-items: center;
     margin: 0.5rem 0 0 0.5rem;
     background-color: ${({ theme, isEvent, idx }) =>
-        isEvent ? theme.eventColors[idx] : theme.teamColors[idx % theme.teamColors.length]};
+        isEvent ? theme.eventColors[idx!] : theme.teamColors[idx! % theme.teamColors.length]};
     padding: 0.75rem 1.5rem;
     border-radius: 100rem;
     font-size: 1.25rem;
@@ -260,7 +276,7 @@ const TeamButton = styled.div`
     border: 0.0625rem solid ${({ theme }) => theme.border};
     box-shadow: 0 0.25rem 0.125rem
         ${({ theme, isEvent, idx }) =>
-            isEvent ? theme.eventColors[idx] : theme.teamColors[idx % theme.teamColors.length]}33;
+            isEvent ? theme.eventColors[idx!] : theme.teamColors[idx! % theme.teamColors.length]}33;
 
     opacity: 1;
     transition: opacity 0.3s ease;

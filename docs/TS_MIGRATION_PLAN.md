@@ -29,7 +29,7 @@
 | ✅ **2-8** | `components/note` | 3 | 406 | `2-8 진행해줘` |
 | ✅ **2-9** | `components/board` (index + Drawer 3개) | 4 | 767 | `2-9 진행해줘` |
 | ✅ **2-10** | `components/board/updateEnsembleDrawers` | 4 | 479 | `2-10 진행해줘` |
-| **2-11** | `components/teams` (index + Drawer 3개) | 4 | 679 | `2-11 진행해줘` |
+| ✅ **2-11** | `components/teams` (index + Drawer 3개) | 4 | 679 | `2-11 진행해줘` |
 | **2-12** | `components/teams/addTeamDrawers` | 6 | 509 | `2-12 진행해줘` |
 | **2-13** | `components/teams/updateTeamDrawers` | 5 | 453 | `2-13 진행해줘` |
 | **2-14** | `components/teams/addEnsembleDrawers` | 4 | 419 | `2-14 진행해줘` |

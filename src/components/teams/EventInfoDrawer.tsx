@@ -4,8 +4,9 @@ import styled from 'styled-components';
 import { Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useTeamContext, useDrawerContext } from '@/context';
+import type { DrawerId } from '@/types';
 
-const name2FullName = {
+const name2FullName: Record<string, string> = {
     보소: '보컬 소모임',
     기소: '기타 소모임',
     베소: '베이스 소모임',
@@ -19,7 +20,11 @@ const name2FullName = {
     '동방 사용 불가': '동방 사용 불가',
 };
 
-const EventInfoDrawer = ({ drawerId }) => {
+interface EventInfoDrawerProps {
+    drawerId: DrawerId;
+}
+
+const EventInfoDrawer = ({ drawerId }: EventInfoDrawerProps) => {
     const { name, setTeamStates } = useTeamContext();
     const { openDrawer } = useDrawerContext();
 
@@ -44,7 +49,12 @@ const EventInfoDrawer = ({ drawerId }) => {
     );
 };
 
-const Card = styled.div`
+interface CardProps {
+    /** 사용처 없음 */
+    heightFix?: boolean;
+}
+
+const Card = styled.div<CardProps>`
     display: flex;
     flex-direction: column;
     align-items: center;

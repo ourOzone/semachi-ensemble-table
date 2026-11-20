@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 
-const useScrollPosition = () => {
+/** window의 세로 스크롤 위치(px) */
+const useScrollPosition = (): number => {
     const [scrollY, setScrollY] = useState(0);
 
     useEffect(() => {

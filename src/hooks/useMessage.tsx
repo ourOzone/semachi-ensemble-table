@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import { message as antMessage } from 'antd';
 import styled from 'styled-components';
 import {
@@ -7,26 +8,40 @@ import {
     CloseCircleFilled,
 } from '@ant-design/icons';
 
-const bgColors = {
+type MessageType = 'info' | 'success' | 'warning' | 'error';
+
+/** useMessage가 돌려주는 알림 함수 모음. 호출할 때마다 이전 알림을 지우고 새로 띄운다 */
+export interface Message {
+    success: (text: string) => void;
+    error: (text: string) => void;
+    warning: (text: string) => void;
+    info: (text: string) => void;
+}
+
+const bgColors: Record<MessageType, string> = {
     info: '#e6f4ff',
     success: '#f6ffed',
     warning: '#fffbe6',
     error: '#fff2f0',
 };
-const borderColors = {
+const borderColors: Record<MessageType, string> = {
     info: '#91caff',
     success: '#b7eb8f',
     warning: '#ffe58f',
     error: '#ffccc7',
 };
-const iconColors = {
+const iconColors: Record<MessageType, string> = {
     info: '#1890ff',
     success: '#52c41a',
     warning: '#faad14',
     error: '#ff4d4f',
 };
 
-const Content = styled.div`
+interface ContentProps {
+    type: MessageType;
+}
+
+const Content = styled.div<ContentProps>`
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -39,11 +54,11 @@ const Content = styled.div`
     box-shadow: 0 0.25rem 0.25rem ${({ type }) => borderColors[type]}80;
 `;
 
-const useMessage = () => {
+const useMessage = (): [Message, ReactElement] => {
     // message 사용을 위해 컴포넌트 최상단에 {contextHolder} 삽입해야 함
     const [messageApi, contextHolder] = antMessage.useMessage();
 
-    const success = (text) => {
+    const success = (text: string) => {
         messageApi.destroy();
         messageApi.open({
             content: (
@@ -56,7 +71,7 @@ const useMessage = () => {
         });
     };
 
-    const error = (text) => {
+    const error = (text: string) => {
         messageApi.destroy();
         messageApi.open({
             content: (
@@ -69,7 +84,7 @@ const useMessage = () => {
         });
     };
 
-    const warning = (text) => {
+    const warning = (text: string) => {
         messageApi.destroy();
         messageApi.open({
             content: (
@@ -82,7 +97,7 @@ const useMessage = () => {
         });
     };
 
-    const info = (text) => {
+    const info = (text: string) => {
         messageApi.destroy();
         messageApi.open({
             content: (
@@ -95,7 +110,7 @@ const useMessage = () => {
         });
     };
 
-    const message = { success, error, warning, info };
+    const message: Message = { success, error, warning, info };
 
     return [message, contextHolder];
 };

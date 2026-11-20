@@ -371,7 +371,10 @@
 - 테스트
   - 기존 테스트 55개가 수정 없이 통과 (`fetch.test.tsx` characterization 포함)
   - lib 단위 테스트 26개 추가 (`src/lib/*.test.ts`): characterization 기대값을 `now` 인자 방식으로 옮기고, 테스트가 없던 `isSkipped`(7일 경계)·`getWeek`(일요일 현재 동작)·`toEnsembleRequest`도 현재 동작대로 고정
-  - 뮤테이션 검사: lib 코드를 20가지로 일부러 바꿔 모두 실패로 잡히는 것을 확인
+  - 뮤테이션 검사: lib 코드를 20가지로 일부러 바꿔 **19가지 검출**
+    - ⚠️ 정정: 처음에는 "20/20 검출"로 기록했으나, 검사 스크립트가 `npx vitest`를 써서 원본에서도 항상 실패(exit 1)하는 상태였다. 프로젝트의 vitest로 다시 실행하고, 원본 통과(기준선)를 먼저 확인한 뒤 `Tests N failed` 출력으로 판정해 재검사했다
+    - 놓친 1가지: 반복 합주의 요일이 오늘보다 **뒤** 요일일 때의 `% 7` (기존 테스트는 화·목·일처럼 앞 요일만 있었다. 2단계 characterization 테스트도 같은 빈틈). 토요일 케이스를 추가해 검출 확인
+    - 이후 뮤테이션 검사는 `pnpm exec vitest`(또는 `node node_modules/vitest/vitest.mjs`)로 실행하고 기준선을 먼저 확인한다. `npx vitest`는 이 환경에서 프로젝트 vitest를 찾지 못한다
 - `noUncheckedIndexedAccess` 에러: 21개 → 19개 (board의 `idx2hour` 접근 2곳이 `slotEndTime`으로 합쳐짐)
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 81/81 (2회) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)

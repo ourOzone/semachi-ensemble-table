@@ -124,6 +124,8 @@ describe('resolveNextDate', () => {
             expect(next({ day: 1, nextDate: iso('2026-11-17') })).toBe('2026-11-24 10:00'); // 화 → 다음 화
             expect(next({ day: 3, nextDate: iso('2026-11-19') })).toBe('2026-11-26 10:00'); // 목 → 6일 뒤
             expect(next({ day: 6, nextDate: iso('2026-11-15') })).toBe('2026-11-22 10:00'); // 일(day() 0) → 다음 일
+            // 오늘(금)보다 뒤 요일: 7 + 6 - 5 = 8 → % 7 = 1일 뒤
+            expect(next({ day: 5, nextDate: iso('2026-11-14') })).toBe('2026-11-21 10:00'); // 토 → 내일
         });
     });
 });

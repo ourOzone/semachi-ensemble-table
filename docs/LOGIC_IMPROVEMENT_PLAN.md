@@ -109,7 +109,7 @@
 - 테스트 헬퍼: 테스트마다 새 QueryClient(재시도 끔)를 쓰도록 `renderWithTheme`·`renderApp`에 포함
 - (승인 시) E3: `.claude/settings.json` 허용 목록을 pnpm 명령 기준으로 갱신
 
-### 3-1. F1 최소 수정 (결정 6 승인 시)
+### 3-1. F1 최소 수정 (결정 6 승인 시) ✅
 - `UpdateTeamDrawer4`의 `onClose`: 멤버 6칸을 `orgDesc`로 되돌린다. `UpdateTeamDrawer5`의 `onClose`: 셋리스트를 `orgDesc[6]`으로 되돌린다.
 - `Teams.test.tsx`에 회귀 테스트: 멤버 단계에서 뒤로 갔다가 다시 진행해 저장해도 기존 값이 유지되는지
 

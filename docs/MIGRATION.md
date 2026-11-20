@@ -8,7 +8,7 @@
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/TS_MIGRATION_PLAN.md`) |
-| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0 ✅) |
+| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0·3-1 ✅) |
 
 ## 작업 로그
 
@@ -342,6 +342,18 @@
 - `.claude/settings.json`: 허용 명령을 npm → pnpm 기준으로 (`typecheck`, `build`, `test:run`, 읽기 전용 검사인 `lint`·`format:check` 추가) (E3)
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 54/54 (2회) / `pnpm build` ✅ (JS 961kB, +25kB는 react-query) / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
+### 2026-11-20 — 3-1: F1 팀 수정 데이터 손실 수정 (동작 변경, 사전 결정 6)
+
+- 지금 → 바꾼 후
+  - 멤버 단계(`UpdateTeamDrawer4`)에서 뒤로 가기: `desc` 7칸을 모두 비움 → 수정 전 값(`orgDesc`)으로 되돌림
+  - 셋리 단계(`UpdateTeamDrawer5`)에서 뒤로 가기: 셋리스트를 비움 → 수정 전 셋리스트로 되돌림
+  - 결과: 뒤로 갔다가 다시 진행해 저장해도 기존 멤버·셋리가 지워지지 않는다. "뒤로 가기 = 그 단계의 수정 취소"로, PIN 단계의 기존 동작(수정 전 상태로 복원)과 같은 의미
+- Drawer 내부 수정이지만 운영 중인 데이터 손실이라 최소 범위(`onClose` 2곳)만 고침. Drawer 구조는 View 개편 때 바뀜
+- `Teams.test.tsx`에 회귀 테스트: 멤버·셋리를 고친 뒤 뒤로 갔다가 다시 진행 → 기존 값 표시, 저장 본문에 기존 `desc`
+  - 수정 전 코드에서 실패(멤버 칸이 빈 값)하는 것을 확인. 셋리 쪽 수정만 되돌려도 실패하는 것을 확인
+
+**검증:** 아래 공통 검증 참고
 
 ## 남은 일
 

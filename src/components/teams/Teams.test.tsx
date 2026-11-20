@@ -143,6 +143,50 @@ describe('팀', () => {
         });
     });
 
+    // F1 회귀 테스트: 멤버·셋리 단계에서 뒤로 가면 그 단계의 입력을 원래 값으로 되돌린다 (이전에는 빈 값이 되어 그대로 저장됐다)
+    it('팀 수정: 멤버·셋리 단계에서 뒤로 갔다가 다시 진행해 저장해도 기존 값이 유지된다', async () => {
+        let putBody: unknown;
+        server.use(
+            http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)),
+            http.put(`${url}/team`, async ({ request }) => {
+                putBody = await request.json();
+                return HttpResponse.json({ id: 'team-1' });
+            }),
+        );
+        const user = await openTeamInfo();
+
+        await user.click(screen.getByRole('button', { name: /팀 수정/ }));
+        await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
+        await user.click(await screen.findByText('외부공연'));
+        const nameDrawer = await findDrawer(/팀 이름을 바꿔요/);
+        await user.click(await findEnabledButton('확인', nameDrawer));
+
+        // 멤버를 고친 뒤 뒤로 가기 → 다시 진행하면 원래 값
+        let memberDrawer = await findDrawer(/누가 바뀌었나요/);
+        await user.type(within(memberDrawer).getAllByRole('textbox')[0]!, '바뀜');
+        await user.click(within(memberDrawer).getByRole('button', { name: 'Close' }));
+        await user.click(await findEnabledButton('확인', nameDrawer));
+        memberDrawer = await findDrawer(/누가 바뀌었나요/);
+        expect(within(memberDrawer).getAllByRole('textbox')[0]).toHaveValue('보컬A');
+        await user.click(await findEnabledButton('확인', memberDrawer));
+
+        // 셋리를 고친 뒤 뒤로 가기 → 다시 진행하면 원래 값
+        let setlistDrawer = await findDrawer(/셋리가 바뀌었나요/);
+        await user.type(within(setlistDrawer).getByRole('textbox'), '바뀜');
+        await user.click(within(setlistDrawer).getByRole('button', { name: 'Close' }));
+        await user.click(await findEnabledButton('확인', memberDrawer));
+        setlistDrawer = await findDrawer(/셋리가 바뀌었나요/);
+        expect(within(setlistDrawer).getByRole('textbox')).toHaveValue('셋리스트');
+        await user.click(await findEnabledButton('다 바꿨어요', setlistDrawer));
+
+        expect(await screen.findByText('잘 바꿔놨어요.')).toBeInTheDocument();
+        expect(putBody).toEqual({
+            type: '외부공연(연합/대외)',
+            name: '테스트밴드',
+            desc: ['보컬A', '기타B', '베이스C', '드럼D', '키보드E', '매니저F', '셋리스트'],
+        });
+    });
+
     describe('합주 추가', () => {
         beforeEach(() => {
             // 달력 날짜 고정: 2026-11-20(금). Date만 가짜로 바꿔 user-event·MSW 타이머에는 영향 없음

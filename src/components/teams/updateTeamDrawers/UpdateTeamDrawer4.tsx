@@ -16,7 +16,7 @@ interface UpdateTeamDrawer4Props {
 }
 
 const UpdateTeamDrawer4 = ({ drawerId }: UpdateTeamDrawer4Props) => {
-    const { desc, setDesc } = useTeamContext();
+    const { desc, setDesc, orgDesc } = useTeamContext();
     const { openDrawer } = useDrawerContext();
     const focusInputRef = useRef<InputRef>(null);
 
@@ -34,7 +34,8 @@ const UpdateTeamDrawer4 = ({ drawerId }: UpdateTeamDrawer4Props) => {
     return (
         <Drawer
             drawerId={drawerId}
-            onClose={() => setDesc(['', '', '', '', '', '', ''])}
+            // 뒤로 가면 수정 전 값으로 되돌린다 (이전에는 7칸을 모두 비워, 다시 진행해 저장하면 멤버·셋리가 지워졌다: ISSUES F1)
+            onClose={() => setDesc([...orgDesc])}
             focusInputRef={focusInputRef}
         >
             <Title>누가 바뀌었나요 🎸</Title>

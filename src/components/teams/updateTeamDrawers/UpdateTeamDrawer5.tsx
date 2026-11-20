@@ -24,7 +24,7 @@ interface UpdateTeamDrawer5Props {
 }
 
 const UpdateTeamDrawer5 = ({ drawerId, handleUpdateTeam }: UpdateTeamDrawer5Props) => {
-    const { id, type, name, desc, setDesc } = useTeamContext();
+    const { id, type, name, desc, setDesc, orgDesc } = useTeamContext();
     const focusInputRef = useRef<TextAreaRef>(null);
 
     const text = useMemo(() => desc[6] || '', [desc]);
@@ -37,9 +37,10 @@ const UpdateTeamDrawer5 = ({ drawerId, handleUpdateTeam }: UpdateTeamDrawer5Prop
         [setDesc],
     );
 
+    // 뒤로 가면 셋리스트만 수정 전 값으로 되돌린다 (이전에는 빈 값이 되어 그대로 저장될 수 있었다: ISSUES F1)
     const onClose = useCallback(() => {
-        setDesc((prev) => [...prev.slice(0, 6), '']);
-    }, [setDesc]);
+        setDesc((prev) => [...prev.slice(0, 6), orgDesc[6] ?? '']);
+    }, [setDesc, orgDesc]);
 
     const isOverLimit = text.length > maxInput;
 

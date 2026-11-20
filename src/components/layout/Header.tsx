@@ -1,4 +1,3 @@
-import React from 'react';
 import styled from 'styled-components';
 import { Layout, Button } from 'antd';
 import { BellOutlined, BookOutlined } from '@ant-design/icons';
@@ -29,7 +28,12 @@ const Header = () => {
     );
 };
 
-const StyledHeader = styled(AntHeader)`
+interface StyledHeaderProps {
+    /** 현재 스타일에서 쓰이지 않음 (DOM으로 전달되는 기존 경고 원인, 3단계 정리 대상) */
+    scrollPosition: number;
+}
+
+const StyledHeader = styled(AntHeader)<StyledHeaderProps>`
     position: sticky !important;
     width: 100%;
     top: 0;

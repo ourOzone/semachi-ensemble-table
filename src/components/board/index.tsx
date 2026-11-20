@@ -4,6 +4,7 @@ import { teamExists } from '@/api/team';
 import { updateEnsemble, deleteEnsemble, ensembleExists } from '@/api/ensemble';
 import { useFetchContext, useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
 import useMessage from '@/hooks/useMessage';
+import { useToday } from '@/hooks/useToday';
 import { days, hours } from '@/constants';
 import { Container } from '@/components/common/Container';
 import EnsembleInfoDrawer from './EnsembleInfoDrawer';
@@ -22,14 +23,11 @@ import 'dayjs/locale/ko';
 
 dayjs.locale('ko');
 
-// 모듈을 불러올 때 한 번만 계산한다 (자정이 지나도 갱신되지 않음: ISSUES F2, 3-3에서 수정 예정)
-// 월요일 0 ~ 일요일 6 기준에서, 오늘의 idx값
-const todayIdx = getTodayIdx(dayjs());
-
-// 이번주 날짜 7개 (시간은 현재 시간)
-const week = getWeek(dayjs());
-
 const Board = () => {
+    // 자정이 지나면 다시 계산된다 (이전에는 모듈을 불러올 때 한 번만 계산: ISSUES F2)
+    const today = useToday();
+    const todayIdx = getTodayIdx(today); // 월요일 0 ~ 일요일 6 기준에서, 오늘의 idx값
+    const week = getWeek(today); // 이번주 날짜 7개 (월~일)
     const { teams, ensembles, fetchData } = useFetchContext();
     const { setTeamStates } = useTeamContext();
     const { setEnsembleStates, setNextDate } = useEnsembleContext();

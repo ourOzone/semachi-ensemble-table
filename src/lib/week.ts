@@ -9,9 +9,10 @@ export function getTodayIdx(now: Dayjs): DayIndex {
 }
 
 /**
- * 합주표에 표시할 7일 (월~일, 시각은 now 그대로).
- * dayjs의 day(1)은 일요일 시작 주 기준이라, 일요일에는 다음 주 월요일부터가 된다 (ISSUES F2, 3-3에서 수정 예정)
+ * 합주표에 표시할 7일: 오늘이 속한 주의 월~일 (일요일은 마지막 날). 시각은 now 그대로.
+ * 이전에는 dayjs의 day(1)(일요일 시작 주 기준)을 써서 일요일에 다음 주가 표시됐다 (ISSUES F2)
  */
 export function getWeek(now: Dayjs): Dayjs[] {
-    return Array.from({ length: 7 }, (_, i) => now.day(1).add(i, 'day'));
+    const monday = now.subtract(getTodayIdx(now), 'day');
+    return Array.from({ length: 7 }, (_, i) => monday.add(i, 'day'));
 }

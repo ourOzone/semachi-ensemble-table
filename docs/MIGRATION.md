@@ -8,7 +8,7 @@
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/TS_MIGRATION_PLAN.md`) |
-| 3. 내부 로직 개선 | ⏳ 시작 전 |
+| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0 ✅) |
 
 ## 작업 로그
 
@@ -325,6 +325,24 @@
 - `@vitest/coverage-v8` 추가, `test:coverage` 스크립트
 - `noUncheckedIndexedAccess` 재검토(2-0에서 2단계 후로 미룸): 켜면 에러 21개 (teams 9, context 6, board 6). 대부분 배열 인덱스 접근(`idx2hour[...]`, `blocks[day][hour]`, `desc[idx]` 등)이라, 3단계에서 해당 로직을 정리하면서 켜는 것을 권장
 
+### 2026-11-20 — 3단계 계획 수립
+
+- `docs/LOGIC_IMPROVEMENT_PLAN.md` 작성. View 개편 때 Drawer가 단일 Drawer로 바뀌는 것을 전제로, 개편 후에도 남는 층(api·queries·lib·notify·stores)에 집중
+- 사전 결정 8개 모두 추천안으로 확정
+- team·ensemble Context는 Zustand로 옮기지 않고 View 개편 때 폼 로컬 상태로 흡수 → `docs/MODERNIZATION.md`에 "View 개편 체크리스트" 추가
+- `docs/ISSUES.md`: B1·B2 전달 완료, B4 추가, 항목별 처리 단계 연결
+- `docs/BACKEND_SUGGESTIONS.md`: 백엔드 개발자 전달용 개선 제안
+
+### 2026-11-20 — 3-0: 기반 준비
+
+- `@tanstack/react-query` 5.108, `zustand` 5.1 설치
+- `src/lib/queryClient.ts`: `createQueryClient()` (조회 재시도 1회, 탭 복귀 시 다시 불러오기는 기본값 유지). `src/index.tsx`에 `QueryClientProvider` 연결
+  - 아직 query를 쓰는 곳이 없어 동작 변화 없음. 조회 실패 알림은 3-6에서 연결
+- `src/test/render.tsx`: `renderWithTheme`·`renderApp`이 렌더링마다 새 QueryClient(재시도 끔)를 제공하고 반환값에 `queryClient` 포함
+- `.claude/settings.json`: 허용 명령을 npm → pnpm 기준으로 (`typecheck`, `build`, `test:run`, 읽기 전용 검사인 `lint`·`format:check` 추가) (E3)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 54/54 (2회) / `pnpm build` ✅ (JS 961kB, +25kB는 react-query) / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -369,3 +387,4 @@
 ### 다음 순서
 1. ~~2단계 TS 전환~~ ✅ 완료
 2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)
+3. 3단계: ~~사전 결정 확정, 3-0~~ ✅ → 3-1부터 진행

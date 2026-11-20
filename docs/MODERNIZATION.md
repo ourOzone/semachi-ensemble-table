@@ -74,6 +74,7 @@ CRA에는 ESLint가 내장돼 있었는데, Vite로 옮기면서 **린트가 완
 - 매번 `xxxExists()`로 확인 요청을 한 번 더 보낸 다음 실제 요청을 보낸다.
 
 적용 방향: 리소스별 query로 분리하고, mutation 후 해당 데이터만 invalidate한다. 삭제된 리소스(404)는 사전 확인 요청 대신 mutation 에러로 처리한다.
+구체적인 query·mutation 설계는 `docs/LOGIC_IMPROVEMENT_PLAN.md`의 "목표 아키텍처".
 
 ### 6. 클라이언트 상태: Zustand 📌 적용 예정 (Context 4개 대체)
 
@@ -81,6 +82,10 @@ CRA에는 ESLint가 내장돼 있었는데, Vite로 옮기면서 **린트가 완
 - `orgXxx` 상태 복제 패턴(수정 취소 시 복원용)은 store 안에서 "draft와 원본"으로 표현한다.
 - selector로 필요한 값만 구독해 리렌더링 문제를 구조적으로 해결한다.
 - 서버 데이터(teams, ensembles, notes, notices)는 5번(TanStack Query)으로 가고, Zustand에는 UI·폼 상태만 남긴다.
+
+**범위 재검토 (2026-11-20):** View 개편 때 Drawer가 "단계별 여러 Drawer"에서 "Drawer 하나에서 모두 입력"으로 바뀐다.
+team·ensemble Context는 단계 사이에 입력값을 넘기려고 존재하므로, 개편 후에는 폼 로컬 상태(react-hook-form + Zod)로 흡수된다.
+그래서 3단계에서는 **Drawer 상태만 Zustand로** 옮기고, team·ensemble은 View 개편 때 정리하는 안을 추천한다 (3단계 계획 사전 결정 1번).
 
 ### 7. API 경계 검증: Zod 🔄 일부 적용 (스키마·타입 ✅ 2-0, 응답 parse 📌 3단계)
 
@@ -94,6 +99,22 @@ Zod 스키마로 응답을 parse하면서 `_id → id` 같은 변환도 같이 �
 ---
 
 ## 🟢 적용 예정: View 개편
+
+### View 개편 체크리스트 (3단계에서 넘긴 일)
+
+> 3단계는 "View 개편 후에도 남는 층"만 정리하고, Drawer·폼에 묶인 정리는 여기로 넘겼다.
+> 근거: `docs/LOGIC_IMPROVEMENT_PLAN.md` 사전 결정 1·5번, `docs/ISSUES.md`의 View 항목.
+
+- [ ] **Drawer 단일화:** API 요청 하나에 Drawer 하나. 그 안에서 모든 값을 입력하고, 완료 화면 Drawer("락앤롤!" 등)는 삭제
+- [ ] **`context/team`·`context/ensemble` 제거:** 단계 사이 입력값 전달용이다. 폼 로컬 상태(shadcn/ui Form = react-hook-form + Zod)로 옮긴 뒤 삭제한다. Zustand로 옮기지 않는다
+  - 함께 사라지는 것: 입력 한 글자마다 다시 렌더링(P3), 수정 취소용 `orgXxx` 복제(P5, 폼 초기값으로 대체), `setTeamStates()`·`setEnsembleStates()` 초기화 호출
+- [ ] **`stores/drawer` 축소:** 3-9에서 Context → Zustand로 옮긴 Drawer 스택을 단일 Drawer 구조에 맞게 줄이고, 호환용 `useDrawerContext` 별칭을 삭제한다
+- [ ] **PIN 흐름:** 지금은 PIN 단계 Drawer가 존재 확인과 `check-xxx-pin`을 따로 호출한다(P2 잔여, F6). 백엔드 B1 대응(변경 API에서 PIN 검증)에 맞춰 폼 submit 하나로 합친다
+- [ ] **알림:** `lib/notify`의 내부만 Sonner로 교체한다 (호출부는 3-6에서 이미 정리됨)
+- [ ] **폼은 3단계의 mutation 훅을 호출한다** (`useUpdateTeam().mutateAsync(...)` 등). 성공·실패 알림과 캐시 갱신은 훅이 처리한다
+- [ ] **Drawer 쪽 잔여 이슈:** F9(Drawer의 `exhaustive-deps`), F10, F11, V1~V5, E4
+- [ ] **테스트:** Drawer 흐름 테스트를 새 UI 기준으로 다시 작성한다. `lib/`·`queries/` 테스트는 유지한다
+- [ ] **React Compiler 도입 판단** (10번)
 
 ### 8. 스타일링: Tailwind CSS v4 📌 적용 예정 (styled-components 대체)
 
@@ -153,8 +174,8 @@ React Compiler는 별도로 검토한다:
 ✅ React 19 업그레이드 (+ antd 패치)
 ✅ 2단계 TS 전환 (+ Zod 스키마·타입, 응답 parse는 3단계로)
 ✅ 로직 개선 전 characterization test 작성 (src/context/fetch.test.tsx)
-  → 3단계 로직 개선 (+ TanStack Query, Zustand, Zod parse)
-  → View 개편 (Tailwind v4 + shadcn/ui, antd·styled-components 제거)
+  → 3단계 로직 개선 (+ TanStack Query, Zustand, Zod parse) — 계획: docs/LOGIC_IMPROVEMENT_PLAN.md
+  → View 개편 (Tailwind v4 + shadcn/ui, antd·styled-components 제거, Drawer 단일화)
   → (검토) React Compiler
 ```
 

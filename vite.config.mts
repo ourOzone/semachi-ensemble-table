@@ -28,6 +28,12 @@ export default defineConfig(({ mode }) => {
             // 날짜 계산 테스트가 실행 환경(CI 등)의 시간대에 따라 달라지지 않도록 서비스 시간대로 고정
             env: { TZ: 'Asia/Seoul' },
             restoreMocks: true,
+            coverage: {
+                provider: 'v8',
+                include: ['src/**/*.{ts,tsx}'],
+                exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/**/*.d.ts'],
+                reporter: ['text-summary', 'text'],
+            },
             // antd Drawer를 여러 단계 거치는 흐름 테스트는 병렬 실행 시 기본값(5초)을 넘길 수 있다
             testTimeout: 15_000,
         },

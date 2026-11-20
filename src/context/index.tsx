@@ -1,5 +1,4 @@
 import { useContext, type Context, type ReactNode } from 'react';
-import { FetchContextProvider, FetchContext } from './fetch';
 import { TeamContextProvider, TeamContext } from './team';
 import { EnsembleContextProvider, EnsembleContext } from './ensemble';
 import { DrawerContextProvider, DrawerContext } from './drawer';
@@ -13,13 +12,11 @@ interface ContextProviderProps {
 
 export function ContextProvider({ children }: ContextProviderProps) {
     return (
-        <FetchContextProvider>
-            <TeamContextProvider>
-                <EnsembleContextProvider>
-                    <DrawerContextProvider>{children}</DrawerContextProvider>
-                </EnsembleContextProvider>
-            </TeamContextProvider>
-        </FetchContextProvider>
+        <TeamContextProvider>
+            <EnsembleContextProvider>
+                <DrawerContextProvider>{children}</DrawerContextProvider>
+            </EnsembleContextProvider>
+        </TeamContextProvider>
     );
 }
 
@@ -30,10 +27,6 @@ function useRequiredContext<T>(context: Context<T | null>, name: string): T {
         throw new Error(`${name}는 ContextProvider 안에서만 사용할 수 있어요.`);
     }
     return value;
-}
-
-export function useFetchContext() {
-    return useRequiredContext(FetchContext, 'useFetchContext');
 }
 
 export function useTeamContext() {

@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import styled from 'styled-components';
-import { useFetchContext, useDrawerContext } from '@/context';
+import { useDrawerContext } from '@/context';
+import { useNotices } from '@/queries/notes';
+import { useRefetchAll } from '@/queries/refetchAll';
 import useMessage from '@/hooks/useMessage';
 import { addNotice, deleteNotice, noticeExists } from '@/api/notice';
 import { Button } from 'antd';
@@ -10,7 +12,9 @@ import AddNoticeDrawer from './AddNoticeDrawer';
 import DeleteNoticeDrawer from './DeleteNoticeDrawer';
 
 const Notice = () => {
-    const { notices, fetchData } = useFetchContext();
+    const notices = useNotices();
+    // fetchData: 화면 전체 다시 불러오기 (임시, 3-7·3-8에서 mutation으로 대체)
+    const fetchData = useRefetchAll();
     const [message, contextHolder] = useMessage();
     const [id, setId] = useState('');
     const [text, setText] = useState('');

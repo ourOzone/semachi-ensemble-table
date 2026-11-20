@@ -8,7 +8,7 @@
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
-| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-4 ✅) |
+| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-5 ✅) |
 
 ## 작업 로그
 
@@ -410,6 +410,27 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 번들: JS 961kB → 1,047kB (gzip 301kB → 325kB). Zod가 이제 실제로 번들에 포함됨. `zod/mini`로 줄일 수 있지만, View 개편 때 폼 검증(react-hook-form + Zod)에서 일반 Zod를 쓰게 되므로 바꾸지 않음
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 91/91 (2회) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
+### 2026-11-20 — 3-5: 조회를 TanStack Query로 (P1)
+
+- `src/queries/` 추가
+  - `teams.ts`: `teamsQueryKey`·`teamsQueryOptions`, `useTeams()` (`select: toTeams`)
+  - `ensembles.ts`: `ensemblesQueryKey`·`ensemblesQueryOptions`, `useBoard()` (팀·합주를 모두 불러온 뒤 `toBoard`, 팀 색상이 팀 순서로 정해지므로)
+  - `notes.ts`: 한마디·공지의 key·options, `useNotes()`·`useNotices()`
+  - `refetchAll.ts`: `useRefetchAll()` — 이전 `fetchData`와 같은 역할(4개 전체 무효화). **임시**: 3-7·3-8에서 mutation별 무효화로 바뀌면 삭제
+  - 캐시에는 서버 응답 원본을 두고, 화면용 변환은 `select`(lib 함수)에서 한다
+- 컨테이너 4개(board·teams·note·notice): `useFetchContext()` → 조회 훅. 안의 `fetchData()` 호출은 이름을 유지한 채 `useRefetchAll()`로 바꿔 변경 범위를 최소화
+- `App`: 최초 `fetchData()` effect 삭제 (각 조회 훅이 마운트될 때 불러옴). effect 의존성 린트 경고 2건 해소
+- `context/fetch.tsx`·`fetch.test.tsx` 삭제. characterization 기대값은 3-2에서 `lib/*.test.ts`로 옮겨져 있다
+- 동작 차이 (사전 결정 3)
+  - 4개 목록을 **병렬**로 요청한다 (이전: 하나씩 순서대로). 하나가 실패해도 나머지는 표시된다 (이전: 실패한 지점 이후는 요청하지 않음)
+  - 탭으로 돌아오면 다시 불러온다. 조회 실패 시 1회 재시도
+  - 불러오기 전에는 빈 배열 (이전 Context 초기값과 같음). 조회 실패 알림은 3-6에서 연결
+- 테스트 6개 추가 (`src/queries/queries.test.tsx`): 화면용 변환, 병렬 요청(4개가 모두 요청될 때까지 응답을 막아, 순차 요청이면 시간 초과로 실패), 합주표가 팀 목록을 기다림, 전체 다시 불러오기, 탭 복귀 시 다시 불러오기, 재시도 1회
+  - 변형 검사 7/7 검출 (순차 요청, 팀 대기 제거, 다시 불러오기 누락, 재시도 횟수, 포커스 갱신 끔, 팀 변환 누락, 공지 변환 변경)
+  - 진행 중 발견: 포커스 상태를 테스트 정리 전에 되돌리면 이전 테스트의 다시 불러오기가 다음 테스트의 요청 수에 섞였다 → 언마운트 후 되돌리도록 수정
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 76/76 (2회, fetch.test 21개 삭제·조회 훅 6개 추가) / `pnpm build` ✅ (JS 1,055kB) / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 60 (App effect 경고 2건 감소)
 
 ## 남은 일
 

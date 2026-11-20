@@ -129,7 +129,7 @@
 - `isNotFound(err)` 헬퍼를 추가한다 (axios 404 판별, mutation에서 사용).
 - P8: `ensemble?id=` → `/ensemble?id=`. 최종 요청 URL이 같은지 테스트로 확인한다.
 
-### 3-5. 조회를 TanStack Query로 (P1)
+### 3-5. 조회를 TanStack Query로 (P1) ✅
 - `queries/{teams,ensembles,notes,notices}.ts`에 key와 조회 훅, `queries/board.ts`에 `useBoard()`
 - 컴포넌트의 `useFetchContext()`를 훅으로 바꾼다. `fetchData()` 호출은 임시로 `invalidateQueries`로 대체한다 (3-7·3-8에서 mutation으로 바뀌며 사라짐).
 - `App`의 최초 fetch effect를 삭제한다 (F9 중 2건 해소).

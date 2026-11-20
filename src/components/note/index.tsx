@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import styled from 'styled-components';
-import { useFetchContext, useDrawerContext } from '@/context';
+import { useDrawerContext } from '@/context';
+import { useNotes } from '@/queries/notes';
+import { useRefetchAll } from '@/queries/refetchAll';
 import useMessage from '@/hooks/useMessage';
 import { addNote, deleteNote, noteExists, checkNotePin } from '@/api/note';
 import { Button } from 'antd';
@@ -10,7 +12,9 @@ import AddNoteDrawer from './AddNoteDrawer';
 import DeleteNoteDrawer from './DeleteNoteDrawer';
 
 const Note = () => {
-    const { notes, fetchData } = useFetchContext();
+    const notes = useNotes();
+    // fetchData: 화면 전체 다시 불러오기 (임시, 3-7·3-8에서 mutation으로 대체)
+    const fetchData = useRefetchAll();
     const [message, contextHolder] = useMessage();
     const [id, setId] = useState('');
     const [text, setText] = useState('');

@@ -1,6 +1,5 @@
-import { useEffect } from 'react';
 import styled from 'styled-components';
-import { useFetchContext, useDrawerContext } from '@/context';
+import { useDrawerContext } from '@/context';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Notice from '@/components/notice';
@@ -11,12 +10,8 @@ import { media } from '@/styles/media';
 import type { DrawerId } from '@/types';
 
 function App() {
-    const { fetchData } = useFetchContext();
+    // 데이터는 각 컴포넌트의 query 훅(src/queries)이 마운트될 때 불러온다 (이전에는 여기서 fetchData()를 한 번 호출)
     const { openedDrawers } = useDrawerContext();
-
-    useEffect(() => {
-        fetchData();
-    }, []);
 
     return (
         <>

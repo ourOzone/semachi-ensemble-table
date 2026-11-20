@@ -2,7 +2,10 @@ import { useCallback } from 'react';
 import styled from 'styled-components';
 import { teamExists } from '@/api/team';
 import { updateEnsemble, deleteEnsemble, ensembleExists } from '@/api/ensemble';
-import { useFetchContext, useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
+import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
+import { useBoard } from '@/queries/ensembles';
+import { useRefetchAll } from '@/queries/refetchAll';
+import { useTeams } from '@/queries/teams';
 import useMessage from '@/hooks/useMessage';
 import { useToday } from '@/hooks/useToday';
 import { days, hours } from '@/constants';
@@ -28,7 +31,10 @@ const Board = () => {
     const today = useToday();
     const todayIdx = getTodayIdx(today); // 월요일 0 ~ 일요일 6 기준에서, 오늘의 idx값
     const week = getWeek(today); // 이번주 날짜 7개 (월~일)
-    const { teams, ensembles, fetchData } = useFetchContext();
+    const teams = useTeams();
+    const ensembles = useBoard();
+    // fetchData: 화면 전체 다시 불러오기 (임시, 3-7·3-8에서 mutation으로 대체)
+    const fetchData = useRefetchAll();
     const { setTeamStates } = useTeamContext();
     const { setEnsembleStates, setNextDate } = useEnsembleContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();

@@ -7,7 +7,9 @@ import type { Team, TimeSlot } from '@/types';
 import { addTeam, updateTeam, deleteTeam, teamExists } from '@/api/team';
 import { addEnsemble } from '@/api/ensemble';
 import useMessage from '@/hooks/useMessage';
-import { useFetchContext, useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
+import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
+import { useRefetchAll } from '@/queries/refetchAll';
+import { useTeams } from '@/queries/teams';
 import { eventIds } from '@/constants';
 import { toEnsembleRequest } from '@/lib/ensemble';
 import { Container } from '@/components/common/Container';
@@ -34,7 +36,9 @@ const eventNames1 = ['보소', '기소', '베소', '드소', '키소'];
 const eventNames2 = ['메인 회의', '재학생 회의', '회의', '오디션', '합주 불가', '동방 사용 불가'];
 
 const Teams = () => {
-    const { teams, fetchData } = useFetchContext();
+    const teams = useTeams();
+    // fetchData: 화면 전체 다시 불러오기 (임시, 3-7·3-8에서 mutation으로 대체)
+    const fetchData = useRefetchAll();
     const { setTeamStates } = useTeamContext();
     const { setEnsembleStates } = useEnsembleContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();

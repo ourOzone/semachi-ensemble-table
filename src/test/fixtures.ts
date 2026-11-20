@@ -3,7 +3,7 @@ import { url } from '@/constants';
 import type { EnsembleResponse, NoteResponse, NoticeResponse, TeamResponse } from '@/types';
 import { server } from './server';
 
-// 테스트 공용 서버 응답 데이터. App 첫 로딩(fetchData)이 요청하는 4개 목록이다.
+// 테스트 공용 서버 응답 데이터. App 첫 로딩(src/queries의 조회 훅)이 요청하는 4개 목록이다.
 
 export const teams: TeamResponse[] = [
     {

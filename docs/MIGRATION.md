@@ -306,6 +306,25 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ / `pnpm format:check` ✅
 
+### 2026-11-20 — 2단계 마무리 전체 테스트
+
+| 항목 | 결과 |
+|---|---|
+| 깨끗한 설치 (`pnpm install --frozen-lockfile`) | ✅ |
+| `src`의 JS 파일 | 0개 (TS 84개) |
+| `pnpm typecheck` | ✅ |
+| `pnpm lint` | 에러 5·경고 62 (2단계 시작 전과 동일, 모두 기존 코드) |
+| `pnpm format:check` | ✅ |
+| `pnpm test:run` (3회 반복) | ✅ 11개 파일, 54개 테스트 |
+| 커버리지 (`pnpm test:coverage`, 신규) | 구문 87% · 분기 77% · 함수 88% · 줄 87%. 미실행 부분은 대부분 네트워크 오류·"이미 삭제됨" catch 경로, Drawer 닫기 초기화, Enter 키 제출 |
+| `pnpm build` | ✅ JS 936kB(gzip 294kB). 2단계 전 857kB 대비 +79kB는 React 19(react-dom 증가)가 주원인으로 판단. Zod는 타입만 import해 번들에 포함 안 됨 |
+| 개발 서버 | 진입점·App·context·컴포넌트 모듈 200, antd 패치 로드, TS 변환 확인 |
+| 프로덕션 미리보기 (`build/`) | HTML·JS 200, 번들에 env의 API 주소, 폰트 woff2 |
+| 커밋 재현성 | 깨끗한 worktree에서 HEAD 타입 체크·테스트 54개 통과 |
+
+- `@vitest/coverage-v8` 추가, `test:coverage` 스크립트
+- `noUncheckedIndexedAccess` 재검토(2-0에서 2단계 후로 미룸): 켜면 에러 21개 (teams 9, context 6, board 6). 대부분 배열 인덱스 접근(`idx2hour[...]`, `blocks[day][hour]`, `desc[idx]` 등)이라, 3단계에서 해당 로직을 정리하면서 켜는 것을 권장
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -335,7 +354,7 @@
 | 항목 | 대체 대상 | 시점 |
 |---|---|---|
 | ~~React 19 (+ `@ant-design/v5-patch-for-react-19`)~~ | ~~React 18~~ | ✅ 완료 (2026-11-19) |
-| Zod | 수동 응답 정제 | 2단계 (API 응답 타입 정의 시) |
+| Zod | 수동 응답 정제 | 스키마·타입 ✅ 2-0 / 응답 parse는 3단계 (TanStack Query와 함께) |
 | TanStack Query | `context/fetch` (`fetchData`, `xxxExists` 사전 확인) | 3단계 |
 | Zustand | `context/team`, `ensemble`, `drawer` | 3단계 |
 | Tailwind CSS v4 | styled-components | View 개편 |

@@ -82,11 +82,14 @@ CRA에는 ESLint가 내장돼 있었는데, Vite로 옮기면서 **린트가 완
 - selector로 필요한 값만 구독해 리렌더링 문제를 구조적으로 해결한다.
 - 서버 데이터(teams, ensembles, notes, notices)는 5번(TanStack Query)으로 가고, Zustand에는 UI·폼 상태만 남긴다.
 
-### 7. API 경계 검증: Zod 📌 적용 예정
+### 7. API 경계 검증: Zod 🔄 일부 적용 (스키마·타입 ✅ 2-0, 응답 parse 📌 3단계)
 
 2단계에서 API 응답 타입을 `interface`로만 적으면 런타임에는 아무것도 보장되지 않는다.
 Zod 스키마로 응답을 parse하면서 `_id → id` 같은 변환도 같이 처리해, 타입과 데이터 정제를 한 곳에 모은다.
 타입은 `z.infer`로 스키마에서 뽑아 `src/types/`의 도메인 타입과 일치시킨다.
+
+- ✅ 2-0: `src/types/response.ts`에 서버 응답 스키마 4개와 `z.infer` 타입 정의, 2-2에서 API 응답 타입으로 연결
+- 📌 3단계: 응답을 실제로 `parse`하는 것은 스키마와 다른 응답에 에러가 나는 동작 변경이라 TanStack Query 도입 때 함께 적용 (2-0 사전 결정 1번)
 
 ---
 
@@ -152,9 +155,9 @@ Drawer 기반 UI 자체를 View 개편에서 걷어낼 예정이므로 다루지
 ✅ 개발 도구 정비 (Oxlint + Prettier, @/ alias, pnpm, Vitest)
 ✅ 1단계 잔여물 정리
 ✅ React 19 업그레이드 (+ antd 패치)
-  → 2단계 TS 전환 (+ Zod 스키마)
-  → 로직 개선 전 characterization test 작성
-  → 3단계 로직 개선 (+ TanStack Query, Zustand)
+✅ 2단계 TS 전환 (+ Zod 스키마·타입, 응답 parse는 3단계로)
+✅ 로직 개선 전 characterization test 작성 (src/context/fetch.test.tsx)
+  → 3단계 로직 개선 (+ TanStack Query, Zustand, Zod parse)
   → View 개편 (Tailwind v4 + shadcn/ui, antd·styled-components 제거)
   → (검토) React Compiler
 ```

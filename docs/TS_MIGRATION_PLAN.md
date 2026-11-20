@@ -1,14 +1,19 @@
-# 2단계: JS → TS 전환 계획
+# 2단계: JS → TS 전환 계획 ✅ 완료 (2026-11-20)
 
 > 작업 규칙은 `CLAUDE.md`(TS 전환 규칙, 로직 vs 뷰), 진행 기록은 `docs/MIGRATION.md`를 따른다.
-> 이 문서는 **어떤 순서로, 어떤 단위로 작업을 지시할지**를 정리한 실행 계획이다.
+> 이 문서는 **어떤 순서로, 어떤 단위로 작업을 지시할지**를 정리한 실행 계획이다. 2단계가 끝나 지금은 기록용이다.
+> 진행 중 발견한 문제는 `docs/ISSUES.md`에 모았다.
 
-## 현황 (2026-11-19 기준)
+## 결과 (2026-11-20 완료)
 
-- 남은 JS 파일: **57개, 약 5,300줄** (`.js` 9개, `.jsx` 48개)
-- 이미 TS: `index.tsx`, `vite-env.d.ts`, `styles/theme.ts`, `styles/styled.d.ts`, 테스트 파일들
-- 환경: React 19 + `@types/react` 19, TypeScript 7, `strict: true`, `allowJs: true`(전환 중 JS·TS 공존)
-- 안전망: `pnpm test:run` (api 클라이언트, OkButton, **App 전체 렌더링 스모크 테스트**)
+| 항목 | 시작 (2026-11-19) | 완료 (2026-11-20) |
+|---|---|---|
+| `src`의 JS 파일 | 57개, 약 5,300줄 (`.js` 9 · `.jsx` 48) | **0개** (TS 84개) |
+| tsconfig | `strict: true`, `allowJs: true` | `strict: true`, `allowJs` 제거 |
+| `any` | – | 0건, Oxlint `typescript/no-explicit-any` error로 강제 |
+| 테스트 | 3개 파일, 8개 (App 스모크 포함) | 11개 파일, 54개 (기능별 흐름 + `fetchData` characterization) |
+| 린트 | 에러 5 · 경고 62 | 에러 5 · 경고 62 (변동 없음, 모두 기존 코드) |
+| 커밋 | – | 단계별 16개 (2-0 ~ 2-15) |
 
 ---
 
@@ -50,7 +55,7 @@
 |---|---|---|---|---|
 | 1 | Zod 적용 범위 | (a) 스키마 정의 + `z.infer`로 타입만 / (b) API 응답을 `parse`까지 | **(a)** | (b)는 스키마와 다른 응답이 오면 에러가 나는 **동작 변경**이다. `parse`는 3단계 TanStack Query 도입 때 함께 붙인다. |
 | 2 | styled-components 커스텀 props | (a) 이름 그대로 두고 타입만 / (b) `$isToday` 같은 transient props로 변경 | **(a)** | (b)는 DOM으로 새는 경고를 없애지만, styled-components 자체를 View 개편 때 걷어낼 예정이라 이중 작업이다. |
-| 3 | tsconfig 추가 엄격 옵션 (`noUncheckedIndexedAccess` 등) | 켜기 / 끄기 | **끄기** | `idx2hour[idx]`, `blocks[day][hour]` 같은 인덱스 접근이 많아, 켜면 뷰 코드에 `!`·가드가 대량으로 생긴다. 2단계 완료 후 다시 검토한다. |
+| 3 | tsconfig 추가 엄격 옵션 (`noUncheckedIndexedAccess` 등) | 켜기 / 끄기 | **끄기** | `idx2hour[idx]`, `blocks[day][hour]` 같은 인덱스 접근이 많아, 켜면 뷰 코드에 `!`·가드가 대량으로 생긴다. 2단계 완료 후 다시 검토한다. → **재검토 결과(2026-11-20): 켜면 에러 21개. 3단계에서 로직을 정리하며 켜기를 권장** (`ISSUES.md` P7) |
 | 4 | Drawer ID | (a) `string` / (b) 30개 ID의 union 타입 `DrawerId` | **(b)** | 오타를 컴파일 단계에서 잡는다. 순수 타입이라 동작 변화가 없다. |
 
 2-0에서 만드는 것:
@@ -82,12 +87,12 @@ DrawerId      = 'teamInfo' | 'addTeam1' | ... // 30개
 
 ### 2-1. constants, styles
 - `constants`: `days`, `hours`, `idx2hour`는 `as const`. `eventIds`는 `includes(string)` 비교 때문에 `readonly string[]`로 둔다. (2-1에서 확정)
-- `styles/media.js`: tagged template과 `(props) => ...` 함수를 모두 받는 헬퍼라 타입이 가장 까다롭다. styled-components의 `css`/`Interpolation` 타입으로 표현하고, 호출하는 쪽 코드는 바꾸지 않는다.
+- `styles/media`: tagged template과 `(props) => ...` 함수를 모두 받는 헬퍼라 타입이 가장 까다롭다. → 실제로는 `<P>(styles: TemplateStringsArray | string | (props: P) => string) => (props: P) => string` 제네릭 시그니처로 구현. styled props가 함수 인자로 추론되고, tagged template에 보간을 넣으면 타입 에러 (2-1에서 확정)
 - `GlobalStyle`: woff2 import는 `vite/client` 타입이 처리한다.
 
 ### 2-2. api
 - `get<T>()` 같은 제네릭으로 응답 타입을 받는다. 반환 타입은 `src/types/`의 `XxxResponse`를 쓴다.
-- `ensemble.js`의 `ensemble?id=`처럼 앞에 `/`가 빠진 경로가 있다. baseURL과 합쳐져 지금도 동작하므로 **그대로 둔다** (3단계 정리 대상으로 기록).
+- `ensemble.ts`의 `ensemble?id=`처럼 앞에 `/`가 빠진 경로가 있다. baseURL과 합쳐져 지금도 동작하므로 **그대로 둔다** (3단계 정리 대상으로 기록).
 - `xxxExists`는 응답 본문이 아니라 404 여부로 판단한다. 타입은 `Promise<boolean>`으로 둔다.
 
 ### 2-3. hooks
@@ -110,12 +115,12 @@ DrawerId      = 'teamInfo' | 'addTeam1' | ... // 30개
 - 파일마다 반복되는 `Title`, `Header` 같은 styled 컴포넌트는 **중복이어도 그대로 둔다** (View 개편 대상).
 - `TeamInfoDrawer`의 key 없는 Fragment 등 린트 지적 사항은 고치지 않는다 (3단계, 승인 후).
 
-### 2-15. App + 마무리
-- `App.jsx` → `App.tsx`
-- `tsconfig.json`: `allowJs`, `checkJs` 제거
-- `src/` 아래 `.js`/`.jsx`가 0개인지 확인
-- Oxlint에 `typescript/no-explicit-any`를 에러로 추가
-- `docs/MIGRATION.md`의 2단계를 ✅로 표시
+### 2-15. App + 마무리 ✅
+- ✅ `App.jsx` → `App.tsx`
+- ✅ `tsconfig.json`: `allowJs`, `checkJs` 제거
+- ✅ `src/` 아래 `.js`/`.jsx`가 0개인지 확인
+- ✅ Oxlint에 `typescript/no-explicit-any`를 에러로 추가
+- ✅ `docs/MIGRATION.md`의 2단계를 ✅로 표시
 
 ---
 
@@ -141,9 +146,22 @@ DrawerId      = 'teamInfo' | 'addTeam1' | ... // 30개
 
 이 경우 해당 부분은 손대지 않고, 무엇이 문제인지와 선택지를 보고한 뒤 지시를 기다린다.
 
+### 진행하며 확정된 처리 방식
+
+- **코드를 바꾸지 않고 타입으로 기록:** 쓰이지 않는 prop·인자, 이상한 값(`teamColor: -1`)은 그대로 두고 타입 주석에 "3단계 정리 대상"으로 표시
+- **non-null 단언(`!`):** context의 nullable 값을 서버 요청에 넘기는 곳 등. 실행 결과가 같다는 근거를 주석으로 남김
+- **값 변경 허용 범위:** antd 타입이 `null`을 받지 않는 `status={... : null}` → `undefined`처럼, 라이브러리 내부에서 같게 처리됨을 확인한 경우만
+- **흐름 테스트:** 기능 폴더마다 사용자 흐름 테스트를 추가하고, 서버로 보내는 요청 본문까지 검증
+
+### 진행하며 겪은 문제와 대응 (커밋 절차)
+
+- `git mv`로 미리 stage된 이름 변경은 `git add`의 제외 패턴으로 빠지지 않아, 다른 단계 커밋에 섞인 적이 있다 (2-9·2-11). → **커밋 전 `git reset`으로 stage를 비우고 시작**
+- 단계를 묶어 진행할 때 앞 단계 커밋은 JS·TS가 섞인 중간 상태다. → **임시 worktree에 커밋을 꺼내 타입 체크·테스트를 따로 검증**
+- 여러 단계 흐름 테스트가 병렬 실행 시 기본 제한 시간(5초)을 넘김 → `testTimeout` 15초
+
 ---
 
 ## 참고: 범위 밖에서 발견한 문제
 
-- **백엔드가 팀·메모 PIN을 클라이언트에 그대로 보낸다** (`GET /teams`, `GET /notes`). → 백엔드 개발자에게 전달됨 (2026-11-19). 프론트엔드에서는 추가 조치하지 않는다.
-  타입에서는 `pin`을 응답 타입에만 optional로 두고, 앱 내부 타입(`Team`, `Note`)에서는 제외한다.
+- 전체 목록은 `docs/ISSUES.md`로 옮겼다. (백엔드: B1 서버 측 PIN 미검증, B2 인증 없는 전체 팀 삭제, B3 PIN 노출 — B3만 전달됨)
+- 타입에서는 `pin`을 응답 타입에만 optional로 두고, 앱 내부 타입(`Team`, `Note`)에서는 제외한다.

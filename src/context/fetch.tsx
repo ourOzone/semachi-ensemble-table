@@ -1,4 +1,4 @@
-import React, { createContext, useState, useCallback } from 'react';
+import { createContext, useState, useCallback, type ReactNode } from 'react';
 import dayjs from 'dayjs';
 import { getTeams } from '@/api/team';
 import { getEnsembles } from '@/api/ensemble';
@@ -7,20 +7,36 @@ import { getNotices } from '@/api/notice';
 import { eventIds } from '@/constants';
 import theme from '@/styles/theme';
 import { idx2hour } from '@/constants';
+import type { EnsembleBoard, Note, Notice, Team } from '@/types';
 
-const FetchContext = createContext();
+export interface FetchContextValue {
+    /** 소모임·회의(eventIds)를 제외한 팀 목록 */
+    teams: Team[];
+    /** 합주표. 첫 fetch 전에는 빈 배열 */
+    ensembles: EnsembleBoard;
+    notes: Note[];
+    notices: Notice[];
+    /** 화면 전체 데이터를 다시 불러온다 */
+    fetchData: () => Promise<void>;
+}
 
-function FetchContextProvider({ children }) {
-    const [teams, setTeams] = useState([]);
-    const [ensembles, setEnsembles] = useState([]);
-    const [notes, setNotes] = useState([]);
-    const [notices, setNotices] = useState([]);
+const FetchContext = createContext<FetchContextValue | null>(null);
+
+interface FetchContextProviderProps {
+    children: ReactNode;
+}
+
+function FetchContextProvider({ children }: FetchContextProviderProps) {
+    const [teams, setTeams] = useState<Team[]>([]);
+    const [ensembles, setEnsembles] = useState<EnsembleBoard>([]);
+    const [notes, setNotes] = useState<Note[]>([]);
+    const [notices, setNotices] = useState<Notice[]>([]);
 
     // 화면 전체 fetching 하는 함수
     const fetchData = useCallback(async () => {
         // teams fetch
         const teamsRaw = await getTeams();
-        const teamsData = teamsRaw.map(({ _id, type, name, desc }) => ({
+        const teamsData: Team[] = teamsRaw.map(({ _id, type, name, desc }) => ({
             id: _id,
             type,
             name,
@@ -47,7 +63,9 @@ function FetchContextProvider({ children }) {
 
         // ensembles fetch
         const ensemblesRaw = await getEnsembles();
-        const blocks = Array.from({ length: 7 }, () => Array.from({ length: 30 }, () => [])); // 직관적으로 blocks로 표기 (7 x 30 사이즈 2차원 배열)
+        const blocks: EnsembleBoard = Array.from({ length: 7 }, () =>
+            Array.from({ length: 30 }, () => []),
+        ); // 직관적으로 blocks로 표기 (7 x 30 사이즈 2차원 배열)
 
         // day, startTime, endTime에 따라 block 형식으로 정제
         ensemblesRaw.forEach(

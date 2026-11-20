@@ -1,6 +1,11 @@
 import styled from 'styled-components';
 
-export const Container = styled.div`
+interface ContainerProps {
+    /** true면 가로 배치 */
+    row?: boolean;
+}
+
+export const Container = styled.div<ContainerProps>`
     display: flex;
     flex-direction: ${({ row }) => (row ? 'row' : 'column')};
     background-color: ${({ theme }) => theme.container};

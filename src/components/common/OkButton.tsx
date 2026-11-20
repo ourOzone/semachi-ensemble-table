@@ -1,7 +1,12 @@
 import styled from 'styled-components';
-import { Button } from 'antd';
+import { Button, type ButtonProps } from 'antd';
 
-const OkButton = ({ disabled, label = '확인', ...props }) => {
+interface OkButtonProps extends Omit<ButtonProps, 'children'> {
+    /** 버튼 문구. 기본값 '확인' */
+    label?: string;
+}
+
+const OkButton = ({ disabled, label = '확인', ...props }: OkButtonProps) => {
     return (
         <Wrapper>
             <StyledButton type="primary" disabled={disabled} visible={disabled} {...props}>
@@ -11,7 +16,12 @@ const OkButton = ({ disabled, label = '확인', ...props }) => {
     );
 };
 
-const StyledButton = styled(Button)`
+interface StyledButtonProps {
+    /** true면 숨긴다 (disabled 값을 그대로 받음) */
+    visible?: boolean;
+}
+
+const StyledButton = styled(Button)<StyledButtonProps>`
     width: 100%;
     height: 4.5rem;
     border-radius: 1.5rem;

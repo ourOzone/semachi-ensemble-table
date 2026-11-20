@@ -23,7 +23,7 @@
 | ✅ **2-2** | `api` (index, team, ensemble, note, notice) | 5 | 99 | `2-2 진행해줘` |
 | ✅ **2-3** | `hooks` (useMessage, useScrollPosition) | 2 | 126 | `2-3 진행해줘` |
 | ✅ **2-4** | `context` (drawer, team, ensemble, fetch, index) | 5 | 321 | `2-4 진행해줘` |
-| **2-5** | `components/common` | 5 | 185 | `2-5 진행해줘` |
+| ✅ **2-5** | `components/common` | 5 | 185 | `2-5 진행해줘` |
 | **2-6** | `components/layout` | 2 | 100 | `2-6 진행해줘` |
 | **2-7** | `components/notice` | 4 | 511 | `2-7 진행해줘` |
 | **2-8** | `components/note` | 3 | 406 | `2-8 진행해줘` |

@@ -1,9 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode, type RefObject } from 'react';
 import styled from 'styled-components';
-import { Drawer as AntDrawer } from 'antd';
+import { Drawer as AntDrawer, type InputRef } from 'antd';
 import { LeftOutlined } from '@ant-design/icons';
 import { useDrawerContext } from '@/context';
 import { media } from '@/styles/media';
+import type { DrawerId } from '@/types';
+
+/** focus({ cursor })를 지원하는 antd Input·TextArea의 ref */
+export type FocusableInputRef = Pick<InputRef, 'focus'>;
+
+interface DrawerProps {
+    children: ReactNode;
+    drawerId: DrawerId;
+    /** false면 닫기(뒤로가기) 버튼을 숨긴다 */
+    closable?: boolean;
+    /** 닫기 버튼이나 바깥 영역으로 닫힐 때, closeDrawer() 다음에 호출 */
+    onClose?: () => void;
+    /** false면 흰색, true면 하늘색 배경 */
+    background?: boolean;
+    /** 이 Drawer가 맨 위로 열리면 포커스(커서 끝)할 입력창 */
+    focusInputRef?: RefObject<FocusableInputRef | null>;
+}
 
 const Drawer = ({
     children,
@@ -12,7 +29,7 @@ const Drawer = ({
     onClose = undefined,
     background = false,
     focusInputRef = undefined,
-}) => {
+}: DrawerProps) => {
     const { openedDrawers, closeDrawer, closeAllDrawers } = useDrawerContext();
 
     const getWidth = () => (window.innerWidth <= 767 ? '100%' : '767px');
@@ -29,7 +46,7 @@ const Drawer = ({
     }, []);
 
     // props로 focusInputRef를 받은 경우, Drawer 열리면 해당 input에 포커스
-    const handleAfterOpenChange = (open) => {
+    const handleAfterOpenChange = (open: boolean) => {
         if (focusInputRef && open && openedDrawers[openedDrawers.length - 1] === drawerId) {
             setTimeout(() => {
                 focusInputRef.current?.focus({
@@ -68,7 +85,13 @@ const Drawer = ({
     );
 };
 
-const StyledDrawer = styled(AntDrawer)`
+interface StyledDrawerProps {
+    openedDrawers: DrawerId[];
+    drawerId: DrawerId;
+    background: boolean;
+}
+
+const StyledDrawer = styled(AntDrawer)<StyledDrawerProps>`
     & > * {
         background-color: ${({ theme, background }) => (background ? theme.background : theme.white)};
     }

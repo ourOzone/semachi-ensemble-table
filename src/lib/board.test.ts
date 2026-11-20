@@ -1,7 +1,8 @@
 /**
  * lib/board 단위 테스트.
  * context/fetch.test.tsx의 characterization 기대값(현재 동작)을 now 인자 방식으로 옮겼다.
- * 이상해 보이는 현재 동작(현재 시각이 붙는 nextDate, teamColor -1)도 그대로 고정한다. 바꿀 때는 승인 후 기대값을 함께 고친다.
+ * 이상해 보이는 현재 동작(teamColor -1)도 그대로 고정한다. 바꿀 때는 승인 후 기대값을 함께 고친다.
+ * 3-3에서 승인된 수정: 다시 계산한 nextDate는 0시 (F7, 이전에는 현재 시각 10:00이 붙었다)
  *
  * now는 2026-11-20(금) 10:00 (테스트 시간대 Asia/Seoul)
  */
@@ -85,7 +86,10 @@ describe('resolveNextDate', () => {
 
     it('일회성 합주는 서버 값 그대로 둔다 (오늘 날짜여도)', () => {
         expect(next({ repeat: false, nextDate: iso('2026-11-25') })).toBe('2026-11-25 00:00');
-        expect(next({ repeat: false, nextDate: iso('2026-11-20') })).toBe('2026-11-20 00:00');
+        // 오늘 합주가 이미 끝난 시각(09:30)이라, 반복 합주였다면 7일 뒤가 됐을 경우
+        expect(next({ repeat: false, nextDate: iso('2026-11-20'), startTime: 0, endTime: 0 })).toBe(
+            '2026-11-20 00:00',
+        );
     });
 
     it('반복 합주의 nextDate가 내일 이후면 그대로 둔다', () => {
@@ -93,39 +97,39 @@ describe('resolveNextDate', () => {
     });
 
     describe('반복 합주의 nextDate가 오늘 이전이고, 오늘과 같은 요일(금)일 때', () => {
-        it('오늘 합주가 아직 안 끝났으면 오늘(현재 시각)로 바꾼다', () => {
+        it('오늘 합주가 아직 안 끝났으면 오늘(0시)로 바꾼다', () => {
             // endTime 3 → 끝나는 시각 11:00, 지금 10:00
-            expect(next({ nextDate: iso('2026-11-13'), endTime: 3 })).toBe('2026-11-20 10:00');
+            expect(next({ nextDate: iso('2026-11-13'), endTime: 3 })).toBe('2026-11-20 00:00');
         });
 
         it('nextDate가 오늘이거나 오늘의 더 늦은 시각이어도 날짜 단위로 비교해 같은 규칙을 따른다', () => {
-            expect(next({ nextDate: iso('2026-11-20'), endTime: 3 })).toBe('2026-11-20 10:00');
+            expect(next({ nextDate: iso('2026-11-20'), endTime: 3 })).toBe('2026-11-20 00:00');
             expect(next({ nextDate: iso('2026-11-20T15:00'), endTime: 3 })).toBe(
-                '2026-11-20 10:00',
+                '2026-11-20 00:00',
             );
         });
 
-        it('오늘 합주가 이미 끝났으면 7일 뒤(현재 시각)로 바꾼다', () => {
+        it('오늘 합주가 이미 끝났으면 7일 뒤(0시)로 바꾼다', () => {
             // startTime 0, endTime 0 → 끝나는 시각 09:30, 지금 10:00
             expect(next({ nextDate: iso('2026-11-13'), startTime: 0, endTime: 0 })).toBe(
-                '2026-11-27 10:00',
+                '2026-11-27 00:00',
             );
         });
 
         it('마지막 칸(endTime 29)까지 하는 합주는 끝나는 시각이 24:00이라 항상 오늘이다', () => {
             expect(next({ nextDate: iso('2026-11-13'), startTime: 28, endTime: 29 })).toBe(
-                '2026-11-20 10:00',
+                '2026-11-20 00:00',
             );
         });
     });
 
     describe('반복 합주의 nextDate가 오늘 이전이고, 오늘과 다른 요일일 때', () => {
-        it('그 요일이 다시 오는 가장 가까운 날(현재 시각)로 바꾼다', () => {
-            expect(next({ day: 1, nextDate: iso('2026-11-17') })).toBe('2026-11-24 10:00'); // 화 → 다음 화
-            expect(next({ day: 3, nextDate: iso('2026-11-19') })).toBe('2026-11-26 10:00'); // 목 → 6일 뒤
-            expect(next({ day: 6, nextDate: iso('2026-11-15') })).toBe('2026-11-22 10:00'); // 일(day() 0) → 다음 일
+        it('그 요일이 다시 오는 가장 가까운 날(0시)로 바꾼다', () => {
+            expect(next({ day: 1, nextDate: iso('2026-11-17') })).toBe('2026-11-24 00:00'); // 화 → 다음 화
+            expect(next({ day: 3, nextDate: iso('2026-11-19') })).toBe('2026-11-26 00:00'); // 목 → 6일 뒤
+            expect(next({ day: 6, nextDate: iso('2026-11-15') })).toBe('2026-11-22 00:00'); // 일(day() 0) → 다음 일
             // 오늘(금)보다 뒤 요일: 7 + 6 - 5 = 8 → % 7 = 1일 뒤
-            expect(next({ day: 5, nextDate: iso('2026-11-14') })).toBe('2026-11-21 10:00'); // 토 → 내일
+            expect(next({ day: 5, nextDate: iso('2026-11-14') })).toBe('2026-11-21 00:00'); // 토 → 내일
         });
     });
 });
@@ -200,7 +204,7 @@ describe('toBoard', () => {
     it('nextDate는 now 기준으로 다시 계산된다 (resolveNextDate)', () => {
         const board = toBoard(teams, [ensemble({ _id: 'e1', nextDate: iso('2026-11-13') })], now);
 
-        expect(fmt(board[4]![2]![0]!.nextDate)).toBe('2026-11-20 10:00');
+        expect(fmt(board[4]![2]![0]!.nextDate)).toBe('2026-11-20 00:00');
     });
 });
 

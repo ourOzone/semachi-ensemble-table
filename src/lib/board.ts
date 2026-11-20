@@ -42,7 +42,7 @@ export function buildColorMap(teams: Team[]): Record<string, string> {
  * - 일회성 합주이거나 nextDate가 오늘 이후(날짜 단위)면 서버 값 그대로
  * - 반복 합주이고 nextDate가 오늘과 같은 요일이면: 오늘 합주가 아직 안 끝났으면 오늘, 끝났으면 7일 뒤
  * - 반복 합주이고 다른 요일이면: 그 요일이 다시 오는 가장 가까운 날
- * 오늘·7일 뒤·가장 가까운 날에는 현재 시각(now)이 그대로 붙는다 (ISSUES F7, 3-3에서 수정 예정)
+ * 다시 계산한 날짜는 그날 0시다 (이전에는 현재 시각이 붙어, 미루기 때 시각이 붙은 날짜가 저장됐다: ISSUES F7)
  */
 export function resolveNextDate(
     { repeat, nextDate, endTime }: Pick<EnsembleResponse, 'repeat' | 'nextDate' | 'endTime'>,
@@ -52,11 +52,12 @@ export function resolveNextDate(
     if (!repeat || now.isBefore(next, 'day')) {
         return next;
     }
+    const today = now.startOf('day');
     if (next.day() === now.day()) {
         const [hour, minute] = slotEndTime(endTime);
-        return now.hour(hour).minute(minute).isAfter(now) ? now : now.add(7, 'day');
+        return now.hour(hour).minute(minute).isAfter(now) ? today : today.add(7, 'day');
     }
-    return now.add((7 + next.day() - now.day()) % 7, 'day');
+    return today.add((7 + next.day() - now.day()) % 7, 'day');
 }
 
 /**

@@ -4,7 +4,8 @@
  * characterization test(특성 테스트)란?
  * - "이렇게 동작해야 한다"(명세)가 아니라 "지금 이렇게 동작한다"(현재 동작)를 그대로 기록하는 테스트.
  * - 레거시 코드를 리팩터링하기 전에 안전망으로 쓴다. 고친 뒤에도 이 테스트가 통과하면 동작이 바뀌지 않은 것이다.
- * - 그래서 이상해 보이는 동작도 일단 그대로 고정한다. (예: 색상 없는 팀의 teamColor가 -1, 반복 합주의 다음 날짜에 현재 시각이 붙는 것)
+ * - 그래서 이상해 보이는 동작도 일단 그대로 고정한다. (예: 색상 없는 팀의 teamColor가 -1)
+ * - 승인된 수정(3-3): 반복 합주의 다시 계산한 다음 날짜는 0시 (F7, 이전에는 현재 시각이 붙었다)
  *   이런 동작을 일부러 바꾸려면, 먼저 승인을 받고 해당 테스트의 기대값을 함께 고친다.
  *
  * 대상: 서버 응답(teams·ensembles·notes·notices)을 화면용 데이터로 바꾸는 부분.
@@ -196,9 +197,15 @@ describe('fetchData 정제 로직 (characterization)', () => {
         });
 
         it('일회성 합주는 오늘 날짜여도 그대로 둔다 (반복 합주 규칙을 적용하지 않음)', async () => {
-            // 서버는 오늘 이후의 일회성 합주를 내려준다. 반복 합주였다면 현재 시각(10:00)으로 바뀌었을 경우
+            // 서버는 오늘 이후의 일회성 합주를 내려준다. 오늘 합주가 이미 끝난 시각(09:30)이라, 반복 합주였다면 7일 뒤로 바뀌었을 경우
             const block = await refineOne(
-                ensemble({ _id: 'e1', repeat: false, nextDate: iso('2026-11-20'), endTime: 3 }),
+                ensemble({
+                    _id: 'e1',
+                    repeat: false,
+                    nextDate: iso('2026-11-20'),
+                    startTime: 0,
+                    endTime: 0,
+                }),
             );
 
             expect(fmt(block)).toBe('2026-11-20 00:00');
@@ -211,13 +218,13 @@ describe('fetchData 정제 로직 (characterization)', () => {
         });
 
         describe('반복 합주의 nextDate가 오늘 이전이고, 오늘과 같은 요일(금)일 때', () => {
-            it('오늘 합주가 아직 안 끝났으면 오늘(현재 시각)로 바꾼다', async () => {
+            it('오늘 합주가 아직 안 끝났으면 오늘(0시)로 바꾼다', async () => {
                 // endTime 3 → 끝나는 시각 idx2hour[4] = 11:00, 지금 10:00
                 const block = await refineOne(
                     ensemble({ _id: 'e1', nextDate: iso('2026-11-13'), endTime: 3 }),
                 );
 
-                expect(fmt(block)).toBe('2026-11-20 10:00');
+                expect(fmt(block)).toBe('2026-11-20 00:00');
             });
 
             it('nextDate가 오늘이어도 같은 규칙을 따른다', async () => {
@@ -225,7 +232,7 @@ describe('fetchData 정제 로직 (characterization)', () => {
                     ensemble({ _id: 'e1', nextDate: iso('2026-11-20'), endTime: 3 }),
                 );
 
-                expect(fmt(block)).toBe('2026-11-20 10:00');
+                expect(fmt(block)).toBe('2026-11-20 00:00');
             });
 
             it('nextDate가 오늘의 더 늦은 시각(15:00)이어도 날짜 단위로 비교해 같은 규칙을 따른다', async () => {
@@ -234,16 +241,16 @@ describe('fetchData 정제 로직 (characterization)', () => {
                     ensemble({ _id: 'e1', nextDate: iso('2026-11-20T15:00'), endTime: 3 }),
                 );
 
-                expect(fmt(block)).toBe('2026-11-20 10:00');
+                expect(fmt(block)).toBe('2026-11-20 00:00');
             });
 
-            it('오늘 합주가 이미 끝났으면 7일 뒤(현재 시각)로 바꾼다', async () => {
+            it('오늘 합주가 이미 끝났으면 7일 뒤(0시)로 바꾼다', async () => {
                 // startTime 0, endTime 0 → 끝나는 시각 idx2hour[1] = 09:30, 지금 10:00
                 const block = await refineOne(
                     ensemble({ _id: 'e1', nextDate: iso('2026-11-13'), startTime: 0, endTime: 0 }),
                 );
 
-                expect(fmt(block)).toBe('2026-11-27 10:00');
+                expect(fmt(block)).toBe('2026-11-27 00:00');
             });
 
             it('마지막 칸(endTime 29)까지 하는 합주는 끝나는 시각이 24:00(다음 날 0시)이라 항상 오늘이다', async () => {
@@ -256,17 +263,17 @@ describe('fetchData 정제 로직 (characterization)', () => {
                     }),
                 );
 
-                expect(fmt(block)).toBe('2026-11-20 10:00');
+                expect(fmt(block)).toBe('2026-11-20 00:00');
             });
         });
 
         describe('반복 합주의 nextDate가 오늘 이전이고, 오늘과 다른 요일일 때', () => {
-            it('그 요일이 다시 오는 가장 가까운 날(현재 시각)로 바꾼다: 화요일 → 다음 화요일', async () => {
+            it('그 요일이 다시 오는 가장 가까운 날(0시)로 바꾼다: 화요일 → 다음 화요일', async () => {
                 const block = await refineOne(
                     ensemble({ _id: 'e1', day: 1, nextDate: iso('2026-11-17') }), // 화
                 );
 
-                expect(fmt(block)).toBe('2026-11-24 10:00');
+                expect(fmt(block)).toBe('2026-11-24 00:00');
             });
 
             it('어제와 같은 요일(목요일)이면 6일 뒤로 바꾼다', async () => {
@@ -274,7 +281,7 @@ describe('fetchData 정제 로직 (characterization)', () => {
                     ensemble({ _id: 'e1', day: 3, nextDate: iso('2026-11-19') }), // 목
                 );
 
-                expect(fmt(block)).toBe('2026-11-26 10:00');
+                expect(fmt(block)).toBe('2026-11-26 00:00');
             });
 
             it('일요일(dayjs의 day() = 0)도 다음 일요일로 바꾼다', async () => {
@@ -282,7 +289,7 @@ describe('fetchData 정제 로직 (characterization)', () => {
                     ensemble({ _id: 'e1', day: 6, nextDate: iso('2026-11-15') }), // 일
                 );
 
-                expect(fmt(block)).toBe('2026-11-22 10:00');
+                expect(fmt(block)).toBe('2026-11-22 00:00');
             });
         });
     });

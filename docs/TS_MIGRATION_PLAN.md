@@ -32,7 +32,7 @@
 | ✅ **2-11** | `components/teams` (index + Drawer 3개) | 4 | 679 | `2-11 진행해줘` |
 | ✅ **2-12** | `components/teams/addTeamDrawers` | 6 | 509 | `2-12 진행해줘` |
 | ✅ **2-13** | `components/teams/updateTeamDrawers` | 5 | 453 | `2-13 진행해줘` |
-| **2-14** | `components/teams/addEnsembleDrawers` | 4 | 419 | `2-14 진행해줘` |
+| ✅ **2-14** | `components/teams/addEnsembleDrawers` | 4 | 419 | `2-14 진행해줘` |
 | **2-15** | `App.jsx` + 마무리 (`allowJs` 끄기 등) | 1 | 52 | `2-15 진행해줘` |
 
 - 작은 단계는 묶어서 지시해도 된다. 예: `2-5, 2-6 진행해줘`, `2-1~2-3 진행해줘`. 이때도 **커밋은 단계별로** 나눈다.

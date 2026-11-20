@@ -4,10 +4,17 @@ import styled from 'styled-components';
 import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
 import { idx2hour } from '@/constants';
 import { Button } from 'antd';
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
+import type { DrawerId, TimeSlot } from '@/types';
+import type { HandleAddEnsemble } from '../types';
 import OkButton from '@/components/common/OkButton';
 
-const AddEnsembleDrawer3 = ({ drawerId, handleAddEnsemble }) => {
+interface AddEnsembleDrawer3Props {
+    drawerId: DrawerId;
+    handleAddEnsemble: HandleAddEnsemble;
+}
+
+const AddEnsembleDrawer3 = ({ drawerId, handleAddEnsemble }: AddEnsembleDrawer3Props) => {
     const { id, name } = useTeamContext();
     const { repeat, nextDate, startTime, setStartTime, endTime, setEndTime } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
@@ -23,7 +30,15 @@ const AddEnsembleDrawer3 = ({ drawerId, handleAddEnsemble }) => {
     }, [setStartTime, setEndTime, setStartTimeStr, setEndTimeStr]);
 
     const handleClick = useCallback(
-        (id, name, repeat, nextDate, startTime, endTime) => {
+        (
+            id: string,
+            name: string,
+            repeat: boolean,
+            nextDate: Dayjs | null,
+            startTime: TimeSlot | null,
+            endTime: TimeSlot | null,
+        ) => {
+            // await하지 않아 저장 성공 여부와 관계없이 완료 화면(addEnsemble4)을 연다 (3단계 정리 대상)
             handleAddEnsemble(id, name, repeat, nextDate, startTime, endTime);
             openDrawer('addEnsemble4');
         },
@@ -31,7 +46,12 @@ const AddEnsembleDrawer3 = ({ drawerId, handleAddEnsemble }) => {
     );
 
     const handleClickTime = useCallback(
-        (idx, startTime, endTime, startTimeStr) => {
+        (
+            idx: TimeSlot,
+            startTime: TimeSlot | null,
+            endTime: TimeSlot | null,
+            startTimeStr: string,
+        ) => {
             // startTime과 endTime의 값은 모두 block의 index (0 ~ 29)
             // startIdx 설정
             if (startTime === null || endTime !== null) {
@@ -63,7 +83,7 @@ const AddEnsembleDrawer3 = ({ drawerId, handleAddEnsemble }) => {
         [setStartTime, setEndTime],
     );
 
-    const isSelected = (idx) => {
+    const isSelected = (idx: TimeSlot): boolean => {
         if (startTime === null) return false;
         if (endTime === null) return idx === startTime;
         return idx >= startTime && idx <= endTime + 1;
@@ -104,7 +124,11 @@ const Title = styled.span`
     font-family: Bold;
 `;
 
-const Header = styled.div`
+interface HeaderProps {
+    show: boolean;
+}
+
+const Header = styled.div<HeaderProps>`
     height: 8.5rem;
     margin-top: 1.5rem;
     display: flex;
@@ -130,7 +154,11 @@ const TimeGridWrapper = styled.div`
     transition: margin-top 0.4s ease;
 `;
 
-const TimeButton = styled(Button)`
+interface TimeButtonProps {
+    selected: boolean;
+}
+
+const TimeButton = styled(Button)<TimeButtonProps>`
     height: 4rem;
     border-radius: 1rem;
     padding: 0;

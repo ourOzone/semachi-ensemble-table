@@ -3,9 +3,14 @@ import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { Result } from 'antd';
 import { useDrawerContext } from '@/context';
+import type { DrawerId } from '@/types';
 import OkButton from '@/components/common/OkButton';
 
-const AddEnsembleDrawer4 = ({ drawerId }) => {
+interface AddEnsembleDrawer4Props {
+    drawerId: DrawerId;
+}
+
+const AddEnsembleDrawer4 = ({ drawerId }: AddEnsembleDrawer4Props) => {
     const { closeAllDrawers } = useDrawerContext();
 
     const handleClick = useCallback(() => {

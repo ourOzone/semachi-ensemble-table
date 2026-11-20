@@ -7,7 +7,7 @@
 | 단계 | 상태 |
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
-| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-13까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
+| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-14까지 완료 (남은 JS: `App.jsx` 1개) (계획: `docs/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ⏳ 시작 전 |
 
 ## 작업 로그
@@ -269,6 +269,17 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 33/33 (3회 반복, 팀 테스트는 3회 추가 반복) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
+### 2026-11-20 — 2-14: components/teams/addEnsembleDrawers
+
+- `git mv`: `AddEnsembleDrawer1~4.jsx` → `.tsx`
+- 2-10(updateEnsembleDrawers)과 같은 방식: 반복 여부(`boolean`), 달력(`Dayjs`), 시간 선택(`TimeSlot`, `if`의 null 검사로 타입이 좁혀져 코드 변경 없음), `Header`·`TimeButton` props 타입
+- `AddEnsembleDrawer3`: `HandleAddEnsemble`
+- 발견한 기존 버그 (3단계 대상, 동작 변경이라 손대지 않음)
+  - `AddEnsembleDrawer3`: `handleAddEnsemble()`을 await하지 않고 바로 완료 화면(addEnsemble4)을 열어, 저장이 실패해도 "등록했어요"가 표시됨 (2-12의 팀 추가와 같은 문제, 코드에 주석)
+- 실제 동작은 2-13에서 추가한 `Teams.test.tsx` 합주 추가 흐름 테스트로 검증
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 33/33 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -309,5 +320,5 @@
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
 
 ### 다음 순서
-1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-14)
+1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-15)
 2. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성

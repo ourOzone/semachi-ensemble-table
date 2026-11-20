@@ -290,6 +290,22 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 33/33 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
+### 2026-11-20 — fetchData characterization test (3단계 준비)
+
+- `src/context/fetch.test.tsx` 추가 (21개): 서버 응답 → 화면용 데이터 정제 로직의 **현재 동작**을 고정
+  - 팀: `_id`→`id`, pin 제외, 소모임·회의 제외, 순서 유지
+  - 합주표: 7×30 배열, `startTime~endTime` 칸마다 배치, 첫 칸에만 팀 이름, 겹치는 합주
+  - 색상: 팀 목록 순서로 `teamColors` 순환, 소모임은 `eventColors`, 목록에 없는 팀은 `-1`
+  - 다음 합주 날짜: 일회성(미래·오늘), 반복+미래, 반복+같은 요일(안 끝남·오늘·늦은 시각·끝남·마지막 칸), 반복+다른 요일(화·목·일)
+  - 한마디·공지 매핑
+- 이상해 보이는 현재 동작도 그대로 기록함 (3단계에서 바꾸려면 승인 후 기대값을 함께 수정)
+  - 반복 합주의 다음 날짜가 오늘/다른 요일로 바뀌면 **현재 시각이 붙는다** (자정이 아님)
+  - 목록에 없는 팀의 `teamColor`는 `-1`
+- 테스트 품질 확인: `fetch.tsx`를 14가지로 일부러 바꿔(뮤테이션) 모두 실패로 잡히는지 확인. 처음 놓친 3가지(일회성 분기, 요일 계산식, 날짜 비교 단위)는 테스트를 추가해 보완
+- `vite.config.mts`: 테스트 시간대를 `Asia/Seoul`로 고정 (`env.TZ`). 실행 환경 TZ가 UTC·America/Los_Angeles여도 통과 확인
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ / `pnpm format:check` ✅
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -331,4 +347,4 @@
 
 ### 다음 순서
 1. ~~2단계 TS 전환~~ ✅ 완료
-2. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성
+2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)

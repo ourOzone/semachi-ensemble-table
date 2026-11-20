@@ -16,6 +16,8 @@
 - 테스트 파일은 대상 파일 옆에 `*.test.ts(x)`로 둔다.
 - API는 실제 서버로 보내지 않는다. 각 테스트에서 `server.use(http.get(...))`로 모킹한다 (`src/test/server.ts`). 핸들러 없는 요청은 에러가 난다.
 - styled-components theme이 필요한 컴포넌트는 `src/test/render.tsx`의 `renderWithTheme`으로 렌더링한다.
+- 테스트는 `pnpm test:run` 또는 `pnpm exec vitest run <경로>`로 실행한다. `npx vitest`(와 메인 저장소에서 `node node_modules/vitest/vitest.mjs` 직접 실행)는 이 환경에서 runner를 찾지 못해 원본에서도 항상 실패한다.
+- 뮤테이션 검사 등 스크립트로 테스트 결과를 판정할 때는 원본이 통과하는지(기준선)를 먼저 확인하고, 종료 코드가 아니라 출력의 `Tests N failed`로 판정한다.
 
 ## 작업 범위
 - `src/` 아래 프론트엔드 코드만 수정한다.

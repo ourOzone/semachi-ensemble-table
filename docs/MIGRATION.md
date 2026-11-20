@@ -8,7 +8,7 @@
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
-| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-2 ✅) |
+| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-3 ✅) |
 
 ## 작업 로그
 
@@ -378,6 +378,23 @@
 - `noUncheckedIndexedAccess` 에러: 21개 → 19개 (board의 `idx2hour` 접근 2곳이 `slotEndTime`으로 합쳐짐)
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 81/81 (2회) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
+### 2026-11-20 — 3-3: 순수 함수 버그 수정 (동작 변경, 사전 결정 7)
+
+ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함께 바꿨다.
+
+| ID | 지금 → 바꾼 후 | 테스트 |
+|---|---|---|
+| F2 | 일요일에 합주표 날짜가 다음 주 → 오늘이 속한 주의 월~일(`lib/week`의 `getWeek`). 모듈 로드 시 1회 계산 → `useToday` 훅(`src/hooks/useToday.ts`)으로 자정마다 다시 계산 | 일요일·주 경계, 자정 갱신·연속 갱신·타이머 정리 |
+| F7 | 다시 계산한 다음 합주 날짜에 현재 시각 → 그날 0시 (오늘 합주가 끝났는지는 현재 시각으로 판단) | characterization 기대값 `10:00` → `00:00` |
+| F8 | 목록에 없는 팀의 `teamColor` `-1` → `theme.blueGray`, 타입 `string \| -1` → `string` | 기대값 갱신 |
+
+- 테스트 보강: 일회성 합주 테스트가 F7 이후 반복 규칙과 결과가 같아져(둘 다 오늘 0시) 구분하지 못하게 됨 → "오늘 합주가 이미 끝난 시각" 조건으로 바꿔, 반복 규칙이었다면 7일 뒤가 되도록 함
+- 뮤테이션 검사 (기준선 확인 후 `Tests N failed`로 판정): lib 23/23, `useToday` 2/2(의존성 누락·타이머 정리 누락), 옛 `getWeek` 1/1
+- 진행 중 발견: 3-2의 뮤테이션 검사가 `npx vitest`로 실행돼 무효였다 → 재검사(19/20) 후 놓친 1건의 테스트를 추가하고 3-2 기록을 정정 (커밋 `3dfbb59`). `CLAUDE.md` 테스트 규칙에 실행 방법·판정 방법 추가
+- 미루기 흐름 영향 (F7): 미루기는 블록의 `nextDate`에 7일을 더해 저장하므로, 이제 0시 날짜가 저장된다. Board 흐름 테스트는 날짜만 비교해 그대로 통과
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 84/84 (2회) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
 ## 남은 일
 

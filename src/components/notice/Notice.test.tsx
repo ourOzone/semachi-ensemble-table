@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { url } from '@/constants';
 import { mockInitialData } from '@/test/fixtures';
+import { findEnabledButton } from '@/test/queries';
 import { renderApp } from '@/test/render';
 import { server } from '@/test/server';
 
@@ -15,17 +16,6 @@ async function openNoticeDrawer() {
     await user.click(await screen.findByText('첫 공지'));
     const addButton = await screen.findByRole('button', { name: /공지를 추가해요/ });
     return { user, addButton };
-}
-
-// OkButton은 비활성일 때 visibility: hidden이라 접근성 이름이 비어 role로 찾을 수 없다.
-// 문구로 찾고, PIN 서버 확인이 끝나 활성화될 때까지 기다린다.
-async function findEnabledButton(label: string) {
-    let button: HTMLButtonElement | null = null;
-    await waitFor(() => {
-        button = screen.getByText(label).closest('button');
-        expect(button).toBeEnabled();
-    });
-    return button!;
 }
 
 describe('공지', () => {

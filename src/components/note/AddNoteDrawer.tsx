@@ -1,24 +1,42 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
-import { Button, Input } from 'antd';
+import { Button, Input, type GetRef } from 'antd';
 import OkButton from '@/components/common/OkButton';
 import PinInput from '@/components/common/PinInput';
+import type { DrawerId } from '@/types';
 
 const { TextArea } = Input;
+type TextAreaRef = GetRef<typeof TextArea>;
 const maxInput = 200;
 const minRows = 4;
 const maxRows = 10;
 const maxPinInput = 4;
 
-const countLines = (value) => {
+const countLines = (value: string): number => {
     const lines = value.split('\n').length;
     return Math.min(Math.max(lines, minRows), maxRows);
 };
 
-const AddNoteDrawer = ({ drawerId, text, setText, pin, setPin, handleAddNote }) => {
+interface AddNoteDrawerProps {
+    drawerId: DrawerId;
+    text: string;
+    setText: Dispatch<SetStateAction<string>>;
+    pin: string;
+    setPin: Dispatch<SetStateAction<string>>;
+    handleAddNote: (text: string, pin: string) => Promise<void>;
+}
+
+const AddNoteDrawer = ({
+    drawerId,
+    text,
+    setText,
+    pin,
+    setPin,
+    handleAddNote,
+}: AddNoteDrawerProps) => {
     const isOverLimit = text.length > maxInput;
-    const focusInputRef = useRef(null);
+    const focusInputRef = useRef<TextAreaRef>(null);
 
     const onClose = useCallback(() => {
         setText('');
@@ -26,7 +44,7 @@ const AddNoteDrawer = ({ drawerId, text, setText, pin, setPin, handleAddNote }) 
     }, []);
 
     const handlePinChange = useCallback(
-        (e) => {
+        (e: ChangeEvent<HTMLInputElement>) => {
             const numeric = e.target.value.replace(/\D/g, '');
             if (numeric.length <= maxPinInput) {
                 setPin(numeric);
@@ -80,7 +98,11 @@ const Wrapper = styled.div`
     gap: 2rem;
 `;
 
-const StyledTextArea = styled(TextArea)`
+interface StyledTextAreaProps {
+    $isOverLimit: boolean;
+}
+
+const StyledTextArea = styled(TextArea)<StyledTextAreaProps>`
     margin-top: 4rem;
     font-size: 1.5rem;
     font-family: Bold !important;

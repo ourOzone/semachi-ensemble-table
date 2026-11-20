@@ -7,7 +7,7 @@
 | 단계 | 상태 |
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
-| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-7까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
+| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-8까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ⏳ 시작 전 |
 
 ## 작업 로그
@@ -189,6 +189,17 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 21/21 (2회 반복) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
+### 2026-11-20 — 2-8: components/note
+
+- `git mv`: `note/index·AddNoteDrawer·DeleteNoteDrawer.jsx` → `.tsx`
+- 2-7(notice)과 같은 방식: Drawer별 `XxxDrawerProps`, `StyledPinInput`·`StyledTextArea` props 타입, `status`의 `null` → `undefined` 1곳
+- notice와 다른 점: `handleAddNote(text, pin)`은 pin을 실제로 서버에 보낸다 (주석 불필요)
+- 테스트
+  - `src/test/queries.ts` 추가: `findEnabledButton()` (2-7의 공지 테스트에 있던 헬퍼를 공용으로 이동)
+  - `src/components/note/Note.test.tsx` 추가: 한마디 등록(서버에 `{ text, pin }` 전송), 삭제(PIN 확인 `{ noteId, pin }`, `DELETE /note?id=`)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 23/23 (2회 반복) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -229,5 +240,5 @@
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
 
 ### 다음 순서
-1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-8)
+1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-9)
 2. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성

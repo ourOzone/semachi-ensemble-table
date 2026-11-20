@@ -26,7 +26,7 @@
 | ✅ **2-5** | `components/common` | 5 | 185 | `2-5 진행해줘` |
 | ✅ **2-6** | `components/layout` | 2 | 100 | `2-6 진행해줘` |
 | ✅ **2-7** | `components/notice` | 4 | 511 | `2-7 진행해줘` |
-| **2-8** | `components/note` | 3 | 406 | `2-8 진행해줘` |
+| ✅ **2-8** | `components/note` | 3 | 406 | `2-8 진행해줘` |
 | **2-9** | `components/board` (index + Drawer 3개) | 4 | 767 | `2-9 진행해줘` |
 | **2-10** | `components/board/updateEnsembleDrawers` | 4 | 479 | `2-10 진행해줘` |
 | **2-11** | `components/teams` (index + Drawer 3개) | 4 | 679 | `2-11 진행해줘` |

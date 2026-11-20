@@ -8,7 +8,7 @@
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
-| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0·3-1 ✅) |
+| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-2 ✅) |
 
 ## 작업 로그
 
@@ -354,6 +354,27 @@
   - 수정 전 코드에서 실패(멤버 칸이 빈 값)하는 것을 확인. 셋리 쪽 수정만 되돌려도 실패하는 것을 확인
 
 **검증:** 아래 공통 검증 참고
+
+### 2026-11-20 — 3-2: 순수 함수 추출 (동작 동일)
+
+- `src/lib/` 추가. 현재 시각은 모두 `now` 인자로 받는다 (호출부가 `dayjs()`를 넘김) → 가짜 타이머 없이 테스트 가능
+  - `board.ts`: `slotEndTime`(시간칸 끝 시각, `idx2hour[endTime + 1]` 파싱 중복 정리), `toTeams`, `buildColorMap`, `resolveNextDate`(4단 중첩 삼항 → if 분기), `toBoard`, `isSkipped`(Board 렌더링 안의 회색 판단)
+  - `notes.ts`: `toNotes`, `toNotices`
+  - `week.ts`: `getTodayIdx`, `getWeek`
+  - `ensemble.ts`: `toEnsembleRequest` (board·teams에 중복돼 있던 요일 변환·레거시 `type`·`due` 계산)
+- 호출부: `context/fetch`(정제 로직 → lib 호출), `board/index`(주간 날짜·회색 판단·수정 요청), `teams/index`(합주 추가 요청)
+- 그대로 둔 현재 동작 (3-3에서 승인된 수정): 일요일 날짜 라벨(F2), 모듈 로드 시 1회 계산(F2), 다음 날짜의 현재 시각(F7), `teamColor` -1(F8). 코드 주석과 테스트에 "현재 동작"으로 표시
+- 차이 (동작 영향 없음)
+  - 같은 합주의 칸마다 `nextDate`를 다시 계산하던 것을 합주당 한 번 계산하고, 같은 Dayjs(불변) 값을 공유
+  - 한 번 정제할 때 `dayjs()`를 여러 번 부르던 것을 하나의 `now`로 통일 (밀리초 차이)
+  - 합주 요청 본문의 키 순서
+- 테스트
+  - 기존 테스트 55개가 수정 없이 통과 (`fetch.test.tsx` characterization 포함)
+  - lib 단위 테스트 26개 추가 (`src/lib/*.test.ts`): characterization 기대값을 `now` 인자 방식으로 옮기고, 테스트가 없던 `isSkipped`(7일 경계)·`getWeek`(일요일 현재 동작)·`toEnsembleRequest`도 현재 동작대로 고정
+  - 뮤테이션 검사: lib 코드를 20가지로 일부러 바꿔 모두 실패로 잡히는 것을 확인
+- `noUncheckedIndexedAccess` 에러: 21개 → 19개 (board의 `idx2hour` 접근 2곳이 `slotEndTime`으로 합쳐짐)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 81/81 (2회) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
 ## 남은 일
 

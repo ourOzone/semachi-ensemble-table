@@ -113,7 +113,7 @@
 - `UpdateTeamDrawer4`의 `onClose`: 멤버 6칸을 `orgDesc`로 되돌린다. `UpdateTeamDrawer5`의 `onClose`: 셋리스트를 `orgDesc[6]`으로 되돌린다.
 - `Teams.test.tsx`에 회귀 테스트: 멤버 단계에서 뒤로 갔다가 다시 진행해 저장해도 기존 값이 유지되는지
 
-### 3-2. 순수 함수 추출 (동작 동일)
+### 3-2. 순수 함수 추출 (동작 동일) ✅
 - `lib/board.ts`: `toTeams`, `buildColorMap`, `resolveNextDate(ensemble, now)`, `toBoard(teams, ensembles, now)`, `isSkipped(block, now)`(Board 렌더링 안의 회색 판단)
 - `lib/week.ts`: `getWeek(now)`, `getTodayIdx(now)`. **F2 버그는 이 커밋에서 그대로 유지한다.**
 - `lib/ensemble.ts`: `toEnsembleRequest(...)`. 요일 변환과 레거시 `type`·`due` 계산이 board와 teams에 중복돼 있다. `idx2hour[endTime + 1].split(':')` 파싱 중복도 함께 정리한다.

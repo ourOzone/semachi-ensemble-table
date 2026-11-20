@@ -13,18 +13,21 @@ import UpdateEnsembleDrawer3 from './updateEnsembleDrawers/UpdateEnsembleDrawer3
 import UpdateEnsembleDrawer4 from './updateEnsembleDrawers/UpdateEnsembleDrawer4';
 import DeleteEnsembleDrawer from './DeleteEnsembleDrawer';
 import SkipEnsembleDrawer from './SkipEnsembleDrawer';
-import { idx2hour } from '@/constants';
 import dayjs, { type Dayjs } from 'dayjs';
+import { isSkipped } from '@/lib/board';
+import { toEnsembleRequest } from '@/lib/ensemble';
+import { getTodayIdx, getWeek } from '@/lib/week';
 import type { EnsembleBlock, TimeSlot } from '@/types';
 import 'dayjs/locale/ko';
 
 dayjs.locale('ko');
 
+// 모듈을 불러올 때 한 번만 계산한다 (자정이 지나도 갱신되지 않음: ISSUES F2, 3-3에서 수정 예정)
 // 월요일 0 ~ 일요일 6 기준에서, 오늘의 idx값
-const todayIdx = dayjs().day() === 0 ? 6 : dayjs().day() - 1;
+const todayIdx = getTodayIdx(dayjs());
 
 // 이번주 날짜 7개 (시간은 현재 시간)
-const week = Array.from({ length: 7 }, (_, i) => dayjs().day(1).add(i, 'day'));
+const week = getWeek(dayjs());
 
 const Board = () => {
     const { teams, ensembles, fetchData } = useFetchContext();
@@ -105,16 +108,10 @@ const Board = () => {
             try {
                 if (await checkEnsembleExists(id)) {
                     // 선택을 마친 뒤에만 호출되어 null이 아님 (null이면 nextDate.day()에서 TypeError → catch, 기존 동작)
-                    await updateEnsemble(id, {
-                        teamId,
-                        repeat,
-                        nextDate: nextDate!,
-                        startTime: startTime!,
-                        endTime: endTime!,
-                        day: (nextDate!.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
-                        type: repeat ? '무기한' : '일회성', // TODO 삭제
-                        due: repeat ? '2099-12-31' : nextDate!.format('YYYY-MM-DD'), // TODO 삭제
-                    });
+                    await updateEnsemble(
+                        id,
+                        toEnsembleRequest(teamId, repeat, nextDate!, startTime!, endTime!),
+                    );
                     fetchData();
                     message.success('잘 바꿔놨어요.');
                     setOpenedDrawers(['ensembleInfo']);
@@ -203,24 +200,7 @@ const Board = () => {
                                             key={`${idx}_${time}_${ensemble.id}`}
                                             teamColor={ensemble.teamColor}
                                             // nextDate의 날짜 + endTime이 시간이 현재 날짜/시간보다 일주일 이상 멀면 회색 처리
-                                            gray={
-                                                dayjs(ensemble.nextDate)
-                                                    .hour(
-                                                        Number(
-                                                            idx2hour[ensemble.endTime + 1].split(
-                                                                ':',
-                                                            )[0],
-                                                        ),
-                                                    )
-                                                    .minute(
-                                                        Number(
-                                                            idx2hour[ensemble.endTime + 1].split(
-                                                                ':',
-                                                            )[1],
-                                                        ),
-                                                    )
-                                                    .diff(dayjs(), 'day') >= 7
-                                            }
+                                            gray={isSkipped(ensemble, dayjs())}
                                             onClick={() => handleEnsembleClick(ensemble)}
                                         >
                                             {/* 한 타임에 겹치는 팀이 5개 미만이면 팀명을 표시 */}

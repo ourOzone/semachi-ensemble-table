@@ -9,6 +9,7 @@ import { addEnsemble } from '@/api/ensemble';
 import useMessage from '@/hooks/useMessage';
 import { useFetchContext, useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
 import { eventIds } from '@/constants';
+import { toEnsembleRequest } from '@/lib/ensemble';
 import { Container } from '@/components/common/Container';
 import TeamInfoDrawer from './TeamInfoDrawer';
 import EventInfoDrawer from './EventInfoDrawer';
@@ -155,15 +156,8 @@ const Teams = () => {
                 if (await checkTeamExists(id)) {
                     // 선택을 마친 뒤에만 호출되어 null이 아님 (null이면 nextDate.day()에서 TypeError → catch, 기존 동작)
                     await addEnsemble({
-                        teamId: id,
                         teamName: name,
-                        day: (nextDate!.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
-                        nextDate: nextDate!,
-                        startTime: startTime!,
-                        endTime: endTime!,
-                        repeat,
-                        type: repeat ? '무기한' : '일회성', // TODO 삭제
-                        due: repeat ? '2099-12-31' : nextDate!.format('YYYY-MM-DD'), // TODO 삭제
+                        ...toEnsembleRequest(id, repeat, nextDate!, startTime!, endTime!),
                     });
                     fetchData();
                     setTeamStates(); // 초기화

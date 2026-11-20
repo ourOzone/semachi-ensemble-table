@@ -56,7 +56,7 @@
 | P4 | 🟡 | `useMessage`가 렌더링마다 새 객체를 반환해 이를 의존하는 `useCallback`이 사실상 무의미. 거의 같은 알림 함수 4개가 반복 | `lib/notify` 중앙화 (3-6), View 개편 때 Sonner로 교체 |
 | P5 | 🟡 | 수정 취소 복원용 `orgXxx` 상태를 따로 복제해 관리 (team·ensemble context) | View (단일 Drawer 폼의 초기값으로 대체) |
 | P6 | 🟡 | 서버 응답을 런타임 검증 없이 사용 (Zod 스키마는 정의만 됨) | Zod `parse` (3-4) |
-| P7 | 🟡 | `noUncheckedIndexedAccess`를 켜면 타입 에러 21개 (teams 9, context 6, board 6). 대부분 배열 인덱스 접근 | 3-10에서 켜기 (로직 11곳은 가드, Drawer 10곳은 `!`) |
+| P7 | 🟡 | `noUncheckedIndexedAccess`를 켜면 타입 에러 21개 (teams 9, context 6, board 6). 대부분 배열 인덱스 접근. 3-2 이후 19개 (lib/board 6, board/index 1, teams/index 2, Drawer 10) | 3-10에서 켜기 (로직 11곳은 가드, Drawer 10곳은 `!`) |
 | P8 | ⚪ | API 경로 오타: `ensemble?id=`(앞의 `/` 누락). baseURL과 합쳐져 동작은 함 | 3-4 |
 
 ## 4. View (View 개편 시 해소 예정)

@@ -129,10 +129,6 @@ React Compiler는 별도로 검토한다:
 - 코드 전체에 `useCallback`이 깔려 있지만, `useMessage`가 렌더링마다 새 `message` 객체를 반환해서 **실제로는 메모이제이션이 거의 효과가 없다.**
 - Compiler(1.0)를 쓰면 수동 `useCallback`/`useMemo`를 대부분 지울 수 있다. 다만 3단계에서 Context → Zustand, fetch → TanStack Query로 바뀌면 수동 메모이제이션 자체가 많이 줄어들므로, 그 이후에 도입 여부를 판단한다.
 
-### ~~11. Drawer 스택을 URL과 동기화~~ ❌ 제외
-
-Drawer 기반 UI 자체를 View 개편에서 걷어낼 예정이므로 다루지 않는다.
-
 ---
 
 ## 🧹 1단계(Vite 전환) 잔여물 ✅ 처리 완료
@@ -182,10 +178,6 @@ pnpm install                     # node_modules 재생성
 ```
 
 > 이 프로젝트는 2026-11-18에 위 절차로 전환 완료 (pnpm 12.21.0). 상세 기록은 `docs/MIGRATION.md`.
-
-### npm ↔ pnpm 대응표
-
-`docs/PNPM.md` 참고.
 
 ### 알아두면 좋은 차이점
 

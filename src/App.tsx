@@ -8,6 +8,7 @@ import Teams from '@/components/teams';
 import Board from '@/components/board';
 import Note from '@/components/note';
 import { media } from '@/styles/media';
+import type { DrawerId } from '@/types';
 
 function App() {
     const { fetchData } = useFetchContext();
@@ -31,7 +32,12 @@ function App() {
     );
 }
 
-const Container = styled.div`
+interface ContainerProps {
+    /** Drawer가 하나라도 열려 있으면 본문을 왼쪽으로 민다 */
+    openedDrawers: DrawerId[];
+}
+
+const Container = styled.div<ContainerProps>`
     display: flex;
     flex-direction: column;
     width: 100%;

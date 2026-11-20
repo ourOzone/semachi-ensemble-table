@@ -31,7 +31,8 @@
     "no-shadow": "off",
     "import/no-named-as-default": "off",
     "import/no-unassigned-import": "off",
-    "import/no-named-as-default-member": "off"
+    "import/no-named-as-default-member": "off",
+    "typescript/no-explicit-any": "error"
   },
   "ignorePatterns": ["api.js", "build/**", "dist/**", "node_modules/**"],
   "overrides": [

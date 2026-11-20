@@ -7,7 +7,7 @@
 | 단계 | 상태 |
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
-| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-14까지 완료 (남은 JS: `App.jsx` 1개) (계획: `docs/TS_MIGRATION_PLAN.md`) |
+| 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ⏳ 시작 전 |
 
 ## 작업 로그
@@ -280,6 +280,16 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 33/33 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
+### 2026-11-20 — 2-15: App + 마무리
+
+- `git mv`: `App.jsx` → `App.tsx`, `Container`의 `openedDrawers: DrawerId[]` 타입
+- `tsconfig.json`: `allowJs`·`checkJs` 제거 → 이제 `src`에 JS 파일이 생기면 import 시 에러
+- Oxlint: `typescript/no-explicit-any`를 error로 추가 (`any` 금지 규칙을 린트로 강제, 임의의 `any`를 잡는 것까지 확인). 현재 `src`의 `any`·`TODO(type)` 0건
+- `src`의 `.js`·`.jsx` 0개 → 2단계 완료
+- 그대로 둔 것 (3단계 대상): `App`의 `fetchData` effect 의존성 경고 2건
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 33/33 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -320,5 +330,5 @@
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
 
 ### 다음 순서
-1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-15)
+1. ~~2단계 TS 전환~~ ✅ 완료
 2. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성

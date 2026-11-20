@@ -1,28 +1,47 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { checkNoticePin } from '@/api/notice';
-import { Button, Input } from 'antd';
+import { Button, Input, type GetRef } from 'antd';
 import useMessage from '@/hooks/useMessage';
 import OkButton from '@/components/common/OkButton';
 import PinInput from '@/components/common/PinInput';
+import type { DrawerId } from '@/types';
 
 const { TextArea } = Input;
+type TextAreaRef = GetRef<typeof TextArea>;
 const maxInput = 200;
 const minRows = 4;
 const maxRows = 10;
 const maxPinInput = 4;
 
-const countLines = (value) => {
+const countLines = (value: string): number => {
     const lines = value.split('\n').length;
     return Math.min(Math.max(lines, minRows), maxRows);
 };
 
-const AddNoticeDrawer = ({ drawerId, text, setText, pin, setPin, handleAddNotice }) => {
+interface AddNoticeDrawerProps {
+    drawerId: DrawerId;
+    text: string;
+    setText: Dispatch<SetStateAction<string>>;
+    pin: string;
+    setPin: Dispatch<SetStateAction<string>>;
+    /** pin도 함께 넘기지만 부모(handleAddNotice)는 text만 사용한다 (3단계 정리 대상) */
+    handleAddNotice: (text: string, pin: string) => Promise<void>;
+}
+
+const AddNoticeDrawer = ({
+    drawerId,
+    text,
+    setText,
+    pin,
+    setPin,
+    handleAddNotice,
+}: AddNoticeDrawerProps) => {
     const [message, contextHolder] = useMessage();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
     const isOverLimit = text.length > maxInput;
-    const focusInputRef = useRef(null);
+    const focusInputRef = useRef<TextAreaRef>(null);
 
     const onClose = useCallback(() => {
         setText('');
@@ -31,7 +50,7 @@ const AddNoticeDrawer = ({ drawerId, text, setText, pin, setPin, handleAddNotice
     }, []);
 
     const handlePinChange = useCallback(
-        async (value) => {
+        async (value: string) => {
             const numeric = value.replace(/\D/g, '');
             if (numeric.length <= maxPinInput) {
                 setPin(numeric);
@@ -75,7 +94,7 @@ const AddNoticeDrawer = ({ drawerId, text, setText, pin, setPin, handleAddNotice
                         controls={false}
                         placeholder="숫자 4자리"
                         error={error}
-                        status={pin.length === maxPinInput && error ? 'error' : null}
+                        status={pin.length === maxPinInput && error ? 'error' : undefined}
                         onKeyDown={(e) => {
                             // Enter 키 누를시
                             if (e.key === 'Enter' && !error && pin.length === maxPinInput) {
@@ -103,7 +122,11 @@ const Wrapper = styled.div`
     gap: 2rem;
 `;
 
-const StyledTextArea = styled(TextArea)`
+interface StyledTextAreaProps {
+    $isOverLimit: boolean;
+}
+
+const StyledTextArea = styled(TextArea)<StyledTextAreaProps>`
     margin-top: 4rem;
     font-size: 1.5rem;
     font-family: Bold !important;
@@ -120,7 +143,16 @@ const StyledTextArea = styled(TextArea)`
     }
 `;
 
-const StyledPinInput = styled(PinInput)`
+interface StyledPinInputProps {
+    /** 항상 PIN 문자열 (antd Input의 value 타입을 좁힘) */
+    value: string;
+    /** PIN 4자리를 다 입력했는데 틀린 경우 true */
+    error: boolean;
+    /** Input에는 없는 prop(InputNumber 전용)이라 효과 없이 DOM으로 전달됨 (3단계 정리 대상) */
+    controls?: boolean;
+}
+
+const StyledPinInput = styled(PinInput)<StyledPinInputProps>`
     color: ${({ theme, value, error }) => (value.length === maxPinInput && error ? theme.danger : theme.title)};
 `;
 

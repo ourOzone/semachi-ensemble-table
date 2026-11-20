@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useFetchContext, useDrawerContext } from '@/context';
 import useMessage from '@/hooks/useMessage';
@@ -19,7 +19,7 @@ const Notice = () => {
 
     // 이미 삭제된 공지인지 체크. 이미 있는 공지를 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
     const checkNoticeExists = useCallback(
-        async (id) => {
+        async (id: string) => {
             try {
                 await noticeExists(id);
                 return true;
@@ -37,7 +37,7 @@ const Notice = () => {
     );
 
     const handleAddNotice = useCallback(
-        async (text) => {
+        async (text: string) => {
             try {
                 await addNotice(text);
                 fetchData();
@@ -52,7 +52,7 @@ const Notice = () => {
         [fetchData, message],
     );
 
-    const handleClickDelete = useCallback(async (id) => {
+    const handleClickDelete = useCallback(async (id: string) => {
         try {
             if (await checkNoticeExists(id)) {
                 setId(id);
@@ -64,7 +64,7 @@ const Notice = () => {
     }, []);
 
     const handleDeleteNotice = useCallback(
-        async (id) => {
+        async (id: string) => {
             try {
                 if (await checkNoticeExists(id)) {
                     await deleteNotice(id);

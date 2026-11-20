@@ -1,11 +1,20 @@
-import { useCallback } from 'react';
+import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { Button } from 'antd';
 import { useDrawerContext } from '@/context';
 import { PlusCircleOutlined, CloseOutlined } from '@ant-design/icons';
+import type { DrawerId, Notice } from '@/types';
 
-const NoticeDrawer = ({ drawerId, notices, handleClickDelete }) => {
+interface NoticeDrawerProps {
+    drawerId: DrawerId;
+    notices: Notice[];
+    /** 부모가 넘기지만 사용하지 않음 (3단계 정리 대상) */
+    setId: Dispatch<SetStateAction<string>>;
+    handleClickDelete: (id: string) => Promise<void>;
+}
+
+const NoticeDrawer = ({ drawerId, notices, handleClickDelete }: NoticeDrawerProps) => {
     const { openDrawer } = useDrawerContext();
 
     return (

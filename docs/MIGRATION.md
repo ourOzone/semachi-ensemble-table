@@ -7,7 +7,7 @@
 | 단계 | 상태 |
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
-| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-6까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
+| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-7까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ⏳ 시작 전 |
 
 ## 작업 로그
@@ -171,6 +171,24 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 18/18 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
+### 2026-11-20 — 2-7: components/notice
+
+- `git mv`: `notice/index·NoticeDrawer·AddNoticeDrawer·DeleteNoticeDrawer.jsx` → `.tsx`
+- 각 Drawer에 `XxxDrawerProps` 정의. 부모가 내려주는 콜백은 한 Drawer에서만 쓰여 공용 타입 없이 props에 시그니처를 직접 기술
+- 코드를 바꾸지 않고 타입으로 현재 동작을 기록한 곳
+  - `StyledPinInput`: `value: string`(antd value 타입을 좁힘), `error: boolean`, `controls?: boolean`(Input에 없는 prop이라 DOM으로만 전달됨, 3단계 대상)
+  - `AddNoticeDrawer`의 `handleAddNotice(text, pin)`: 부모는 `text`만 사용 → props 타입은 호출 형태 그대로 두고 주석 (3단계 대상)
+  - `NoticeDrawer`의 `setId`: 부모가 넘기지만 사용하지 않음 → props 타입에 포함하고 주석 (3단계 대상)
+- 값 변경 1곳: `status={... ? 'error' : null}` → `undefined`. antd 타입이 null을 허용하지 않음. antd 내부에서 둘 다 falsy로 처리되어 결과 동일
+- TextArea ref 타입은 antd의 `GetRef<typeof TextArea>`로 얻음 (깊은 경로 import 회피)
+- 테스트
+  - `src/test/fixtures.ts` 추가: 공용 서버 응답 데이터와 `mockInitialData()`. `src/test/render.tsx`에 `renderApp()` 추가. `App.test.tsx`를 이들로 정리 (`/team/:id` 모킹을 실제 응답인 `true`로 수정)
+  - `src/components/notice/Notice.test.tsx` 추가: 공지 등록(서버에 `{ content }`만 전송), 틀린 PIN이면 완료 비활성, 공지 삭제(`DELETE /notice?id=`)
+  - 비활성 `OkButton`은 `visibility: hidden`이라 접근성 이름이 비어 role로 못 찾음 → 문구로 찾고 활성화를 기다리는 헬퍼 사용. 이 처리 전에는 PIN 확인 응답 타이밍에 따라 간헐적으로 실패했음 (6회 반복으로 안정성 확인)
+  - 틀린 PIN 테스트는 서버 확인이 끝난 뒤 상태를 보도록 작성하고, 서버가 true를 주면 실패하는 것까지 확인
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 21/21 (2회 반복) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -211,5 +229,5 @@
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
 
 ### 다음 순서
-1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-7)
+1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-8)
 2. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성

@@ -2,7 +2,7 @@
 
 > 마이그레이션 1~3단계(CRA → Vite, JS → TS, 내부 로직 개선) **외에** 추가로 최신화할 항목을 정리한 문서.
 > 표기: ✅ 적용 완료 · 📌 적용 예정 · 🔍 검토 · ❌ 제외
-> 진행 상황 기록은 `docs/MIGRATION.md`, pnpm 명령어는 `docs/PNPM.md`에서 따로 관리한다.
+> 진행 상황 기록은 `docs/MIGRATION.md`, pnpm 명령어는 `docs/archive/PNPM.md`에서 따로 관리한다.
 >
 > 기준 시점: 2026-11 / Node 24, npm 10, TypeScript 7.0.2, Vite 8
 

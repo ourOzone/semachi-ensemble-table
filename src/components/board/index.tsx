@@ -313,8 +313,8 @@ const Block = styled.div`
 `;
 
 interface EnsembleProps {
-    /** 색상 매핑에 없는 팀이면 -1 (그대로 CSS 값이 됨, 3단계 정리 대상) */
-    teamColor: string | -1;
+    /** 팀 색상 (색상 매핑에 없는 팀은 theme.blueGray) */
+    teamColor: string;
     /** 다음 합주가 일주일 이상 뒤면 회색 */
     gray: boolean;
 }

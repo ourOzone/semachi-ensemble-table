@@ -91,7 +91,8 @@ export function toBoard(
                 nextDate,
                 due,
                 displayName: hour === startTime ? teamName : '', // 맨 처음 블록에만 팀명 표시
-                teamColor: colorMap[teamId] ?? -1, // 목록에 없는 팀은 -1 (ISSUES F8, 3-3에서 수정 예정)
+                // 목록에 없는 팀(삭제된 팀 등)은 회청색 (이전에는 -1이 그대로 CSS 배경색 값이 됐다: ISSUES F8)
+                teamColor: colorMap[teamId] ?? theme.blueGray,
             });
         }
     });

@@ -36,8 +36,8 @@ export interface EnsembleBlock {
     due: string;
     /** 합주의 첫 칸에만 팀 이름, 나머지 칸은 빈 문자열 */
     displayName: string;
-    /** 팀 색상. 색상 매핑에 없는 팀이면 -1 (3단계 정리 대상) */
-    teamColor: string | -1;
+    /** 팀 색상. 색상 매핑에 없는 팀(삭제된 팀 등)이면 theme.blueGray */
+    teamColor: string;
 }
 
 /** 합주표 전체. [요일 0~6][시간칸 0~29][그 칸에 겹치는 합주들] */

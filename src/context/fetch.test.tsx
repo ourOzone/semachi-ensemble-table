@@ -4,8 +4,9 @@
  * characterization test(특성 테스트)란?
  * - "이렇게 동작해야 한다"(명세)가 아니라 "지금 이렇게 동작한다"(현재 동작)를 그대로 기록하는 테스트.
  * - 레거시 코드를 리팩터링하기 전에 안전망으로 쓴다. 고친 뒤에도 이 테스트가 통과하면 동작이 바뀌지 않은 것이다.
- * - 그래서 이상해 보이는 동작도 일단 그대로 고정한다. (예: 색상 없는 팀의 teamColor가 -1)
- * - 승인된 수정(3-3): 반복 합주의 다시 계산한 다음 날짜는 0시 (F7, 이전에는 현재 시각이 붙었다)
+ * - 그래서 이상해 보이는 동작도 일단 그대로 고정한다.
+ * - 승인된 수정(3-3): 반복 합주의 다시 계산한 다음 날짜는 0시 (F7, 이전에는 현재 시각이 붙었다),
+ *   색상 없는 팀의 teamColor는 theme.blueGray (F8, 이전에는 -1)
  *   이런 동작을 일부러 바꾸려면, 먼저 승인을 받고 해당 테스트의 기대값을 함께 고친다.
  *
  * 대상: 서버 응답(teams·ensembles·notes·notices)을 화면용 데이터로 바꾸는 부분.
@@ -180,10 +181,10 @@ describe('fetchData 정제 로직 (characterization)', () => {
             expect(block.teamColor).toBe(theme.eventColors[1]);
         });
 
-        it('팀 목록에 없는 팀(예: 삭제된 팀)의 합주는 teamColor가 -1이다', async () => {
+        it('팀 목록에 없는 팀(예: 삭제된 팀)의 합주는 회청색(blueGray)이다', async () => {
             const block = await refineOne(ensemble({ _id: 'e1', teamId: 'deleted-team' }));
 
-            expect(block.teamColor).toBe(-1);
+            expect(block.teamColor).toBe(theme.blueGray);
         });
     });
 

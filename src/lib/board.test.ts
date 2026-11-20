@@ -1,8 +1,9 @@
 /**
  * lib/board 단위 테스트.
  * context/fetch.test.tsx의 characterization 기대값(현재 동작)을 now 인자 방식으로 옮겼다.
- * 이상해 보이는 현재 동작(teamColor -1)도 그대로 고정한다. 바꿀 때는 승인 후 기대값을 함께 고친다.
- * 3-3에서 승인된 수정: 다시 계산한 nextDate는 0시 (F7, 이전에는 현재 시각 10:00이 붙었다)
+ * 동작을 바꿀 때는 승인 후 기대값을 함께 고친다.
+ * 3-3에서 승인된 수정: 다시 계산한 nextDate는 0시 (F7, 이전에는 현재 시각 10:00이 붙었다),
+ *   목록에 없는 팀의 teamColor는 theme.blueGray (F8, 이전에는 -1)
  *
  * now는 2026-11-20(금) 10:00 (테스트 시간대 Asia/Seoul)
  */
@@ -187,7 +188,7 @@ describe('toBoard', () => {
         ]);
     });
 
-    it('소모임·회의 합주는 eventColors, 팀 목록에 없는 팀(예: 삭제된 팀)의 합주는 teamColor -1', () => {
+    it('소모임·회의 합주는 eventColors, 팀 목록에 없는 팀(예: 삭제된 팀)의 합주는 회청색(blueGray)', () => {
         const board = toBoard(
             teams,
             [
@@ -198,7 +199,7 @@ describe('toBoard', () => {
         );
 
         expect(board[4]![0]![0]!.teamColor).toBe(theme.eventColors[1]);
-        expect(board[4]![1]![0]!.teamColor).toBe(-1);
+        expect(board[4]![1]![0]!.teamColor).toBe(theme.blueGray);
     });
 
     it('nextDate는 now 기준으로 다시 계산된다 (resolveNextDate)', () => {

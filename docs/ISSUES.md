@@ -41,7 +41,7 @@
 | F5 | 🟡 | 팀 삭제 Drawer가 `useMessage()`의 `contextHolder`를 렌더링하지 않아, 네트워크 오류 알림이 화면에 표시되지 않는다 | `teams/DeleteTeamDrawer.tsx` | 코드 | 3-6 (알림 중앙화로 자동 해소) |
 | F6 | 🟡 | 합주 수정 PIN 단계의 네트워크 오류가 `console.error`로만 처리되어 사용자에게 알림이 없다 | `UpdateEnsembleDrawer1.tsx` | 코드 | View (PIN 단계 Drawer) |
 | F7 | 🟡 | 반복 합주의 "다음 날짜"가 오늘·다른 요일로 재계산되면 자정이 아니라 **현재 시각**이 붙는다. 이 값으로 미루기를 하면 시각이 붙은 날짜가 서버에 저장된다 | `context/fetch.tsx` → `lib/board` | 재현 (characterization test로 고정) | ✅ 3-3 (2026-11-20). 다시 계산한 날짜는 그날 0시 |
-| F8 | 🟡 | 팀 목록에 없는 팀의 합주는 `teamColor`가 `-1`이 되어 그대로 CSS 배경색 값이 된다 (팀 삭제는 합주도 지우므로 드묾) | `context/fetch.tsx`, `board/index.tsx` | 재현 (characterization test) | 3-3 |
+| F8 | 🟡 | 팀 목록에 없는 팀의 합주는 `teamColor`가 `-1`이 되어 그대로 CSS 배경색 값이 된다 (팀 삭제는 합주도 지우므로 드묾) | `context/fetch.tsx` → `lib/board`, `board/index.tsx` | 재현 (characterization test) | ✅ 3-3 (2026-11-20). `theme.blueGray`로 표시, 타입도 `string`으로 |
 | F9 | 🟡 | `useCallback` 의존성 누락 31건(`exhaustive-deps`). 예: 공지·한마디의 `handleClickDelete`는 deps가 `[]`라 첫 렌더링의 함수를 계속 참조한다. 지금은 참조하는 값들이 대부분 고정이라 눈에 띄는 오동작은 확인하지 못함 | 여러 곳 | 린트 | 컨테이너·App: 3-5~3-9 / Drawer: View |
 | F10 | 🟡 | 합주 정보 Drawer가 `handleSkip`으로 prop을 받지만 부모는 `handleSkipEnsemble`로 넘겨 항상 `undefined`. 실제로 쓰이지 않아 동작 영향 없음 | `EnsembleInfoDrawer.tsx` | 코드 | View |
 | F11 | ⚪ | 쓰이지 않는 prop·인자: `NoticeDrawer`의 `setId`, 공지 추가의 `pin` 인자(부모가 버림), `Header`의 `scrollPosition`, Input에 없는 `controls={false}`(8곳) | 여러 곳 | 코드 (타입 주석으로 표시) | View |

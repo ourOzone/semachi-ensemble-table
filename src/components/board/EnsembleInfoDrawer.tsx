@@ -12,12 +12,29 @@ import {
 import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
 import { idx2hour, eventIds } from '@/constants';
 import useMessage from '@/hooks/useMessage';
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
+import type { DrawerId, TimeSlot } from '@/types';
+import type { CheckEnsembleExists, HandleClickTeamInfo, HandleSkipEnsemble } from './types';
 import 'dayjs/locale/ko';
 
 dayjs.locale('ko');
 
-const EnsembleInfoDrawer = ({ drawerId, checkEnsembleExists, handleClickTeamInfo, handleSkip }) => {
+interface EnsembleInfoDrawerProps {
+    drawerId: DrawerId;
+    checkEnsembleExists: CheckEnsembleExists;
+    handleClickTeamInfo: HandleClickTeamInfo;
+    /** 부모가 넘기지만 사용하지 않음 (3단계 정리 대상) */
+    handleSkipEnsemble: HandleSkipEnsemble;
+    /** 구조분해하지만 부모가 넘기지 않아 항상 undefined (부모는 handleSkipEnsemble로 넘김, 3단계 정리 대상) */
+    handleSkip?: never;
+}
+
+const EnsembleInfoDrawer = ({
+    drawerId,
+    checkEnsembleExists,
+    handleClickTeamInfo,
+    handleSkip,
+}: EnsembleInfoDrawerProps) => {
     const { id: teamId, name, setTeamStates } = useTeamContext();
     const {
         id,
@@ -40,7 +57,13 @@ const EnsembleInfoDrawer = ({ drawerId, checkEnsembleExists, handleClickTeamInfo
     }, [setTeamStates, setEnsembleStates]);
 
     const handleClickUpdate = useCallback(
-        async (id, repeat, nextDate, startTime, endTime) => {
+        async (
+            id: string,
+            repeat: boolean,
+            nextDate: Dayjs | null,
+            startTime: TimeSlot | null,
+            endTime: TimeSlot | null,
+        ) => {
             try {
                 if (await checkEnsembleExists(id)) {
                     // team 수정시 수정하다 뒤로가기 했을 때 state가 바뀌지 않도록 하기 위함
@@ -60,7 +83,7 @@ const EnsembleInfoDrawer = ({ drawerId, checkEnsembleExists, handleClickTeamInfo
         [setEnsembleOrgStates, openDrawer],
     );
 
-    const handleClickDelete = useCallback(async (id) => {
+    const handleClickDelete = useCallback(async (id: string) => {
         try {
             if (await checkEnsembleExists(id)) {
                 openDrawer('deleteEnsemble');
@@ -70,7 +93,7 @@ const EnsembleInfoDrawer = ({ drawerId, checkEnsembleExists, handleClickTeamInfo
         }
     }, []);
 
-    const handleClickSkip = useCallback(async (id) => {
+    const handleClickSkip = useCallback(async (id: string) => {
         try {
             if (await checkEnsembleExists(id)) {
                 openDrawer('skipEnsemble');
@@ -127,7 +150,8 @@ const EnsembleInfoDrawer = ({ drawerId, checkEnsembleExists, handleClickTeamInfo
                             {nextDate?.format('YYYY-MM-DD')} ({nextDate?.format('dd')})
                         </Time>
                         <Time>
-                            {idx2hour[startTime]} - {idx2hour[endTime + 1]}
+                            {/* Drawer가 열려 있는 동안은 값이 있음 (닫히는 중 초기화되면 null이지만 기존 동작 유지) */}
+                            {idx2hour[startTime!]} - {idx2hour[endTime! + 1]}
                         </Time>
                         <Repeat>{repeat ? '매주 이 시간에 반복' : '이거 한 번만 하고 삭제'}</Repeat>
                     </TimeWrapper>

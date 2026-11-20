@@ -27,7 +27,7 @@
 | ✅ **2-6** | `components/layout` | 2 | 100 | `2-6 진행해줘` |
 | ✅ **2-7** | `components/notice` | 4 | 511 | `2-7 진행해줘` |
 | ✅ **2-8** | `components/note` | 3 | 406 | `2-8 진행해줘` |
-| **2-9** | `components/board` (index + Drawer 3개) | 4 | 767 | `2-9 진행해줘` |
+| ✅ **2-9** | `components/board` (index + Drawer 3개) | 4 | 767 | `2-9 진행해줘` |
 | **2-10** | `components/board/updateEnsembleDrawers` | 4 | 479 | `2-10 진행해줘` |
 | **2-11** | `components/teams` (index + Drawer 3개) | 4 | 679 | `2-11 진행해줘` |
 | **2-12** | `components/teams/addTeamDrawers` | 6 | 509 | `2-12 진행해줘` |
@@ -106,7 +106,7 @@ DrawerId      = 'teamInfo' | 'addTeam1' | ... // 30개
 - antd 컴포넌트를 감싼 styled 컴포넌트는 antd의 props 타입(`ButtonProps`, `InputProps` 등)을 확장한다.
 
 ### 2-6 ~ 2-14. 기능별 컴포넌트
-- 각 폴더의 `index`가 하위 Drawer에 콜백(`handleAddTeam`, `checkTeamExists` 등)을 내려준다. 콜백 타입은 `index` 쪽에 정의하고 Drawer props에서 재사용한다.
+- 각 폴더의 `index`가 하위 Drawer에 콜백(`handleAddTeam`, `checkTeamExists` 등)을 내려준다. 여러 Drawer가 같은 콜백을 받으면 타입을 폴더의 `types.ts`에 둔다 (`index`에 두면 순환 import). 한 곳에서만 쓰면 props에 직접 기술한다. (2-7·2-9에서 확정)
 - 파일마다 반복되는 `Title`, `Header` 같은 styled 컴포넌트는 **중복이어도 그대로 둔다** (View 개편 대상).
 - `TeamInfoDrawer`의 key 없는 Fragment 등 린트 지적 사항은 고치지 않는다 (3단계, 승인 후).
 

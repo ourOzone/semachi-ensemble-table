@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import styled from 'styled-components';
 import { teamExists } from '@/api/team';
 import { updateEnsemble, deleteEnsemble, ensembleExists } from '@/api/ensemble';
@@ -14,7 +14,8 @@ import UpdateEnsembleDrawer4 from './updateEnsembleDrawers/UpdateEnsembleDrawer4
 import DeleteEnsembleDrawer from './DeleteEnsembleDrawer';
 import SkipEnsembleDrawer from './SkipEnsembleDrawer';
 import { idx2hour } from '@/constants';
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
+import type { EnsembleBlock, TimeSlot } from '@/types';
 import 'dayjs/locale/ko';
 
 dayjs.locale('ko');
@@ -34,7 +35,7 @@ const Board = () => {
 
     // 이미 삭제된 합주인지 체크. 이미 있는 팀을 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
     const checkEnsembleExists = useCallback(
-        async (id) => {
+        async (id: string) => {
             try {
                 await ensembleExists(id);
                 return true;
@@ -54,7 +55,7 @@ const Board = () => {
     // const isSkipped = useCallback((nextDate) => nextDate.diff(dayjs().startOf('day'), 'day') >= 7, []);
 
     const handleEnsembleClick = useCallback(
-        async ({ id, teamId, name, repeat, nextDate, startTime, endTime }) => {
+        async ({ id, teamId, name, repeat, nextDate, startTime, endTime }: EnsembleBlock) => {
             try {
                 if (await checkEnsembleExists(id)) {
                     setTeamStates(teamId, '', name);
@@ -72,12 +73,13 @@ const Board = () => {
 
     // 합주 정보 Drawer에서 팀 정보 보기 클릭 (id는 team id)
     const handleClickTeamInfo = useCallback(
-        async (id) => {
+        async (id: string) => {
             try {
                 // 누른 팀이 이미 삭제됐으면 에러 (catch 매커니즘이 달라서 예외적으로 checkTeamExists는 사용 불가)
                 await teamExists(id);
 
-                const { type, name, desc } = teams.find((team) => team.id === id);
+                // 목록에 없으면 구조분해에서 TypeError → catch에서 "이미 삭제된 팀" 처리 (기존 동작)
+                const { type, name, desc } = teams.find((team) => team.id === id)!;
                 setTeamStates(id, type, name, desc);
                 openDrawer('teamInfo');
             } catch {
@@ -92,18 +94,26 @@ const Board = () => {
     );
 
     const handleUpdateEnsemble = useCallback(
-        async (id, teamId, repeat, nextDate, startTime, endTime) => {
+        async (
+            id: string,
+            teamId: string,
+            repeat: boolean,
+            nextDate: Dayjs | null,
+            startTime: TimeSlot | null,
+            endTime: TimeSlot | null,
+        ) => {
             try {
                 if (await checkEnsembleExists(id)) {
+                    // 선택을 마친 뒤에만 호출되어 null이 아님 (null이면 nextDate.day()에서 TypeError → catch, 기존 동작)
                     await updateEnsemble(id, {
                         teamId,
                         repeat,
-                        nextDate,
-                        startTime,
-                        endTime,
-                        day: (nextDate.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
+                        nextDate: nextDate!,
+                        startTime: startTime!,
+                        endTime: endTime!,
+                        day: (nextDate!.day() + 6) % 7, // 월요일 0 ~ 일요일 6으로 변환
                         type: repeat ? '무기한' : '일회성', // TODO 삭제
-                        due: repeat ? '2099-12-31' : nextDate.format('YYYY-MM-DD'), // TODO 삭제
+                        due: repeat ? '2099-12-31' : nextDate!.format('YYYY-MM-DD'), // TODO 삭제
                     });
                     fetchData();
                     message.success('잘 바꿔놨어요.');
@@ -119,7 +129,7 @@ const Board = () => {
     );
 
     const handleDeleteEnsemble = useCallback(
-        async (id) => {
+        async (id: string) => {
             try {
                 if (await checkEnsembleExists(id)) {
                     await deleteEnsemble(id);
@@ -140,7 +150,14 @@ const Board = () => {
 
     // 다음 번에 안 해요 클릭 시 nextDate를 7일 뒤로 변경
     const handleSkipEnsemble = useCallback(
-        async (id, teamId, repeat, nextDate, startTime, endTime) => {
+        async (
+            id: string,
+            teamId: string,
+            repeat: boolean,
+            nextDate: Dayjs | null,
+            startTime: TimeSlot | null,
+            endTime: TimeSlot | null,
+        ) => {
             try {
                 if (await checkEnsembleExists(id)) {
                     handleUpdateEnsemble(
@@ -271,7 +288,11 @@ const ColumnWrapper = styled.div`
     width: 100%;
 `;
 
-const LabelWrapper = styled.div`
+interface LabelWrapperProps {
+    isToday: boolean;
+}
+
+const LabelWrapper = styled.div<LabelWrapperProps>`
     display: flex;
     flex-direction: column;
     height: 3.25rem;
@@ -313,7 +334,14 @@ const Block = styled.div`
     margin-right: 0.25rem;
 `;
 
-const Ensemble = styled.div`
+interface EnsembleProps {
+    /** 색상 매핑에 없는 팀이면 -1 (그대로 CSS 값이 됨, 3단계 정리 대상) */
+    teamColor: string | -1;
+    /** 다음 합주가 일주일 이상 뒤면 회색 */
+    gray: boolean;
+}
+
+const Ensemble = styled.div<EnsembleProps>`
     width: 100%;
     height: 2.5rem;
     background-color: ${({ theme, teamColor, gray }) => (gray ? theme.disabledGray : teamColor)};

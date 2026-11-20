@@ -1,4 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
+import type { InputRef } from 'antd';
+import type { Dayjs } from 'dayjs';
 import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { checkTeamPin } from '@/api/team';
@@ -6,15 +8,26 @@ import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context'
 import OkButton from '@/components/common/OkButton';
 import PinInput from '@/components/common/PinInput';
 import useMessage from '@/hooks/useMessage';
+import type { DrawerId, TimeSlot } from '@/types';
+import type { CheckEnsembleExists, HandleSkipEnsemble } from './types';
 
 const maxInput = 4;
 
-const DeleteEnsembleDrawer = ({ drawerId, checkEnsembleExists, handleDeleteEnsemble }) => {
+interface SkipEnsembleDrawerProps {
+    drawerId: DrawerId;
+    checkEnsembleExists: CheckEnsembleExists;
+    handleSkipEnsemble: HandleSkipEnsemble;
+}
+
+const SkipEnsembleDrawer = ({
+    drawerId,
+    checkEnsembleExists,
+    handleSkipEnsemble,
+}: SkipEnsembleDrawerProps) => {
     const { id: teamId, pin, setPin } = useTeamContext();
-    const { id } = useEnsembleContext();
-    const { openDrawer } = useDrawerContext();
+    const { id, repeat, nextDate, startTime, endTime } = useEnsembleContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
-    const focusInputRef = useRef(null);
+    const focusInputRef = useRef<InputRef>(null);
     const [message, contextHolder] = useMessage();
 
     const onClose = useCallback(() => {
@@ -23,7 +36,7 @@ const DeleteEnsembleDrawer = ({ drawerId, checkEnsembleExists, handleDeleteEnsem
     }, [setPin]);
 
     const handlePinChange = useCallback(
-        async (id, teamId, value) => {
+        async (id: string, teamId: string, value: string) => {
             const numeric = value.replace(/\D/g, '');
             if (numeric.length <= maxInput) {
                 setPin(numeric);
@@ -48,10 +61,26 @@ const DeleteEnsembleDrawer = ({ drawerId, checkEnsembleExists, handleDeleteEnsem
         [setPin],
     );
 
+    const handleClickSkip = useCallback(
+        (
+            id: string,
+            teamId: string,
+            repeat: boolean,
+            nextDate: Dayjs | null,
+            startTime: TimeSlot | null,
+            endTime: TimeSlot | null,
+        ) => {
+            setPin('');
+            setError(false);
+            handleSkipEnsemble(id, teamId, repeat, nextDate, startTime, endTime);
+        },
+        [handleSkipEnsemble, setPin],
+    );
+
     return (
         <Drawer drawerId={drawerId} onClose={onClose} focusInputRef={focusInputRef}>
             {contextHolder}
-            <Title>PIN 입력해야 삭제돼요 🔑</Title>
+            <Title>PIN 입력해야 미룰 수 있어요 🔑</Title>
             <InputWrapper>
                 <StyledInput
                     ref={focusInputRef}
@@ -62,19 +91,19 @@ const DeleteEnsembleDrawer = ({ drawerId, checkEnsembleExists, handleDeleteEnsem
                     controls={false}
                     placeholder="숫자 4자리"
                     error={error}
-                    status={pin.length === maxInput && error ? 'error' : null}
+                    status={pin.length === maxInput && error ? 'error' : undefined}
                     onKeyDown={(e) => {
                         // Enter 키 누를시
                         if (e.key === 'Enter' && !error && pin.length === maxInput) {
-                            handleDeleteEnsemble(id);
+                            handleClickSkip(id, teamId, repeat, nextDate, startTime, endTime);
                         }
                     }}
                 />
             </InputWrapper>
 
             <OkButton
-                label="진짜 삭제해요"
-                onClick={() => handleDeleteEnsemble(id)}
+                label="다음 번에 안 해요"
+                onClick={() => handleClickSkip(id, teamId, repeat, nextDate, startTime, endTime)}
                 disabled={error || pin.length !== maxInput}
             />
         </Drawer>
@@ -95,8 +124,17 @@ const InputWrapper = styled.div`
     align-items: center;
 `;
 
-const StyledInput = styled(PinInput)`
+interface StyledInputProps {
+    /** 항상 PIN 문자열 (antd Input의 value 타입을 좁힘) */
+    value: string;
+    /** PIN 4자리를 다 입력했는데 틀린 경우 true */
+    error: boolean;
+    /** Input에는 없는 prop(InputNumber 전용)이라 효과 없이 DOM으로 전달됨 (3단계 정리 대상) */
+    controls?: boolean;
+}
+
+const StyledInput = styled(PinInput)<StyledInputProps>`
     color: ${({ theme, value, error }) => (value.length === maxInput && error ? theme.danger : theme.title)};
 `;
 
-export default DeleteEnsembleDrawer;
+export default SkipEnsembleDrawer;

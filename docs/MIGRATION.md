@@ -7,7 +7,7 @@
 | 단계 | 상태 |
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
-| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-8까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
+| 2. JS → TS 100% 전환 | 🔄 진행 중 — 2-9까지 완료 (계획: `docs/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ⏳ 시작 전 |
 
 ## 작업 로그
@@ -200,6 +200,24 @@
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 23/23 (2회 반복) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
 
+### 2026-11-20 — 2-9: components/board
+
+- `git mv`: `board/index·EnsembleInfoDrawer·DeleteEnsembleDrawer·SkipEnsembleDrawer.jsx` → `.tsx`
+- `src/components/board/types.ts` 추가: 하위 Drawer 여러 곳이 받는 콜백 타입(`CheckEnsembleExists`, `HandleUpdateEnsemble`, `HandleSkipEnsemble`, `HandleDeleteEnsemble`, `HandleClickTeamInfo`). `index.tsx`에 두면 순환 import가 생겨 폴더별 `types.ts`로 분리
+- non-null 단언(`!`)으로 처리한 곳 (실행 결과 동일, 주석으로 근거 기록)
+  - `handleUpdateEnsemble`: context 값(`Dayjs | null`, `TimeSlot | null`)을 받지만 서버 요청엔 non-null 필요. 선택을 마친 뒤에만 호출되며, null이면 기존에도 `nextDate.day()`에서 TypeError → catch
+  - `handleClickTeamInfo`: `teams.find()!`. 없으면 기존에도 구조분해 TypeError → catch의 "이미 삭제된 팀" 경로
+  - `EnsembleInfoDrawer`의 `idx2hour[startTime!]`, `idx2hour[endTime! + 1]`: 열려 있는 동안은 값이 있음
+- 타입으로 기록한 기존 문제 (3단계 대상)
+  - `EnsembleInfoDrawer`는 `handleSkip`으로 구조분해하지만 부모는 `handleSkipEnsemble`로 넘김 → `handleSkip?: never`, `handleSkipEnsemble`(미사용)로 표시
+  - `Ensemble` 블록의 `teamColor: string | -1` (-1이 그대로 CSS 값이 됨)
+- 테스트
+  - `src/test/queries.ts`: `findEnabledButton()`에 범위(container) 인자 추가, `findDrawer()` 추가
+  - `src/components/board/Board.test.tsx` 추가: 합주 정보 표시, 수정(PIN → 반복 → 달력 → 시간 → `PUT` 본문), 미루기(7일 뒤 `nextDate`), 삭제. `Date`만 가짜로 고정(2026-11-20)
+  - 수정 흐름은 2-10의 updateEnsembleDrawers를 거치므로 2-10 검증도 겸함
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 27/27 (2회 반복, 합주 테스트는 4회 반복) / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 62 (변동 없음)
+
 ## 남은 일
 
 ### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
@@ -240,5 +258,5 @@
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
 
 ### 다음 순서
-1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-9)
+1. 2단계 TS 전환 — 단계 구성과 지시 방법은 `docs/TS_MIGRATION_PLAN.md` 참고 (다음: 2-10)
 2. 로직 개선 전 `context/fetch.jsx` 정제 로직에 characterization test 작성

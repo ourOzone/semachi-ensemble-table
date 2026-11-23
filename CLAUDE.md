@@ -55,6 +55,7 @@
   Drawer 내부에만 있는 문제(단계 간 값 전달, 단계별 초기화, PIN 단계 등)는 고치지 않고 `docs/ISSUES.md`에 View 처리로 기록한다.
 - View 개편의 디자인 원칙 (사용자 결정): 사용자의 약 90%가 모바일이다. UX는 모바일 기준, UI는 모바일·폴더블·PC 모두 불편함이 없게 한다.
   `src/styles/theme.ts`의 `teamColors` 20종은 서비스의 아이덴티티라 값·개수·순서를 바꾸지 않는다.
+- View 개편 중 새 코드는 Tailwind + shadcn/ui(`src/components/ui/`)로만 쓴다 (styled-components·antd 금지). 옛 코드와 공존하는 동안의 CSS 레이어 규칙은 `docs/VIEW_REDESIGN_PLAN.md` "공존 기간 규칙"을 따른다.
 - 알림(토스트) 기능은 3-6 폐기 때 삭제했다 (2026-11-23). 3단계에서는 다시 넣지 않고, View 개편 때 새로 추가한다 (`docs/VIEW_REDESIGN_PLAN.md`).
 
 ## 작업 방식

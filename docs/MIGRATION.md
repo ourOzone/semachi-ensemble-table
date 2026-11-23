@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-0 사전 결정 확정 (2026-11-23), 다음은 V-1 기반 작업 (계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-1 기반 작업 완료 (2026-11-23, 브랜치 `ui3.0`), 다음은 V-2 합주표 (계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -549,6 +549,29 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - `MODERNIZATION.md` 10번: React Compiler 판단 → V-1에서 켜기로 확정
 - `CLAUDE.md`: 팀 색 유지·모바일 우선 규칙 추가
 
+### 2026-11-23 — View 개편 V-1: 기반 작업 (브랜치 `ui3.0`)
+
+- 브랜치: `migrate-vite` → `dev`(V-0 문서 커밋) → `ui3.0`(View 개편 작업)
+- 설치: Tailwind 4.3(`@tailwindcss/vite`), shadcn 4.23(Radix 기반, `radix-nova`) + Button·Drawer(vaul 1.1.2)·Sonner 2.0, lucide-react, `cn`, `tw-animate-css`, React Compiler(`babel-plugin-react-compiler` 1.0 + `@rolldown/plugin-babel`), `@ant-design/cssinjs`(antd가 쓰던 것과 같은 1.24, `StyleProvider`용 직접 의존성)
+  - shadcn이 넣은 것 중 뺀 것: Geist 글꼴(한글 없음), `next-themes`(다크 모드 없음). `shadcn`은 CSS import(`shadcn/tailwind.css`)만 쓰므로 devDependencies로
+- CSS 레이어 순서 `theme, base, legacy, antd, components, utilities` (사전 결정 1)
+  - 옛 `GlobalStyle`(styled-components, 레이어 밖)이 그대로면 `*` 규칙이 Tailwind 유틸리티를 모두 이긴다 → `src/styles/legacy.css`로 옮겨 `legacy` 레이어에 넣고 `GlobalStyle.ts` 삭제. 쓰지 않던 antd message 스타일은 버림
+  - antd는 스타일을 head 맨 앞에 넣어 레이어 선언보다 먼저 `antd` 레이어가 등장 → 가장 낮은 레이어가 되어 Tailwind preflight가 antd 버튼 테두리·배경을 지웠다(달력 화살표). `index.html`에 레이어 순서를 먼저 선언하고, antd 스타일은 body에(`StyleProvider container`), 아이콘 스타일은 처음부터 레이어로(`IconProvider`)
+  - preflight가 바꾼 `line-height`(html 1.5, 버튼이 부모 값 상속)를 legacy에서 브라우저 기본값으로
+- 옛 화면 확인: Playwright(설치된 Chrome)로 V-1 전(`dev`, worktree)·후 화면을 픽셀 비교. 메인·팀 추가·공지·팀 정보·달력·PIN × 390·1280px, 개발 서버·프로덕션 빌드 모두 0픽셀 차이 (PC 폭 antd Drawer 포커스 외곽선 색만 다름, ISSUES V8)
+- 토큰: 팀 색 20종·소모임 색 11종을 `@theme`로 (값·순서 그대로). 나머지 색은 V-2 디자인 컨셉에서
+- 알림 (동작 변경): **조회가 (재시도까지) 실패하면 "정보를 불러오지 못했어요" 알림**이 뜬다 (이전: 알림 없음). 여러 조회가 동시에 실패해도 하나 (ISSUES V6 일부)
+  - `createQueryClient({ retry })`: 테스트용 QueryClient도 같은 함수로 만들어 알림 설정을 공유 (`mutations.retry: false`는 TanStack 기본값과 같음)
+- React Compiler: 옛 코드 포함 전체에 적용. 빌드 결과에 메모이제이션 코드 51곳. 기존 테스트 93개 그대로 통과
+- 테스트 (5개 추가, ISSUES E7)
+  - `src/styles/tokens.test.ts`: 팀 색·소모임 색 토큰이 `theme.ts`와 값·순서가 같은지 (`node:fs`는 필요한 함수만 타입 선언, `@types/node`는 추가하지 않음)
+  - `src/lib/notify.test.tsx`: 조회 실패 시 알림 하나, 성공 시 없음
+  - `src/components/ui/drawer.test.tsx`: vaul Drawer 열기·제목으로 찾기·입력·닫기
+  - `setup.ts`: 포인터 캡처 빈 구현, vaul 애니메이션 끄기, 테스트마다 `toast.dismiss()` / `render.tsx`: `<Toaster />` / `queries.ts`: `findDialog()`
+  - 변형 검사 8/8 검출 (알림 id·연결 제거, 팀 색 값·순서·개수, 소모임 색, 알림 정리·vaul 보정 제거)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 98/98 / `pnpm exec vitest run --maxWorkers=4` ✅ / `pnpm build` ✅ (JS 1,091kB, gzip 340kB: +52kB) / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 42 (변동 없음, 새 코드 0건)
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -582,9 +605,9 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 | ~~Zod~~ | ~~수동 응답 정제~~ | ✅ 3단계 (항목 단위 응답 검증) |
 | ~~TanStack Query~~ | ~~`context/fetch` (`fetchData`, `xxxExists` 사전 확인)~~ | ✅ 3단계 |
 | Zustand | ~~`context/drawer`~~ ✅ 3-9 / `context/team`·`ensemble`은 Zustand가 아니라 폼 로컬 상태로 | View 개편 |
-| Tailwind CSS v4 | styled-components | View 개편 |
+| Tailwind CSS v4 | styled-components | View 개편 (V-1에서 도입, 기능 단계마다 대체) |
 | shadcn/ui | antd (`PinInput` → input-otp), **알림 기능 새로 추가**(Sonner, 기존 `useMessage`는 3-6 폐기 때 삭제) | View 개편 |
-| React Compiler | 수동 `useCallback`/`useMemo` | View 개편 V-1에서 켜기 (V-0 확정) |
+| ~~React Compiler~~ | ~~수동 `useCallback`/`useMemo`~~ | ✅ V-1 (2026-11-23) |
 
 ### 환경
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
@@ -593,4 +616,4 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 1. ~~2단계 TS 전환~~ ✅ 완료
 2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)
 3. ~~3단계 내부 로직 개선~~ ✅ 완료 (2026-11-23)
-4. View 개편: 계획 `docs/VIEW_REDESIGN_PLAN.md` (V-0 ✅, 다음은 V-1 기반 작업)
+4. View 개편: 계획 `docs/VIEW_REDESIGN_PLAN.md` (V-0·V-1 ✅, 다음은 V-2 합주표)

@@ -44,7 +44,7 @@
 | 단계 | 내용 | 관련 ID |
 |---|---|---|
 | V-0 ✅ | 사전 결정 확정 (2026-11-23) | |
-| V-1 | **기반 작업**: 아래 "V-1 상세" | V6 |
+| V-1 ✅ | **기반 작업**: 아래 "V-1 상세" (2026-11-23) | V6(조회 실패 알림) |
 | V-2 | **합주표**: 합주표 그리드, 합주 정보·수정·미루기·삭제 → 단일 Drawer, 달력·시간 선택. **디자인 컨셉을 이 단계의 구성안에서 정한다** (색·글꼴·간격·모서리·Drawer 모양, 화면 폭별 배치) | F6, F10 |
 | V-3 | **팀**: 팀 버튼, 팀 정보·추가·수정·삭제, 합주 추가, 소모임 정보 → 단일 Drawer. 규모가 커서 필요하면 V-3a(팀) / V-3b(합주 추가·소모임)로 나눈다. 합주 추가의 달력·시간 선택은 V-2의 컴포넌트를 다시 쓴다 | F11, V7 |
 | V-4 | **한마디**: 한마디 목록·등록·삭제 (V-2·V-3에서 정한 컨셉을 따른다) | |
@@ -52,16 +52,31 @@
 | V-6 | **일괄 정리**: 아래 "V-6 상세" | V1~V5, E4, F9 |
 | V-7 | **마무리**: 린트·커버리지·번들 비교, 문서 | |
 
-### V-1 상세 (기반 작업)
-- Tailwind v4(`@tailwindcss/vite`) 설치, 진입 CSS 파일, 사전 결정 1의 레이어 순서
-- shadcn/ui 초기화: `components.json`, 컴포넌트 위치 `src/components/ui/`, `cn()` 유틸 (`src/lib/utils.ts`)
-- 디자인 토큰: `src/styles/theme.ts`의 색·팀 색상(`teamColors`·`eventColors`)을 CSS 변수(Tailwind `@theme`)로 옮긴다. **팀 색은 값·순서 그대로** (디자인 원칙). 공존 기간에는 `theme.ts`도 유지 (styled 쪽이 사용). 그 외 색은 V-2에서 컨셉을 정할 때 새로 정한다
-- 단일 Drawer: shadcn Drawer(vaul) 추가 (사전 결정 2). 설치 시 vaul의 유지보수 상태와 React 19 호환을 확인하고, 문제가 있으면 보고한다. 모바일 키보드가 올라올 때 입력칸이 가려지지 않는지 확인
-- 반응형 확인 환경: 개발 서버에서 디자인 원칙의 확인 폭(360·390~430·600~900·1024px 이상)으로 볼 수 있게 한다
-- 폰트: `GlobalStyle`의 `@font-face`(woff2)를 CSS로 옮길 준비 (실제 제거는 V-6)
-- 알림: `<Toaster />`를 앱 루트에 두고, 조회 실패(TanStack Query `QueryCache.onError`)를 연결. 변경(mutation) 알림은 기능 단계마다 그 기능의 훅에 연결
-- React Compiler (사전 결정 7)
-- 테스트 헬퍼: 렌더링 헬퍼에 `<Toaster />`, 새 UI용 공용 헬퍼(역할 기반 조회) 추가. 기존 antd용 헬퍼(`findEnabledButton`·`findDrawer`)는 V-6까지 유지
+### V-1 상세 (기반 작업) ✅ 2026-11-23
+- [x] Tailwind v4.3(`@tailwindcss/vite`), 진입 CSS `src/styles/index.css`, 사전 결정 1의 레이어 순서 → 아래 "공존 기간 규칙"
+- [x] shadcn/ui 초기화(`shadcn@4.23`, Radix 기반, 스타일 `radix-nova`): `components.json`, `src/components/ui/`(button·drawer·sonner), `cn()`(`src/lib/utils.ts`, shadcn 공식 `cn` 패키지를 다시 내보냄)
+- [x] 디자인 토큰: 팀 색 20종·소모임 색 11종을 `@theme`의 `--color-team-0~19`·`--color-event-0~10`으로 (값·순서 그대로, `src/styles/tokens.test.ts`가 `theme.ts`와 같은지 확인). 그 외 색·모서리는 shadcn 기본값으로 두고 V-2에서 컨셉을 정할 때 새로 정한다
+- [x] 단일 Drawer: shadcn Drawer(vaul 1.1.2) 추가. vaul은 마지막 배포가 2024-12이고 React 19를 지원하며, 내부는 계속 유지되는 Radix Dialog다. jsdom에서 열기·입력·닫기 확인(`drawer.test.tsx`). **모바일 키보드에 입력칸이 가려지는지는 실제 폼이 생기는 V-2에서 확인** (headless 브라우저로는 확인 불가)
+- [x] 반응형·회귀 확인: 설치된 Chrome + Playwright(`playwright-core`, 작업 폴더 밖)로 화면 폭별 스크린샷을 찍어 픽셀 비교. 아래 "옛 화면 확인 결과"
+- [x] 글꼴: 옛 `GlobalStyle`(styled-components)을 `src/styles/legacy.css`로 옮기고 삭제. 새 코드용 `--font-sans`는 나눔스퀘어 네오(300·400·700, 같은 woff2). shadcn이 넣은 Geist 글꼴은 한글이 없어 제거
+- [x] 알림: `<Toaster />`(위쪽 가운데, 밝은 테마, `next-themes` 제거)를 앱 루트에. 조회 실패는 `QueryCache.onError` → `lib/notify`의 `notifyQueryError()` (같은 id로 띄워 여러 조회가 동시에 실패해도 하나). 변경 알림은 기능 단계마다
+- [x] React Compiler: `babel-plugin-react-compiler` 1.0 + `@rolldown/plugin-babel` (플러그인 내장 Rust판은 실험 단계라 Babel판). 옛 코드 포함 전체에 적용, 기존 테스트 93개 통과
+- [x] 테스트 헬퍼: `renderWithTheme`·`renderApp`에 `<Toaster />`, `createTestQueryClient()`는 앱과 같은 `createQueryClient({ retry: false })`, 새 UI용 `findDialog(제목)`. jsdom 보정은 ISSUES E7
+
+#### 공존 기간 규칙 (V-1에서 정함, V-6까지 지킨다)
+- **CSS 레이어 순서:** `theme, base, legacy, antd, components, utilities` (뒤가 우선). `index.html`의 `<style>`과 `src/styles/index.css` 두 곳에 같은 순서로 선언한다
+  - 레이어 순서는 **문서에서 레이어 이름이 처음 나온 순서**로 정해진다. antd는 스타일을 컨테이너 맨 앞에 넣으므로, head에 넣으면 antd가 가장 낮은 레이어가 된다 → `StyleProvider`에 `layer`와 `container={document.body}`, 아이콘 스타일은 `IconProvider value={{ layer: 'antd' }}`(없으면 달력의 중첩 `ConfigProvider`가 head 맨 앞의 아이콘 스타일을 `@layer antd`로 바꿔 같은 문제가 생김) (`src/index.tsx`)
+  - `legacy` = 옛 전역 스타일(`legacy.css`). preflight보다 뒤라 옛 화면이 그대로다. preflight가 바꾸는 `line-height`(html·버튼)는 legacy에서 브라우저 기본값으로 되돌렸다
+  - styled-components의 컴포넌트 스타일은 레이어 밖(가장 우선)이지만 옛 요소에만 붙는다
+- **새 컴포넌트는 글자 크기·굵기를 유틸리티 클래스로 지정한다.** legacy의 `* { font-size; font-family: Regular }`가 새 요소에도 적용되기 때문 (ISSUES V8)
+- **새 코드에 styled-components·antd를 쓰지 않는다.** 스타일은 Tailwind, 컴포넌트는 `src/components/ui/`
+- shadcn 컴포넌트 추가: `pnpm dlx shadcn@4.23.0 add <이름>` 후 `pnpm format`. 생성된 파일을 읽고 필요 없는 의존성(예: `next-themes`)이 들어오면 정리한다
+- 알림 문구·함수는 `src/lib/notify.ts`에 모은다
+
+#### 옛 화면 확인 결과 (V-1 전후 픽셀 비교)
+- 비교: 메인(전체 페이지)·팀 추가·공지·팀 정보·달력(합주 추가)·PIN 입력 × 390px·1280px, 개발 서버와 프로덕션 빌드 모두
+- 결과: 모두 0픽셀 차이. 단 PC 폭에서 antd Drawer를 연 화면은 포커스 외곽선 색만 다름(1,832픽셀, ISSUES V8)
+- 과정에서 찾아 고친 것: ① preflight의 `line-height: 1.5`로 팀 버튼이 커짐 ② 버튼이 헤더의 `line-height: 64px`을 물려받아 아이콘 이동 ③ antd 레이어가 맨 앞으로 가 달력 화살표 버튼의 테두리·배경이 사라짐 (위 레이어 규칙)
 
 ### 기능 단계(V-2 ~ V-5)에서 할 일
 1. **화면 구성안을 먼저 제안하고 승인을 받는다** (Drawer 하나에 무엇을 넣는지, 입력 순서, 완료·실패 표시, **화면 폭별 배치**). 동작이 바뀌는 부분은 목록으로 밝힌다
@@ -72,8 +87,10 @@
 6. PIN 흐름: 백엔드 B1(변경 API의 서버 측 PIN 검증)이 바뀌기 전까지는 폼 안에서 `check-xxx-pin`으로 확인한 뒤 저장한다. 바뀌었다는 통보가 오면 그때 저장 요청 하나로 합친다
 
 ### V-6 상세 (일괄 정리)
-- 끝까지 손대지 않은 View: `layout`(Header·Footer), `common`(Drawer·OkButton·PinInput·Tooltip·Container), App의 본문 밀기(`openedDrawers` 기반 translate), `GlobalStyle`·`media`·`styled.d.ts`
-- 제거: `antd`, `@ant-design/icons`, `@ant-design/v5-patch-for-react-19`(+ `src/index.tsx`의 import), `styled-components`, `src/styles/theme.ts`(토큰으로 이전 완료 후), `context/team`·`context/ensemble`·`ContextProvider`, 호환용 `useDrawerContext` 별칭
+- 끝까지 손대지 않은 View: `layout`(Header·Footer), `common`(Drawer·OkButton·PinInput·Tooltip·Container), App의 본문 밀기(`openedDrawers` 기반 translate), `media`·`styled.d.ts`
+- 공존 기간 장치 제거: `src/styles/legacy.css`와 `legacy` 레이어, `index.html`의 레이어 선언 중 `antd`, `src/index.tsx`의 `StyleProvider`·`IconProvider`, 테스트 setup의 vaul 외 antd용 보정(`matchMedia` 등은 필요 여부 확인)
+- `theme.ts` 제거 전: `lib/board`의 `buildColorMap`이 `theme.teamColors`를 쓴다 → 팀 색 상수를 로직 층으로 옮겨야 한다 (로직 변경이므로 먼저 보고. `tokens.test.ts`도 그 상수와 비교하도록)
+- 제거: `antd`, `@ant-design/icons`, `@ant-design/cssinjs`, `@ant-design/v5-patch-for-react-19`(+ `src/index.tsx`의 import), `styled-components`, `src/styles/theme.ts`(토큰으로 이전 완료 후), `context/team`·`context/ensemble`·`ContextProvider`, 호환용 `useDrawerContext` 별칭
 - `stores/drawer`를 단일 Drawer 구조에 맞게 줄인다 (스택이 필요 없으면 "열린 Drawer 하나 + 대상 id")
 - antd 의존 테스트 헬퍼(`findEnabledButton`·`findDrawer`·달력 `td[title]`) 정리 (E4), App 테스트의 허용 경고 목록(`KNOWN_WARNINGS`) 정리
 
@@ -94,7 +111,7 @@
   - 함께 사라지는 것: 입력 한 글자마다 다시 렌더링(P3), 수정 취소용 `orgXxx` 복제(P5, 폼 초기값으로 대체), `setTeamStates()`·`setEnsembleStates()` 초기화 호출
 - [ ] **`stores/drawer` 축소:** 3-9에서 Context → Zustand로 옮긴 Drawer 스택을 단일 Drawer 구조에 맞게 줄이고, 호환용 `useDrawerContext` 별칭을 삭제한다
 - [ ] **PIN 흐름:** 지금은 PIN 단계 Drawer가 존재 확인과 `check-xxx-pin`을 따로 호출한다(P2 잔여, F6). 백엔드 B1 대응(변경 API에서 PIN 검증)에 맞춰 폼 submit 하나로 합친다
-- [ ] **(트렌디한) 알림 기능 새로 추가:** 3-6을 폐기하면서 기존 알림(`useMessage`)을 프로젝트에서 삭제했다(2026-11-23). 지금은 성공·실패·"이미 삭제됨"을 사용자에게 알리지 않는다
+- [ ] **(트렌디한) 알림 기능 새로 추가:** (V-1: Sonner와 조회 실패 알림 ✅, 변경 알림은 기능 단계마다) 3-6을 폐기하면서 기존 알림(`useMessage`)을 프로젝트에서 삭제했다(2026-11-23). 지금은 성공·실패·"이미 삭제됨"을 사용자에게 알리지 않는다
   - 권장: shadcn/ui의 **Sonner**(토스트)를 앱 루트에 하나 두고, mutation 훅의 `onSuccess`·`onError`(404 → "이미 삭제됨")와 TanStack Query `QueryCache.onError`(조회 실패)에서 호출
   - 이전 알림 문구는 git 기록(`8af5868` 이전 코드)에서 참고할 수 있다
 - [ ] **폼은 3단계의 mutation 훅을 호출한다** (`useUpdateTeam().mutateAsync(...)` 등). 캐시 갱신은 훅이 처리한다 (알림은 위 항목에서 새로 연결)
@@ -153,6 +170,7 @@
 ## 공통 검증 (작업마다)
 
 - `pnpm typecheck` / `pnpm test:run` / `pnpm format:check` / `pnpm build`
-- `pnpm lint`: 에러·경고가 늘지 않아야 한다 (View 개편 시작 시점: 에러 5·경고 42, 모두 옛 View 코드). 새 코드는 0건
+- `pnpm lint`: 에러·경고가 늘지 않아야 한다 (View 개편 시작 시점: 에러 5·경고 42, 모두 옛 View 코드. V-1 후 같음). 새 코드는 0건
 - 테스트를 스크립트로 판정할 때는 `CLAUDE.md`의 테스트 규칙(기준선 먼저, `Tests N failed`로 판정)을 따른다
 - 화면이 바뀌는 작업은 개발 서버로 실제 렌더링을 확인한다. 디자인 원칙의 확인 폭(모바일·폴더블·PC)에서 모두 본다
+- 옛 화면이 남아 있는 동안은, 바꾸지 않은 옛 화면이 그대로인지도 확인한다 (V-1의 픽셀 비교 방식: 작업 전 커밋을 worktree로 띄워 같은 상황을 비교)

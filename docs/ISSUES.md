@@ -14,7 +14,7 @@
 |---|---|---|---|---|---|
 | 🔴 Major | 3 | 3 | – | – | – |
 | 🟡 Minor | – | 7 | 7 | 6 | 4 |
-| ⚪ 참고 | 1 | 1 | 2 | 1 | 2 |
+| ⚪ 참고 | 1 | 1 | 2 | 2 | 3 |
 
 ---
 
@@ -68,9 +68,10 @@
 | V2 | 🟡 | 리스트 key 누락: `TeamInfoDrawer`의 key 없는 Fragment map, 완료 화면 `Result`의 `extra={[<OkButton />]}` 2곳(`jsx-key` 린트 에러) |
 | V3 | 🟡 | effect 안에서 바로 setState (`set-state-in-effect` 린트 에러 3건): `Drawer`의 창 너비, 팀 이름 입력의 무작위 예시 이름 2곳 |
 | V4 | 🟡 | antd Drawer의 deprecated prop `maskStyle` 사용 |
-| V5 | 🟡 | JS 번들 936kB (500kB 경고). 대부분 antd. 2단계 중 +79kB는 React 19가 주원인으로 판단 |
-| V6 | 🟡 | **알림 기능이 없다.** 3-6(알림 중앙화)을 폐기하면서 기존 알림(`useMessage`)을 삭제했다(2026-11-23). 성공·실패·"이미 삭제됨"을 사용자에게 알리지 않는다 → View 개편 때 Sonner 등으로 새로 추가 (`docs/VIEW_REDESIGN_PLAN.md`) |
+| V5 | 🟡 | JS 번들 936kB (500kB 경고). 대부분 antd. 2단계 중 +79kB는 React 19가 주원인으로 판단. 3단계 완료 1,039kB, V-1 후 1,091kB(gzip 340kB, Sonner·lucide·React Compiler 런타임). antd 제거(V-6) 후 다시 측정 |
+| V6 | 🟡 | **알림 기능이 없다.** 3-6(알림 중앙화)을 폐기하면서 기존 알림(`useMessage`)을 삭제했다(2026-11-23). 성공·실패·"이미 삭제됨"을 사용자에게 알리지 않는다 → View 개편 때 Sonner 등으로 새로 추가 (`docs/VIEW_REDESIGN_PLAN.md`). 🔄 V-1 (2026-11-23): Sonner `<Toaster />`(위쪽 가운데)와 **조회 실패 알림** 추가 (`lib/notify`, 여러 조회가 동시에 실패해도 하나). 변경의 성공·실패·"이미 삭제됨" 알림은 기능 단계(V-2~)에서 연결 |
 | V7 | ⚪ | 공용 Drawer가 열림 애니메이션이 끝난 뒤 첫 입력칸으로 포커스를 옮긴다(`afterOpenChange`). 그 전에 다른 칸에 입력 중이면 포커스가 되돌아간다 (팀 추가 PIN 단계의 "한 번 더" 칸, 한마디·공지 등록의 PIN 칸도 같은 구조). 사람이 겪을 가능성은 낮음. 테스트는 포커스가 옮겨진 뒤 입력하도록 수정 |
+| V8 | ⚪ | **새 코드·옛 코드 공존 기간의 전역 스타일 (V-1, 2026-11-23).** ① 옛 전역 스타일(`src/styles/legacy.css`, 이전 `GlobalStyle`)의 `* { font-size: 16px(모바일 12·10px); font-family: Regular }`가 새 요소에도 적용된다 → 새 컴포넌트는 글자 크기·굵기를 유틸리티 클래스로 지정한다 (유틸리티 레이어가 우선). ② shadcn 기본 스타일 `* { outline-color: ring }`으로 antd Drawer의 포커스 외곽선 색이 검정 → 연회색으로 바뀜 (PC 폭에서 Drawer 왼쪽 가장자리 1px, 화면 비교에서 확인). V-6에서 legacy 레이어·antd 제거 시 해소 |
 
 ## 5. 환경 · 테스트
 
@@ -81,11 +82,12 @@
 | E3 | 🟡 | `.claude/settings.json`의 권한 허용 목록이 `npm run ...`, `npx vitest ...` 기준이라 pnpm 전환 후 명령과 맞지 않음 → ✅ 3-0에서 pnpm 기준으로 갱신 (2026-11-20) |
 | E4 | ⚪ | 테스트가 antd 내부 구현에 의존하는 부분: 비활성 버튼의 `visibility: hidden`(`findEnabledButton`), Drawer 클래스(`findDrawer`), 달력 셀 `td[title]`. antd 교체 시 함께 수정 |
 | E5 | ⚪ | jsdom의 XHR이 mock 응답에도 CORS를 검사해, 테스트 페이지 origin을 API origin으로 맞춰 둠 (`vite.config.mts`) |
+| E7 | ⚪ | 새 UI 라이브러리의 테스트 환경 보정 (`src/test/setup.ts`, V-1): ① jsdom에 포인터 캡처 API가 없어 vaul 드래그 처리가 에러 → 빈 구현 ② vaul이 스스로 넣는 열고 닫는 애니메이션 CSS 때문에 jsdom에서 `animationend`가 오지 않아 닫힌 Drawer가 DOM에 남음 → 테스트에서 vaul 애니메이션 끔 ③ Sonner 알림은 모듈 전역 상태라 다음 테스트의 `<Toaster />`에 이전 알림이 다시 그려짐 → 테스트마다 `toast.dismiss()` |
 | E6 | 🟡 | 흐름 테스트가 간헐적으로 실패했다 (`--maxWorkers=4`에서 잘 재현, 2단계부터 있었고 3-5 이후 잦아짐). ✅ 원인 3가지를 테스트 쪽에서 수정 (2026-11-23): ① Board `openEnsembleInfo`가 `findAllByText`의 두 번째 요소를 클릭 → 합주표가 늦게 그려지면 `undefined` 클릭 ② Teams `openTeamInfo`가 첫 번째 `'테스트밴드'`를 클릭 → 가끔 합주 블록이 잡혀 Drawer가 닫힘 ③ 팀 추가 PIN 단계에서 Drawer의 지연 포커스(V7). 수정 후 기본 3회·`--maxWorkers=4` 4회 모두 통과. 알림 삭제로 렌더링 타이밍도 바뀌어, 각 수정의 기여도를 완전히 분리하지는 못함. 3-7에서 한마디·공지 등록 테스트가 드물게 실패(2/9회) → 같은 구조(③)로 보고 포커스를 기다리도록 수정. 실패 시점 DOM으로 확인하지는 못했다(재현 12회 중 0회). 수정 후 6회 통과 |
 
 ---
 
-## 린트 현황 (3단계 완료 시점: 에러 5·경고 42, 2단계 완료 시점 에러 5·경고 62)
+## 린트 현황 (3단계 완료 시점: 에러 5·경고 42, 2단계 완료 시점 에러 5·경고 62. V-1 후에도 같음: 새 코드 0건)
 
 남은 지적은 모두 View 쪽(Drawer·layout·common) 코드다. 로직 층(`api`·`lib`·`queries`·`stores`·`hooks`·`context`·컨테이너·App)은 0건.
 

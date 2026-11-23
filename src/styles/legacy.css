@@ -1,0 +1,66 @@
+/*
+ * 옛 View 코드의 전역 스타일 (이전 src/styles/GlobalStyle.ts, V-1에서 옮김). V-6에서 이 파일을 삭제한다.
+ *
+ * index.css에서 `legacy` 레이어로 불러온다. styled-components의 createGlobalStyle은 레이어 밖에 들어가
+ * 모든 레이어보다 우선하므로, 그대로 두면 아래 `*` 규칙이 Tailwind 유틸리티(p-4, text-sm 등)를 모두 이긴다.
+ * 레이어 순서: base(Tailwind preflight) < legacy(이 파일) < antd < components < utilities
+ *
+ * 공존 기간 주의: `*` 규칙이 새 요소에도 적용된다 (글자 크기 16px·글꼴 'Regular').
+ * 새 컴포넌트는 글자 크기·굵기를 유틸리티 클래스로 지정한다.
+ */
+
+@font-face {
+    font-family: 'Light';
+    font-style: normal;
+    src: url('../assets/fonts/NanumSquareNeo-aLt.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Regular';
+    font-style: normal;
+    src: url('../assets/fonts/NanumSquareNeo-bRg.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Bold';
+    font-style: normal;
+    src: url('../assets/fonts/NanumSquareNeo-cBd.woff2') format('woff2');
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-size: 16px;
+    font-family: Regular;
+}
+
+/* src/styles/media.ts의 large(767px)·small(425px). 원래 순서(large → small)를 유지해야 425px 이하가 10px이 된다 */
+@media (max-width: 767px) {
+    * {
+        font-size: 12px;
+    }
+}
+@media (max-width: 425px) {
+    * {
+        font-size: 10px;
+    }
+}
+
+/* Tailwind preflight가 html에 line-height: 1.5를 줘서 옛 화면의 버튼·글자 높이가 커진다 → 브라우저 기본값으로 되돌린다 */
+html {
+    line-height: normal;
+}
+
+/*
+ * preflight의 button { font: inherit }으로 버튼이 부모의 line-height를 물려받는다
+ * (예: 헤더 버튼이 antd Layout.Header의 64px을 받아 아이콘이 8px 올라감) → 브라우저 기본값으로
+ */
+button,
+input,
+textarea,
+select {
+    line-height: normal;
+}
+
+body {
+    background-color: #f5f8ff;
+}

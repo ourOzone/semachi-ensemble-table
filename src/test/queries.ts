@@ -27,3 +27,11 @@ export async function findDrawer(text: string | RegExp): Promise<HTMLElement> {
     expect(drawer).not.toBeNull();
     return drawer!;
 }
+
+/**
+ * 새 UI(View 개편)의 Drawer를 제목으로 찾는다.
+ * shadcn Drawer(vaul)는 Radix Dialog 기반이라 role="dialog"이고, 접근성 이름은 DrawerTitle이다.
+ */
+export function findDialog(name: string | RegExp): Promise<HTMLElement> {
+    return screen.findByRole('dialog', { name });
+}

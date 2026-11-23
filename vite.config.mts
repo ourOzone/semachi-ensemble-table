@@ -1,6 +1,8 @@
 import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
+import react, { reactCompilerPreset } from '@vitejs/plugin-react';
+import babel from '@rolldown/plugin-babel';
+import tailwindcss from '@tailwindcss/vite';
 
 // 프론트엔드 env는 env/ 에서만 읽는다. 루트 .env는 백엔드(api.js) 전용이다.
 const ENV_DIR = 'env';
@@ -9,7 +11,13 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, ENV_DIR, 'VITE_');
 
     return {
-        plugins: [react()],
+        plugins: [
+            react(),
+            // React Compiler (View 개편 사전 결정 7): 컴포넌트·훅을 자동으로 메모이제이션한다.
+            // 플러그인 내장 Rust판(compiler 옵션)은 실험 단계라 안정판인 Babel판을 쓴다.
+            babel({ presets: [reactCompilerPreset()] }),
+            tailwindcss(),
+        ],
         envDir: ENV_DIR,
         resolve: {
             tsconfigPaths: true,

@@ -9,6 +9,14 @@
         <link rel="apple-touch-icon" href="/logo192.png" />
         <link rel="manifest" href="/manifest.json" />
         <title>세마치 합주판</title>
+        <!--
+            CSS 레이어 순서 선언 (src/styles/index.css와 같은 순서). 레이어 순서는 문서에서 레이어 이름이 처음 나온 순서로 정해진다.
+            antd 스타일(StyleProvider, src/index.tsx)은 body에 들어가므로, 여기서 먼저 선언해야 antd 레이어가 의도한 자리에 놓인다.
+            antd 제거 시(V-6) 이 선언도 정리한다.
+        -->
+        <style>
+            @layer theme, base, legacy, antd, components, utilities;
+        </style>
     </head>
     <body>
         <noscript>이 앱을 사용하려면 JavaScript를 켜야 해요.</noscript>

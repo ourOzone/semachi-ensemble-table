@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 // 팀 목록 (View 개편 V-2).
 // - PC(md 이상): 모두 펼쳐 보여준다 ("전체" 버튼 없음)
 // - 모바일: 한 줄을 좌우로 밀어 본다. 밀기 시작하면 "전체" 버튼이 아이콘만 남고, 맨 왼쪽까지 돌아오면 글자가 다시 나온다.
-//   "전체"를 누르면 화면 폭 전체로 펼친다 (높이가 부드럽게 바뀜)
+//   "전체"를 누르면 화면 폭 전체로 펼친다 (높이만 부드럽게 바뀜. 투명도 애니메이션은 흰색으로 깜빡여 뺐다)
 
 export interface Chip {
     key: string;
@@ -37,7 +37,7 @@ const TeamChips = ({ teams, events, onAddTeam }: TeamChipsProps) => {
                 setExpanded((prev) => !prev);
                 setScrolled(false);
             }}
-            className="inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-600 bg-neutral-100 px-2.5 text-sm font-medium text-black md:hidden"
+            className="inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-400 bg-neutral-100 px-2.5 text-sm font-medium text-black md:hidden"
         >
             <LayoutGrid className="size-3.5 shrink-0" aria-hidden />
             {/* 밀고 있는 동안은 아이콘만 (글자는 폭을 0으로 줄여 숨긴다: 접근성 이름은 그대로) */}
@@ -77,13 +77,13 @@ const TeamChips = ({ teams, events, onAddTeam }: TeamChipsProps) => {
 
     return (
         <div
-            className="mt-4 overflow-hidden transition-[height] duration-300 ease-out md:mt-5"
+            className="overflow-hidden transition-[height] duration-300 ease-out"
             style={heightStyle}
         >
             <div ref={innerRef}>
                 {expanded ? (
                     // 펼침: "전체" 버튼도 같은 줄에 두어 버튼 아래까지 화면 폭 전체로 줄바꿈
-                    <div className="flex flex-wrap gap-1.5 duration-300 animate-in fade-in-0">
+                    <div className="flex flex-wrap gap-1.5">
                         {allButton}
                         {chips}
                     </div>

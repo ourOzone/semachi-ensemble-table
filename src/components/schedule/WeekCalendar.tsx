@@ -14,12 +14,13 @@ const SIZE = {
     mobile: { slot: 22, padY: 2, name: 11 },
     pc: { slot: 30, padY: 4, name: 14, time: 11 },
 } as const;
-const NAME_LINE_HEIGHT = 1.25;
+// 이름 줄 간격. 줄 사이에 여유를 두어, 잘리는 다음 줄 글자의 윗부분이 비치지 않게 한다 (아래 NAME_CLIP_MARGIN)
+const NAME_LINE_HEIGHT = 1.4;
 const TIME_LINE_HEIGHT = 1.3;
 const MAX_NAME_LINES = 3;
 
-/** 시간 표시는 1시간 30분(3칸) 이상인 블록에만, PC에서만 (모바일은 폭이 좁다) */
-const TIME_MIN_SLOTS = 3;
+/** 시간 표시는 1시간(2칸) 이상인 블록에만, PC에서만 (30분 블록은 이름 한 줄 높이뿐, 모바일은 폭이 좁다) */
+const TIME_MIN_SLOTS = 2;
 
 /** 줄무늬: 팀 아닌 일정(소모임·회의 등) */
 const EVENT_STRIPES =
@@ -45,15 +46,14 @@ const WeekCalendar = ({
     onClickEvent,
 }: WeekCalendarProps) => {
     return (
-        <div className="mt-4 overflow-hidden [--hour-col:28px] [--slot:22px] md:mt-6 md:[--hour-col:44px] md:[--slot:30px]">
-            {/* 주가 바뀌면 새로 그려지며(key) 옆에서 살짝 밀려 들어온다 */}
+        <div className="mt-3 overflow-hidden [--hour-col:28px] [--slot:22px] md:mt-4 md:[--hour-col:44px] md:[--slot:30px]">
+            {/* 주가 바뀌면 새로 그려지며(key) 옆에서 살짝 밀려 들어온다. 투명도는 바꾸지 않는다 (흰색으로 깜빡임) */}
             <div
                 key={weekStart.valueOf()}
                 className={cn(
-                    direction &&
-                        'duration-200 ease-out motion-safe:animate-in motion-safe:fade-in-0',
-                    direction === 'next' && 'motion-safe:slide-in-from-right-6',
-                    direction === 'prev' && 'motion-safe:slide-in-from-left-6',
+                    direction && 'duration-200 ease-out motion-safe:animate-in',
+                    direction === 'next' && 'motion-safe:slide-in-from-right-4',
+                    direction === 'prev' && 'motion-safe:slide-in-from-left-4',
                 )}
             >
                 {/* 요일 머리글 */}
@@ -196,7 +196,8 @@ function EventBlock({ event, onClick }: EventBlockProps) {
             {/* 이름: 블록 높이만큼의 줄까지만 (말줄임표 없이 잘림) */}
             <span
                 className={cn(
-                    'max-h-[calc(var(--name-lines)*1.25em)] shrink-0 overflow-hidden text-[11px] leading-[1.25] font-medium wrap-anywhere md:max-h-[calc(var(--name-lines-md)*1.25em)] md:text-sm',
+                    // 줄 단위로 자르되, 끝을 0.15em 위로 당겨 다음 줄 글자 윗부분이 보이지 않게 (기기마다 픽셀 반올림이 달라도 여유)
+                    'max-h-[calc(var(--name-lines)*1.4em-0.15em)] shrink-0 overflow-hidden text-[11px] leading-[1.4] font-medium wrap-anywhere md:max-h-[calc(var(--name-lines-md)*1.4em-0.15em)] md:text-sm',
                     // 3개 이상 겹치면 1024px 미만(모바일·태블릿)에서는 폭이 20px 안팎이라 색 띠만
                     lanes >= 3 && 'max-lg:hidden',
                     skipped && 'line-through',

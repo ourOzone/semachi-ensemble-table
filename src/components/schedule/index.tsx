@@ -6,7 +6,7 @@ import { useToday } from '@/hooks/useToday';
 import { formatWeekRange, getWeekStart, MAX_WEEK_OFFSET } from '@/lib/calendar';
 import { getTodayIdx } from '@/lib/week';
 
-// 합주판 카드 (View 개편 V-2): 주 제목·이동 → 팀 목록 → 주 단위 캘린더.
+// 합주판 카드 (View 개편 V-2): 팀 목록 → 주 제목·이동 → 주 단위 캘린더 (날짜 행은 캘린더에 붙여 둔다).
 // 이번 주부터 MAX_WEEK_OFFSET주 뒤까지 볼 수 있다 (지난 주는 보여주지 않는다).
 // `ui` 클래스: 옛 전역 스타일이 적용되지 않는 새 코드 영역 (src/styles/index.css)
 
@@ -32,7 +32,9 @@ const Schedule = () => {
 
     return (
         <section className="ui w-full max-w-[1080px] rounded-[24px] bg-white p-4 shadow-[0_2px_10px_2px_rgb(0_0_0/0.06)] md:p-7">
-            <div className="flex items-center justify-between gap-2">
+            <Teams />
+
+            <div className="mt-4 flex items-center justify-between gap-2 md:mt-6">
                 <h2 className="text-xl font-bold text-ink md:text-[28px]">
                     {formatWeekRange(weekStart)}
                 </h2>
@@ -66,7 +68,6 @@ const Schedule = () => {
                 </div>
             </div>
 
-            <Teams />
             <Board
                 weekStart={weekStart}
                 todayIdx={week.offset === 0 ? getTodayIdx(today) : null}

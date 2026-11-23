@@ -54,11 +54,11 @@
      */
     --spacing: 4px;
 
-    /* 화면 색 (V-2 컨셉: 회색 바탕 + 흰 카드 + 검은 글씨). 오늘 표시는 검정 원 + 아주 옅은 열 배경 */
+    /* 화면 색 (V-2 컨셉: 회색 바탕 + 흰 카드 + 검은 글씨). 오늘 표시는 차분한 파랑 원 + 아주 옅은 파랑 열 배경 */
     --color-page: #f2f3f5;
     --color-ink: #18181b;
-    --color-today: #18181b;
-    --color-today-tint: rgb(24 24 27 / 0.04);
+    --color-today: #3e63dd;
+    --color-today-tint: rgb(62 99 221 / 0.06);
 
     --text-xs: 12px;
     --text-sm: 14px;

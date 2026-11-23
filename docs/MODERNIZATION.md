@@ -110,8 +110,10 @@ Zod 스키마로 응답을 parse하면서 `_id → id` 같은 변환도 같이 �
   - 함께 사라지는 것: 입력 한 글자마다 다시 렌더링(P3), 수정 취소용 `orgXxx` 복제(P5, 폼 초기값으로 대체), `setTeamStates()`·`setEnsembleStates()` 초기화 호출
 - [ ] **`stores/drawer` 축소:** 3-9에서 Context → Zustand로 옮긴 Drawer 스택을 단일 Drawer 구조에 맞게 줄이고, 호환용 `useDrawerContext` 별칭을 삭제한다
 - [ ] **PIN 흐름:** 지금은 PIN 단계 Drawer가 존재 확인과 `check-xxx-pin`을 따로 호출한다(P2 잔여, F6). 백엔드 B1 대응(변경 API에서 PIN 검증)에 맞춰 폼 submit 하나로 합친다
-- [ ] **알림:** `lib/notify`의 내부만 Sonner로 교체한다 (호출부는 3-6에서 이미 정리됨)
-- [ ] **폼은 3단계의 mutation 훅을 호출한다** (`useUpdateTeam().mutateAsync(...)` 등). 성공·실패 알림과 캐시 갱신은 훅이 처리한다
+- [ ] **(트렌디한) 알림 기능 새로 추가:** 3-6을 폐기하면서 기존 알림(`useMessage`)을 프로젝트에서 삭제했다(2026-11-23). 지금은 성공·실패·"이미 삭제됨"을 사용자에게 알리지 않는다
+  - 권장: shadcn/ui의 **Sonner**(토스트)를 앱 루트에 하나 두고, mutation 훅의 `onSuccess`·`onError`(404 → "이미 삭제됨")와 TanStack Query `QueryCache.onError`(조회 실패)에서 호출
+  - 이전 알림 문구는 git 기록(`8af5868` 이전 코드)에서 참고할 수 있다
+- [ ] **폼은 3단계의 mutation 훅을 호출한다** (`useUpdateTeam().mutateAsync(...)` 등). 캐시 갱신은 훅이 처리한다 (알림은 위 항목에서 새로 연결)
 - [ ] **Drawer 쪽 잔여 이슈:** F9(Drawer의 `exhaustive-deps`), F10, F11, V1~V5, E4
 - [ ] **테스트:** Drawer 흐름 테스트를 새 UI 기준으로 다시 작성한다. `lib/`·`queries/` 테스트는 유지한다
 - [ ] **React Compiler 도입 판단** (10번)
@@ -124,7 +126,7 @@ Zod 스키마로 응답을 parse하면서 `_id → id` 같은 변환도 같이 �
 ### 9. UI 라이브러리: shadcn/ui 📌 적용 예정 (antd 대체)
 
 - Radix/Base UI + Tailwind 기반이고, 컴포넌트 코드를 직접 소유한다.
-- 대체 대상: 자체 `useMessage` 훅 → Sonner, `PinInput` → input-otp.
+- 대체 대상: `PinInput` → input-otp. 알림은 기존 `useMessage`를 삭제했으므로(3-6 폐기) Sonner로 **새로 추가**한다.
 - 전제 조건: **React 19** (10번 참고), 기본 alias `@/` (적용 완료).
 
 ### 10. React 19 ✅ 적용 완료 (2026-11-19) / React Compiler 🔍 검토

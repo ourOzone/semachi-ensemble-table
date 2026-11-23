@@ -8,7 +8,7 @@
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
-| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-5 ✅) |
+| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-5 ✅, 3-6 ❌ 폐기·알림 기능 삭제) |
 
 ## 작업 로그
 
@@ -432,6 +432,23 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 76/76 (2회, fetch.test 21개 삭제·조회 훅 6개 추가) / `pnpm build` ✅ (JS 1,055kB) / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 60 (App effect 경고 2건 감소)
 
+### 2026-11-23 — 3-6 폐기, 알림 기능 삭제, 흐름 테스트 간헐적 실패 수정
+
+- 3-6(알림 중앙화: 루트 holder + `lib/notify`)을 구현했으나, 진행 중 드러난 흐름 테스트의 간헐적 실패 조사가 길어져 **사용자 결정으로 폐기**하고, **알림 기능을 프로젝트 전체에서 삭제**했다 (동작 변경, 사용자 지시)
+  - 삭제: `src/hooks/useMessage.tsx`·`useMessage.test.tsx`, 사용처 13개 파일의 import 13·훅 호출 12·`contextHolder` 11·`message.xxx()` 39곳, `useCallback` deps의 `message` 18곳
+  - 비게 된 catch 25곳에는 "오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)" 주석. 흐름 제어(Drawer 닫기·상태 초기화·다시 불러오기)는 그대로
+  - 결과: 성공·실패·"이미 삭제됨"을 사용자에게 알리지 않는다 (ISSUES V6). F5·P4는 대상이 사라져 해소
+  - **View 개편 때 (트렌디한) 알림 기능을 새로 추가한다**: `MODERNIZATION.md` View 개편 체크리스트, 계획 문서 "View 개편 때 넘겨주는 것"에 기록
+  - 흐름 테스트에서 알림 문구를 기다리던 9곳은 서버 요청(본문·URL)이 보내질 때까지 기다리도록 변경
+- 흐름 테스트 간헐적 실패 (ISSUES E6): 원인은 모두 테스트 쪽이었다
+  1. Board `openEnsembleInfo`: `findAllByText('테스트밴드')`는 하나만 찾아도 끝나, 합주표가 늦게 그려지면 두 번째 요소(합주 블록)가 `undefined`인 채로 클릭 → 두 개가 다 보일 때까지 기다림
+  2. Teams `openTeamInfo`: 첫 번째 `'테스트밴드'`를 팀 버튼으로 가정했으나 가끔 합주 블록이 잡혀, 모킹 없는 합주 존재 확인 → "이미 삭제됨" 처리로 Drawer가 모두 닫힘 → "팀 추가" 버튼과 같은 목록 안에서 찾음
+  3. 팀 추가 PIN 단계: Drawer가 열림 애니메이션 뒤 PIN 칸으로 포커스를 옮겨, "한 번 더" 칸 입력 도중 포커스가 되돌아감 (ISSUES V7) → PIN 칸에 포커스가 옮겨진 뒤 입력
+  - 조사 중 확인: 3-6 이전 커밋(`a8e61c2`·`03a62ca`·`8af5868`)에서도 `--maxWorkers=4`에서 실패 → 원래 있던 문제. 대기 시간을 5초로 늘려도 실패해 "느린 것"이 아니라 화면이 끝내 바뀌지 않는 경우였다
+- `useRefetchAll` 등 3-5의 구조는 그대로
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 74/74 (3회) / `pnpm exec vitest run --maxWorkers=4` ✅ 4회 / `pnpm build` ✅ (JS 1,035kB) / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 57 (deps의 `message` 제거로 3건 감소)
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -467,7 +484,7 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 | TanStack Query | `context/fetch` (`fetchData`, `xxxExists` 사전 확인) | 3단계 |
 | Zustand | `context/team`, `ensemble`, `drawer` | 3단계 |
 | Tailwind CSS v4 | styled-components | View 개편 |
-| shadcn/ui | antd (`useMessage` → Sonner, `PinInput` → input-otp) | View 개편 |
+| shadcn/ui | antd (`PinInput` → input-otp), **알림 기능 새로 추가**(Sonner, 기존 `useMessage`는 3-6 폐기 때 삭제) | View 개편 |
 | (검토) React Compiler | 수동 `useCallback`/`useMemo` | 3단계 이후 |
 
 ### 환경

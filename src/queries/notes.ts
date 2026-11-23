@@ -5,8 +5,9 @@ import { addNotice, deleteNotice, getNotices } from '@/api/notice';
 import { toNotes, toNotices } from '@/lib/notes';
 import type { Note, Notice } from '@/types';
 
-export const notesQueryKey = ['notes'] as const;
-export const noticesQueryKey = ['notices'] as const;
+import { noticesQueryKey, notesQueryKey } from './keys';
+
+export { noticesQueryKey, notesQueryKey };
 
 export const notesQueryOptions = queryOptions({ queryKey: notesQueryKey, queryFn: getNotes });
 export const noticesQueryOptions = queryOptions({

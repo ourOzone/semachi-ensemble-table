@@ -7,6 +7,7 @@ import { url } from '@/constants';
 import { mockInitialData } from '@/test/fixtures';
 import { findDrawer, findEnabledButton } from '@/test/queries';
 import { renderApp } from '@/test/render';
+import { countOf, recordRequests } from '@/test/requests';
 import { server } from '@/test/server';
 
 // 팀 기능 흐름 테스트: 팀 추가 6단계, 팀 정보, 팀 수정 5단계, 팀 삭제, 합주 추가 4단계, 소모임 정보.
@@ -27,7 +28,10 @@ async function openTeamInfo() {
 }
 
 describe('팀', () => {
+    let requests: string[];
+
     beforeEach(() => {
+        requests = recordRequests();
         mockInitialData();
         server.use(http.get(`${url}/team/:id`, () => HttpResponse.json(true)));
     });
@@ -83,6 +87,8 @@ describe('팀', () => {
         expect(screen.getByText('드럼D')).toBeInTheDocument();
         await user.click(screen.getByText('셋리'));
         expect(await screen.findByText('셋리스트')).toBeInTheDocument();
+        // 팀 클릭 시점의 존재 확인 요청은 없다 (이전: 1회, 사전 결정 5)
+        expect(countOf(requests, 'GET /team/team-1')).toBe(0);
     });
 
     it('팀 삭제: PIN이 맞으면 팀을 삭제한다', async () => {
@@ -152,6 +158,33 @@ describe('팀', () => {
             name: '바뀐밴드',
             desc: ['보컬A', '기타B', '베이스C', '드럼D', '키보드E', '매니저F', '셋리스트'],
         });
+        // 존재 확인은 팀 정보 Drawer의 수정 버튼·PIN Drawer 2회 (이전: 팀 클릭·저장 직전까지 4회, 사전 결정 5)
+        expect(countOf(requests, 'GET /team/team-1')).toBe(2);
+    });
+
+    it('팀 수정: 저장할 때 서버가 404(이미 삭제됨)를 주면 Drawer를 모두 닫고 팀·합주 목록을 다시 불러온다', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        server.use(
+            http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)),
+            http.put(`${url}/team`, () =>
+                HttpResponse.json({ error: 'Team not found' }, { status: 404 }),
+            ),
+        );
+        const user = await openTeamInfo();
+
+        await user.click(screen.getByRole('button', { name: /팀 수정/ }));
+        await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
+        await user.click(await screen.findByText('외부공연'));
+        await user.click(await findEnabledButton('확인', await findDrawer(/팀 이름을 바꿔요/)));
+        await user.click(await findEnabledButton('확인', await findDrawer(/누가 바뀌었나요/)));
+        await user.click(
+            await findEnabledButton('다 바꿨어요', await findDrawer(/셋리가 바뀌었나요/)),
+        );
+
+        await waitFor(() => expect(document.querySelectorAll('.ant-drawer-open')).toHaveLength(0));
+        await waitFor(() => expect(countOf(requests, 'GET /teams')).toBe(2));
+        expect(countOf(requests, 'GET /ensembles')).toBe(2);
+        expect(countOf(requests, 'GET /notes')).toBe(1);
     });
 
     // F1 회귀 테스트: 멤버·셋리 단계에서 뒤로 가면 그 단계의 입력을 원래 값으로 되돌린다 (이전에는 빈 값이 되어 그대로 저장됐다)
@@ -245,6 +278,8 @@ describe('팀', () => {
                 due: '2026-11-27',
             });
             expect(dayjs(posted!.nextDate as string).format('YYYY-MM-DD')).toBe('2026-11-27');
+            // 서버가 팀 존재를 검사하지 않아(ISSUES B4) 저장 직전 확인은 유지: 팀 정보 Drawer의 합주 추가 버튼 + 저장 직전 = 2회
+            expect(countOf(requests, 'GET /team/team-1')).toBe(2);
         });
     });
 

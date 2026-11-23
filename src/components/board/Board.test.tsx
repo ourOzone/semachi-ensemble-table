@@ -7,6 +7,7 @@ import { url } from '@/constants';
 import { mockInitialData } from '@/test/fixtures';
 import { findDrawer, findEnabledButton } from '@/test/queries';
 import { renderApp } from '@/test/render';
+import { countOf, recordRequests } from '@/test/requests';
 import { server } from '@/test/server';
 
 // 합주표 흐름 테스트: 합주 블록 → 정보 Drawer → 수정 / 미루기 / 삭제.
@@ -28,6 +29,7 @@ async function openEnsembleInfo() {
 
 describe('합주표', () => {
     let putBody: Record<string, unknown> | undefined;
+    let requests: string[];
 
     beforeEach(() => {
         // 날짜 계산 고정: 2026-11-20(금) 10:00. Date만 가짜로 바꿔 user-event·MSW 타이머에는 영향 없음
@@ -35,6 +37,7 @@ describe('합주표', () => {
         vi.setSystemTime(new Date(2026, 10, 20, 10, 0));
 
         putBody = undefined;
+        requests = recordRequests();
         mockInitialData();
         server.use(
             http.get(`${url}/ensemble/:id`, () => HttpResponse.json(true)),
@@ -59,6 +62,8 @@ describe('합주표', () => {
         expect(screen.getByText('2026-11-23 (월)')).toBeInTheDocument();
         expect(screen.getByText('10:00 - 11:00')).toBeInTheDocument();
         expect(screen.getByText('매주 이 시간에 반복')).toBeInTheDocument();
+        // 블록 클릭 시점의 존재 확인 요청은 없다 (이전: 1회, 사전 결정 5)
+        expect(countOf(requests, 'GET /ensemble/ensemble-1')).toBe(0);
     });
 
     it('합주를 수정하면 PIN → 반복 여부 → 날짜 → 시간 순으로 고르고 서버에 보낸다', async () => {
@@ -105,6 +110,8 @@ describe('합주표', () => {
         await waitFor(() => expect(putBody).toBeDefined());
         expect(putBody).toMatchObject({ teamId: 'team-1', repeat: true, startTime: 2, endTime: 3 });
         expect(dayjs(putBody!.nextDate as string).format('YYYY-MM-DD')).toBe('2026-11-30');
+        // 존재 확인은 정보 Drawer의 미루기 버튼·PIN Drawer 2회 (이전: 블록 클릭·미루기 처리·수정 처리까지 5회, 사전 결정 5)
+        expect(countOf(requests, 'GET /ensemble/ensemble-1')).toBe(2);
     });
 
     it('PIN이 맞으면 합주를 삭제한다', async () => {

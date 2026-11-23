@@ -11,7 +11,6 @@ import { createTestQueryClient } from '@/test/render';
 import { server } from '@/test/server';
 import { useBoard } from './ensembles';
 import { useNotes, useNotices } from './notes';
-import { useRefetchAll } from './refetchAll';
 import { useTeams } from './teams';
 
 function wrapperWith(queryClient: QueryClient) {
@@ -27,7 +26,6 @@ function useAll() {
         board: useBoard(),
         notes: useNotes(),
         notices: useNotices(),
-        refetchAll: useRefetchAll(),
     };
 }
 
@@ -114,18 +112,6 @@ describe('조회 훅 (TanStack Query)', () => {
         releaseTeams();
         await waitFor(() => expect(result.current.board).toHaveLength(7));
         expect(result.current.board[0]![2]![0]!.teamColor).toBe(theme.teamColors[0]);
-    });
-
-    it('useRefetchAll: 4개 목록을 모두 다시 불러온다', async () => {
-        mockInitialData();
-        const counts = countRequests();
-        const { result } = renderHook(useAll, { wrapper: wrapperWith(createTestQueryClient()) });
-        await waitFor(() => expect(result.current.board).toHaveLength(7));
-        expect(counts).toEqual({ teams: 1, ensembles: 1, notes: 1, notices: 1 });
-
-        await act(() => result.current.refetchAll());
-
-        expect(counts).toEqual({ teams: 2, ensembles: 2, notes: 2, notices: 2 });
     });
 
     describe('앱 기본값 (createQueryClient, 사전 결정 3)', () => {

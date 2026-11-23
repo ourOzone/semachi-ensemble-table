@@ -1,11 +1,15 @@
 import { useCallback } from 'react';
 import styled from 'styled-components';
-import { teamExists } from '@/api/team';
-import { updateEnsemble, deleteEnsemble, ensembleExists } from '@/api/ensemble';
+import { isNotFound } from '@/api';
+import { ensembleExists } from '@/api/ensemble';
 import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
-import { useBoard } from '@/queries/ensembles';
-import { useRefetchAll } from '@/queries/refetchAll';
-import { useTeams } from '@/queries/teams';
+import {
+    useBoard,
+    useDeleteEnsemble,
+    useRefreshEnsembles,
+    useUpdateEnsemble,
+} from '@/queries/ensembles';
+import { useRefreshTeamsAndEnsembles, useTeams } from '@/queries/teams';
 import { useToday } from '@/hooks/useToday';
 import { days, hours } from '@/constants';
 import { Container } from '@/components/common/Container';
@@ -32,68 +36,72 @@ const Board = () => {
     const week = getWeek(today); // 이번주 날짜 7개 (월~일)
     const teams = useTeams();
     const ensembles = useBoard();
-    // fetchData: 화면 전체 다시 불러오기 (임시, 3-7·3-8에서 mutation으로 대체)
-    const fetchData = useRefetchAll();
+    const refreshEnsembles = useRefreshEnsembles();
+    const refreshTeamsAndEnsembles = useRefreshTeamsAndEnsembles();
+    const { mutateAsync: updateEnsembleAsync } = useUpdateEnsemble();
+    const { mutateAsync: deleteEnsembleAsync } = useDeleteEnsemble();
     const { setTeamStates } = useTeamContext();
     const { setEnsembleStates, setNextDate } = useEnsembleContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
 
-    // 이미 삭제된 합주인지 체크. 이미 있는 팀을 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
+    // 이미 삭제된 합주를 만났을 때: 상태·Drawer 초기화 후 합주 목록을 다시 불러온다
+    const handleEnsembleGone = useCallback(() => {
+        setTeamStates();
+        setEnsembleStates();
+        closeAllDrawers();
+        refreshEnsembles();
+    }, [closeAllDrawers, refreshEnsembles, setEnsembleStates, setTeamStates]);
+
+    // 이미 삭제된 합주인지 체크. 정보·PIN Drawer가 다음 단계로 가기 전에 사용한다 (true를 리턴하면 계속 진행)
     const checkEnsembleExists = useCallback(
         async (id: string) => {
             try {
                 await ensembleExists(id);
                 return true;
             } catch {
-                setTeamStates();
-                setEnsembleStates();
-                closeAllDrawers();
-                fetchData();
+                handleEnsembleGone();
                 return false;
             }
         },
-        [closeAllDrawers, fetchData, setEnsembleStates],
+        [handleEnsembleGone],
     );
 
-    // 이 합주가 "다음 번에 안 해요"에 해당하는지(회색인지) 판단
-    // const isSkipped = useCallback((nextDate) => nextDate.diff(dayjs().startOf('day'), 'day') >= 7, []);
-
+    // 합주 블록 클릭: 바로 정보 Drawer를 연다 (이전에는 여기서 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
     const handleEnsembleClick = useCallback(
-        async ({ id, teamId, name, repeat, nextDate, startTime, endTime }: EnsembleBlock) => {
-            try {
-                if (await checkEnsembleExists(id)) {
-                    setTeamStates(teamId, '', name);
-                    setEnsembleStates(id, repeat, nextDate, startTime, endTime);
-                    openDrawer('ensembleInfo');
-                }
-            } catch {
-                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
-            }
+        ({ id, teamId, name, repeat, nextDate, startTime, endTime }: EnsembleBlock) => {
+            setTeamStates(teamId, '', name);
+            setEnsembleStates(id, repeat, nextDate, startTime, endTime);
+            openDrawer('ensembleInfo');
         },
-        [fetchData, openDrawer, setTeamStates, setEnsembleStates],
+        [openDrawer, setTeamStates, setEnsembleStates],
     );
 
-    // 합주 정보 Drawer에서 팀 정보 보기 클릭 (id는 team id)
+    // 합주 정보 Drawer에서 팀 정보 보기 클릭 (id는 team id).
+    // 불러온 팀 목록에서 찾는다. 없으면 이미 삭제된 팀 (이전에는 존재 확인 요청 후 찾았다: 사전 결정 5)
     const handleClickTeamInfo = useCallback(
-        async (id: string) => {
-            try {
-                // 누른 팀이 이미 삭제됐으면 에러 (catch 매커니즘이 달라서 예외적으로 checkTeamExists는 사용 불가)
-                await teamExists(id);
-
-                // 목록에 없으면 구조분해에서 TypeError → catch에서 "이미 삭제된 팀" 처리 (기존 동작)
-                const { type, name, desc } = teams.find((team) => team.id === id)!;
-                setTeamStates(id, type, name, desc);
-                openDrawer('teamInfo');
-            } catch {
+        (id: string) => {
+            const team = teams.find((team) => team.id === id);
+            if (!team) {
                 setTeamStates();
                 setEnsembleStates();
                 closeAllDrawers();
-                fetchData();
+                refreshTeamsAndEnsembles();
+                return;
             }
+            setTeamStates(id, team.type, team.name, team.desc);
+            openDrawer('teamInfo');
         },
-        [fetchData, openDrawer, teams, setTeamStates, setEnsembleStates, closeAllDrawers],
+        [
+            closeAllDrawers,
+            openDrawer,
+            refreshTeamsAndEnsembles,
+            setEnsembleStates,
+            setTeamStates,
+            teams,
+        ],
     );
 
+    // 이미 삭제됐으면 서버가 404를 준다 → 이미 삭제된 합주 처리 (이전에는 수정 전에 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
     const handleUpdateEnsemble = useCallback(
         async (
             id: string,
@@ -104,40 +112,36 @@ const Board = () => {
             endTime: TimeSlot | null,
         ) => {
             try {
-                if (await checkEnsembleExists(id)) {
-                    // 선택을 마친 뒤에만 호출되어 null이 아님 (null이면 nextDate.day()에서 TypeError → catch, 기존 동작)
-                    await updateEnsemble(
-                        id,
-                        toEnsembleRequest(teamId, repeat, nextDate!, startTime!, endTime!),
-                    );
-                    fetchData();
-                    setOpenedDrawers(['ensembleInfo']);
-                }
-            } catch {
+                // 선택을 마친 뒤에만 호출되어 null이 아님 (null이면 nextDate.day()에서 TypeError → catch, 기존 동작)
+                await updateEnsembleAsync({
+                    id,
+                    ...toEnsembleRequest(teamId, repeat, nextDate!, startTime!, endTime!),
+                });
+                setOpenedDrawers(['ensembleInfo']);
+            } catch (err) {
+                if (isNotFound(err)) handleEnsembleGone();
                 // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [fetchData, setOpenedDrawers],
+        [handleEnsembleGone, setOpenedDrawers, updateEnsembleAsync],
     );
 
     const handleDeleteEnsemble = useCallback(
         async (id: string) => {
             try {
-                if (await checkEnsembleExists(id)) {
-                    await deleteEnsemble(id);
-                }
+                await deleteEnsembleAsync(id);
             } catch {
                 // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             } finally {
                 setEnsembleStates();
                 closeAllDrawers();
-                fetchData();
             }
         },
-        [closeAllDrawers, fetchData, setEnsembleStates],
+        [closeAllDrawers, deleteEnsembleAsync, setEnsembleStates],
     );
 
     // 다음 번에 안 해요 클릭 시 nextDate를 7일 뒤로 변경
+    // 저장을 기다리지 않고 화면의 다음 날짜를 먼저 바꾼다 (ISSUES F4, 3-8의 수정 커밋에서 고침)
     const handleSkipEnsemble = useCallback(
         async (
             id: string,
@@ -147,23 +151,17 @@ const Board = () => {
             startTime: TimeSlot | null,
             endTime: TimeSlot | null,
         ) => {
-            try {
-                if (await checkEnsembleExists(id)) {
-                    handleUpdateEnsemble(
-                        id,
-                        teamId,
-                        repeat,
-                        dayjs(nextDate).add(7, 'day'),
-                        startTime,
-                        endTime,
-                    );
-                    setNextDate((prev) => dayjs(prev).add(7, 'day'));
-                }
-            } catch {
-                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
-            }
+            handleUpdateEnsemble(
+                id,
+                teamId,
+                repeat,
+                dayjs(nextDate).add(7, 'day'),
+                startTime,
+                endTime,
+            );
+            setNextDate((prev) => dayjs(prev).add(7, 'day'));
         },
-        [handleUpdateEnsemble, checkEnsembleExists],
+        [handleUpdateEnsemble, setNextDate],
     );
 
     return (

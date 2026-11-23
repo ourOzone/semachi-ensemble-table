@@ -8,7 +8,7 @@ import type { TimeSlot } from '@/types';
 export type CheckEnsembleExists = (id: string) => Promise<boolean>;
 
 /** 합주 정보 Drawer에서 "팀 정보 보기" (teamId로 팀 정보 Drawer를 연다) */
-export type HandleClickTeamInfo = (teamId: string) => Promise<void>;
+export type HandleClickTeamInfo = (teamId: string) => void;
 
 /**
  * 합주 수정·미루기. 인자는 Ensemble context 값을 그대로 받으므로 null 허용 타입이지만,

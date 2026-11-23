@@ -4,11 +4,17 @@ import { Divider } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import type { Team, TimeSlot } from '@/types';
-import { addTeam, updateTeam, deleteTeam, teamExists } from '@/api/team';
-import { addEnsemble } from '@/api/ensemble';
+import { isNotFound } from '@/api';
+import { teamExists } from '@/api/team';
 import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
-import { useRefetchAll } from '@/queries/refetchAll';
-import { useTeams } from '@/queries/teams';
+import { useAddEnsemble } from '@/queries/ensembles';
+import {
+    useAddTeam,
+    useDeleteTeam,
+    useRefreshTeamsAndEnsembles,
+    useTeams,
+    useUpdateTeam,
+} from '@/queries/teams';
 import { eventIds } from '@/constants';
 import { toEnsembleRequest } from '@/lib/ensemble';
 import { Container } from '@/components/common/Container';
@@ -36,13 +42,23 @@ const eventNames2 = ['메인 회의', '재학생 회의', '회의', '오디션',
 
 const Teams = () => {
     const teams = useTeams();
-    // fetchData: 화면 전체 다시 불러오기 (임시, 3-7·3-8에서 mutation으로 대체)
-    const fetchData = useRefetchAll();
+    const refreshTeamsAndEnsembles = useRefreshTeamsAndEnsembles();
+    const { mutateAsync: addTeamAsync } = useAddTeam();
+    const { mutateAsync: updateTeamAsync } = useUpdateTeam();
+    const { mutateAsync: deleteTeamAsync } = useDeleteTeam();
+    const { mutateAsync: addEnsembleAsync } = useAddEnsemble();
     const { setTeamStates } = useTeamContext();
     const { setEnsembleStates } = useEnsembleContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
 
-    // 이미 삭제된 팀인지 체크. 이미 있는 팀을 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
+    // 이미 삭제된 팀을 만났을 때: 상태·Drawer 초기화 후 팀·합주 목록을 다시 불러온다
+    const handleTeamGone = useCallback(() => {
+        setTeamStates();
+        closeAllDrawers();
+        refreshTeamsAndEnsembles();
+    }, [closeAllDrawers, refreshTeamsAndEnsembles, setTeamStates]);
+
+    // 이미 삭제된 팀인지 체크. 팀 정보·PIN Drawer와 합주 추가(서버가 팀 존재를 검사하지 않음: ISSUES B4)가 사용한다
     // 해당 함수를 try -> if(else 없음) 에서 호출: false 리턴시 if문 넘긴채 그대로 try문 종료, 이후 try문 내에서 에러시 catch
     const checkTeamExists = useCallback(
         async (id: string) => {
@@ -50,28 +66,20 @@ const Teams = () => {
                 await teamExists(id);
                 return true;
             } catch {
-                setTeamStates();
-                closeAllDrawers();
-                fetchData();
+                handleTeamGone();
                 return false;
             }
         },
-        [closeAllDrawers, fetchData, setTeamStates],
+        [handleTeamGone],
     );
 
-    // 팀 클릭
+    // 팀 클릭: 바로 팀 정보 Drawer를 연다 (이전에는 여기서 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
     const handleClickTeam = useCallback(
-        async ({ id, type, name, desc }: Team) => {
-            try {
-                if (await checkTeamExists(id)) {
-                    setTeamStates(id, type, name, desc);
-                    openDrawer('teamInfo');
-                }
-            } catch {
-                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
-            }
+        ({ id, type, name, desc }: Team) => {
+            setTeamStates(id, type, name, desc);
+            openDrawer('teamInfo');
         },
-        [fetchData, openDrawer, setTeamStates, checkTeamExists],
+        [openDrawer, setTeamStates],
     );
 
     // 소모임 및 회의 클릭 (id값은 순서대로 event0~ 으로 지정)
@@ -92,46 +100,41 @@ const Teams = () => {
     const handleAddTeam = useCallback(
         async (type: string, name: string, desc: string[], pin: string) => {
             try {
-                await addTeam({ type, name, desc, pin, publishDate: dayjs() });
-                fetchData();
+                await addTeamAsync({ type, name, desc, pin, publishDate: dayjs() });
                 setTeamStates(); // 초기화
             } catch {
                 // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [fetchData, setTeamStates],
+        [addTeamAsync, setTeamStates],
     );
 
+    // 이미 삭제됐으면 서버가 404를 준다 → 이미 삭제된 팀 처리 (이전에는 수정 전에 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
     const handleUpdateTeam = useCallback(
         async (id: string, type: string, name: string, desc: string[]) => {
             try {
-                if (await checkTeamExists(id)) {
-                    await updateTeam(id, { type, name, desc });
-                    fetchData();
-                    setOpenedDrawers(['teamInfo']);
-                }
-            } catch {
+                await updateTeamAsync({ id, type, name, desc });
+                setOpenedDrawers(['teamInfo']);
+            } catch (err) {
+                if (isNotFound(err)) handleTeamGone();
                 // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [fetchData, setOpenedDrawers, checkTeamExists],
+        [handleTeamGone, setOpenedDrawers, updateTeamAsync],
     );
 
     const handleDeleteTeam = useCallback(
         async (id: string) => {
             try {
-                if (await checkTeamExists(id)) {
-                    await deleteTeam(id);
-                }
+                await deleteTeamAsync(id);
             } catch {
                 // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             } finally {
                 setTeamStates();
                 closeAllDrawers();
-                fetchData();
             }
         },
-        [closeAllDrawers, fetchData, setTeamStates, checkTeamExists],
+        [closeAllDrawers, deleteTeamAsync, setTeamStates],
     );
 
     const handleAddEnsemble = useCallback(
@@ -144,13 +147,13 @@ const Teams = () => {
             endTime: TimeSlot | null,
         ) => {
             try {
+                // 서버가 팀 존재를 검사하지 않으므로(ISSUES B4) 사전 확인을 유지한다
                 if (await checkTeamExists(id)) {
                     // 선택을 마친 뒤에만 호출되어 null이 아님 (null이면 nextDate.day()에서 TypeError → catch, 기존 동작)
-                    await addEnsemble({
+                    await addEnsembleAsync({
                         teamName: name,
                         ...toEnsembleRequest(id, repeat, nextDate!, startTime!, endTime!),
                     });
-                    fetchData();
                     setTeamStates(); // 초기화
                     setEnsembleStates();
                 }
@@ -158,7 +161,7 @@ const Teams = () => {
                 // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [fetchData, setTeamStates, setEnsembleStates, checkTeamExists],
+        [addEnsembleAsync, checkTeamExists, setEnsembleStates, setTeamStates],
     );
 
     return (

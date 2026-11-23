@@ -11,17 +11,29 @@ import { getTodayIdx } from '@/lib/week';
 // `ui` 클래스: 옛 전역 스타일이 적용되지 않는 새 코드 영역 (src/styles/index.css)
 
 const navButton =
-    'inline-flex size-8 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100 disabled:text-neutral-300 disabled:hover:bg-transparent';
+    'inline-flex size-8 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100 disabled:text-neutral-300 disabled:hover:bg-transparent md:size-10';
+
+type Direction = 'prev' | 'next' | null;
 
 const Schedule = () => {
     const today = useToday();
-    const [weekOffset, setWeekOffset] = useState(0);
-    const weekStart = getWeekStart(today, weekOffset);
+    const [week, setWeek] = useState<{ offset: number; direction: Direction }>({
+        offset: 0,
+        direction: null,
+    });
+    const weekStart = getWeekStart(today, week.offset);
+
+    const moveTo = (offset: number) =>
+        setWeek((prev) =>
+            offset === prev.offset
+                ? prev
+                : { offset, direction: offset > prev.offset ? 'next' : 'prev' },
+        );
 
     return (
-        <section className="ui w-full max-w-[1080px] rounded-[24px] bg-white p-4 shadow-[0_2px_10px_2px_rgb(0_0_0/0.1)] md:p-6">
+        <section className="ui w-full max-w-[1080px] rounded-[24px] bg-white p-4 shadow-[0_2px_10px_2px_rgb(0_0_0/0.06)] md:p-7">
             <div className="flex items-center justify-between gap-2">
-                <h2 className="text-xl font-bold text-neutral-900 md:text-2xl">
+                <h2 className="text-xl font-bold text-ink md:text-[28px]">
                     {formatWeekRange(weekStart)}
                 </h2>
                 <div className="flex shrink-0 items-center gap-1">
@@ -29,16 +41,16 @@ const Schedule = () => {
                         type="button"
                         aria-label="이전 주"
                         className={navButton}
-                        disabled={weekOffset === 0}
-                        onClick={() => setWeekOffset((offset) => offset - 1)}
+                        disabled={week.offset === 0}
+                        onClick={() => moveTo(week.offset - 1)}
                     >
-                        <ChevronLeft className="size-5" aria-hidden />
+                        <ChevronLeft className="size-5 md:size-6" aria-hidden />
                     </button>
                     <button
                         type="button"
-                        className="h-8 rounded-full border border-neutral-300 px-3 text-[13px] font-medium text-neutral-800 hover:bg-neutral-50 disabled:text-neutral-400"
-                        disabled={weekOffset === 0}
-                        onClick={() => setWeekOffset(0)}
+                        className="h-8 rounded-full border border-neutral-300 px-3 text-[13px] font-medium text-neutral-800 hover:bg-neutral-50 disabled:text-neutral-400 md:h-10 md:px-4 md:text-[15px]"
+                        disabled={week.offset === 0}
+                        onClick={() => moveTo(0)}
                     >
                         오늘
                     </button>
@@ -46,16 +58,20 @@ const Schedule = () => {
                         type="button"
                         aria-label="다음 주"
                         className={navButton}
-                        disabled={weekOffset === MAX_WEEK_OFFSET}
-                        onClick={() => setWeekOffset((offset) => offset + 1)}
+                        disabled={week.offset === MAX_WEEK_OFFSET}
+                        onClick={() => moveTo(week.offset + 1)}
                     >
-                        <ChevronRight className="size-5" aria-hidden />
+                        <ChevronRight className="size-5 md:size-6" aria-hidden />
                     </button>
                 </div>
             </div>
 
             <Teams />
-            <Board weekStart={weekStart} todayIdx={weekOffset === 0 ? getTodayIdx(today) : null} />
+            <Board
+                weekStart={weekStart}
+                todayIdx={week.offset === 0 ? getTodayIdx(today) : null}
+                direction={week.direction}
+            />
         </section>
     );
 };

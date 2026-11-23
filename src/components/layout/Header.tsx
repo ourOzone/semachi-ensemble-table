@@ -1,81 +1,38 @@
-import styled from 'styled-components';
-import { Layout, Button } from 'antd';
-import { BellOutlined, BookOutlined } from '@ant-design/icons';
-import useScrollPosition from '@/hooks/useScrollPosition';
-import Tooltip from '@/components/common/Tooltip';
+import { BookMarked } from 'lucide-react';
+import { useHideOnScroll } from '@/hooks/useHideOnScroll';
+import { cn } from '@/lib/utils';
 
-const { Header: AntHeader } = Layout;
+// 헤더 (View 개편 V-2에서 새로 만듦: 이전은 antd Layout.Header + styled-components, 반투명 블러).
+// 배경은 페이지와 같은 회색, 스크롤을 내리면 위로 들어가고 올리면 다시 나온다.
+
+const DRIVE_URL =
+    'https://drive.google.com/drive/folders/1FneJEkXY-hSqpM_XOBic7ep8lJZ3tdFn?usp=sharing';
 
 const Header = () => {
-    const scrollPosition = useScrollPosition();
+    const hidden = useHideOnScroll();
+
     return (
-        <StyledHeader scrollPosition={scrollPosition}>
-            <Title>세마치 합주판</Title>
-            <ButtonWrapper>
-                <Tooltip title="회칙 등 문서 구글 드라이브">
-                    <StyledButton
-                        variant="text"
-                        icon={<BookOutlined />}
-                        onClick={() =>
-                            (window.location.href =
-                                'https://drive.google.com/drive/folders/1FneJEkXY-hSqpM_XOBic7ep8lJZ3tdFn?usp=sharing')
-                        }
-                    ></StyledButton>
-                </Tooltip>
-                {/* <StyledButton variant="text" icon={<BellOutlined />}></StyledButton> */}
-            </ButtonWrapper>
-        </StyledHeader>
+        <header
+            className={cn(
+                'ui sticky top-0 z-10 w-full bg-page transition-transform duration-300 ease-out',
+                hidden && '-translate-y-full',
+            )}
+        >
+            <div className="mx-auto flex h-14 max-w-[1112px] items-center justify-between px-5 md:h-16">
+                <span className="text-xl font-bold text-ink select-none md:text-2xl">
+                    세마치 합주판
+                </span>
+                <a
+                    href={DRIVE_URL}
+                    aria-label="회칙 등 문서 (구글 드라이브)"
+                    title="회칙 등 문서 구글 드라이브"
+                    className="inline-flex size-10 items-center justify-center rounded-full text-ink hover:bg-black/5"
+                >
+                    <BookMarked className="size-6" aria-hidden />
+                </a>
+            </div>
+        </header>
     );
 };
-
-interface StyledHeaderProps {
-    /** 현재 스타일에서 쓰이지 않음 (DOM으로 전달되는 기존 경고 원인, 3단계 정리 대상) */
-    scrollPosition: number;
-}
-
-const StyledHeader = styled(AntHeader)<StyledHeaderProps>`
-    position: sticky !important;
-    width: 100%;
-    top: 0;
-    z-index: 1;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    height: 5rem;
-    padding: 1.5rem 1rem 1.5rem 1.5rem;
-
-    background-color: ${({ theme }) => theme.background}CC;
-    backdrop-filter: blur(1rem); /* 블러 효과 */
-    -webkit-backdrop-filter: blur(1rem); /* Safari 지원용 */
-`;
-
-const StyledButton = styled(Button)`
-    background: none;
-    border: none;
-    box-shadow: none;
-    width: 4rem !important;
-    height: 4rem;
-    border-radius: 1.5rem;
-
-    &:hover {
-        background-color: ${({ theme }) => theme.boardBackground}80 !important;
-    }
-
-    & svg {
-        font-size: 2rem;
-        color: ${({ theme }) => theme.title};
-    }
-`;
-
-const ButtonWrapper = styled.div`
-    display: flex;
-`;
-
-const Title = styled.span`
-    font-family: Bold;
-    font-size: 1.5rem;
-    color: ${({ theme }) => theme.title};
-    user-select: none;
-`;
 
 export default Header;

@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 1차 합주판 카드(주 단위 캘린더) 완료 (2026-11-23, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1·2차(사용자 수정 반영) 완료 (2026-11-23, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -589,6 +589,22 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 테스트 19개 추가: `lib/calendar.test.ts`(주 계산·제목·쉼 판단·레인 배치·주 캘린더), `components/schedule/Schedule.test.tsx`(주 이동·오늘·쉼 표시·전체 펼침). 변형 검사 18/18 (처음 2개 생존 → 레인 경계 테스트 2개 추가). 옛 Drawer 흐름 테스트는 수정 없이 통과
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 117/117 / `pnpm exec vitest run --maxWorkers=4` ✅ / `pnpm build` ✅ (JS 1,125kB, gzip 356kB: +33kB) / `pnpm lint` → 에러 5·경고 42 (변동 없음, 새 코드 0건) / `pnpm format:check`: `src`·문서 ✅ (`vite.config.mts`는 사용자가 작업 중인 변경이라 손대지 않음)
+
+### 2026-11-23 — View 개편 V-2 (2차): 사용자 수정 요청 반영 + 헤더·배경
+
+합주판이 예쁜지 보기 위해 V-2 범위 밖(헤더·배경)도 간단히 손봤다. 상세는 계획 문서 "V-2 진행" 2차.
+
+- 동작·화면 변경 (지금 → 바꾼 후)
+  - PC 글자 크기: 작음 → 전체적으로 키움. 모바일은 팀 목록만 키움
+  - 페이지 바탕: 연한 파랑 회색 → 회색(`#f2f3f5`) / 헤더: 짙은 파랑 제목 + 반투명 블러 → 검은 제목 + 블러 없음, 스크롤을 내리면 숨고 올리면 나옴
+  - 팀 목록: PC도 한 줄 + "전체" → PC는 모두 펼침. 모바일은 좌우로 밀어 봄("전체" 버튼이 아이콘으로 줄어듦), 펼침·접음에 높이 애니메이션
+  - 캘린더: PC 시간칸 높이 26 → 30px, 주를 바꿀 때 밀려 들어오는 애니메이션, 오늘 표시 파랑 → 검정
+  - 블록: 긴 이름 "…" → 말줄임표 없이 끊김. 모바일 2개 겹침: 글씨 없음 → 이름 표시. 3개 이상 겹침은 1024px 미만에서 색 띠만. PC 시간: 좁거나 이름이 길면 안 보임 → 항상 보임(작은 글씨, 아주 좁으면 두 줄). 쉼 블록 바탕: 흰색 → 투명
+- 헤더를 새 코드로 다시 만들고(`layout/Header`), `hooks/useHideOnScroll` 추가, 옛 `hooks/useScrollPosition` 삭제
+- 확인: Playwright로 가짜 데이터(겹침 2~4개 등) × 360·390·430·768·1024·1280px, 실제 데이터 첫 화면. 팀 목록 밀기(전체 버튼 89 → 36px, 돌아오면 89px), 펼침 높이 애니메이션, 헤더 숨김·보임, 주 이동 애니메이션 실행 확인. 옛 Drawer 화면은 V-1 전과 0픽셀 차이
+- 테스트: `hooks/useHideOnScroll.test.ts` 3개 추가, "전체" 펼침 테스트를 다시 그려지는 버튼에 맞게 수정. 변형 검사 21/21
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 120/120 / `pnpm exec vitest run --maxWorkers=4` ✅ / `pnpm build` ✅ (JS 1,101kB, gzip 349kB: 헤더에서 antd Layout·Tooltip이 빠져 -24kB) / `pnpm lint` → 에러 5·경고 41 (새 코드 0건) / `pnpm format:check`: `src`·문서 ✅ (`vite.config.mts`는 사용자 변경이라 손대지 않음)
 
 ## 남은 일
 

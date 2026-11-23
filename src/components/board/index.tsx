@@ -30,10 +30,12 @@ interface BoardProps {
     weekStart: Dayjs;
     /** 오늘이 이 주에 있으면 요일 인덱스(월 0 ~ 일 6), 없으면 null */
     todayIdx: number | null;
+    /** 주를 바꿀 때 들어오는 방향 (애니메이션). 처음 그릴 때는 null */
+    direction: 'prev' | 'next' | null;
 }
 
 // 합주표 (View 개편 V-2: 주 단위 캘린더). 합주 정보·수정·미루기·삭제 Drawer는 아직 옛 Drawer다
-const Board = ({ weekStart, todayIdx }: BoardProps) => {
+const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
     const teams = useTeams();
     const week = useWeekSchedule(weekStart);
     const refreshEnsembles = useRefreshEnsembles();
@@ -174,6 +176,7 @@ const Board = ({ weekStart, todayIdx }: BoardProps) => {
                 week={week}
                 weekStart={weekStart}
                 todayIdx={todayIdx}
+                direction={direction}
                 onClickEvent={handleEnsembleClick}
             />
 

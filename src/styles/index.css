@@ -53,6 +53,13 @@
      * 화면 폭 기준(sm·md·lg)은 미디어 쿼리라 html 글자 크기와 관계없이 브라우저 기본(16px) 기준이다.
      */
     --spacing: 4px;
+
+    /* 화면 색 (V-2 컨셉: 회색 바탕 + 흰 카드 + 검은 글씨). 오늘 표시는 검정 원 + 아주 옅은 열 배경 */
+    --color-page: #f2f3f5;
+    --color-ink: #18181b;
+    --color-today: #18181b;
+    --color-today-tint: rgb(24 24 27 / 0.04);
+
     --text-xs: 12px;
     --text-sm: 14px;
     --text-base: 16px;

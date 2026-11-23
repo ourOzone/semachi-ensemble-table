@@ -58,6 +58,7 @@ html {
     line-height: normal;
 }
 
+/* 페이지 바탕 (V-2: 연한 파랑 회색 #f5f8ff → 회색, 토큰은 index.css의 --color-page) */
 body {
-    background-color: #f5f8ff;
+    background-color: var(--color-page);
 }

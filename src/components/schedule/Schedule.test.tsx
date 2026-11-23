@@ -62,11 +62,13 @@ describe('합주판 (주 단위 캘린더)', () => {
         const user = userEvent.setup();
         renderApp();
 
-        const all = await screen.findByRole('button', { name: /전체/ });
-        expect(all).toHaveAttribute('aria-expanded', 'false');
-        await user.click(all);
-        expect(all).toHaveAttribute('aria-expanded', 'true');
-        await user.click(all);
-        expect(all).toHaveAttribute('aria-expanded', 'false');
+        // 펼치면 버튼이 펼친 목록 안으로 옮겨 가므로(다시 그려짐) 매번 새로 찾는다
+        const all = () => screen.getByRole('button', { name: /전체/ });
+        await screen.findByRole('button', { name: /전체/ });
+        expect(all()).toHaveAttribute('aria-expanded', 'false');
+        await user.click(all());
+        expect(all()).toHaveAttribute('aria-expanded', 'true');
+        await user.click(all());
+        expect(all()).toHaveAttribute('aria-expanded', 'false');
     });
 });

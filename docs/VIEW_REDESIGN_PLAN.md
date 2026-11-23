@@ -87,12 +87,21 @@
 - [x] **1차: 합주판 카드 (2026-11-23).** 클릭 동작은 아직 옛 Drawer를 연다 (사용자 지시: 동작은 나중에)
   - 카드: 주 제목("11월 16일 – 22일") + 이전 주·오늘·다음 주 → 팀 목록 → 주 단위 캘린더. 옛 Teams·Board 카드 두 개를 하나로 (`src/components/schedule/`)
   - 주 이동: 이번 주부터 12주 뒤까지 (`MAX_WEEK_OFFSET`), 지난 주는 보여주지 않음
-  - 팀 목록: 한 줄로 줄이고 오른쪽이 흐려짐, "전체 N"(N = 팀 수, 팀 아닌 일정 제외)을 누르면 화면 폭 전체로 펼침. 팀 → "팀 추가" → 팀 아닌 일정 순 (펼치면 팀 아닌 일정은 새 줄)
-  - 캘린더: 흰 바탕 + 한 시간마다 가로선만, 오늘 열은 옅은 파랑, 오늘 날짜는 파란 원. 시간칸(30분) 높이 모바일 22px·PC 26px
-  - 블록: 솔리드 팀 색 + 흰 글씨(굵기 500, 11~12px, 블록 높이에 맞춰 최대 3줄). 1시간 30분 이상이고 폭이 72px 이상이면 이름 한 줄 + 둘째 줄에 시간. 폭 20px 미만이면 글씨 없이 색 띠만 (모바일에서 3개 이상 겹치면 자연히 띠가 됨, 숫자 뱃지 없음)
+  - 팀 목록: 한 줄로 줄이고 오른쪽이 흐려짐, "전체 N"(N = 팀 수, 팀 아닌 일정 제외)을 누르면 화면 폭 전체로 펼침. 팀 → "팀 추가" → 팀 아닌 일정 순 (펼치면 팀 아닌 일정은 새 줄) → 2차에서 바뀜
+  - 캘린더: 흰 바탕 + 한 시간마다 가로선만, 오늘 열은 옅은 파랑, 오늘 날짜는 파란 원. 시간칸(30분) 높이 모바일 22px·PC 26px → 2차에서 바뀜
+  - 블록: 솔리드 팀 색 + 흰 글씨(굵기 500, 11~12px, 블록 높이에 맞춰 최대 3줄). 1시간 30분 이상이고 폭이 72px 이상이면 이름 한 줄 + 둘째 줄에 시간. 폭 20px 미만이면 글씨 없이 색 띠만 → 2차에서 바뀜
   - 블록 상태: 기본(솔리드) / 팀 아닌 일정(줄무늬) / 이번 주 쉼(팀 색 점선 테두리 + 팀 색 취소선 글씨) / 겹침(가로로 나눔: `lib/calendar`의 `assignLanes`)
   - 데이터: 백엔드 변경 없음. 서버의 합주(요일·시간칸·반복·다음 날짜)에서 주마다 보이는 합주와 상태를 계산한다 (`lib/calendar`의 `getOccurrence`·`toWeekSchedule`, 로직 층에 새 파일로 추가하고 기존 함수는 바꾸지 않음). 한계는 ISSUES V9
-- [ ] 2차 이후: 사용자 상세 수정 → 합주 정보·수정·미루기·삭제 단일 Drawer(V-2 본 작업)
+- [x] **2차: 사용자 상세 수정 반영 (2026-11-23).** 합주판이 예쁜지 보기 위해 주변(헤더·배경)도 함께 손봄
+  - 공통: PC 글자를 전체적으로 키움(제목 28px, 팀 15px, 요일 14px·날짜 20px, 블록 이름 14px·시간 11px, 시간 라벨 13px). 모바일은 팀 목록만 13 → 14px
+  - 색 (토큰 `index.css`): 페이지 바탕 `--color-page` `#f2f3f5`(이전 연한 파랑 회색 `#f5f8ff`), 글씨 `--color-ink` `#18181b`, 오늘 `--color-today` `#18181b`(검정 원) + `--color-today-tint`(아주 옅은 회색 열). `index.html`·`manifest.json`의 테마 색도 같이
+  - 헤더: 새 코드로 다시 만듦 (`layout/Header`, antd Layout·styled 제거). 검은 제목, 블러 없이 페이지 바탕색, 스크롤을 내리면 들어가고 올리면 나옴 (`hooks/useHideOnScroll`). 옛 `useScrollPosition` 삭제
+  - 팀 목록: PC(md 이상)는 "전체" 버튼 없이 모두 펼침. 모바일은 좌우로 밀어 보고, 밀기 시작하면 "전체" 버튼이 아이콘만 남고 맨 왼쪽으로 돌아오면 글자가 다시 나옴. "전체" 버튼은 옅은 회색 바탕 + 짙은 회색 테두리 + 검은 글씨. 펼치고 접을 때 높이가 부드럽게 바뀜
+  - 캘린더: 시간칸 높이 PC 26 → 30px. 주를 바꾸면(오늘 포함) 옆에서 살짝 밀려 들어옴(0.2초, 동작 줄이기 설정이면 없음)
+  - 블록 이름: 말줄임표(…) 없이 블록 높이만큼의 줄에서 뚝 끊김. 2개 겹침까지는 모바일에서도 항상 이름이 보임(좁으면 한 글자씩 세로로). 3개 이상 겹치면 1024px 미만(모바일·태블릿)에서는 색 띠만
+  - 시간(PC, 1시간 30분 이상): 이름보다 작은 11px. 자리를 이름보다 먼저 잡아 항상 보이게(이름 줄 수를 그만큼 줄임). 겹쳐서 아주 좁으면 시작·끝 시각을 두 줄로 쌓음. 3개 이상 겹치면 1024px 이상에서만
+  - 쉼(점선): 바탕을 비워 뒤의 가로선이 보이게
+- [ ] 3차 이후: 사용자 상세 수정 → 합주 정보·수정·미루기·삭제 단일 Drawer(V-2 본 작업)
 - [ ] V-2 끝에 정리: 옛 합주표용 `toBoard`·`useBoard`·`isSkipped`·`EnsembleBoard`·`EnsembleBlock` (새 캘린더로 대체되어 테스트에서만 쓰임)
 
 #### 나중에 할 일 (사용자 요청 메모)
@@ -107,7 +116,7 @@
 6. PIN 흐름: 백엔드 B1(변경 API의 서버 측 PIN 검증)이 바뀌기 전까지는 폼 안에서 `check-xxx-pin`으로 확인한 뒤 저장한다. 바뀌었다는 통보가 오면 그때 저장 요청 하나로 합친다
 
 ### V-6 상세 (일괄 정리)
-- 끝까지 손대지 않은 View: `layout`(Header·Footer), `common`(Drawer·OkButton·PinInput·Tooltip·Container), App의 본문 밀기(`openedDrawers` 기반 translate), `media`·`styled.d.ts`
+- 끝까지 손대지 않은 View: `layout`(Footer. Header는 V-2에서 새로 만듦), `common`(Drawer·OkButton·PinInput·Tooltip·Container), App의 본문 밀기(`openedDrawers` 기반 translate), `media`·`styled.d.ts`
 - 공존 기간 장치 제거: `src/styles/legacy.css`와 `legacy` 레이어, `index.html`의 레이어 선언 중 `antd`, `src/index.tsx`의 `StyleProvider`·`IconProvider`, 테스트 setup의 vaul 외 antd용 보정(`matchMedia` 등은 필요 여부 확인)
 - `theme.ts` 제거 전: `lib/board`의 `buildColorMap`이 `theme.teamColors`를 쓴다 → 팀 색 상수를 로직 층으로 옮겨야 한다 (로직 변경이므로 먼저 보고. `tokens.test.ts`도 그 상수와 비교하도록)
 - 제거: `antd`, `@ant-design/icons`, `@ant-design/cssinjs`, `@ant-design/v5-patch-for-react-19`(+ `src/index.tsx`의 import), `styled-components`, `src/styles/theme.ts`(토큰으로 이전 완료 후), `context/team`·`context/ensemble`·`ContextProvider`, 호환용 `useDrawerContext` 별칭
@@ -190,7 +199,7 @@
 ## 공통 검증 (작업마다)
 
 - `pnpm typecheck` / `pnpm test:run` / `pnpm format:check` / `pnpm build`
-- `pnpm lint`: 에러·경고가 늘지 않아야 한다 (View 개편 시작 시점: 에러 5·경고 42, 모두 옛 View 코드. V-1 후 같음). 새 코드는 0건
+- `pnpm lint`: 에러·경고가 늘지 않아야 한다 (View 개편 시작 시점: 에러 5·경고 42, 모두 옛 View 코드. V-2 2차 후 에러 5·경고 41). 새 코드는 0건
 - 테스트를 스크립트로 판정할 때는 `CLAUDE.md`의 테스트 규칙(기준선 먼저, `Tests N failed`로 판정)을 따른다
 - 화면이 바뀌는 작업은 개발 서버로 실제 렌더링을 확인한다. 디자인 원칙의 확인 폭(모바일·폴더블·PC)에서 모두 본다
 - 옛 화면이 남아 있는 동안은, 바꾸지 않은 옛 화면이 그대로인지도 확인한다 (V-1의 픽셀 비교 방식: 작업 전 커밋을 worktree로 띄워 같은 상황을 비교)

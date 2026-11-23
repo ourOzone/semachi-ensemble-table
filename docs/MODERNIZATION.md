@@ -74,7 +74,7 @@ CRA에는 ESLint가 내장돼 있었는데, Vite로 옮기면서 **린트가 완
 - 매번 `xxxExists()`로 확인 요청을 한 번 더 보낸 다음 실제 요청을 보낸다.
 
 적용 방향: 리소스별 query로 분리하고, mutation 후 해당 데이터만 invalidate한다. 삭제된 리소스(404)는 사전 확인 요청 대신 mutation 에러로 처리한다.
-구체적인 query·mutation 설계는 `docs/LOGIC_IMPROVEMENT_PLAN.md`의 "목표 아키텍처".
+구체적인 query·mutation 설계는 `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`의 "목표 아키텍처".
 
 ### 6. 클라이언트 상태: Zustand ✅ Drawer 상태만 적용 (3-9) / team·ensemble은 View 개편 때 폼 로컬 상태로
 
@@ -100,34 +100,13 @@ Zod 스키마로 응답을 parse하면서 `_id → id` 같은 변환도 같이 �
 
 ## 🟢 적용 예정: View 개편
 
-### View 개편 체크리스트 (3단계에서 넘긴 일)
+> **View 개편의 진행 방식·사전 결정·단계·체크리스트와 8·9번 상세는 `docs/VIEW_REDESIGN_PLAN.md`로 옮겼다** (2026-11-23).
 
-> 3단계는 "View 개편 후에도 남는 층"만 정리하고, Drawer·폼에 묶인 정리는 여기로 넘겼다.
-> 근거: `docs/LOGIC_IMPROVEMENT_PLAN.md` 사전 결정 1·5번, `docs/ISSUES.md`의 View 항목.
+### View 개편 체크리스트 (3단계에서 넘긴 일) → `docs/VIEW_REDESIGN_PLAN.md`
 
-- [ ] **Drawer 단일화:** API 요청 하나에 Drawer 하나. 그 안에서 모든 값을 입력하고, 완료 화면 Drawer("락앤롤!" 등)는 삭제
-- [ ] **`context/team`·`context/ensemble` 제거:** 단계 사이 입력값 전달용이다. 폼 로컬 상태(shadcn/ui Form = react-hook-form + Zod)로 옮긴 뒤 삭제한다. Zustand로 옮기지 않는다
-  - 함께 사라지는 것: 입력 한 글자마다 다시 렌더링(P3), 수정 취소용 `orgXxx` 복제(P5, 폼 초기값으로 대체), `setTeamStates()`·`setEnsembleStates()` 초기화 호출
-- [ ] **`stores/drawer` 축소:** 3-9에서 Context → Zustand로 옮긴 Drawer 스택을 단일 Drawer 구조에 맞게 줄이고, 호환용 `useDrawerContext` 별칭을 삭제한다
-- [ ] **PIN 흐름:** 지금은 PIN 단계 Drawer가 존재 확인과 `check-xxx-pin`을 따로 호출한다(P2 잔여, F6). 백엔드 B1 대응(변경 API에서 PIN 검증)에 맞춰 폼 submit 하나로 합친다
-- [ ] **(트렌디한) 알림 기능 새로 추가:** 3-6을 폐기하면서 기존 알림(`useMessage`)을 프로젝트에서 삭제했다(2026-11-23). 지금은 성공·실패·"이미 삭제됨"을 사용자에게 알리지 않는다
-  - 권장: shadcn/ui의 **Sonner**(토스트)를 앱 루트에 하나 두고, mutation 훅의 `onSuccess`·`onError`(404 → "이미 삭제됨")와 TanStack Query `QueryCache.onError`(조회 실패)에서 호출
-  - 이전 알림 문구는 git 기록(`8af5868` 이전 코드)에서 참고할 수 있다
-- [ ] **폼은 3단계의 mutation 훅을 호출한다** (`useUpdateTeam().mutateAsync(...)` 등). 캐시 갱신은 훅이 처리한다 (알림은 위 항목에서 새로 연결)
-- [ ] **Drawer 쪽 잔여 이슈:** F9(Drawer의 `exhaustive-deps`), F10, F11, V1~V5, E4
-- [ ] **테스트:** Drawer 흐름 테스트를 새 UI 기준으로 다시 작성한다. `lib/`·`queries/` 테스트는 유지한다
-- [ ] **React Compiler 도입 판단** (10번)
+### 8. 스타일링: Tailwind CSS v4 📌 적용 예정 (styled-components 대체) → `docs/VIEW_REDESIGN_PLAN.md`
 
-### 8. 스타일링: Tailwind CSS v4 📌 적용 예정 (styled-components 대체)
-
-- styled-components는 공식적으로 **유지보수 모드**다. 런타임 CSS-in-JS라 React 19 / RSC 흐름과 맞지 않는다.
-- 지금 코드에는 `.ant-drawer-close svg`처럼 **antd 내부 클래스를 덮어쓰는 코드와 `!important`가 많다.** UI 라이브러리 교체와 함께 정리된다.
-
-### 9. UI 라이브러리: shadcn/ui 📌 적용 예정 (antd 대체)
-
-- Radix/Base UI + Tailwind 기반이고, 컴포넌트 코드를 직접 소유한다.
-- 대체 대상: `PinInput` → input-otp. 알림은 기존 `useMessage`를 삭제했으므로(3-6 폐기) Sonner로 **새로 추가**한다.
-- 전제 조건: **React 19** (10번 참고), 기본 alias `@/` (적용 완료).
+### 9. UI 라이브러리: shadcn/ui 📌 적용 예정 (antd 대체) → `docs/VIEW_REDESIGN_PLAN.md`
 
 ### 10. React 19 ✅ 적용 완료 (2026-11-19) / React Compiler 🔍 View 개편 때 판단
 
@@ -184,7 +163,7 @@ React Compiler는 별도로 검토한다:
 ✅ 2단계 TS 전환 (+ Zod 스키마·타입, 응답 parse는 3단계로)
 ✅ 로직 개선 전 characterization test 작성 (src/context/fetch.test.tsx, 3-2에서 lib 테스트로 이전)
 ✅ 3단계 로직 개선 (+ TanStack Query, Zustand(Drawer), Zod 검증) — 2026-11-23 완료, 3-6 폐기·알림 삭제
-  → View 개편 (Tailwind v4 + shadcn/ui, antd·styled-components 제거, Drawer 단일화)
+  → View 개편 (Tailwind v4 + shadcn/ui, antd·styled-components 제거, Drawer 단일화) — 계획: docs/VIEW_REDESIGN_PLAN.md
   → (검토) React Compiler: View 개편 시작 시점에 판단 (10번)
 ```
 

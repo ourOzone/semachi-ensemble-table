@@ -200,6 +200,8 @@
 
 ## View 개편 때 넘겨주는 것
 
+> View 개편 계획은 `docs/VIEW_REDESIGN_PLAN.md`.
+
 - 폼은 mutation 훅을 호출한다. 예: `await updateTeam.mutateAsync({ id, type, name, desc })`. 캐시 갱신은 훅이 처리한다.
 - 폼 입력값은 폼 로컬 상태에 둔다 (shadcn/ui Form = react-hook-form + Zod). 그다음 `context/team`·`context/ensemble`과 `orgXxx`를 삭제한다.
 - **알림 기능을 새로 추가한다** (3-6 폐기와 함께 기존 알림을 삭제했다). shadcn/ui의 Sonner 같은 최신 토스트 라이브러리를 앱 루트에 하나 두고, mutation 훅의 `onSuccess`·`onError`(404 = "이미 삭제됨" 포함)와 QueryCache `onError`(조회 실패)에서 띄우는 구조를 권장

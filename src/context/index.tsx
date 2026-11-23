@@ -38,7 +38,7 @@ export function useEnsembleContext() {
 /**
  * 호환용 별칭: Drawer 상태는 stores/drawer(Zustand)로 옮겼다 (3-9). Drawer 파일들을 고치지 않으려고 이름을 유지한다.
  * store 전체를 구독하므로 이전 Context와 같은 시점에 다시 렌더링된다. 새 코드는 useDrawerStore(selector)를 쓴다.
- * View 개편 때 정리한다 (docs/MODERNIZATION.md View 개편 체크리스트)
+ * View 개편 때 정리한다 (docs/VIEW_REDESIGN_PLAN.md)
  */
 export function useDrawerContext() {
     return useDrawerStore();

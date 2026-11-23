@@ -22,7 +22,7 @@
 ## 작업 범위
 - `src/` 아래 프론트엔드 코드만 수정한다.
 - 루트의 `api.js`는 백엔드 코드다. 읽는 것은 괜찮지만 수정·이동·삭제하지 않는다.
-- 백엔드 관련 문제·제안(`docs/ISSUES.md`의 B 항목, `docs/BACKEND_SUGGESTIONS.md`)은 모두 백엔드 개발자에게 전달했다. 이 내용은 더 검토하거나 수정하지 않는다.
+- 백엔드 관련 문제·제안(`docs/ISSUES.md`의 B 항목, `docs/archive/BACKEND_SUGGESTIONS.md`)은 모두 백엔드 개발자에게 전달했다. 이 내용은 더 검토하거나 수정하지 않는다.
   백엔드가 바뀌면 사용자가 변경 내용을 알려준다. 그때 프론트 반영 범위를 다시 검토한다.
 - 루트 `.env`는 백엔드 전용(비밀값 포함)이다. 프론트엔드 환경변수는 `env/.env`에 `VITE_` 접두사로 두고, 타입은 `src/vite-env.d.ts`에 추가한다.
 
@@ -33,7 +33,7 @@
 
 진행 상황은 @docs/MIGRATION.md 에 기록하고, 작업이 끝날 때마다 갱신한다.
 2단계(TS 전환)는 완료됐다 (기록: `docs/archive/TS_MIGRATION_PLAN.md`).
-3단계(내부 로직 개선)는 완료됐다 (2026-11-23, 기록: `docs/LOGIC_IMPROVEMENT_PLAN.md`). 다음은 View 개편이며, 할 일은 `docs/MODERNIZATION.md`의 View 개편 체크리스트에 있다.
+3단계(내부 로직 개선)는 완료됐다 (2026-11-23, 기록: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`). 다음은 View 개편이며, 진행 방식·사전 결정·단계·체크리스트·작업마다 갱신할 문서는 `docs/VIEW_REDESIGN_PLAN.md`를 따른다.
 발견한 문제점은 `docs/ISSUES.md`에 ID(`B1`, `F1` 등)로 관리한다. 새로 발견하면 추가하고, 처리하면 상태를 갱신한다.
 
 ## TS 전환 규칙
@@ -47,12 +47,13 @@
 - `src` 내부 모듈은 `@/` alias로 import한다 (`@/components/...`). 같은 폴더·하위 폴더는 `./` 상대 경로를 허용한다.
 
 ## 로직 vs 뷰
-- 뷰: JSX 구조, styled-components 스타일, CSS, 마크업. 추후 전면 개편 예정이므로 구조를 바꾸지 않는다. 단, TS 전환(타입 부여)은 한다.
+- 뷰: JSX 구조, styled-components 스타일, CSS, 마크업. 3단계까지는 구조를 바꾸지 않았다.
+  View 개편 중에는 `docs/VIEW_REDESIGN_PLAN.md`의 단계에 따라 뷰를 새로 만든다. 이때 로직 층(`src/lib`·`src/queries`·`src/api`·`src/stores`)은 바꾸지 않는 것이 원칙이다.
 - 로직: 커스텀 훅, context, 상태 관리, 유틸 함수, 데이터 가공, API 호출. 3단계의 개선 대상이다.
 - 로직 개선은 동작이 바뀌지 않는 범위에서만 한다. 동작이 바뀌는 수정은 먼저 제안하고 승인을 받는다.
 - View 개편 때 Drawer는 "API 요청 하나에 단계별 Drawer 여러 개"에서 "Drawer 하나에서 모두 입력"으로 바뀐다. 완료 화면 Drawer("락앤롤!" 등)는 삭제된다.
   Drawer 내부에만 있는 문제(단계 간 값 전달, 단계별 초기화, PIN 단계 등)는 고치지 않고 `docs/ISSUES.md`에 View 처리로 기록한다.
-- 알림(토스트) 기능은 3-6 폐기 때 삭제했다 (2026-11-23). 3단계에서는 다시 넣지 않고, View 개편 때 새로 추가한다 (`docs/MODERNIZATION.md` View 개편 체크리스트).
+- 알림(토스트) 기능은 3-6 폐기 때 삭제했다 (2026-11-23). 3단계에서는 다시 넣지 않고, View 개편 때 새로 추가한다 (`docs/VIEW_REDESIGN_PLAN.md`).
 
 ## 작업 방식
 - 한 번에 폴더 하나(또는 관련 파일 묶음)만 진행한다.

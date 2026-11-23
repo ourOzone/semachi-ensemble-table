@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll } from 'vitest';
+import { useDrawerStore } from '@/stores/drawer';
 import { server } from '@/test/server';
 
 // jsdom에는 matchMedia가 없다. antd의 반응형 컴포넌트(Grid, Drawer 등)가 사용하므로 최소 구현을 제공한다.
@@ -25,6 +26,8 @@ afterEach(() => {
     cleanup(); // globals: false 이므로 RTL 자동 cleanup이 동작하지 않아 직접 호출
     server.resetHandlers();
     server.events.removeAllListeners(); // test/requests.ts의 recordRequests 리스너 정리
+    // Zustand store는 모듈 전역이라 테스트끼리 상태가 이어진다 (이전 Context는 렌더링마다 새로 만들어졌다) → 초기 상태로
+    useDrawerStore.setState(useDrawerStore.getInitialState(), true);
 });
 
 afterAll(() => server.close());

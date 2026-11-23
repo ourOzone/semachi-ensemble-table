@@ -150,7 +150,7 @@
 - 리팩터링 커밋: `useAddTeam`·`useUpdateTeam`·`useDeleteTeam`, `useAddEnsemble`(팀 확인 유지)·`useUpdateEnsemble`·`useDeleteEnsemble` (미루기는 `useUpdateEnsemble`을 사용해 별도 훅을 만들지 않음). `handleClickTeamInfo`는 캐시에서 팀을 찾는다(없으면 "이미 삭제된 팀").
 - 수정 커밋: F3 (`AddTeamDrawer5`·`AddEnsembleDrawer3`의 호출부 한 줄씩), F4 (미루기)
 
-### 3-9. Drawer 상태를 Zustand로 (결정 1)
+### 3-9. Drawer 상태를 Zustand로 (결정 1) ✅
 - `stores/drawer.ts`: 지금과 같은 API(`openedDrawers`, `openDrawer`, `closeDrawer`, `closeAllDrawers`, `setOpenedDrawers`)
 - `useDrawerContext`는 store 훅의 별칭으로 남긴다 → Drawer 파일 수정 없음 (View 개편 때 정리)
 - `App`은 selector로 "열린 Drawer가 있는지"만 구독한다. `DrawerContextProvider`를 제거한다.

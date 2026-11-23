@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { useDrawerStore } from '@/stores/drawer';
 import { ContextProvider, useDrawerContext, useEnsembleContext, useTeamContext } from '.';
 
 const wrapper = ContextProvider;
@@ -7,13 +8,14 @@ const wrapper = ContextProvider;
 describe('context 훅', () => {
     it('Provider 밖에서 호출하면 에러를 낸다', () => {
         vi.spyOn(console, 'error').mockImplementation(() => {}); // React의 에러 로그 숨김
-        expect(() => renderHook(() => useDrawerContext())).toThrow(/ContextProvider/);
+        expect(() => renderHook(() => useTeamContext())).toThrow(/ContextProvider/);
     });
 });
 
-describe('DrawerContext', () => {
+// Drawer 상태는 Zustand store(stores/drawer)로 옮겼다. useDrawerContext는 호환용 별칭이라 Provider 없이 동작한다
+describe('useDrawerContext (stores/drawer)', () => {
     it('openDrawer는 스택에 쌓고, closeDrawer는 맨 위 하나만 닫는다', () => {
-        const { result } = renderHook(() => useDrawerContext(), { wrapper });
+        const { result } = renderHook(() => useDrawerContext());
 
         act(() => result.current.openDrawer('teamInfo'));
         act(() => result.current.openDrawer('updateTeam1'));
@@ -24,12 +26,33 @@ describe('DrawerContext', () => {
     });
 
     it('closeAllDrawers는 스택을 비운다', () => {
-        const { result } = renderHook(() => useDrawerContext(), { wrapper });
+        const { result } = renderHook(() => useDrawerContext());
 
         act(() => result.current.openDrawer('notice'));
         act(() => result.current.openDrawer('addNotice'));
         act(() => result.current.closeAllDrawers());
         expect(result.current.openedDrawers).toEqual([]);
+    });
+
+    it('setOpenedDrawers는 스택을 통째로 바꾼다', () => {
+        const { result } = renderHook(() => useDrawerContext());
+
+        act(() => result.current.openDrawer('teamInfo'));
+        act(() => result.current.openDrawer('updateTeam1'));
+        act(() => result.current.setOpenedDrawers(['teamInfo']));
+        expect(result.current.openedDrawers).toEqual(['teamInfo']);
+    });
+
+    it('컴포넌트 밖에서도 getState()로 읽고 바꿀 수 있고, 구독 중인 컴포넌트가 다시 렌더링된다', () => {
+        const { result } = renderHook(() => useDrawerStore((state) => state.openedDrawers));
+
+        act(() => useDrawerStore.getState().openDrawer('notice'));
+        expect(result.current).toEqual(['notice']);
+    });
+
+    // 테스트끼리 상태가 이어지지 않도록 setup.ts가 매 테스트 뒤 초기화한다 (위 테스트에서 연 'notice'가 남지 않음)
+    it('테스트가 끝나면 초기 상태로 돌아간다', () => {
+        expect(useDrawerStore.getState().openedDrawers).toEqual([]);
     });
 });
 

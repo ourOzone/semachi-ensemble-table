@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { useDrawerContext } from '@/context';
+import { useDrawerStore } from '@/stores/drawer';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Notice from '@/components/notice';
@@ -11,7 +11,8 @@ import type { DrawerId } from '@/types';
 
 function App() {
     // 데이터는 각 컴포넌트의 query 훅(src/queries)이 마운트될 때 불러온다 (이전에는 여기서 fetchData()를 한 번 호출)
-    const { openedDrawers } = useDrawerContext();
+    // 열린 Drawer 스택만 구독한다 (Drawer가 열리고 닫힐 때만 다시 렌더링)
+    const openedDrawers = useDrawerStore((state) => state.openedDrawers);
 
     return (
         <>

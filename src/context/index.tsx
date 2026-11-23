@@ -1,7 +1,7 @@
 import { useContext, type Context, type ReactNode } from 'react';
 import { TeamContextProvider, TeamContext } from './team';
 import { EnsembleContextProvider, EnsembleContext } from './ensemble';
-import { DrawerContextProvider, DrawerContext } from './drawer';
+import { useDrawerStore } from '@/stores/drawer';
 
 // 전체 root파일(src/index.js)에 ContextProvider 중첩해서 기입하지 않기 위한 + useContext 함수들 일괄 정의 위한 파일
 // Context가 추가되면 여기에도 추가로 작성해야 함
@@ -13,9 +13,7 @@ interface ContextProviderProps {
 export function ContextProvider({ children }: ContextProviderProps) {
     return (
         <TeamContextProvider>
-            <EnsembleContextProvider>
-                <DrawerContextProvider>{children}</DrawerContextProvider>
-            </EnsembleContextProvider>
+            <EnsembleContextProvider>{children}</EnsembleContextProvider>
         </TeamContextProvider>
     );
 }
@@ -37,6 +35,11 @@ export function useEnsembleContext() {
     return useRequiredContext(EnsembleContext, 'useEnsembleContext');
 }
 
+/**
+ * 호환용 별칭: Drawer 상태는 stores/drawer(Zustand)로 옮겼다 (3-9). Drawer 파일들을 고치지 않으려고 이름을 유지한다.
+ * store 전체를 구독하므로 이전 Context와 같은 시점에 다시 렌더링된다. 새 코드는 useDrawerStore(selector)를 쓴다.
+ * View 개편 때 정리한다 (docs/MODERNIZATION.md View 개편 체크리스트)
+ */
 export function useDrawerContext() {
-    return useRequiredContext(DrawerContext, 'useDrawerContext');
+    return useDrawerStore();
 }

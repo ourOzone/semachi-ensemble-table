@@ -8,7 +8,7 @@
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
-| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-5 ✅, 3-6 ❌ 폐기·알림 기능 삭제, 3-7·3-8 ✅) |
+| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-5 ✅, 3-6 ❌ 폐기·알림 기능 삭제, 3-7~3-9 ✅) |
 
 ## 작업 로그
 
@@ -485,6 +485,20 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
   - 변형 검사(리팩터링) 8/8 검출
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 88/88 (2회) / `pnpm exec vitest run --maxWorkers=4` ✅ 2회 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 43 (컨테이너 경고 7건 감소)
+
+### 2026-11-23 — 3-9: Drawer 상태를 Zustand로 (사전 결정 1)
+
+- `src/stores/drawer.ts`: `useDrawerStore` (`openedDrawers`, `openDrawer`, `setOpenedDrawers`, `closeAllDrawers`, `closeDrawer` — 이전 Context와 같은 API). 컴포넌트 밖에서도 `getState()`로 사용 가능
+  - `setOpenedDrawers`: 함수형 업데이트(`SetStateAction`)를 받던 것을 배열만 받도록 좁힘 (호출부 2곳 모두 배열)
+- `context/drawer.tsx` 삭제, `ContextProvider`에서 `DrawerContextProvider` 제거
+- `useDrawerContext()`는 호환용 별칭으로 남김 (store 전체 구독 → 이전 Context와 같은 시점에 다시 렌더링). Drawer 파일 약 30개는 수정 없음. View 개편 때 정리 (`MODERNIZATION.md` 체크리스트에 기록됨)
+- `App`: 열린 Drawer 스택만 구독 (`useDrawerStore((s) => s.openedDrawers)`)
+- 테스트
+  - store는 모듈 전역이라 테스트끼리 상태가 이어진다 (이전 Context는 렌더링마다 새로 만들어짐) → `setup.ts`의 afterEach에서 초기 상태로 되돌림. 이 초기화를 빼면 흐름 테스트 9개가 실패하는 것을 확인
+  - `context/index.test.tsx`: Drawer 테스트를 Provider 없이 동작하도록 바꾸고 `setOpenedDrawers`·`getState()`·테스트 간 초기화 테스트 추가. "Provider 밖 호출 에러"는 아직 Context인 `useTeamContext`로 확인
+  - 변형 검사 4/4 검출
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 91/91 / `pnpm exec vitest run --maxWorkers=4` ✅ 2회 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 43 (변동 없음)
 
 ## 남은 일
 

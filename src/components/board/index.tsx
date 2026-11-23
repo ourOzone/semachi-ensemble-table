@@ -118,9 +118,11 @@ const Board = () => {
                     ...toEnsembleRequest(teamId, repeat, nextDate!, startTime!, endTime!),
                 });
                 setOpenedDrawers(['ensembleInfo']);
+                return true;
             } catch (err) {
                 if (isNotFound(err)) handleEnsembleGone();
                 // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
+                return false;
             }
         },
         [handleEnsembleGone, setOpenedDrawers, updateEnsembleAsync],
@@ -140,8 +142,8 @@ const Board = () => {
         [closeAllDrawers, deleteEnsembleAsync, setEnsembleStates],
     );
 
-    // 다음 번에 안 해요 클릭 시 nextDate를 7일 뒤로 변경
-    // 저장을 기다리지 않고 화면의 다음 날짜를 먼저 바꾼다 (ISSUES F4, 3-8의 수정 커밋에서 고침)
+    // 다음 번에 안 해요 클릭 시 nextDate를 7일 뒤로 변경.
+    // 저장에 성공한 뒤에 화면의 다음 날짜를 바꾼다 (이전: 저장을 기다리지 않고 먼저 바꿔, 실패해도 바뀐 날짜가 보였다: ISSUES F4)
     const handleSkipEnsemble = useCallback(
         async (
             id: string,
@@ -151,7 +153,7 @@ const Board = () => {
             startTime: TimeSlot | null,
             endTime: TimeSlot | null,
         ) => {
-            handleUpdateEnsemble(
+            const saved = await handleUpdateEnsemble(
                 id,
                 teamId,
                 repeat,
@@ -159,7 +161,9 @@ const Board = () => {
                 startTime,
                 endTime,
             );
-            setNextDate((prev) => dayjs(prev).add(7, 'day'));
+            if (saved) {
+                setNextDate((prev) => dayjs(prev).add(7, 'day'));
+            }
         },
         [handleUpdateEnsemble, setNextDate],
     );

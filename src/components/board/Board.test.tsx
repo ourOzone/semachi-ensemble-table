@@ -110,8 +110,33 @@ describe('합주표', () => {
         await waitFor(() => expect(putBody).toBeDefined());
         expect(putBody).toMatchObject({ teamId: 'team-1', repeat: true, startTime: 2, endTime: 3 });
         expect(dayjs(putBody!.nextDate as string).format('YYYY-MM-DD')).toBe('2026-11-30');
+        // 저장에 성공한 뒤 정보 Drawer의 다음 날짜가 바뀐다
+        expect(await screen.findByText('2026-11-30 (월)')).toBeInTheDocument();
         // 존재 확인은 정보 Drawer의 미루기 버튼·PIN Drawer 2회 (이전: 블록 클릭·미루기 처리·수정 처리까지 5회, 사전 결정 5)
         expect(countOf(requests, 'GET /ensemble/ensemble-1')).toBe(2);
+    });
+
+    // F4: 이전에는 저장을 기다리지 않고 화면의 날짜를 먼저 바꿔, 저장이 실패해도 바뀐 날짜가 보였다
+    it('다음 번에 안 해요: 저장에 실패하면 화면의 다음 날짜를 바꾸지 않는다', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        let attempted = false;
+        server.use(
+            http.put(`${url}/ensemble`, () => {
+                attempted = true;
+                return new HttpResponse(null, { status: 500 });
+            }),
+        );
+        const user = await openEnsembleInfo();
+
+        await user.click(screen.getByRole('button', { name: /다음 번에 안 해요/ }));
+        const skipDrawer = await findDrawer(/PIN 입력해야 미룰 수 있어요/);
+        await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
+        await user.click(await findEnabledButton('다음 번에 안 해요', skipDrawer));
+
+        await waitFor(() => expect(attempted).toBe(true));
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        expect(screen.getByText('2026-11-23 (월)')).toBeInTheDocument();
+        expect(screen.queryByText('2026-11-30 (월)')).not.toBeInTheDocument();
     });
 
     it('PIN이 맞으면 합주를 삭제한다', async () => {

@@ -86,7 +86,7 @@ const WeekCalendar = ({
                 </div>
 
                 {/* 본문: 시간 라벨 + 요일 7칸 */}
-                <div className="relative grid grid-cols-[var(--hour-col)_repeat(7,minmax(0,1fr))] pt-2">
+                <div className="relative grid grid-cols-[var(--hour-col)_repeat(7,minmax(0,1fr))] pt-2 pb-2">
                     {/* 가로선: 한 시간마다 (요일 영역 전체) */}
                     <div
                         aria-hidden
@@ -103,7 +103,8 @@ const WeekCalendar = ({
 
                     {/* 시간 라벨: 가로선 높이에 맞춘다 */}
                     <div aria-hidden className="relative h-[calc(var(--slot)*30)]">
-                        {hours.map((hour, i) => (
+                        {/* 맨 아래 24는 기능은 없지만 표의 끝을 보여준다 */}
+                        {[...hours, '24'].map((hour, i) => (
                             <span
                                 key={hour}
                                 className="absolute right-1.5 -translate-y-1/2 text-[11px] leading-none text-neutral-400 md:right-3 md:text-[13px]"

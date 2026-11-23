@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import styled from 'styled-components';
+import { cardRadius } from '@/styles/cardRadius';
 import { useDrawerContext } from '@/context';
 import { useAddNotice, useDeleteNotice, useNotices, useRefreshNotices } from '@/queries/notes';
 import { noticeExists } from '@/api/notice';
@@ -113,7 +114,7 @@ const NoticeButton = styled(Button)`
     max-width: 1080px;
     padding: 2rem 1.25rem;
     background-color: ${({ theme }) => theme.lightBlue};
-    border-radius: 1.5rem;
+    ${cardRadius}
     box-shadow: 0 2px 10px 2px rgba(0, 0, 0, 0.1);
     border: none;
     outline: none;

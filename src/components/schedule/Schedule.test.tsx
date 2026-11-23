@@ -58,17 +58,24 @@ describe('합주판 (주 단위 캘린더)', () => {
         expect(screen.getByRole('button', { name: '테스트밴드 10:00–11:00' })).toBeInTheDocument();
     });
 
-    it('팀 목록은 "전체"로 펼치고 접는다', async () => {
+    it('팀 목록은 "전체"로 펼치고, 펼친 동안은 "닫기"로 접는다', async () => {
         const user = userEvent.setup();
         renderApp();
 
         // 펼치면 버튼이 펼친 목록 안으로 옮겨 가므로(다시 그려짐) 매번 새로 찾는다
-        const all = () => screen.getByRole('button', { name: /전체/ });
-        await screen.findByRole('button', { name: /전체/ });
-        expect(all()).toHaveAttribute('aria-expanded', 'false');
-        await user.click(all());
-        expect(all()).toHaveAttribute('aria-expanded', 'true');
-        await user.click(all());
-        expect(all()).toHaveAttribute('aria-expanded', 'false');
+        const all = await screen.findByRole('button', { name: /전체/ });
+        expect(all).toHaveAttribute('aria-expanded', 'false');
+
+        await user.click(all);
+        const close = screen.getByRole('button', { name: '닫기' });
+        expect(close).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.queryByRole('button', { name: /전체/ })).toBeNull();
+
+        await user.click(close);
+        expect(screen.getByRole('button', { name: /전체/ })).toHaveAttribute(
+            'aria-expanded',
+            'false',
+        );
+        expect(screen.queryByRole('button', { name: '닫기' })).toBeNull();
     });
 });

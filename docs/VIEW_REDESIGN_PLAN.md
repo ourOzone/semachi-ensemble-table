@@ -108,7 +108,13 @@
   - 애니메이션의 흰 깜빡임 제거: 주 이동·팀 목록 펼침에서 투명도(fade) 애니메이션을 빼고, 주 이동은 옆으로 살짝(16px) 미는 것만, 펼침은 높이만
   - 시간 표시(PC): 1시간 30분 이상 → 1시간 이상 (30분 시작이라서가 아니라 1시간 블록이라 안 나왔다). 30분 블록은 이름 한 줄 높이뿐이라 시간 없음
   - 잘리는 이름 줄: 다음 줄 글자의 윗부분이 살짝 비치던 것 → 줄 간격 1.25 → 1.4, 자르는 위치를 줄 경계보다 0.15em 위로 (기기마다 픽셀 반올림이 달라도 여유)
-- [ ] 4차 이후: 사용자 상세 수정 → 합주 정보·수정·미루기·삭제 단일 Drawer(V-2 본 작업)
+- [x] **4차: 사용자 상세 수정 반영 (2026-11-23)**
+  - "전체" 버튼: 펼친 동안은 "× 닫기". 테두리를 더 연한 회색(neutral-300)으로
+  - 팀 목록을 밀어 왼쪽이 "전체" 버튼 밑으로 들어가는 동안 왼쪽도 오른쪽과 같은 폭으로 흐리게
+  - 캘린더 맨 아래에 24 라벨과 가로선 (표의 끝 표시)
+  - 오늘 표시: 파랑 → 파란빛이 은은한 회색(슬레이트) `#4a5568`
+  - 큰 카드(공지·합주판·한마디) 모서리: 24px → **스쿼클**(아이폰 앱 아이콘처럼 곡률이 이어지는 모서리, `corner-shape: squircle`, 28px). 지원하지 않는 브라우저(사파리 등)는 일반 둥근 모서리 18px. 새 코드는 `rounded-card`(index.css), 옛 styled 코드는 `src/styles/cardRadius.ts`
+- [ ] 5차 이후: 사용자 상세 수정 → 합주 정보·수정·미루기·삭제 단일 Drawer(V-2 본 작업)
 - [ ] V-2 끝에 정리: 옛 합주표용 `toBoard`·`useBoard`·`isSkipped`·`EnsembleBoard`·`EnsembleBlock` (새 캘린더로 대체되어 테스트에서만 쓰임)
 
 #### 나중에 할 일 (사용자 요청 메모)
@@ -124,7 +130,7 @@
 
 ### V-6 상세 (일괄 정리)
 - 끝까지 손대지 않은 View: `layout`(Footer. Header는 V-2에서 새로 만듦), `common`(Drawer·OkButton·PinInput·Tooltip·Container), App의 본문 밀기(`openedDrawers` 기반 translate), `media`·`styled.d.ts`
-- 공존 기간 장치 제거: `src/styles/legacy.css`와 `legacy` 레이어, `index.html`의 레이어 선언 중 `antd`, `src/index.tsx`의 `StyleProvider`·`IconProvider`, 테스트 setup의 vaul 외 antd용 보정(`matchMedia` 등은 필요 여부 확인)
+- 공존 기간 장치 제거: `src/styles/legacy.css`와 `legacy` 레이어, `src/styles/cardRadius.ts`(옛 카드용 모서리), `index.html`의 레이어 선언 중 `antd`, `src/index.tsx`의 `StyleProvider`·`IconProvider`, 테스트 setup의 vaul 외 antd용 보정(`matchMedia` 등은 필요 여부 확인)
 - `theme.ts` 제거 전: `lib/board`의 `buildColorMap`이 `theme.teamColors`를 쓴다 → 팀 색 상수를 로직 층으로 옮겨야 한다 (로직 변경이므로 먼저 보고. `tokens.test.ts`도 그 상수와 비교하도록)
 - 제거: `antd`, `@ant-design/icons`, `@ant-design/cssinjs`, `@ant-design/v5-patch-for-react-19`(+ `src/index.tsx`의 import), `styled-components`, `src/styles/theme.ts`(토큰으로 이전 완료 후), `context/team`·`context/ensemble`·`ContextProvider`, 호환용 `useDrawerContext` 별칭
 - `stores/drawer`를 단일 Drawer 구조에 맞게 줄인다 (스택이 필요 없으면 "열린 Drawer 하나 + 대상 id")

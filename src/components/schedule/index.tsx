@@ -31,7 +31,7 @@ const Schedule = () => {
         );
 
     return (
-        <section className="ui w-full max-w-[1080px] rounded-[24px] bg-white p-4 shadow-[0_2px_10px_2px_rgb(0_0_0/0.06)] md:p-7">
+        <section className="ui w-full max-w-[1080px] rounded-card bg-white p-4 shadow-[0_2px_10px_2px_rgb(0_0_0/0.06)] md:p-7">
             <Teams />
 
             <div className="mt-4 flex items-center justify-between gap-2 md:mt-6">

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { LayoutGrid, Plus } from 'lucide-react';
+import { LayoutGrid, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // 팀 목록 (View 개편 V-2).
 // - PC(md 이상): 모두 펼쳐 보여준다 ("전체" 버튼 없음)
 // - 모바일: 한 줄을 좌우로 밀어 본다. 밀기 시작하면 "전체" 버튼이 아이콘만 남고, 맨 왼쪽까지 돌아오면 글자가 다시 나온다.
-//   "전체"를 누르면 화면 폭 전체로 펼친다 (높이만 부드럽게 바뀜. 투명도 애니메이션은 흰색으로 깜빡여 뺐다)
+//   "전체"를 누르면 화면 폭 전체로 펼치고, 펼친 동안 버튼은 "닫기"가 된다. (높이만 부드럽게 바뀜. 투명도 애니메이션은 흰색으로 깜빡여 뺐다)
 
 export interface Chip {
     key: string;
@@ -37,18 +37,27 @@ const TeamChips = ({ teams, events, onAddTeam }: TeamChipsProps) => {
                 setExpanded((prev) => !prev);
                 setScrolled(false);
             }}
-            className="inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-400 bg-neutral-100 px-2.5 text-sm font-medium text-black md:hidden"
+            className="inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-300 bg-neutral-100 px-2.5 text-sm font-medium text-black md:hidden"
         >
-            <LayoutGrid className="size-3.5 shrink-0" aria-hidden />
-            {/* 밀고 있는 동안은 아이콘만 (글자는 폭을 0으로 줄여 숨긴다: 접근성 이름은 그대로) */}
-            <span
-                className={cn(
-                    'overflow-hidden whitespace-nowrap transition-[max-width,opacity,margin] duration-200',
-                    scrolled ? 'ml-0 max-w-0 opacity-0' : 'ml-1 max-w-24 opacity-100',
-                )}
-            >
-                전체 <span className="text-neutral-500">{teams.length}</span>
-            </span>
+            {expanded ? (
+                <>
+                    <X className="size-3.5 shrink-0" aria-hidden />
+                    <span className="ml-1 whitespace-nowrap">닫기</span>
+                </>
+            ) : (
+                <>
+                    <LayoutGrid className="size-3.5 shrink-0" aria-hidden />
+                    {/* 밀고 있는 동안은 아이콘만 (글자는 폭을 0으로 줄여 숨긴다: 접근성 이름은 그대로) */}
+                    <span
+                        className={cn(
+                            'overflow-hidden whitespace-nowrap transition-[max-width,opacity,margin] duration-200',
+                            scrolled ? 'ml-0 max-w-0 opacity-0' : 'ml-1 max-w-24 opacity-100',
+                        )}
+                    >
+                        전체 <span className="text-neutral-500">{teams.length}</span>
+                    </span>
+                </>
+            )}
         </button>
     );
 
@@ -92,7 +101,11 @@ const TeamChips = ({ teams, events, onAddTeam }: TeamChipsProps) => {
                         {allButton}
                         <div
                             onScroll={(e) => setScrolled(e.currentTarget.scrollLeft > 0)}
-                            className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none] mask-r-from-88% mask-r-to-100% md:flex-wrap md:overflow-visible md:mask-none [&::-webkit-scrollbar]:hidden"
+                            className={cn(
+                                'flex min-w-0 flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none] mask-r-from-88% mask-r-to-100% md:flex-wrap md:overflow-visible md:mask-none [&::-webkit-scrollbar]:hidden',
+                                // 밀어서 왼쪽이 "전체" 버튼 밑으로 들어가는 동안은 왼쪽도 같은 폭으로 흐리게
+                                scrolled && 'mask-l-from-88% mask-l-to-100%',
+                            )}
                         >
                             {chips}
                         </div>

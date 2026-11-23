@@ -54,11 +54,11 @@
      */
     --spacing: 4px;
 
-    /* 화면 색 (V-2 컨셉: 회색 바탕 + 흰 카드 + 검은 글씨). 오늘 표시는 차분한 파랑 원 + 아주 옅은 파랑 열 배경 */
+    /* 화면 색 (V-2 컨셉: 회색 바탕 + 흰 카드 + 검은 글씨). 오늘 표시는 파란빛이 은은한 회색(슬레이트) 원 + 아주 옅은 열 배경 */
     --color-page: #f2f3f5;
     --color-ink: #18181b;
-    --color-today: #3e63dd;
-    --color-today-tint: rgb(62 99 221 / 0.06);
+    --color-today: #4a5568;
+    --color-today-tint: rgb(74 85 104 / 0.06);
 
     --text-xs: 12px;
     --text-sm: 14px;
@@ -100,6 +100,19 @@
     --color-event-8: #6a7f9a;
     --color-event-9: #6a7f9a;
     --color-event-10: #6a7f9a;
+}
+
+/*
+ * 큰 카드(공지·합주판·한마디)의 모서리. 아이폰 앱 아이콘처럼 곡률이 이어지는 "스쿼클"을 지원하는 브라우저
+ * (corner-shape: Chrome·안드로이드)에서는 그걸 쓰고, 아니면(사파리 등) 일반 둥근 모서리. 스쿼클은 같은 반지름이면
+ * 덜 둥글어 보여 값을 키운다. 옛 코드(styled)는 같은 값을 src/styles/cardRadius.ts에서 가져다 쓴다
+ */
+@utility rounded-card {
+    border-radius: 18px;
+    @supports (corner-shape: squircle) {
+        border-radius: 28px;
+        corner-shape: squircle;
+    }
 }
 
 /*

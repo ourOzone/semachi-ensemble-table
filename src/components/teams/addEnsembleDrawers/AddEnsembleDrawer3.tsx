@@ -30,7 +30,7 @@ const AddEnsembleDrawer3 = ({ drawerId, handleAddEnsemble }: AddEnsembleDrawer3P
     }, [setStartTime, setEndTime, setStartTimeStr, setEndTimeStr]);
 
     const handleClick = useCallback(
-        (
+        async (
             id: string,
             name: string,
             repeat: boolean,
@@ -38,9 +38,10 @@ const AddEnsembleDrawer3 = ({ drawerId, handleAddEnsemble }: AddEnsembleDrawer3P
             startTime: TimeSlot | null,
             endTime: TimeSlot | null,
         ) => {
-            // await하지 않아 저장 성공 여부와 관계없이 완료 화면(addEnsemble4)을 연다 (3단계 정리 대상)
-            handleAddEnsemble(id, name, repeat, nextDate, startTime, endTime);
-            openDrawer('addEnsemble4');
+            // 저장에 성공했을 때만 완료 화면(addEnsemble4)을 연다. 실패하면 이 단계에 머문다 (이전: 결과와 관계없이 열었다, ISSUES F3)
+            if (await handleAddEnsemble(id, name, repeat, nextDate, startTime, endTime)) {
+                openDrawer('addEnsemble4');
+            }
         },
         [handleAddEnsemble, openDrawer],
     );

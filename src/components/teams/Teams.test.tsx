@@ -13,6 +13,49 @@ import { server } from '@/test/server';
 // 팀 기능 흐름 테스트: 팀 추가 6단계, 팀 정보, 팀 수정 5단계, 팀 삭제, 합주 추가 4단계, 소모임 정보.
 // Drawer가 스택으로 쌓여 같은 문구의 버튼("확인")이 여러 개 있으므로 Drawer 범위로 찾는다.
 
+/** 팀 추가 흐름을 PIN 확인까지 입력하고 "완료"를 누른다 */
+async function fillAddTeam(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(await screen.findByText('팀 추가'));
+    await user.click(await screen.findByText('교내공연'));
+
+    const nameDrawer = await findDrawer(/팀 이름을 지어요/);
+    await user.type(within(nameDrawer).getByRole('textbox'), '새밴드');
+    await user.click(await findEnabledButton('확인', nameDrawer));
+
+    const memberDrawer = await findDrawer(/누구누구 있나요/);
+    await user.type(within(memberDrawer).getAllByRole('textbox')[0]!, '홍길동');
+    await user.click(await findEnabledButton('확인', memberDrawer));
+
+    const setlistDrawer = await findDrawer(/셋리 정한 거 있나요/);
+    await user.type(within(setlistDrawer).getByRole('textbox'), '곡1');
+    await user.click(await findEnabledButton('확인', setlistDrawer));
+
+    // PIN Drawer는 열림 애니메이션이 끝난 뒤 PIN 칸으로 포커스를 옮긴다 (common/Drawer의 afterOpenChange).
+    // 그 전에 입력을 시작하면 "한 번 더" 칸에 입력하는 도중 포커스가 PIN 칸으로 되돌아가 확인 PIN이 덜 입력되는 경우가 있었다
+    // → 포커스가 옮겨진 뒤 입력한다 (ISSUES V7)
+    const pinInput = await screen.findByPlaceholderText('숫자 4자리');
+    await waitFor(() => expect(pinInput).toHaveFocus());
+    await user.type(pinInput, '1234');
+    await user.type(screen.getByPlaceholderText('한 번 더'), '1234');
+    await user.click(await findEnabledButton('완료'));
+}
+
+/** 팀 정보 Drawer에서 합주 추가 흐름(하루만 · 2026-11-27 · 19:00~21:00)을 입력하고 "이대로 할래요"를 누른다 */
+async function fillAddEnsemble(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: /합주 추가/ }));
+    await user.click(await screen.findByText(/하루만 할래요/));
+
+    await screen.findByText(/언제 할래요/);
+    const cell = document.querySelector<HTMLElement>('td[title="2026-11-27"]');
+    expect(cell).not.toBeNull();
+    await user.click(cell!);
+
+    // 시간: 19:00부터 21:00까지 → 시간칸 20 ~ 23
+    await user.click(await screen.findByRole('button', { name: '19:00' }));
+    await user.click(screen.getByRole('button', { name: '21:00' }));
+    await user.click(await findEnabledButton('이대로 할래요'));
+}
+
 /** 팀 버튼('테스트밴드')을 눌러 팀 정보 Drawer를 연다 */
 async function openTeamInfo() {
     const user = userEvent.setup();
@@ -47,29 +90,7 @@ describe('팀', () => {
         const user = userEvent.setup();
         renderApp();
 
-        await user.click(await screen.findByText('팀 추가'));
-        await user.click(await screen.findByText('교내공연'));
-
-        const nameDrawer = await findDrawer(/팀 이름을 지어요/);
-        await user.type(within(nameDrawer).getByRole('textbox'), '새밴드');
-        await user.click(await findEnabledButton('확인', nameDrawer));
-
-        const memberDrawer = await findDrawer(/누구누구 있나요/);
-        await user.type(within(memberDrawer).getAllByRole('textbox')[0]!, '홍길동');
-        await user.click(await findEnabledButton('확인', memberDrawer));
-
-        const setlistDrawer = await findDrawer(/셋리 정한 거 있나요/);
-        await user.type(within(setlistDrawer).getByRole('textbox'), '곡1');
-        await user.click(await findEnabledButton('확인', setlistDrawer));
-
-        // PIN Drawer는 열림 애니메이션이 끝난 뒤 PIN 칸으로 포커스를 옮긴다 (common/Drawer의 afterOpenChange).
-        // 그 전에 입력을 시작하면 "한 번 더" 칸에 입력하는 도중 포커스가 PIN 칸으로 되돌아가 확인 PIN이 덜 입력되는 경우가 있었다
-        // → 포커스가 옮겨진 뒤 입력한다 (ISSUES V6)
-        const pinInput = await screen.findByPlaceholderText('숫자 4자리');
-        await waitFor(() => expect(pinInput).toHaveFocus());
-        await user.type(pinInput, '1234');
-        await user.type(screen.getByPlaceholderText('한 번 더'), '1234');
-        await user.click(await findEnabledButton('완료'));
+        await fillAddTeam(user);
 
         expect(await screen.findByText('락앤롤!')).toBeInTheDocument();
         expect(posted).toMatchObject({
@@ -79,6 +100,27 @@ describe('팀', () => {
             pin: '1234',
         });
         expect(typeof posted!.publishDate).toBe('string'); // Dayjs → ISO 문자열로 직렬화
+    });
+
+    // F3: 이전에는 저장 결과와 관계없이 완료 화면을 열었다
+    it('팀 추가: 저장에 실패하면 완료 화면을 열지 않고 PIN 단계에 머문다', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        let attempted = false;
+        server.use(
+            http.post(`${url}/team`, () => {
+                attempted = true;
+                return new HttpResponse(null, { status: 500 });
+            }),
+        );
+        const user = userEvent.setup();
+        renderApp();
+
+        await fillAddTeam(user);
+
+        await waitFor(() => expect(attempted).toBe(true));
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        expect(screen.queryByText('락앤롤!')).not.toBeInTheDocument();
+        expect(screen.getByText('PIN 만들어요 🔑')).toBeInTheDocument();
     });
 
     it('팀 정보: 팀원과 셋리를 탭으로 전환해 보여준다', async () => {
@@ -253,18 +295,7 @@ describe('팀', () => {
             );
             const user = await openTeamInfo();
 
-            await user.click(screen.getByRole('button', { name: /합주 추가/ }));
-            await user.click(await screen.findByText(/하루만 할래요/));
-
-            await screen.findByText(/언제 할래요/);
-            const cell = document.querySelector<HTMLElement>('td[title="2026-11-27"]');
-            expect(cell).not.toBeNull();
-            await user.click(cell!);
-
-            // 시간: 19:00부터 21:00까지 → 시간칸 20 ~ 23
-            await user.click(await screen.findByRole('button', { name: '19:00' }));
-            await user.click(screen.getByRole('button', { name: '21:00' }));
-            await user.click(await findEnabledButton('이대로 할래요'));
+            await fillAddEnsemble(user);
 
             expect(await screen.findByText(/등록했어요/)).toBeInTheDocument();
             expect(posted).toMatchObject({
@@ -280,6 +311,26 @@ describe('팀', () => {
             expect(dayjs(posted!.nextDate as string).format('YYYY-MM-DD')).toBe('2026-11-27');
             // 서버가 팀 존재를 검사하지 않아(ISSUES B4) 저장 직전 확인은 유지: 팀 정보 Drawer의 합주 추가 버튼 + 저장 직전 = 2회
             expect(countOf(requests, 'GET /team/team-1')).toBe(2);
+        });
+
+        // F3: 이전에는 저장 결과와 관계없이 완료 화면을 열었다
+        it('저장에 실패하면 완료 화면을 열지 않고 시간 선택 단계에 머문다', async () => {
+            vi.spyOn(console, 'error').mockImplementation(() => {});
+            let attempted = false;
+            server.use(
+                http.post(`${url}/ensemble`, () => {
+                    attempted = true;
+                    return new HttpResponse(null, { status: 500 });
+                }),
+            );
+            const user = await openTeamInfo();
+
+            await fillAddEnsemble(user);
+
+            await waitFor(() => expect(attempted).toBe(true));
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            expect(screen.queryByText(/등록했어요/)).not.toBeInTheDocument();
+            expect(screen.getByText('이대로 할래요')).toBeInTheDocument();
         });
     });
 

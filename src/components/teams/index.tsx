@@ -102,8 +102,10 @@ const Teams = () => {
             try {
                 await addTeamAsync({ type, name, desc, pin, publishDate: dayjs() });
                 setTeamStates(); // 초기화
+                return true;
             } catch {
                 // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
+                return false;
             }
         },
         [addTeamAsync, setTeamStates],
@@ -156,9 +158,12 @@ const Teams = () => {
                     });
                     setTeamStates(); // 초기화
                     setEnsembleStates();
+                    return true;
                 }
+                return false; // 팀이 이미 삭제됨 (checkTeamExists가 Drawer를 닫음)
             } catch {
                 // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
+                return false;
             }
         },
         [addEnsembleAsync, checkTeamExists, setEnsembleStates, setTeamStates],

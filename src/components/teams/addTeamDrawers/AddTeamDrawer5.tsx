@@ -23,12 +23,13 @@ const AddTeamDrawer5 = ({ drawerId, handleAddTeam }: AddTeamDrawer5Props) => {
     const focusInputRef = useRef<InputRef>(null);
 
     const handleClick = useCallback(
-        (type: string, name: string, desc: string[], pin: string) => {
-            // await하지 않아 저장 성공 여부와 관계없이 완료 화면(addTeam6)을 연다 (3단계 정리 대상)
-            handleAddTeam(type, name, desc, pin);
-            setConfirmPin('');
-            setError(true);
-            openDrawer('addTeam6');
+        async (type: string, name: string, desc: string[], pin: string) => {
+            // 저장에 성공했을 때만 완료 화면(addTeam6)을 연다. 실패하면 이 단계에 머문다 (이전: 결과와 관계없이 열었다, ISSUES F3)
+            if (await handleAddTeam(type, name, desc, pin)) {
+                setConfirmPin('');
+                setError(true);
+                openDrawer('addTeam6');
+            }
         },
         [handleAddTeam, openDrawer],
     );

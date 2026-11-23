@@ -6,6 +6,7 @@ import { idx2hour } from '@/constants';
 import { Button } from 'antd';
 import dayjs from 'dayjs';
 import OkButton from '@/components/common/OkButton';
+// noUncheckedIndexedAccess: idx2hour[idx]!는 시간 버튼(0~29)에서만 호출되어 범위 안이다 (View 개편 때 삭제될 코드)
 import type { DrawerId, TimeSlot } from '@/types';
 import type { HandleUpdateEnsemble } from '../types';
 
@@ -42,7 +43,7 @@ const UpdateEnsembleDrawer4 = ({ drawerId, handleUpdateEnsemble }: UpdateEnsembl
             if (startTime === null || endTime !== null) {
                 // setStartTime(dayjs(`${dayjs(nextDate).format("YYYY-MM-DD")}T${time}`));
                 setStartTime(idx);
-                setStartTimeStr(idx2hour[idx]);
+                setStartTimeStr(idx2hour[idx]!);
                 setEndTime(null);
                 setEndTimeStr('');
 
@@ -58,11 +59,11 @@ const UpdateEnsembleDrawer4 = ({ drawerId, handleUpdateEnsemble }: UpdateEnsembl
                     setEndTime(startTime - 1);
                     setEndTimeStr(startTimeStr);
                     setStartTime(idx);
-                    setStartTimeStr(idx2hour[idx]);
+                    setStartTimeStr(idx2hour[idx]!);
                     // 일반적인 경우
                 } else {
                     setEndTime(idx - 1);
-                    setEndTimeStr(idx2hour[idx]);
+                    setEndTimeStr(idx2hour[idx]!);
                 }
             }
         },

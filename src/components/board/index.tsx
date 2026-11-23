@@ -179,7 +179,7 @@ const Board = () => {
                 {ensembles?.map((day, idx) => (
                     <ColumnWrapper key={idx}>
                         <LabelWrapper isToday={idx === todayIdx}>
-                            <DateLabel>{week[idx].date()}</DateLabel>
+                            <DateLabel>{week[idx]?.date()}</DateLabel>
                             <DayLabel>{days[idx]}</DayLabel>
                         </LabelWrapper>
                         <Column>

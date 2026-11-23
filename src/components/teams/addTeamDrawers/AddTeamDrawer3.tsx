@@ -45,7 +45,8 @@ const AddTeamDrawer3 = ({ drawerId }: AddTeamDrawer3Props) => {
                         <Label idx={idx}>{label}</Label>
                         <StyledInput
                             ref={idx === 0 ? focusInputRef : null}
-                            value={desc[idx]}
+                            // noUncheckedIndexedAccess: desc는 7칸, idx는 멤버 6칸 (View 개편 때 삭제될 코드)
+                            value={desc[idx]!}
                             onChange={(e) => handleChange(idx, e.target.value)}
                             count={{
                                 show: true,

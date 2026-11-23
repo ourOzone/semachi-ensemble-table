@@ -15,22 +15,26 @@ export const teamResponseSchema = z.object({
     pin: z.string().optional(),
 });
 
-export const ensembleResponseSchema = z.object({
-    _id: z.string(),
-    teamId: z.string(),
-    teamName: z.string(),
-    /** 월요일 0 ~ 일요일 6 */
-    day: z.number(),
-    /** 시작 시간칸 인덱스 (idx2hour 기준, 30분 단위) */
-    startTime: z.number(),
-    /** 마지막 시간칸 인덱스. 실제 종료 시각은 idx2hour[endTime + 1] */
-    endTime: z.number(),
-    repeat: z.boolean(),
-    nextDate: z.string(),
-    due: z.string(),
-    /** '무기한' | '일회성'. 레거시 필드 (repeat로 대체됨) */
-    type: z.string().optional(),
-});
+export const ensembleResponseSchema = z
+    .object({
+        _id: z.string(),
+        teamId: z.string(),
+        teamName: z.string(),
+        /** 월요일 0 ~ 일요일 6 */
+        day: z.number().int().min(0).max(6),
+        /** 시작 시간칸 인덱스 (idx2hour 기준, 30분 단위, 0 ~ 29) */
+        startTime: z.number().int().min(0).max(29),
+        /** 마지막 시간칸 인덱스 (0 ~ 29). 실제 종료 시각은 idx2hour[endTime + 1] */
+        endTime: z.number().int().min(0).max(29),
+        repeat: z.boolean(),
+        nextDate: z.string(),
+        due: z.string(),
+        /** '무기한' | '일회성'. 레거시 필드 (repeat로 대체됨) */
+        type: z.string().optional(),
+    })
+    // 범위 밖·시작 > 끝인 합주는 항목 단위 검증(getList)에서 제외된다 (3-10). 합주표(7 x 30) 배열 접근이 이 범위를 전제로 한다.
+    // 이전에는 시작 > 끝이면 칸이 만들어지지 않아 보이지 않았고, 범위 밖이면 합주표를 만들다 TypeError가 났다
+    .refine((e) => e.startTime <= e.endTime, { message: 'startTime이 endTime보다 크다' });
 
 export const noteResponseSchema = z.object({
     _id: z.string(),

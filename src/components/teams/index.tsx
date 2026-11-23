@@ -189,7 +189,8 @@ const Teams = () => {
                         key={name}
                         isEvent
                         idx={idx}
-                        onClick={() => handleClickEvent(eventIds[idx], name)}
+                        // eventNames1·2와 eventIds는 같은 순서·길이다 (constants)
+                        onClick={() => handleClickEvent(eventIds[idx]!, name)}
                     >
                         {name}
                     </TeamButton>
@@ -201,7 +202,7 @@ const Teams = () => {
                         key={name}
                         isEvent
                         idx={idx + eventNames1.length}
-                        onClick={() => handleClickEvent(eventIds[idx + eventNames1.length], name)}
+                        onClick={() => handleClickEvent(eventIds[idx + eventNames1.length]!, name)}
                     >
                         {name}
                     </TeamButton>

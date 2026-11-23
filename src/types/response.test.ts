@@ -57,4 +57,17 @@ describe('서버 응답 스키마', () => {
         expect(teamResponseSchema.safeParse(noName).success).toBe(false);
         expect(ensembleResponseSchema.safeParse({ ...ensembleJson, day: '0' }).success).toBe(false);
     });
+
+    // 3-10: 합주표(7 x 30) 배열 접근이 전제로 하는 범위. 실제 서버 데이터는 모두 이 범위 안이다 (endTime null 1건 제외)
+    it('합주의 요일(0~6)·시간칸(0~29) 범위와 시작 ≤ 끝을 검사한다', () => {
+        const ok = (overrides: object) =>
+            ensembleResponseSchema.safeParse({ ...ensembleJson, ...overrides }).success;
+
+        expect(ok({ day: 6, startTime: 29, endTime: 29 })).toBe(true);
+        expect(ok({ day: 7 })).toBe(false);
+        expect(ok({ day: -1 })).toBe(false);
+        expect(ok({ endTime: 30 })).toBe(false);
+        expect(ok({ startTime: 1.5 })).toBe(false);
+        expect(ok({ startTime: 6, endTime: 5 })).toBe(false);
+    });
 });

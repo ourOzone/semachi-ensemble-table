@@ -15,7 +15,12 @@ import type {
 
 /** 시간칸 endTime이 끝나는 시각 [시, 분]. idx2hour[endTime + 1] 기준 (endTime 29 → 24:00) */
 export function slotEndTime(endTime: TimeSlot): [hour: number, minute: number] {
-    const [hour, minute] = idx2hour[endTime + 1].split(':');
+    const end = idx2hour[endTime + 1];
+    if (end === undefined) {
+        // 이전에도 undefined.split에서 TypeError가 났다. 범위 밖 값은 응답 스키마에서 걸러진다
+        throw new RangeError(`시간칸 범위를 벗어났어요: endTime ${endTime}`);
+    }
+    const [hour, minute] = end.split(':') as [string, string]; // idx2hour는 모두 'HH:MM'
     return [parseInt(hour), parseInt(minute)];
 }
 
@@ -26,8 +31,8 @@ export function toTeams(teamsRaw: TeamResponse[]): Team[] {
         .filter((team) => !eventIds.includes(team.id));
 }
 
-/** teamId → 색상. 팀은 목록 순서로 teamColors를 순환하고, 소모임·회의는 eventIds 순서대로 eventColors */
-export function buildColorMap(teams: Team[]): Record<string, string> {
+/** teamId → 색상. 팀은 목록 순서로 teamColors를 순환하고, 소모임·회의는 eventIds 순서대로 eventColors (없는 팀은 undefined) */
+export function buildColorMap(teams: Team[]): Partial<Record<string, string>> {
     const teamColorMap = Object.fromEntries(
         teams.map((team, idx) => [team.id, theme.teamColors[idx % theme.teamColors.length]]),
     );
@@ -80,7 +85,8 @@ export function toBoard(
         const nextDate = resolveNextDate(ensemble, now);
 
         for (let hour = startTime; hour <= endTime; hour++) {
-            blocks[day][hour].push({
+            // day(0~6)·시간칸(0~29) 범위는 응답 스키마(ensembleResponseSchema)에서 검증된다
+            blocks[day]![hour]!.push({
                 id: _id,
                 day,
                 startTime,

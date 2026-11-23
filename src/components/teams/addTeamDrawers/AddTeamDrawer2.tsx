@@ -22,7 +22,7 @@ const AddTeamDrawer2 = ({ drawerId }: AddTeamDrawer2Props) => {
 
     useEffect(() => {
         const randomIndex = Math.floor(Math.random() * demoNames.length);
-        setRandomDemoName(demoNames[randomIndex]);
+        setRandomDemoName(demoNames[randomIndex]!); // noUncheckedIndexedAccess: randomIndex는 0 ~ length-1 (View 개편 때 삭제될 코드)
     }, []);
 
     return (

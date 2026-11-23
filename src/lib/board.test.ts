@@ -45,6 +45,10 @@ describe('slotEndTime', () => {
         expect(slotEndTime(3)).toEqual([11, 0]);
         expect(slotEndTime(29)).toEqual([24, 0]);
     });
+
+    it('범위 밖이면 RangeError (이전에도 TypeError가 났다. 범위 밖 합주는 응답 스키마에서 걸러진다)', () => {
+        expect(() => slotEndTime(30)).toThrow(RangeError);
+    });
 });
 
 describe('toTeams', () => {

@@ -42,7 +42,7 @@
 | F6 | 🟡 | 합주 수정 PIN 단계의 네트워크 오류가 `console.error`로만 처리되어 사용자에게 알림이 없다 | `UpdateEnsembleDrawer1.tsx` | 코드 | View (PIN 단계 Drawer). 현재는 알림 기능 자체가 없음(V6) |
 | F7 | 🟡 | 반복 합주의 "다음 날짜"가 오늘·다른 요일로 재계산되면 자정이 아니라 **현재 시각**이 붙는다. 이 값으로 미루기를 하면 시각이 붙은 날짜가 서버에 저장된다 | `context/fetch.tsx` → `lib/board` | 재현 (characterization test로 고정) | ✅ 3-3 (2026-11-20). 다시 계산한 날짜는 그날 0시 |
 | F8 | 🟡 | 팀 목록에 없는 팀의 합주는 `teamColor`가 `-1`이 되어 그대로 CSS 배경색 값이 된다 (팀 삭제는 합주도 지우므로 드묾) | `context/fetch.tsx` → `lib/board`, `board/index.tsx` | 재현 (characterization test) | ✅ 3-3 (2026-11-20). `theme.blueGray`로 표시, 타입도 `string`으로 |
-| F9 | 🟡 | `useCallback` 의존성 누락 31건(`exhaustive-deps`). 예: 공지·한마디의 `handleClickDelete`는 deps가 `[]`라 첫 렌더링의 함수를 계속 참조한다. 지금은 참조하는 값들이 대부분 고정이라 눈에 띄는 오동작은 확인하지 못함 | 여러 곳 | 린트 | 컨테이너·App: 3-5~3-9 (App의 effect 의존성 경고 2건은 3-5에서 해소. 3-7·3-8에서 공지·한마디·팀·합주표 컨테이너의 경고 모두 해소, deps `[]`였던 `handleClickDelete` 포함. 남은 경고는 3-10에서 집계) / Drawer: View |
+| F9 | 🟡 | `useCallback` 의존성 누락 31건(`exhaustive-deps`). 예: 공지·한마디의 `handleClickDelete`는 deps가 `[]`라 첫 렌더링의 함수를 계속 참조한다. 지금은 참조하는 값들이 대부분 고정이라 눈에 띄는 오동작은 확인하지 못함 | 여러 곳 | 린트 | 컨테이너·App: 3-5~3-9 ✅ 3단계에서 해소 (App 2건 3-5, 컨테이너 4개 3-7·3-8, deps `[]`였던 `handleClickDelete` 포함). 31건 → 16건, **남은 16건은 모두 Drawer** → View |
 | F10 | 🟡 | 합주 정보 Drawer가 `handleSkip`으로 prop을 받지만 부모는 `handleSkipEnsemble`로 넘겨 항상 `undefined`. 실제로 쓰이지 않아 동작 영향 없음 | `EnsembleInfoDrawer.tsx` | 코드 | View |
 | F11 | ⚪ | 쓰이지 않는 prop·인자: `NoticeDrawer`의 `setId`, 공지 추가의 `pin` 인자(부모가 버림), `Header`의 `scrollPosition`, Input에 없는 `controls={false}`(8곳) | 여러 곳 | 코드 (타입 주석으로 표시) | View |
 
@@ -57,7 +57,7 @@
 | P5 | 🟡 | 수정 취소 복원용 `orgXxx` 상태를 따로 복제해 관리 (team·ensemble context) | View (단일 Drawer 폼의 초기값으로 대체) |
 | P6 | 🟡 | 서버 응답을 런타임 검증 없이 사용 (Zod 스키마는 정의만 됨) | ✅ 3-4 (2026-11-20). 목록은 항목 단위 검증(`getList`), 존재 확인·PIN 확인은 boolean 검증 |
 | P9 | ⚪ | 실제 서버 데이터에 `endTime`이 `null`인 합주가 1건 있다 (반복 합주, `startTime` 26, `type` '일회성'·`due` 2025-09-13으로 레거시 필드도 서로 맞지 않음). 검증 전에도 칸이 만들어지지 않아 화면에 보이지 않았다 | 3-4에서 해당 항목만 제외하고 콘솔 경고. DB 정리 여부는 별도 판단 |
-| P7 | 🟡 | `noUncheckedIndexedAccess`를 켜면 타입 에러 21개 (teams 9, context 6, board 6). 대부분 배열 인덱스 접근. 3-2 이후 19개 (lib/board 6, board/index 1, teams/index 2, Drawer 10) | 3-10에서 켜기 (로직 11곳은 가드, Drawer 10곳은 `!`) |
+| P7 | 🟡 | `noUncheckedIndexedAccess`를 켜면 타입 에러 21개 (teams 9, context 6, board 6). 대부분 배열 인덱스 접근. 3-2 이후 19개 (lib/board 6, board/index 1, teams/index 2, Drawer 10) | ✅ 3-10 (2026-11-23). 로직은 가드·스키마 범위 검증(합주 요일 0~6·시간칸 0~29·시작 ≤ 끝), Drawer 10곳은 `!` + 근거 주석 |
 | P8 | ⚪ | API 경로 오타: `ensemble?id=`(앞의 `/` 누락). baseURL과 합쳐져 동작은 함 | ✅ 3-4 (2026-11-20). 최종 요청 URL이 같음을 테스트로 확인 |
 
 ## 4. View (View 개편 시 해소 예정)
@@ -77,7 +77,7 @@
 | ID | 심각도 | 내용 |
 |---|---|---|
 | E1 | 🟡 | 로컬 Node 24.14.0 < jsdom 31 하위 의존성 요구 `^24.15.0` → 설치 시 engine 경고 (동작 문제 없음). Node 24 최신으로 업데이트 권장 |
-| E2 | 🟡 | 테스트 커버리지 구문 87%·분기 77%. 미실행 부분은 대부분 네트워크 오류·"이미 삭제됨" catch 경로, Drawer 닫기 초기화, Enter 키 제출 → 3단계의 lib·훅 테스트로 보강 (Drawer 흐름 테스트는 추가하지 않음) |
+| E2 | 🟡 | 테스트 커버리지 구문 87%·분기 77%. 미실행 부분은 대부분 네트워크 오류·"이미 삭제됨" catch 경로, Drawer 닫기 초기화, Enter 키 제출 → ✅ 3단계 완료 시점 구문 91%·분기 81%. View 개편 후에도 남는 층(`api`·`lib`·`queries`·`stores`·`hooks`·`context`·`types`)은 모두 100%. 미실행 부분은 Drawer와 진입점(`index.tsx`) |
 | E3 | 🟡 | `.claude/settings.json`의 권한 허용 목록이 `npm run ...`, `npx vitest ...` 기준이라 pnpm 전환 후 명령과 맞지 않음 → ✅ 3-0에서 pnpm 기준으로 갱신 (2026-11-20) |
 | E4 | ⚪ | 테스트가 antd 내부 구현에 의존하는 부분: 비활성 버튼의 `visibility: hidden`(`findEnabledButton`), Drawer 클래스(`findDrawer`), 달력 셀 `td[title]`. antd 교체 시 함께 수정 |
 | E5 | ⚪ | jsdom의 XHR이 mock 응답에도 CORS를 검사해, 테스트 페이지 origin을 API origin으로 맞춰 둠 (`vite.config.mts`) |
@@ -85,12 +85,14 @@
 
 ---
 
-## 린트 현황 (2단계 완료 시점, 모두 기존 코드)
+## 린트 현황 (3단계 완료 시점: 에러 5·경고 42, 2단계 완료 시점 에러 5·경고 62)
 
-| 규칙 | 건수 | 관련 ID |
-|---|---|---|
-| `react(jsx-key)` ❌ | 2 | V2 |
-| `react(set-state-in-effect)` ❌ | 3 | V3 |
-| `react-hooks/exhaustive-deps` | 31 | F9 |
-| `react(exhaustive-effect-dependencies)` | 2 | F9 (App·Drawer effect) |
-| `no-unused-vars` | 29 | F11 등 (쓰지 않는 import·변수) |
+남은 지적은 모두 View 쪽(Drawer·layout·common) 코드다. 로직 층(`api`·`lib`·`queries`·`stores`·`hooks`·`context`·컨테이너·App)은 0건.
+
+| 규칙 | 건수 | 위치 | 관련 ID |
+|---|---|---|---|
+| `react(jsx-key)` ❌ | 2 | 완료 화면 Drawer 2곳 | V2 |
+| `react(set-state-in-effect)` ❌ | 3 | 공용 `Drawer`, 팀 이름 Drawer 2곳 | V3 |
+| `react-hooks/exhaustive-deps` | 16 | **모두 Drawer** (컨테이너·App·로직 0건) | F9 |
+| `react(exhaustive-effect-dependencies)` | 1 | 공용 `Drawer`의 resize effect | F9 |
+| `no-unused-vars` | 25 | 모두 View 파일(Drawer·layout·common): 쓰지 않는 import·styled 컴포넌트 | F11 등 |

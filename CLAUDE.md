@@ -33,7 +33,7 @@
 
 진행 상황은 @docs/MIGRATION.md 에 기록하고, 작업이 끝날 때마다 갱신한다.
 2단계(TS 전환)는 완료됐다 (기록: `docs/archive/TS_MIGRATION_PLAN.md`).
-3단계의 단계 구성(3-0 ~ 3-10), 사전 결정, 멈추고 보고할 조건은 `docs/LOGIC_IMPROVEMENT_PLAN.md`를 따른다.
+3단계(내부 로직 개선)는 완료됐다 (2026-11-23, 기록: `docs/LOGIC_IMPROVEMENT_PLAN.md`). 다음은 View 개편이며, 할 일은 `docs/MODERNIZATION.md`의 View 개편 체크리스트에 있다.
 발견한 문제점은 `docs/ISSUES.md`에 ID(`B1`, `F1` 등)로 관리한다. 새로 발견하면 추가하고, 처리하면 상태를 갱신한다.
 
 ## TS 전환 규칙

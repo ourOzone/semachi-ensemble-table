@@ -64,7 +64,7 @@ CRA에는 ESLint가 내장돼 있었는데, Vite로 옮기면서 **린트가 완
 
 ## 🟡 적용 예정: 아키텍처 (3단계와 함께)
 
-### 5. 서버 상태: TanStack Query 📌 적용 예정
+### 5. 서버 상태: TanStack Query ✅ 적용 완료 (3-5·3-7·3-8)
 
 현재 `fetchData()` 패턴의 문제:
 
@@ -76,7 +76,7 @@ CRA에는 ESLint가 내장돼 있었는데, Vite로 옮기면서 **린트가 완
 적용 방향: 리소스별 query로 분리하고, mutation 후 해당 데이터만 invalidate한다. 삭제된 리소스(404)는 사전 확인 요청 대신 mutation 에러로 처리한다.
 구체적인 query·mutation 설계는 `docs/LOGIC_IMPROVEMENT_PLAN.md`의 "목표 아키텍처".
 
-### 6. 클라이언트 상태: Zustand 📌 적용 예정 (Context 4개 대체)
+### 6. 클라이언트 상태: Zustand ✅ Drawer 상태만 적용 (3-9) / team·ensemble은 View 개편 때 폼 로컬 상태로
 
 - 각 Provider가 `value={{...}}`를 매번 새 객체로 넘겨서, **팀 이름 입력 한 글자마다 TeamContext를 구독하는 컴포넌트 전체가 다시 렌더링된다.**
 - `orgXxx` 상태 복제 패턴(수정 취소 시 복원용)은 store 안에서 "draft와 원본"으로 표현한다.
@@ -87,7 +87,7 @@ CRA에는 ESLint가 내장돼 있었는데, Vite로 옮기면서 **린트가 완
 team·ensemble Context는 단계 사이에 입력값을 넘기려고 존재하므로, 개편 후에는 폼 로컬 상태(react-hook-form + Zod)로 흡수된다.
 그래서 3단계에서는 **Drawer 상태만 Zustand로** 옮기고, team·ensemble은 View 개편 때 정리하는 안을 추천한다 (3단계 계획 사전 결정 1번).
 
-### 7. API 경계 검증: Zod 🔄 일부 적용 (스키마·타입 ✅ 2-0, 응답 parse 📌 3단계)
+### 7. API 경계 검증: Zod ✅ 적용 완료 (스키마·타입 2-0, 응답 항목 단위 검증 3-4, 합주 범위 검증 3-10)
 
 2단계에서 API 응답 타입을 `interface`로만 적으면 런타임에는 아무것도 보장되지 않는다.
 Zod 스키마로 응답을 parse하면서 `_id → id` 같은 변환도 같이 처리해, 타입과 데이터 정제를 한 곳에 모은다.
@@ -129,7 +129,7 @@ Zod 스키마로 응답을 parse하면서 `_id → id` 같은 변환도 같이 �
 - 대체 대상: `PinInput` → input-otp. 알림은 기존 `useMessage`를 삭제했으므로(3-6 폐기) Sonner로 **새로 추가**한다.
 - 전제 조건: **React 19** (10번 참고), 기본 alias `@/` (적용 완료).
 
-### 10. React 19 ✅ 적용 완료 (2026-11-19) / React Compiler 🔍 검토
+### 10. React 19 ✅ 적용 완료 (2026-11-19) / React Compiler 🔍 View 개편 때 판단
 
 **결론: React 19로 올려야 한다. 시점은 2단계(TS 전환) 시작 전을 권장한다.**
 
@@ -151,6 +151,13 @@ React Compiler는 별도로 검토한다:
 
 - 코드 전체에 `useCallback`이 깔려 있지만, `useMessage`가 렌더링마다 새 `message` 객체를 반환해서 **실제로는 메모이제이션이 거의 효과가 없다.**
 - Compiler(1.0)를 쓰면 수동 `useCallback`/`useMemo`를 대부분 지울 수 있다. 다만 3단계에서 Context → Zustand, fetch → TanStack Query로 바뀌면 수동 메모이제이션 자체가 많이 줄어들므로, 그 이후에 도입 여부를 판단한다.
+
+**3단계 후 판단 메모 (2026-11-23): View 개편 때 함께 도입 여부를 정한다**
+
+- 알림(`useMessage`)을 삭제해, 렌더링마다 새 객체가 deps로 들어가 메모이제이션을 무력화하던 문제는 사라졌다
+- 남은 수동 `useCallback`은 컨테이너 4개와 Drawer(약 30개)에 있다. Drawer는 View 개편 때 대부분 다시 쓰이므로, 지금 Compiler를 넣어도 이득이 작다
+- 새 폼·컴포넌트를 처음부터 Compiler 전제로 쓰면(수동 메모이제이션 없이) 가장 저렴하다 → View 개편 시작 시점에 켜는 것을 권장
+- 확인할 것: Compiler 규칙 위반으로 이어질 수 있는 기존 코드(effect 안 setState 3건, ISSUES V3), Vite 플러그인 구성(`@vitejs/plugin-react`의 Babel 설정), Oxlint로 대신할 수 없는 Compiler 전용 린트 규칙의 필요 여부(1번)
 
 ---
 
@@ -175,10 +182,10 @@ React Compiler는 별도로 검토한다:
 ✅ 1단계 잔여물 정리
 ✅ React 19 업그레이드 (+ antd 패치)
 ✅ 2단계 TS 전환 (+ Zod 스키마·타입, 응답 parse는 3단계로)
-✅ 로직 개선 전 characterization test 작성 (src/context/fetch.test.tsx)
-  → 3단계 로직 개선 (+ TanStack Query, Zustand, Zod parse) — 계획: docs/LOGIC_IMPROVEMENT_PLAN.md
+✅ 로직 개선 전 characterization test 작성 (src/context/fetch.test.tsx, 3-2에서 lib 테스트로 이전)
+✅ 3단계 로직 개선 (+ TanStack Query, Zustand(Drawer), Zod 검증) — 2026-11-23 완료, 3-6 폐기·알림 삭제
   → View 개편 (Tailwind v4 + shadcn/ui, antd·styled-components 제거, Drawer 단일화)
-  → (검토) React Compiler
+  → (검토) React Compiler: View 개편 시작 시점에 판단 (10번)
 ```
 
 ---

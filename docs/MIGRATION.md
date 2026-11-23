@@ -8,7 +8,7 @@
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
-| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-5 ✅, 3-6 ❌ 폐기·알림 기능 삭제, 3-7~3-9 ✅) |
+| 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
 
 ## 작업 로그
 
@@ -500,22 +500,50 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 91/91 / `pnpm exec vitest run --maxWorkers=4` ✅ 2회 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 43 (변동 없음)
 
+### 2026-11-23 — 3-10: 마무리
+
+- `noUncheckedIndexedAccess` 켜기 (P7, 커밋 `cabdcf3`)
+  - 로직: `slotEndTime`은 범위 밖이면 `RangeError`(이전에도 `undefined.split`에서 TypeError), `buildColorMap`은 `Partial` 반환(없는 팀은 `?? theme.blueGray`)
+  - 합주표 배열 접근(`blocks[day][hour]`)은 응답 스키마의 범위 검증을 전제로 한다: `day` 0~6·`startTime`/`endTime` 0~29 정수·시작 ≤ 끝. 적용 전 실제 서버 합주 16건이 모두 범위 안임을 확인(값은 출력하지 않음). 범위 밖 항목은 항목 단위 검증에서 제외 (이전: 시작 > 끝은 칸이 안 만들어져 보이지 않았고, 범위 밖은 TypeError)
+  - 컨테이너: `week[idx]?.`, `eventIds[idx]!`(이름 목록과 같은 순서·길이). Drawer 10곳은 `!` + 근거 주석 (View 개편 때 삭제될 코드)
+- 린트: 로직 층의 마지막 경고(`context/team.tsx`의 쓰지 않는 `checkTeamPin` import) 제거. 남은 지적은 모두 View 쪽 → `ISSUES.md` 린트 현황
+- React Compiler: View 개편 시작 시점에 판단 (`MODERNIZATION.md` 10번에 판단 메모)
+
+### 2026-11-23 — 3단계 마무리 결과
+
+| 항목 | 2단계 완료 (2026-11-20) | 3단계 완료 (2026-11-23) |
+|---|---|---|
+| 테스트 | 11개 파일, 54개 | 17개 파일, 93개 |
+| 커버리지 (구문 · 분기) | 87% · 77% | 91% · 81% (`api`·`lib`·`queries`·`stores`·`hooks`·`context`·`types` 모두 100%) |
+| 린트 | 에러 5 · 경고 62 | 에러 5 · 경고 42 (남은 것은 모두 View 쪽) |
+| tsconfig | `strict` | `strict` + `noUncheckedIndexedAccess` |
+| JS 번들 | 936kB (gzip 294kB) | 1,039kB (gzip 324kB): TanStack Query·Zustand·Zod 런타임 포함 |
+| 데이터 불러오기 | 4개 API 순차, 변경마다 전체 다시 불러오기 | 병렬, 변경마다 영향을 받는 목록만, 탭 복귀 시 다시 불러오기 |
+| 존재 확인 사전 요청 | 클릭·저장마다 | PIN Drawer 안과 합주 추가 전(B4)만 (미루기 5회 → 2회 등) |
+| 서버 응답 | 검증 없음 | Zod 항목 단위 검증 |
+| 상태 | Context 4개 | TanStack Query(서버) · Zustand(Drawer) · Context 2개(team·ensemble, View 개편 때 폼 로컬 상태로) |
+| 알림 | `useMessage` | 없음 (3-6 폐기 때 삭제, View 개편 때 새로 추가) |
+| 처리한 버그 | – | F1·F2·F3·F4·F5(알림 삭제)·F7·F8, P1·P2·P4·P6·P7·P8 |
+
+- 3단계에서 넘긴 일: `LOGIC_IMPROVEMENT_PLAN.md` "View 개편 때 넘겨주는 것", `MODERNIZATION.md` View 개편 체크리스트
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 93/93 / `pnpm test:coverage` ✅ / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 42
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
 
-### 린트 지적 사항 (기존 코드, 아직 수정하지 않음)
+### 린트 지적 사항 (3단계 완료 시점, 모두 View 쪽 코드)
 
-동작이 바뀔 수 있어 2·3단계에서 승인 후 처리한다.
+View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 
-| 규칙 | 건수 | 비고 |
-|---|---|---|
-| `react(jsx-key)` ❌ | 2 | `AddTeamDrawer6`, `AddEnsembleDrawer4`의 `extra={[<OkButton />]}` |
-| `react(set-state-in-effect)` ❌ | 3 | `Drawer`(resize 초기값), `AddTeamDrawer2`, `UpdateTeamDrawer3`(랜덤 데모 이름) |
-| `react-hooks/exhaustive-deps` | 31 | stale closure 가능성. 일부는 실제 버그(`notice/index.jsx`의 `handleClickDelete` deps `[]` 등) |
-| `no-unused-vars` | 29 | 사용하지 않는 import·변수 |
-| ~~`no-console`~~ | ~~3~~ → 0 | ✅ 1단계 잔여물 정리 때 제거 |
-| `react(exhaustive-effect-dependencies)` | 2 | `App`의 `fetchData` effect 등 |
+| 규칙 | 건수 | 위치 | 관련 ID |
+|---|---|---|---|
+| `react(jsx-key)` ❌ | 2 | 완료 화면 Drawer 2곳 | V2 |
+| `react(set-state-in-effect)` ❌ | 3 | 공용 `Drawer`, 팀 이름 Drawer 2곳 | V3 |
+| `react-hooks/exhaustive-deps` | 16 | **모두 Drawer** (컨테이너·App·로직 0건) | F9 |
+| `react(exhaustive-effect-dependencies)` | 1 | 공용 `Drawer`의 resize effect | F9 |
+| `no-unused-vars` | 25 | 모두 View 파일(Drawer·layout·common): 쓰지 않는 import·styled 컴포넌트 | F11 등 |
 
 ### 1단계 잔여물 ✅ 모두 처리
 - ✅ `index.html`: CRA 안내 주석, description 문구, `lang="en"`
@@ -531,12 +559,12 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 | 항목 | 대체 대상 | 시점 |
 |---|---|---|
 | ~~React 19 (+ `@ant-design/v5-patch-for-react-19`)~~ | ~~React 18~~ | ✅ 완료 (2026-11-19) |
-| Zod | 수동 응답 정제 | 스키마·타입 ✅ 2-0 / 응답 parse는 3단계 (TanStack Query와 함께) |
-| TanStack Query | `context/fetch` (`fetchData`, `xxxExists` 사전 확인) | 3단계 |
-| Zustand | `context/team`, `ensemble`, `drawer` | 3단계 |
+| ~~Zod~~ | ~~수동 응답 정제~~ | ✅ 3단계 (항목 단위 응답 검증) |
+| ~~TanStack Query~~ | ~~`context/fetch` (`fetchData`, `xxxExists` 사전 확인)~~ | ✅ 3단계 |
+| Zustand | ~~`context/drawer`~~ ✅ 3-9 / `context/team`·`ensemble`은 Zustand가 아니라 폼 로컬 상태로 | View 개편 |
 | Tailwind CSS v4 | styled-components | View 개편 |
 | shadcn/ui | antd (`PinInput` → input-otp), **알림 기능 새로 추가**(Sonner, 기존 `useMessage`는 3-6 폐기 때 삭제) | View 개편 |
-| (검토) React Compiler | 수동 `useCallback`/`useMemo` | 3단계 이후 |
+| (검토) React Compiler | 수동 `useCallback`/`useMemo` | View 개편 시작 시점에 판단 |
 
 ### 환경
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
@@ -544,4 +572,5 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 ### 다음 순서
 1. ~~2단계 TS 전환~~ ✅ 완료
 2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)
-3. 3단계: ~~사전 결정 확정, 3-0~~ ✅ → 3-1부터 진행
+3. ~~3단계 내부 로직 개선~~ ✅ 완료 (2026-11-23)
+4. View 개편 (`MODERNIZATION.md` View 개편 체크리스트)

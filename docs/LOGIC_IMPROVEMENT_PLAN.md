@@ -1,8 +1,9 @@
-# 3단계: 내부 로직 개선 계획
+# 3단계: 내부 로직 개선 계획 ✅ 완료 (2026-11-23)
 
 > 작업 규칙은 `CLAUDE.md`(로직 vs 뷰, 동작이 바뀌는 수정은 승인 후), 진행 기록은 `docs/MIGRATION.md`를 따른다.
 > 문제는 `docs/ISSUES.md`의 ID(`F1`, `P2` 등)로 참조한다. 도입 라이브러리의 근거는 `docs/MODERNIZATION.md` 5~7번.
 > 이 문서는 **어떤 순서로, 어떤 단위로 작업을 지시할지**를 정리한 실행 계획이다. (작성: 2026-11-20)
+> 3단계는 2026-11-23에 끝났다 (3-6은 폐기하고 알림 기능을 삭제). 단계별 결과는 `docs/MIGRATION.md`, 남은 일은 "View 개편 때 넘겨주는 것"과 `docs/MODERNIZATION.md`의 View 개편 체크리스트.
 
 ## 전제
 
@@ -155,7 +156,7 @@
 - `useDrawerContext`는 store 훅의 별칭으로 남긴다 → Drawer 파일 수정 없음 (View 개편 때 정리)
 - `App`은 selector로 "열린 Drawer가 있는지"만 구독한다. `DrawerContextProvider`를 제거한다.
 
-### 3-10. 마무리
+### 3-10. 마무리 ✅
 - `noUncheckedIndexedAccess` 켜기 (결정 8)
 - 린트: 컨테이너·App의 `exhaustive-deps` 경고 해소를 확인한다. 남은 경고는 Drawer 쪽(View 개편 대상)으로 분류해 ISSUES를 갱신한다. 이번에 손댄 파일의 쓰지 않는 import도 정리한다.
 - 커버리지를 2단계 완료 시점(구문 87%·분기 77%)과 비교한다 (E2).

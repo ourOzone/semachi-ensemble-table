@@ -1,18 +1,15 @@
 import { useCallback } from 'react';
-import styled from 'styled-components';
 import { isNotFound } from '@/api';
 import { ensembleExists } from '@/api/ensemble';
 import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
 import {
-    useBoard,
     useDeleteEnsemble,
     useRefreshEnsembles,
     useUpdateEnsemble,
+    useWeekSchedule,
 } from '@/queries/ensembles';
 import { useRefreshTeamsAndEnsembles, useTeams } from '@/queries/teams';
-import { useToday } from '@/hooks/useToday';
-import { days, hours } from '@/constants';
-import { Container } from '@/components/common/Container';
+import WeekCalendar from '@/components/schedule/WeekCalendar';
 import EnsembleInfoDrawer from './EnsembleInfoDrawer';
 import UpdateEnsembleDrawer1 from './updateEnsembleDrawers/UpdateEnsembleDrawer1';
 import UpdateEnsembleDrawer2 from './updateEnsembleDrawers/UpdateEnsembleDrawer2';
@@ -21,21 +18,24 @@ import UpdateEnsembleDrawer4 from './updateEnsembleDrawers/UpdateEnsembleDrawer4
 import DeleteEnsembleDrawer from './DeleteEnsembleDrawer';
 import SkipEnsembleDrawer from './SkipEnsembleDrawer';
 import dayjs, { type Dayjs } from 'dayjs';
-import { isSkipped } from '@/lib/board';
 import { toEnsembleRequest } from '@/lib/ensemble';
-import { getTodayIdx, getWeek } from '@/lib/week';
-import type { EnsembleBlock, TimeSlot } from '@/types';
+import type { CalendarEvent } from '@/lib/calendar';
+import type { TimeSlot } from '@/types';
 import 'dayjs/locale/ko';
 
 dayjs.locale('ko');
 
-const Board = () => {
-    // 자정이 지나면 다시 계산된다 (이전에는 모듈을 불러올 때 한 번만 계산: ISSUES F2)
-    const today = useToday();
-    const todayIdx = getTodayIdx(today); // 월요일 0 ~ 일요일 6 기준에서, 오늘의 idx값
-    const week = getWeek(today); // 이번주 날짜 7개 (월~일)
+interface BoardProps {
+    /** 보여줄 주의 월요일 0시 (lib/calendar의 getWeekStart) */
+    weekStart: Dayjs;
+    /** 오늘이 이 주에 있으면 요일 인덱스(월 0 ~ 일 6), 없으면 null */
+    todayIdx: number | null;
+}
+
+// 합주표 (View 개편 V-2: 주 단위 캘린더). 합주 정보·수정·미루기·삭제 Drawer는 아직 옛 Drawer다
+const Board = ({ weekStart, todayIdx }: BoardProps) => {
     const teams = useTeams();
-    const ensembles = useBoard();
+    const week = useWeekSchedule(weekStart);
     const refreshEnsembles = useRefreshEnsembles();
     const refreshTeamsAndEnsembles = useRefreshTeamsAndEnsembles();
     const { mutateAsync: updateEnsembleAsync } = useUpdateEnsemble();
@@ -68,7 +68,7 @@ const Board = () => {
 
     // 합주 블록 클릭: 바로 정보 Drawer를 연다 (이전에는 여기서 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
     const handleEnsembleClick = useCallback(
-        ({ id, teamId, name, repeat, nextDate, startTime, endTime }: EnsembleBlock) => {
+        ({ id, teamId, name, repeat, nextDate, startTime, endTime }: CalendarEvent) => {
             setTeamStates(teamId, '', name);
             setEnsembleStates(id, repeat, nextDate, startTime, endTime);
             openDrawer('ensembleInfo');
@@ -169,40 +169,13 @@ const Board = () => {
     );
 
     return (
-        <Container row>
-            <HourColumn>
-                {hours.map((hour) => (
-                    <Hour key={hour}>{hour}</Hour>
-                ))}
-            </HourColumn>
-            <Table>
-                {ensembles?.map((day, idx) => (
-                    <ColumnWrapper key={idx}>
-                        <LabelWrapper isToday={idx === todayIdx}>
-                            <DateLabel>{week[idx]?.date()}</DateLabel>
-                            <DayLabel>{days[idx]}</DayLabel>
-                        </LabelWrapper>
-                        <Column>
-                            {day.map((block, time) => (
-                                <Block key={`${idx}_${time}`}>
-                                    {block.map((ensemble) => (
-                                        <Ensemble
-                                            key={`${idx}_${time}_${ensemble.id}`}
-                                            teamColor={ensemble.teamColor}
-                                            // nextDate의 날짜 + endTime이 시간이 현재 날짜/시간보다 일주일 이상 멀면 회색 처리
-                                            gray={isSkipped(ensemble, dayjs())}
-                                            onClick={() => handleEnsembleClick(ensemble)}
-                                        >
-                                            {/* 한 타임에 겹치는 팀이 5개 미만이면 팀명을 표시 */}
-                                            {block.length < 5 && ensemble.displayName}
-                                        </Ensemble>
-                                    ))}
-                                </Block>
-                            ))}
-                        </Column>
-                    </ColumnWrapper>
-                ))}
-            </Table>
+        <>
+            <WeekCalendar
+                week={week}
+                weekStart={weekStart}
+                todayIdx={todayIdx}
+                onClickEvent={handleEnsembleClick}
+            />
 
             {/* DRAWERS */}
             <EnsembleInfoDrawer
@@ -231,98 +204,8 @@ const Board = () => {
                 checkEnsembleExists={checkEnsembleExists}
                 handleSkipEnsemble={handleSkipEnsemble}
             />
-        </Container>
+        </>
     );
 };
-
-const HourColumn = styled.div`
-    display: flex;
-    flex-direction: column;
-    margin: 4rem 0.5rem 0; // 4rem = LabelWrapper height + margin-bottom + 여유 0.25rem
-`;
-
-const Hour = styled.div`
-    text-align: center;
-    user-select: none;
-    height: 5.25rem; // 5.25rem = block 2.5rem * 2 + even margin-bottom 0.25rem
-`;
-
-const Table = styled.div`
-    display: flex;
-    width: 100%;
-`;
-
-const ColumnWrapper = styled.div`
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-`;
-
-interface LabelWrapperProps {
-    isToday: boolean;
-}
-
-const LabelWrapper = styled.div<LabelWrapperProps>`
-    display: flex;
-    flex-direction: column;
-    height: 3.25rem;
-    margin-bottom: 0.5rem;
-    gap: 0.25rem;
-
-    & > * {
-        ${({ theme, isToday }) =>
-            isToday &&
-            `
-            color: ${theme.primary};
-            font-family: Bold;
-        `};
-    }
-`;
-
-const DateLabel = styled.div`
-    text-align: center;
-    user-select: none;
-`;
-
-const DayLabel = styled(DateLabel)`
-    font-size: 1.75rem;
-`;
-
-const Column = styled.div`
-    display: flex;
-    flex-direction: column;
-
-    & > *:nth-child(even) {
-        margin-bottom: 0.25rem;
-    }
-`;
-
-const Block = styled.div`
-    display: flex;
-    background-color: ${({ theme }) => theme.boardBackground};
-    height: 2.5rem;
-    margin-right: 0.25rem;
-`;
-
-interface EnsembleProps {
-    /** 팀 색상 (색상 매핑에 없는 팀은 theme.blueGray) */
-    teamColor: string;
-    /** 다음 합주가 일주일 이상 뒤면 회색 */
-    gray: boolean;
-}
-
-const Ensemble = styled.div<EnsembleProps>`
-    width: 100%;
-    height: 2.5rem;
-    background-color: ${({ theme, teamColor, gray }) => (gray ? theme.disabledGray : teamColor)};
-    color: ${({ theme }) => theme.white};
-    padding: 0.125rem;
-    user-select: none;
-    cursor: pointer;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    word-break: break-word;
-`;
 
 export default Board;

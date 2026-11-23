@@ -5,8 +5,8 @@
  * 모든 레이어보다 우선하므로, 그대로 두면 아래 `*` 규칙이 Tailwind 유틸리티(p-4, text-sm 등)를 모두 이긴다.
  * 레이어 순서: base(Tailwind preflight) < legacy(이 파일) < antd < components < utilities
  *
- * 공존 기간 주의: `*` 규칙이 새 요소에도 적용된다 (글자 크기 16px·글꼴 'Regular').
- * 새 컴포넌트는 글자 크기·굵기를 유틸리티 클래스로 지정한다.
+ * 새 코드(View 개편)는 `.ui` 요소 안에 있고, 아래 요소 규칙은 `.ui` 안에 적용하지 않는다 (V-2).
+ * 단 html의 글자 크기(16·12·10px)는 그대로라, 새 코드의 Tailwind 간격·글자 크기는 rem 대신 px로 정의했다 (index.css).
  */
 
 @font-face {
@@ -25,7 +25,7 @@
     src: url('../assets/fonts/NanumSquareNeo-cBd.woff2') format('woff2');
 }
 
-* {
+*:not(.ui, .ui *) {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -35,12 +35,12 @@
 
 /* src/styles/media.ts의 large(767px)·small(425px). 원래 순서(large → small)를 유지해야 425px 이하가 10px이 된다 */
 @media (max-width: 767px) {
-    * {
+    *:not(.ui, .ui *) {
         font-size: 12px;
     }
 }
 @media (max-width: 425px) {
-    * {
+    *:not(.ui, .ui *) {
         font-size: 10px;
     }
 }
@@ -54,10 +54,7 @@ html {
  * preflight의 button { font: inherit }으로 버튼이 부모의 line-height를 물려받는다
  * (예: 헤더 버튼이 antd Layout.Header의 64px을 받아 아이콘이 8px 올라감) → 브라우저 기본값으로
  */
-button,
-input,
-textarea,
-select {
+:is(button, input, textarea, select):not(.ui *) {
     line-height: normal;
 }
 

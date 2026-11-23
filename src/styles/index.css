@@ -47,13 +47,27 @@
 @theme {
     --font-sans: 'NanumSquare Neo', system-ui, sans-serif;
 
+    /*
+     * 공존 기간(V-1 ~ V-6): 옛 전역 스타일이 html 글자 크기를 화면 폭에 따라 16·12·10px로 바꾼다 (legacy.css).
+     * rem 단위면 새 코드도 함께 줄어들므로, 간격·글자 크기를 px로 정의한다. legacy 제거(V-6) 후 Tailwind 기본값(rem)으로 되돌린다.
+     * 화면 폭 기준(sm·md·lg)은 미디어 쿼리라 html 글자 크기와 관계없이 브라우저 기본(16px) 기준이다.
+     */
+    --spacing: 4px;
+    --text-xs: 12px;
+    --text-sm: 14px;
+    --text-base: 16px;
+    --text-lg: 18px;
+    --text-xl: 20px;
+    --text-2xl: 24px;
+    --text-3xl: 30px;
+
     --color-team-0: #f94144;
     --color-team-1: #ff6347;
     --color-team-2: #f8961e;
     --color-team-3: #f9844a;
     --color-team-4: #ff9770;
     --color-team-5: #f9c74f;
-    --color-team-6: #fdd835;
+    --color-team-6: #f1d041; /* 원래 #fdd835. 흰 글씨가 보이도록 채도만 조금 낮춤 (사용자 요청, V-2) */
     --color-team-7: #6ece6e;
     --color-team-8: #43a047;
     --color-team-9: #43aa8b;
@@ -70,7 +84,7 @@
 
     --color-event-0: #f94144;
     --color-event-1: #f9844a;
-    --color-event-2: #fdd835;
+    --color-event-2: #f1d041; /* 베소. 팀 색 노랑과 같이 조정 */
     --color-event-3: #43a047;
     --color-event-4: #1e88e5;
     --color-event-5: #6a7f9a;
@@ -151,7 +165,7 @@
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
+    --radius: 10px; /* 공존 기간 px (위 --spacing 설명) */
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.205 0 0);
@@ -206,5 +220,15 @@
     }
     html {
         @apply font-sans;
+    }
+    /*
+     * 새 코드(View 개편)의 루트. 옛 전역 스타일(legacy.css)의 요소 규칙이 이 안에는 적용되지 않으므로
+     * 글꼴·글자 크기·줄 간격을 여기서 정한다 (안쪽 요소는 이 값을 물려받는다)
+     */
+    .ui {
+        font-family: var(--font-sans);
+        font-size: var(--text-sm);
+        line-height: 1.5;
+        color: var(--color-foreground);
     }
 }

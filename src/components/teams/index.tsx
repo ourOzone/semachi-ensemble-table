@@ -1,7 +1,4 @@
 import { useCallback } from 'react';
-import styled from 'styled-components';
-import { Divider } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import type { Team, TimeSlot } from '@/types';
 import { isNotFound } from '@/api';
@@ -16,8 +13,10 @@ import {
     useUpdateTeam,
 } from '@/queries/teams';
 import { eventIds } from '@/constants';
+import { buildColorMap } from '@/lib/board';
 import { toEnsembleRequest } from '@/lib/ensemble';
-import { Container } from '@/components/common/Container';
+import TeamChips, { type Chip } from '@/components/schedule/TeamChips';
+import theme from '@/styles/theme';
 import TeamInfoDrawer from './TeamInfoDrawer';
 import EventInfoDrawer from './EventInfoDrawer';
 import AddTeamDrawer1 from './addTeamDrawers/AddTeamDrawer1';
@@ -169,45 +168,24 @@ const Teams = () => {
         [addEnsembleAsync, checkTeamExists, setEnsembleStates, setTeamStates],
     );
 
+    // 팀 목록 (View 개편 V-2: 한 줄로 줄이고 "전체"로 펼침). 색은 합주표와 같은 매핑(buildColorMap)
+    const colorMap = buildColorMap(teams);
+    const teamChips: Chip[] = teams.map((team) => ({
+        key: team.id,
+        name: team.name,
+        color: colorMap[team.id] ?? theme.blueGray,
+        onClick: () => handleClickTeam(team),
+    }));
+    const eventChips: Chip[] = [...eventNames1, ...eventNames2].map((name, idx) => ({
+        key: name,
+        name,
+        color: theme.eventColors[idx] ?? theme.blueGray,
+        onClick: () => handleClickEvent(eventIds[idx]!, name), // eventIds와 같은 순서
+    }));
+
     return (
-        <Container>
-            <TeamsContainer>
-                {teams &&
-                    teams.map((team, idx) => (
-                        <TeamButton key={idx} idx={idx} onClick={() => handleClickTeam(team)}>
-                            {team.name}
-                        </TeamButton>
-                    ))}
-                <AddTeamButton onClick={handleClickAddTeam}>
-                    <PlusOutlined />팀 추가
-                </AddTeamButton>
-            </TeamsContainer>
-            <StyledDivider />
-            <TeamsContainer>
-                {eventNames1.map((name, idx) => (
-                    <TeamButton
-                        key={name}
-                        isEvent
-                        idx={idx}
-                        // eventNames1·2와 eventIds는 같은 순서·길이다 (constants)
-                        onClick={() => handleClickEvent(eventIds[idx]!, name)}
-                    >
-                        {name}
-                    </TeamButton>
-                ))}
-            </TeamsContainer>
-            <TeamsContainer>
-                {eventNames2.map((name, idx) => (
-                    <TeamButton
-                        key={name}
-                        isEvent
-                        idx={idx + eventNames1.length}
-                        onClick={() => handleClickEvent(eventIds[idx + eventNames1.length]!, name)}
-                    >
-                        {name}
-                    </TeamButton>
-                ))}
-            </TeamsContainer>
+        <>
+            <TeamChips teams={teamChips} events={eventChips} onAddTeam={handleClickAddTeam} />
 
             {/* DRAWERS */}
             <TeamInfoDrawer drawerId="teamInfo" checkTeamExists={checkTeamExists} />
@@ -232,62 +210,8 @@ const Teams = () => {
             <AddEnsembleDrawer2 drawerId="addEnsemble2" />
             <AddEnsembleDrawer3 drawerId="addEnsemble3" handleAddEnsemble={handleAddEnsemble} />
             <AddEnsembleDrawer4 drawerId="addEnsemble4" />
-        </Container>
+        </>
     );
 };
-
-const TeamsContainer = styled.div`
-    display: flex;
-    flex-wrap: wrap;
-`;
-
-const StyledDivider = styled(Divider)`
-    margin: 1.5rem 0 1rem;
-`;
-
-interface TeamButtonProps {
-    /** 소모임·회의 버튼이면 true (eventColors 사용) */
-    isEvent?: boolean;
-    /** 색상 인덱스. AddTeamButton은 넘기지 않지만 배경·그림자를 자체 값으로 덮어써 영향 없음 */
-    idx?: number;
-}
-
-const TeamButton = styled.div<TeamButtonProps>`
-    display: flex;
-    align-items: center;
-    margin: 0.5rem 0 0 0.5rem;
-    background-color: ${({ theme, isEvent, idx }) =>
-        isEvent ? theme.eventColors[idx!] : theme.teamColors[idx! % theme.teamColors.length]};
-    padding: 0.75rem 1.5rem;
-    border-radius: 100rem;
-    font-size: 1.25rem;
-    color: ${({ theme }) => theme.white};
-    cursor: pointer;
-    user-select: none;
-    border: 0.0625rem solid ${({ theme }) => theme.border};
-    box-shadow: 0 0.25rem 0.125rem
-        ${({ theme, isEvent, idx }) =>
-            isEvent ? theme.eventColors[idx!] : theme.teamColors[idx! % theme.teamColors.length]}33;
-
-    opacity: 1;
-    transition: opacity 0.3s ease;
-
-    &:hover {
-        opacity: 0.6;
-    }
-`;
-
-const AddTeamButton = styled(TeamButton)`
-    background-color: ${({ theme }) => theme.white};
-    color: ${({ theme }) => theme.black};
-    border: 0.0625rem dashed ${({ theme }) => theme.primary};
-    box-shadow: 0 0.25rem 0.125rem ${({ theme }) => theme.primary}22;
-    padding-left: 1.25rem;
-
-    & svg {
-        font-size: 1.25rem;
-        margin-right: 0.5rem;
-    }
-`;
 
 export default Teams;

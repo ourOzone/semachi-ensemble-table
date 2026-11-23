@@ -3,8 +3,7 @@ import { useDrawerStore } from '@/stores/drawer';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Notice from '@/components/notice';
-import Teams from '@/components/teams';
-import Board from '@/components/board';
+import Schedule from '@/components/schedule';
 import Note from '@/components/note';
 import { media } from '@/styles/media';
 import type { DrawerId } from '@/types';
@@ -19,8 +18,7 @@ function App() {
             <Header />
             <Container openedDrawers={openedDrawers}>
                 <Notice />
-                <Teams />
-                <Board />
+                <Schedule />
                 <Note />
                 <Footer />
             </Container>

@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-1 기반 작업 완료 (2026-11-23, 브랜치 `ui3.0`), 다음은 V-2 합주표 (계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 1차 합주판 카드(주 단위 캘린더) 완료 (2026-11-23, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -571,6 +571,24 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
   - 변형 검사 8/8 검출 (알림 id·연결 제거, 팀 색 값·순서·개수, 소모임 색, 알림 정리·vaul 보정 제거)
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 98/98 / `pnpm exec vitest run --maxWorkers=4` ✅ / `pnpm build` ✅ (JS 1,091kB, gzip 340kB: +52kB) / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 42 (변동 없음, 새 코드 0건)
+
+### 2026-11-23 — View 개편 V-2 (1차): 합주판 카드 = 팀 목록 + 주 단위 캘린더
+
+- 진행 방식 변경 (사용자): V-2부터 사용자가 디자인 시안을 먼저 제안 → 그대로 만들고 → 사용자가 상세 수정. 이번 범위는 합주판 디자인(클릭 동작은 아직 옛 Drawer)
+- 동작 변경 (지금 → 바꾼 후)
+  - 합주표: 이번 주만 → **이번 주부터 12주 뒤까지 넘겨 보는 주 단위 캘린더** (이전 주·오늘·다음 주)
+  - 합주 표시: 30분 칸마다 색칠 → 시작~끝을 하나의 블록으로, 겹치면 가로로 나눔. 미룬 주는 회색 → 팀 색 점선 + 취소선, 팀 아닌 일정은 줄무늬
+  - 일회성 합주: 날짜와 관계없이 이번 주에 보임(먼 날짜면 회색) → 그 날짜의 주에만 보임
+  - 팀 목록: 모두 펼침 + 팀 아닌 일정 따로 → 한 줄로 줄이고 "전체"로 펼침 (팀 → 팀 추가 → 팀 아닌 일정)
+  - 노랑 팀 색(`#fdd835`, 베소 포함) → `#f1d041` (사용자 요청, 채도만 조금 낮춤)
+- 데이터: 백엔드 변경 없음. `src/lib/calendar.ts` 새로 추가 (`getWeekStart`·`formatWeekRange`·`getOccurrence`·`assignLanes`·`toWeekSchedule`), `queries/ensembles`에 `useWeekSchedule` 추가. 기존 로직 함수는 바꾸지 않음. 한계: ISSUES V9 (반복 합주의 쉼·시작일 구분)
+- 화면: `src/components/schedule/`(카드·`TeamChips`·`WeekCalendar`). 옛 Teams·Board 컨테이너는 Drawer·핸들러는 그대로 두고 렌더링만 새 컴포넌트로 (styled 컴포넌트 제거)
+- 공존 기간 규칙 변경: legacy 요소 규칙을 `.ui` 밖에만 적용, Tailwind 간격·글자 크기·모서리를 px로 (html 글자 크기가 legacy 때문에 16·12·10px로 바뀌므로). ISSUES V8 ①
+- 메모 (사용자 요청): 합주 겹침 최대 4개, 등록·수정 시 막기 → 계획 문서 "나중에 할 일"
+- 확인: Playwright로 실제 데이터·가짜 데이터(겹침 2~4개, 팀 아닌 일정, 쉼, 긴 이름) × 360·390·430·768·1280px. 가로 넘침 없음. 옛 Drawer 화면(팀 추가·공지·팀 정보·달력·PIN)은 V-1 전과 0픽셀 차이
+- 테스트 19개 추가: `lib/calendar.test.ts`(주 계산·제목·쉼 판단·레인 배치·주 캘린더), `components/schedule/Schedule.test.tsx`(주 이동·오늘·쉼 표시·전체 펼침). 변형 검사 18/18 (처음 2개 생존 → 레인 경계 테스트 2개 추가). 옛 Drawer 흐름 테스트는 수정 없이 통과
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 117/117 / `pnpm exec vitest run --maxWorkers=4` ✅ / `pnpm build` ✅ (JS 1,125kB, gzip 356kB: +33kB) / `pnpm lint` → 에러 5·경고 42 (변동 없음, 새 코드 0건) / `pnpm format:check`: `src`·문서 ✅ (`vite.config.mts`는 사용자가 작업 중인 변경이라 손대지 않음)
 
 ## 남은 일
 

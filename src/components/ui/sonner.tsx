@@ -11,12 +11,13 @@ import {
 // shadcn 기본 구성에서 바꾼 것 (V-1):
 // - next-themes 제거: 앱에 다크 모드가 없어 밝은 테마로 고정한다 (다크 모드 여부는 V-2 디자인 컨셉에서)
 // - 위치 위쪽 가운데: 모바일에서 아래에서 올라오는 Drawer와 겹치지 않게 (사전 결정 6)
+// - ui 클래스: 옛 전역 스타일(legacy.css)이 알림 안에 적용되지 않게 (index.css의 .ui)
 const Toaster = ({ ...props }: ToasterProps) => {
     return (
         <Sonner
             theme="light"
             position="top-center"
-            className="toaster group"
+            className="toaster group ui"
             icons={{
                 success: <CircleCheckIcon className="size-4" />,
                 info: <InfoIcon className="size-4" />,

@@ -1,8 +1,9 @@
 import { queryOptions, useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import { addEnsemble, deleteEnsemble, getEnsembles, updateEnsemble } from '@/api/ensemble';
-import { toBoard, toTeams } from '@/lib/board';
+import { buildColorMap, toBoard, toTeams } from '@/lib/board';
+import { toWeekSchedule, type CalendarEvent, type WithLane } from '@/lib/calendar';
 import type { EnsembleBoard, EnsembleUpdateRequest } from '@/types';
 import { ENSEMBLES, ensemblesQueryKey, useRefresh } from './keys';
 import { teamsQueryOptions } from './teams';
@@ -29,6 +30,26 @@ export function useBoard(): EnsembleBoard {
     return useMemo(
         () => (teams && ensembles ? toBoard(teams, ensembles, dayjs()) : NO_BOARD),
         [teams, ensembles],
+    );
+}
+
+const NO_WEEK: WithLane<CalendarEvent>[][] = Array.from({ length: 7 }, () => []);
+
+/**
+ * 한 주의 캘린더 (View 개편 V-2). weekStart는 그 주 월요일 0시 (lib/calendar의 getWeekStart).
+ * 팀 색이 팀 목록 순서로 정해지므로 팀·합주를 모두 불러온 뒤에 만든다. 불러오기 전에는 빈 주
+ */
+export function useWeekSchedule(weekStart: Dayjs): WithLane<CalendarEvent>[][] {
+    const { data: teams } = useQuery({ ...teamsQueryOptions, select: toTeams });
+    const { data: ensembles } = useQuery(ensemblesQueryOptions);
+    const weekKey = weekStart.valueOf();
+
+    return useMemo(
+        () =>
+            teams && ensembles
+                ? toWeekSchedule(ensembles, buildColorMap(teams), dayjs(weekKey), dayjs())
+                : NO_WEEK,
+        [teams, ensembles, weekKey],
     );
 }
 

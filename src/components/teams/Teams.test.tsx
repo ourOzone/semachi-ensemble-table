@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import dayjs from 'dayjs';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -12,12 +12,16 @@ import { server } from '@/test/server';
 // 팀 기능 흐름 테스트: 팀 추가 6단계, 팀 정보, 팀 수정 5단계, 팀 삭제, 합주 추가 4단계, 소모임 정보.
 // Drawer가 스택으로 쌓여 같은 문구의 버튼("확인")이 여러 개 있으므로 Drawer 범위로 찾는다.
 
-/** 팀 버튼(첫 번째 '테스트밴드')을 눌러 팀 정보 Drawer를 연다 */
+/** 팀 버튼('테스트밴드')을 눌러 팀 정보 Drawer를 연다 */
 async function openTeamInfo() {
     const user = userEvent.setup();
     renderApp();
-    const [teamButton] = await screen.findAllByText('테스트밴드');
-    await user.click(teamButton!);
+    // '테스트밴드'는 팀 버튼과 합주표 블록 두 곳에 있다. 문서 순서상 첫 번째를 고르면 가끔 합주 블록이 잡혀
+    // (합주 존재 확인 요청 → 모킹 없음 → 이미 삭제된 합주로 처리되어 Drawer를 모두 닫음) 실패했다.
+    // → "팀 추가" 버튼과 같은 목록 안에서 찾는다
+    const addTeamButton = await screen.findByText('팀 추가');
+    const teamButton = await within(addTeamButton.parentElement!).findByText('테스트밴드');
+    await user.click(teamButton);
     await screen.findByText('보컬A');
     return user;
 }
@@ -54,7 +58,12 @@ describe('팀', () => {
         await user.type(within(setlistDrawer).getByRole('textbox'), '곡1');
         await user.click(await findEnabledButton('확인', setlistDrawer));
 
-        await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
+        // PIN Drawer는 열림 애니메이션이 끝난 뒤 PIN 칸으로 포커스를 옮긴다 (common/Drawer의 afterOpenChange).
+        // 그 전에 입력을 시작하면 "한 번 더" 칸에 입력하는 도중 포커스가 PIN 칸으로 되돌아가 확인 PIN이 덜 입력되는 경우가 있었다
+        // → 포커스가 옮겨진 뒤 입력한다 (ISSUES V6)
+        const pinInput = await screen.findByPlaceholderText('숫자 4자리');
+        await waitFor(() => expect(pinInput).toHaveFocus());
+        await user.type(pinInput, '1234');
         await user.type(screen.getByPlaceholderText('한 번 더'), '1234');
         await user.click(await findEnabledButton('완료'));
 
@@ -95,7 +104,8 @@ describe('팀', () => {
         await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
         await user.click(await findEnabledButton('진짜 삭제해요'));
 
-        expect(await screen.findByText('팀을 삭제했어요.')).toBeInTheDocument();
+        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
+        await waitFor(() => expect(deletedUrl).not.toBe(''));
         expect(pinBody).toEqual({ teamId: 'team-1', pin: '1234' });
         expect(new URL(deletedUrl).searchParams.get('id')).toBe('team-1');
     });
@@ -134,7 +144,8 @@ describe('팀', () => {
         expect(within(setlistDrawer).getByRole('textbox')).toHaveValue('셋리스트');
         await user.click(await findEnabledButton('다 바꿨어요', setlistDrawer));
 
-        expect(await screen.findByText('잘 바꿔놨어요.')).toBeInTheDocument();
+        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
+        await waitFor(() => expect(putBody).toBeDefined());
         expect(new URL(putUrl).searchParams.get('id')).toBe('team-1');
         expect(putBody).toEqual({
             type: '외부공연(연합/대외)',
@@ -179,7 +190,8 @@ describe('팀', () => {
         expect(within(setlistDrawer).getByRole('textbox')).toHaveValue('셋리스트');
         await user.click(await findEnabledButton('다 바꿨어요', setlistDrawer));
 
-        expect(await screen.findByText('잘 바꿔놨어요.')).toBeInTheDocument();
+        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
+        await waitFor(() => expect(putBody).toBeDefined());
         expect(putBody).toEqual({
             type: '외부공연(연합/대외)',
             name: '테스트밴드',

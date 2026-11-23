@@ -3,7 +3,6 @@ import type { InputRef } from 'antd';
 import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { checkNoticePin } from '@/api/notice';
-import useMessage from '@/hooks/useMessage';
 import OkButton from '@/components/common/OkButton';
 import PinInput from '@/components/common/PinInput';
 import type { DrawerId } from '@/types';
@@ -29,7 +28,6 @@ const DeleteNoticeDrawer = ({
     checkNoticeExists,
     handleDeleteNotice,
 }: DeleteNoticeDrawerProps) => {
-    const [message, contextHolder] = useMessage();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
     const focusInputRef = useRef<InputRef>(null);
 
@@ -54,9 +52,7 @@ const DeleteNoticeDrawer = ({
                             setError(!result);
                         }
                     } catch {
-                        message.error(
-                            '인터넷이 불안정하거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                        );
+                        // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
                     }
                 }
             }
@@ -66,7 +62,6 @@ const DeleteNoticeDrawer = ({
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose} focusInputRef={focusInputRef}>
-            {contextHolder}
             <Title>PIN 입력해야 삭제돼요 🔑</Title>
             <InputWrapper>
                 <StyledPinInput

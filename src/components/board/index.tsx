@@ -6,7 +6,6 @@ import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context'
 import { useBoard } from '@/queries/ensembles';
 import { useRefetchAll } from '@/queries/refetchAll';
 import { useTeams } from '@/queries/teams';
-import useMessage from '@/hooks/useMessage';
 import { useToday } from '@/hooks/useToday';
 import { days, hours } from '@/constants';
 import { Container } from '@/components/common/Container';
@@ -38,7 +37,6 @@ const Board = () => {
     const { setTeamStates } = useTeamContext();
     const { setEnsembleStates, setNextDate } = useEnsembleContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
-    const [message, contextHolder] = useMessage();
 
     // 이미 삭제된 합주인지 체크. 이미 있는 팀을 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
     const checkEnsembleExists = useCallback(
@@ -47,7 +45,6 @@ const Board = () => {
                 await ensembleExists(id);
                 return true;
             } catch {
-                message.warning('이미 삭제된 합주예요.');
                 setTeamStates();
                 setEnsembleStates();
                 closeAllDrawers();
@@ -55,7 +52,7 @@ const Board = () => {
                 return false;
             }
         },
-        [closeAllDrawers, fetchData, message, setEnsembleStates],
+        [closeAllDrawers, fetchData, setEnsembleStates],
     );
 
     // 이 합주가 "다음 번에 안 해요"에 해당하는지(회색인지) 판단
@@ -70,12 +67,10 @@ const Board = () => {
                     openDrawer('ensembleInfo');
                 }
             } catch {
-                message.error(
-                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                );
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [fetchData, message, openDrawer, setTeamStates, setEnsembleStates],
+        [fetchData, openDrawer, setTeamStates, setEnsembleStates],
     );
 
     // 합주 정보 Drawer에서 팀 정보 보기 클릭 (id는 team id)
@@ -90,14 +85,13 @@ const Board = () => {
                 setTeamStates(id, type, name, desc);
                 openDrawer('teamInfo');
             } catch {
-                message.warning('이미 삭제된 팀이에요.');
                 setTeamStates();
                 setEnsembleStates();
                 closeAllDrawers();
                 fetchData();
             }
         },
-        [message, fetchData, openDrawer, teams, setTeamStates, setEnsembleStates, closeAllDrawers],
+        [fetchData, openDrawer, teams, setTeamStates, setEnsembleStates, closeAllDrawers],
     );
 
     const handleUpdateEnsemble = useCallback(
@@ -117,16 +111,13 @@ const Board = () => {
                         toEnsembleRequest(teamId, repeat, nextDate!, startTime!, endTime!),
                     );
                     fetchData();
-                    message.success('잘 바꿔놨어요.');
                     setOpenedDrawers(['ensembleInfo']);
                 }
             } catch {
-                message.error(
-                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                );
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [message, fetchData, setOpenedDrawers],
+        [fetchData, setOpenedDrawers],
     );
 
     const handleDeleteEnsemble = useCallback(
@@ -134,19 +125,16 @@ const Board = () => {
             try {
                 if (await checkEnsembleExists(id)) {
                     await deleteEnsemble(id);
-                    message.success('합주를 삭제했어요.');
                 }
             } catch {
-                message.error(
-                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                );
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             } finally {
                 setEnsembleStates();
                 closeAllDrawers();
                 fetchData();
             }
         },
-        [closeAllDrawers, fetchData, message, setEnsembleStates],
+        [closeAllDrawers, fetchData, setEnsembleStates],
     );
 
     // 다음 번에 안 해요 클릭 시 nextDate를 7일 뒤로 변경
@@ -170,20 +158,16 @@ const Board = () => {
                         endTime,
                     );
                     setNextDate((prev) => dayjs(prev).add(7, 'day'));
-                    message.success('잘 미뤘어요.');
                 }
             } catch {
-                message.error(
-                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                );
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [handleUpdateEnsemble, message, checkEnsembleExists],
+        [handleUpdateEnsemble, checkEnsembleExists],
     );
 
     return (
         <Container row>
-            {contextHolder}
             <HourColumn>
                 {hours.map((hour) => (
                     <Hour key={hour}>{hour}</Hour>

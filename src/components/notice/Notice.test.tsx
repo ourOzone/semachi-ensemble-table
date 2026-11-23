@@ -39,7 +39,8 @@ describe('공지', () => {
         await user.type(screen.getByPlaceholderText('숫자 4자리'), '1234');
         await user.click(await findEnabledButton('완료'));
 
-        expect(await screen.findByText('잘 등록했어요.')).toBeInTheDocument();
+        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
+        await waitFor(() => expect(posted).toBeDefined());
         expect(posted).toEqual({ content: '새 공지' });
     });
 
@@ -82,7 +83,8 @@ describe('공지', () => {
         await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
         await user.click(await findEnabledButton('진짜 삭제해요'));
 
-        expect(await screen.findByText('공지를 삭제했어요.')).toBeInTheDocument();
+        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
+        await waitFor(() => expect(deletedUrl).not.toBe(''));
         expect(new URL(deletedUrl).searchParams.get('id')).toBe('notice-1');
     });
 });

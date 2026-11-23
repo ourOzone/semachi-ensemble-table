@@ -3,7 +3,6 @@ import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { checkNoticePin } from '@/api/notice';
 import { Button, Input, type GetRef } from 'antd';
-import useMessage from '@/hooks/useMessage';
 import OkButton from '@/components/common/OkButton';
 import PinInput from '@/components/common/PinInput';
 import type { DrawerId } from '@/types';
@@ -38,7 +37,6 @@ const AddNoticeDrawer = ({
     setPin,
     handleAddNotice,
 }: AddNoticeDrawerProps) => {
-    const [message, contextHolder] = useMessage();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
     const isOverLimit = text.length > maxInput;
     const focusInputRef = useRef<TextAreaRef>(null);
@@ -63,9 +61,7 @@ const AddNoticeDrawer = ({
                         const result = await checkNoticePin(numeric);
                         setError(!result);
                     } catch {
-                        message.error(
-                            '인터넷이 불안정하거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                        );
+                        // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
                     }
                 }
             }
@@ -75,7 +71,6 @@ const AddNoticeDrawer = ({
 
     return (
         <>
-            {contextHolder}
             <Drawer drawerId={drawerId} onClose={onClose} focusInputRef={focusInputRef}>
                 <Wrapper>
                     <StyledTextArea

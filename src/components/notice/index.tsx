@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import { useDrawerContext } from '@/context';
 import { useNotices } from '@/queries/notes';
 import { useRefetchAll } from '@/queries/refetchAll';
-import useMessage from '@/hooks/useMessage';
 import { addNotice, deleteNotice, noticeExists } from '@/api/notice';
 import { Button } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
@@ -15,7 +14,6 @@ const Notice = () => {
     const notices = useNotices();
     // fetchData: 화면 전체 다시 불러오기 (임시, 3-7·3-8에서 mutation으로 대체)
     const fetchData = useRefetchAll();
-    const [message, contextHolder] = useMessage();
     const [id, setId] = useState('');
     const [text, setText] = useState('');
     const [pin, setPin] = useState('');
@@ -28,7 +26,6 @@ const Notice = () => {
                 await noticeExists(id);
                 return true;
             } catch {
-                message.warning('이미 삭제된 공지예요.');
                 setId('');
                 setText('');
                 setPin('');
@@ -37,7 +34,7 @@ const Notice = () => {
                 return false;
             }
         },
-        [closeAllDrawers, fetchData, message],
+        [closeAllDrawers, fetchData],
     );
 
     const handleAddNotice = useCallback(
@@ -48,12 +45,11 @@ const Notice = () => {
                 setText('');
                 setPin('');
                 closeAllDrawers();
-                message.success('잘 등록했어요.');
             } catch {
-                message.error('실패했어요. 너무 많아서 그럴지도요. 100개 까지만 돼요.');
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [fetchData, message],
+        [fetchData],
     );
 
     const handleClickDelete = useCallback(async (id: string) => {
@@ -63,7 +59,7 @@ const Notice = () => {
                 openDrawer('deleteNotice');
             }
         } catch {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
+            // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
         }
     }, []);
 
@@ -72,12 +68,9 @@ const Notice = () => {
             try {
                 if (await checkNoticeExists(id)) {
                     await deleteNotice(id);
-                    message.success('공지를 삭제했어요.');
                 }
             } catch {
-                message.error(
-                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                );
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             } finally {
                 setId('');
                 setPin('');
@@ -85,12 +78,11 @@ const Notice = () => {
                 fetchData();
             }
         },
-        [closeAllDrawers, fetchData, message],
+        [closeAllDrawers, fetchData],
     );
 
     return (
         <>
-            {contextHolder}
             <NoticeButton onClick={() => openDrawer('notice')}>
                 <BellOutlined />
                 <Text>{notices?.[0]?.text.split('\n')[0] || '공지가 딱히 없네요'}</Text>

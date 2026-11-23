@@ -16,8 +16,11 @@ import { server } from '@/test/server';
 async function openEnsembleInfo() {
     const user = userEvent.setup();
     renderApp();
-    // DOM 순서상 첫 번째는 팀 버튼(Teams), 두 번째가 합주 블록(Board)
-    const [, ensembleBlock] = await screen.findAllByText('테스트밴드');
+    // DOM 순서상 첫 번째는 팀 버튼(Teams), 두 번째가 합주 블록(Board).
+    // 합주표는 팀·합주를 모두 불러온 뒤에 그려지므로 팀 버튼만 먼저 보일 수 있다 → 두 개가 다 보일 때까지 기다린다
+    // (findAllByText는 하나만 찾아도 끝나, 합주 블록이 undefined인 채로 클릭해 Drawer가 열리지 않는 경우가 있었다)
+    await waitFor(() => expect(screen.getAllByText('테스트밴드')).toHaveLength(2));
+    const [, ensembleBlock] = screen.getAllByText('테스트밴드');
     await user.click(ensembleBlock!);
     await screen.findByText('다음 합주');
     return user;
@@ -77,7 +80,8 @@ describe('합주표', () => {
         await user.click(screen.getByRole('button', { name: '13:00' }));
         await user.click(await findEnabledButton('이대로 할래요'));
 
-        expect(await screen.findByText('잘 바꿔놨어요.')).toBeInTheDocument();
+        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
+        await waitFor(() => expect(putBody).toBeDefined());
         expect(putBody).toMatchObject({
             teamId: 'team-1',
             repeat: true,
@@ -117,7 +121,8 @@ describe('합주표', () => {
         await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
         await user.click(await findEnabledButton('진짜 삭제해요'));
 
-        expect(await screen.findByText('합주를 삭제했어요.')).toBeInTheDocument();
+        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
+        await waitFor(() => expect(deletedUrl).not.toBe(''));
         expect(new URL(deletedUrl).searchParams.get('id')).toBe('ensemble-1');
     });
 });

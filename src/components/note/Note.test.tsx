@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -31,7 +31,8 @@ describe('한마디', () => {
         await user.type(screen.getByPlaceholderText('숫자 4자리'), '1234');
         await user.click(await findEnabledButton('완료 (일주일 후 삭제)'));
 
-        expect(await screen.findByText('잘 등록했어요.')).toBeInTheDocument();
+        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
+        await waitFor(() => expect(posted).toBeDefined());
         expect(posted).toEqual({ text: '새 한마디', pin: '1234' });
     });
 
@@ -57,7 +58,8 @@ describe('한마디', () => {
         await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
         await user.click(await findEnabledButton('진짜 삭제해요'));
 
-        expect(await screen.findByText('한마디를 삭제했어요.')).toBeInTheDocument();
+        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
+        await waitFor(() => expect(deletedUrl).not.toBe(''));
         expect(pinBody).toEqual({ noteId: 'note-1', pin: '1234' });
         expect(new URL(deletedUrl).searchParams.get('id')).toBe('note-1');
     });

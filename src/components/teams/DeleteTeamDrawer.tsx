@@ -6,7 +6,6 @@ import { checkTeamPin } from '@/api/team';
 import { useTeamContext } from '@/context';
 import OkButton from '@/components/common/OkButton';
 import PinInput from '@/components/common/PinInput';
-import useMessage from '@/hooks/useMessage';
 import type { DrawerId } from '@/types';
 import type { CheckTeamExists, HandleDeleteTeam } from './types';
 
@@ -25,7 +24,6 @@ const DeleteTeamDrawer = ({
 }: DeleteTeamDrawerProps) => {
     const { id, pin, setPin } = useTeamContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
-    const [message, contextHolder] = useMessage();
     const focusInputRef = useRef<InputRef>(null);
 
     const onClose = useCallback(() => {
@@ -49,9 +47,7 @@ const DeleteTeamDrawer = ({
                             setError(!result);
                         }
                     } catch {
-                        message.error(
-                            '인터넷이 불안정하거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                        );
+                        // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
                     }
                 }
             }

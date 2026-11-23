@@ -6,7 +6,6 @@ import styled from 'styled-components';
 import { checkTeamPin } from '@/api/team';
 import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
 import PinInput from '@/components/common/PinInput';
-import useMessage from '@/hooks/useMessage';
 import type { DrawerId, TimeSlot } from '@/types';
 import type { CheckEnsembleExists } from '../types';
 

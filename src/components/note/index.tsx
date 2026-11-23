@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import { useDrawerContext } from '@/context';
 import { useNotes } from '@/queries/notes';
 import { useRefetchAll } from '@/queries/refetchAll';
-import useMessage from '@/hooks/useMessage';
 import { addNote, deleteNote, noteExists, checkNotePin } from '@/api/note';
 import { Button } from 'antd';
 import { PlusCircleOutlined, CloseOutlined } from '@ant-design/icons';
@@ -15,7 +14,6 @@ const Note = () => {
     const notes = useNotes();
     // fetchData: 화면 전체 다시 불러오기 (임시, 3-7·3-8에서 mutation으로 대체)
     const fetchData = useRefetchAll();
-    const [message, contextHolder] = useMessage();
     const [id, setId] = useState('');
     const [text, setText] = useState('');
     const [pin, setPin] = useState('');
@@ -28,7 +26,6 @@ const Note = () => {
                 await noteExists(id);
                 return true;
             } catch {
-                message.warning('이미 삭제된 한마디예요.');
                 setId('');
                 setText('');
                 setPin('');
@@ -37,7 +34,7 @@ const Note = () => {
                 return false;
             }
         },
-        [closeAllDrawers, fetchData, message],
+        [closeAllDrawers, fetchData],
     );
 
     const handleAddNote = useCallback(
@@ -48,12 +45,11 @@ const Note = () => {
                 setText('');
                 setPin('');
                 closeAllDrawers();
-                message.success('잘 등록했어요.');
             } catch {
-                message.error('실패했어요. 너무 많아서 그럴지도요. 100개 까지만 돼요.');
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [fetchData, message],
+        [fetchData],
     );
 
     const handleClickDelete = useCallback(async (id: string) => {
@@ -63,7 +59,7 @@ const Note = () => {
                 openDrawer('deleteNote');
             }
         } catch {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
+            // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
         }
     }, []);
 
@@ -72,12 +68,9 @@ const Note = () => {
             try {
                 if (await checkNoteExists(id)) {
                     await deleteNote(id);
-                    message.success('한마디를 삭제했어요.');
                 }
             } catch {
-                message.error(
-                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                );
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             } finally {
                 setId('');
                 setPin('');
@@ -85,12 +78,11 @@ const Note = () => {
                 fetchData();
             }
         },
-        [closeAllDrawers, fetchData, message],
+        [closeAllDrawers, fetchData],
     );
 
     return (
         <Container>
-            {contextHolder}
             <AddButton onClick={() => openDrawer('addNote')}>
                 <PlusCircleOutlined />
                 멋진 한마디 남겨요 (일주일 후 자동 삭제돼요)

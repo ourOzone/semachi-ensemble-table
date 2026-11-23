@@ -5,7 +5,6 @@ import styled from 'styled-components';
 import { checkTeamPin } from '@/api/team';
 import { useTeamContext, useDrawerContext } from '@/context';
 import PinInput from '@/components/common/PinInput';
-import useMessage from '@/hooks/useMessage';
 import type { DrawerId } from '@/types';
 import type { CheckTeamExists } from '../types';
 
@@ -20,7 +19,6 @@ const UpdateTeamDrawer1 = ({ drawerId, checkTeamExists }: UpdateTeamDrawer1Props
     const { id, orgType, orgName, orgDesc, pin, setPin, setTeamStates } = useTeamContext();
     const { openDrawer } = useDrawerContext();
     const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
-    const [message, contextHolder] = useMessage();
     const focusInputRef = useRef<InputRef>(null);
 
     const onClose = useCallback(
@@ -54,9 +52,7 @@ const UpdateTeamDrawer1 = ({ drawerId, checkTeamExists }: UpdateTeamDrawer1Props
                             }
                         }
                     } catch {
-                        message.error(
-                            '인터넷이 불안정하거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                        );
+                        // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
                     }
                 }
             }
@@ -70,7 +66,6 @@ const UpdateTeamDrawer1 = ({ drawerId, checkTeamExists }: UpdateTeamDrawer1Props
             onClose={() => onClose(id, orgType, orgName, orgDesc)}
             focusInputRef={focusInputRef}
         >
-            {contextHolder}
             <Title>PIN 입력해야 수정돼요 🔑</Title>
             <InputWrapper>
                 <StyledInput

@@ -11,7 +11,6 @@ import {
 } from '@ant-design/icons';
 import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
 import { idx2hour, eventIds } from '@/constants';
-import useMessage from '@/hooks/useMessage';
 import dayjs, { type Dayjs } from 'dayjs';
 import type { DrawerId, TimeSlot } from '@/types';
 import type { CheckEnsembleExists, HandleClickTeamInfo, HandleSkipEnsemble } from './types';
@@ -49,7 +48,6 @@ const EnsembleInfoDrawer = ({
         setEnsembleOrgStates,
     } = useEnsembleContext();
     const { openDrawer } = useDrawerContext();
-    const [message, contextHolder] = useMessage();
 
     const onClose = useCallback(() => {
         setTeamStates();
@@ -75,9 +73,7 @@ const EnsembleInfoDrawer = ({
                     openDrawer('updateEnsemble1');
                 }
             } catch {
-                message.error(
-                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                );
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
         [setEnsembleOrgStates, openDrawer],
@@ -89,7 +85,7 @@ const EnsembleInfoDrawer = ({
                 openDrawer('deleteEnsemble');
             }
         } catch {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
+            // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
         }
     }, []);
 
@@ -99,13 +95,12 @@ const EnsembleInfoDrawer = ({
                 openDrawer('skipEnsemble');
             }
         } catch {
-            message.error('인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.');
+            // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
         }
     }, []);
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose} background>
-            {contextHolder}
             <Card>
                 <Name>{name}</Name>
                 <ButtonWrapper>

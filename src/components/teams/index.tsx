@@ -6,7 +6,6 @@ import dayjs, { type Dayjs } from 'dayjs';
 import type { Team, TimeSlot } from '@/types';
 import { addTeam, updateTeam, deleteTeam, teamExists } from '@/api/team';
 import { addEnsemble } from '@/api/ensemble';
-import useMessage from '@/hooks/useMessage';
 import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
 import { useRefetchAll } from '@/queries/refetchAll';
 import { useTeams } from '@/queries/teams';
@@ -42,7 +41,6 @@ const Teams = () => {
     const { setTeamStates } = useTeamContext();
     const { setEnsembleStates } = useEnsembleContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
-    const [message, contextHolder] = useMessage();
 
     // 이미 삭제된 팀인지 체크. 이미 있는 팀을 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
     // 해당 함수를 try -> if(else 없음) 에서 호출: false 리턴시 if문 넘긴채 그대로 try문 종료, 이후 try문 내에서 에러시 catch
@@ -52,14 +50,13 @@ const Teams = () => {
                 await teamExists(id);
                 return true;
             } catch {
-                message.warning('이미 삭제된 팀이에요.');
                 setTeamStates();
                 closeAllDrawers();
                 fetchData();
                 return false;
             }
         },
-        [closeAllDrawers, fetchData, message, setTeamStates],
+        [closeAllDrawers, fetchData, setTeamStates],
     );
 
     // 팀 클릭
@@ -71,12 +68,10 @@ const Teams = () => {
                     openDrawer('teamInfo');
                 }
             } catch {
-                message.error(
-                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                );
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [message, fetchData, openDrawer, setTeamStates, checkTeamExists],
+        [fetchData, openDrawer, setTeamStates, checkTeamExists],
     );
 
     // 소모임 및 회의 클릭 (id값은 순서대로 event0~ 으로 지정)
@@ -100,13 +95,11 @@ const Teams = () => {
                 await addTeam({ type, name, desc, pin, publishDate: dayjs() });
                 fetchData();
                 setTeamStates(); // 초기화
-            } catch (err) {
-                message.error(
-                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                );
+            } catch {
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [message, fetchData, setTeamStates],
+        [fetchData, setTeamStates],
     );
 
     const handleUpdateTeam = useCallback(
@@ -115,16 +108,13 @@ const Teams = () => {
                 if (await checkTeamExists(id)) {
                     await updateTeam(id, { type, name, desc });
                     fetchData();
-                    message.success('잘 바꿔놨어요.');
                     setOpenedDrawers(['teamInfo']);
                 }
-            } catch (err) {
-                message.error(
-                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                );
+            } catch {
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [message, fetchData, setOpenedDrawers, checkTeamExists],
+        [fetchData, setOpenedDrawers, checkTeamExists],
     );
 
     const handleDeleteTeam = useCallback(
@@ -132,19 +122,16 @@ const Teams = () => {
             try {
                 if (await checkTeamExists(id)) {
                     await deleteTeam(id);
-                    message.success('팀을 삭제했어요.');
                 }
             } catch {
-                message.error(
-                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                );
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             } finally {
                 setTeamStates();
                 closeAllDrawers();
                 fetchData();
             }
         },
-        [closeAllDrawers, fetchData, message, setTeamStates, checkTeamExists],
+        [closeAllDrawers, fetchData, setTeamStates, checkTeamExists],
     );
 
     const handleAddEnsemble = useCallback(
@@ -167,18 +154,15 @@ const Teams = () => {
                     setTeamStates(); // 초기화
                     setEnsembleStates();
                 }
-            } catch (err) {
-                message.error(
-                    '인터넷이 안 좋거나 서버에 문제가 있어요. 잠시 후 다시 시도해주세요.',
-                );
+            } catch {
+                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [message, fetchData, setTeamStates, setEnsembleStates, checkTeamExists],
+        [fetchData, setTeamStates, setEnsembleStates, checkTeamExists],
     );
 
     return (
         <Container>
-            {contextHolder}
             <TeamsContainer>
                 {teams &&
                     teams.map((team, idx) => (

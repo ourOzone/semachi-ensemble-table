@@ -8,7 +8,7 @@
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
-| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-5 ✅, 3-6 ❌ 폐기·알림 기능 삭제, 3-7 ✅) |
+| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-5 ✅, 3-6 ❌ 폐기·알림 기능 삭제, 3-7·3-8 ✅) |
 
 ## 작업 로그
 
@@ -466,6 +466,25 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
   - 한마디·공지 등록 테스트가 드물게 실패 → 팀 추가 PIN 단계(V7)와 같은 구조로 보고 Drawer의 포커스 이동을 기다린 뒤 입력하도록 수정 (실패 시점 DOM으로 확인하지는 못함)
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 79/79 (3회) / `pnpm exec vitest run --maxWorkers=4` ✅ 3회 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 50 (컨테이너 경고 7건 감소)
+
+### 2026-11-23 — 3-8: 팀·합주 변경을 mutation으로 (P1·P2, F3, F4)
+
+커밋을 셋으로 나눴다: 리팩터링(동작 동일 + 사전 결정 5) → F3 → F4
+
+- 리팩터링 (`9684e95`)
+  - `src/queries/keys.ts`: query key 4개와 `useRefresh(키 묶음)` — 팀 변경이 합주 목록도 다시 불러와야 해서 생기는 순환 import를 피함. 키 묶음은 모듈 상수(`TEAMS`·`ENSEMBLES`·`TEAMS_AND_ENSEMBLES`)라 돌려받는 함수가 렌더링마다 바뀌지 않음
+  - mutation 훅: `useAddTeam`(팀 목록) · `useUpdateTeam`·`useDeleteTeam`(팀·합주 목록: 서버가 합주의 `teamName`을 바꾸고, 팀 삭제는 합주도 지움) · `useAddEnsemble`·`useUpdateEnsemble`·`useDeleteEnsemble`(합주 목록). 삭제는 404 포함 항상
+  - 사전 결정 5 (동작 변경): 팀 버튼·합주 블록 클릭 시점과 수정·삭제·미루기 직전의 존재 확인 제거. 수정 중 서버가 404를 주면 `isNotFound`로 "이미 삭제됨" 처리(상태·Drawer 초기화, 목록 다시 불러오기). 합주 정보의 "팀 정보 보기"는 불러온 팀 목록에서 찾음(없으면 이미 삭제된 팀). 합주 추가 전 팀 확인은 유지(B4)
+  - 요청 수: 미루기 흐름의 존재 확인 5회 → 2회, 팀 수정 4회 → 2회, 블록·팀 클릭 1회 → 0회
+  - 임시 `useRefetchAll` 삭제 (모든 컨테이너가 mutation 훅으로 이전)
+- F3 (`5b86e61`): 팀 추가·합주 추가가 저장 결과와 관계없이 완료 화면을 열던 것 → 성공했을 때만(`HandleAddTeam`·`HandleAddEnsemble`이 `Promise<boolean>`). 실패하면 그 단계에 머문다
+- F4: 미루기가 저장을 기다리지 않고 화면 날짜를 먼저 바꾸던 것 → `handleUpdateEnsemble`이 성공 여부를 돌려주고, 성공한 뒤에 바꾼다
+- 테스트
+  - `src/queries/mutations.test.tsx` 6개: 변경마다 다시 불러오는 목록 (팀 추가 → 팀만, 팀 수정·삭제 → 팀·합주, 합주 → 합주만, 404·실패 시)
+  - 흐름 테스트: 요청 수(사전 결정 5), 팀 수정 404 → Drawer 모두 닫고 팀·합주 다시 불러오기, F3 저장 실패 2개, F4 저장 실패 1개 (F3·F4 테스트는 이전 동작으로 되돌리면 실패하는 것 확인). 팀 추가·합주 추가 입력 단계를 헬퍼로 정리
+  - 변형 검사(리팩터링) 8/8 검출
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 88/88 (2회) / `pnpm exec vitest run --maxWorkers=4` ✅ 2회 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 43 (컨테이너 경고 7건 감소)
 
 ## 남은 일
 

@@ -146,8 +146,8 @@
 - 컨테이너의 `handleXxx`는 mutation 호출과 UI 반응만 남긴다. 클릭 시점의 존재 확인은 제거한다(결정 5). deps가 `[]`였던 `handleClickDelete` 문제(F9)도 함께 해소된다.
 - `checkXxxExists`는 PIN Drawer가 prop으로 쓰므로 남긴다.
 
-### 3-8. 변경을 mutation으로: 팀·합주 (P2, F3, F4)
-- 리팩터링 커밋: `useAddTeam`·`useUpdateTeam`·`useDeleteTeam`, `useAddEnsemble`(팀 확인 유지)·`useUpdateEnsemble`·`useSkipEnsemble`·`useDeleteEnsemble`. `handleClickTeamInfo`는 캐시에서 팀을 찾는다(없으면 "이미 삭제된 팀").
+### 3-8. 변경을 mutation으로: 팀·합주 (P2, F3, F4) ✅
+- 리팩터링 커밋: `useAddTeam`·`useUpdateTeam`·`useDeleteTeam`, `useAddEnsemble`(팀 확인 유지)·`useUpdateEnsemble`·`useDeleteEnsemble` (미루기는 `useUpdateEnsemble`을 사용해 별도 훅을 만들지 않음). `handleClickTeamInfo`는 캐시에서 팀을 찾는다(없으면 "이미 삭제된 팀").
 - 수정 커밋: F3 (`AddTeamDrawer5`·`AddEnsembleDrawer3`의 호출부 한 줄씩), F4 (미루기)
 
 ### 3-9. Drawer 상태를 Zustand로 (결정 1)

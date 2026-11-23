@@ -108,7 +108,7 @@ Zod 스키마로 응답을 parse하면서 `_id → id` 같은 변환도 같이 �
 
 ### 9. UI 라이브러리: shadcn/ui 📌 적용 예정 (antd 대체) → `docs/VIEW_REDESIGN_PLAN.md`
 
-### 10. React 19 ✅ 적용 완료 (2026-11-19) / React Compiler 🔍 View 개편 때 판단
+### 10. React 19 ✅ 적용 완료 (2026-11-19) / React Compiler 📌 View 개편 V-1(기반 작업)에서 켜기로 확정 (2026-11-23)
 
 **결론: React 19로 올려야 한다. 시점은 2단계(TS 전환) 시작 전을 권장한다.**
 
@@ -164,7 +164,7 @@ React Compiler는 별도로 검토한다:
 ✅ 로직 개선 전 characterization test 작성 (src/context/fetch.test.tsx, 3-2에서 lib 테스트로 이전)
 ✅ 3단계 로직 개선 (+ TanStack Query, Zustand(Drawer), Zod 검증) — 2026-11-23 완료, 3-6 폐기·알림 삭제
   → View 개편 (Tailwind v4 + shadcn/ui, antd·styled-components 제거, Drawer 단일화) — 계획: docs/VIEW_REDESIGN_PLAN.md
-  → (검토) React Compiler: View 개편 시작 시점에 판단 (10번)
+  → React Compiler: View 개편 V-1(기반 작업)에서 켜기 (10번, V-0에서 확정)
 ```
 
 ---

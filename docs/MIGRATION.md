@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | ⏳ 계획 수립 (`docs/VIEW_REDESIGN_PLAN.md`), V-0 사전 결정 대기 |
+| View 개편 | 🔄 V-0 사전 결정 확정 (2026-11-23), 다음은 V-1 기반 작업 (계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -537,6 +537,18 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - `CLAUDE.md`: View 개편은 새 문서를 따른다, 개편 중에도 로직 층은 바꾸지 않는 것이 원칙
 - 완료된 3단계 계획(`LOGIC_IMPROVEMENT_PLAN.md`)과 전달 완료한 백엔드 제안(`BACKEND_SUGGESTIONS.md`)을 `docs/archive/`로 이동 (사용자), 문서·주석의 경로 참조 갱신
 
+### 2026-11-23 — View 개편 V-0: 사전 결정 확정
+
+- 사전 결정 2(단일 Drawer): **(b) shadcn Drawer(vaul, 아래에서 올라옴)**, 사용자 선택 (추천안은 (a) Sheet였음). 사용자의 약 90%가 모바일이라 한 손 조작에 맞춘다. 넓은 화면의 배치는 V-2 구성안에서 제안
+- 사전 결정 1·3~7: 추천안대로 (레이어 순서, react-hook-form + Zod, lucide-react, shadcn Calendar, Sonner, React Compiler는 V-1에서 켜기)
+- 사전 결정 8(디자인 방향): 새 디자인. 컨셉은 V-2(합주표) 구성안에서 정한다
+- 디자인 원칙 추가 (사용자 결정, 모든 단계에 적용)
+  - 반응형: UX는 모바일 기준, UI는 모바일·폴더블·PC 모두 불편함이 없도록. 구성안에 화면 폭별 배치를 함께 제안하고, 360·390~430·600~900·1024px 이상에서 확인
+  - `teamColors` 20종은 서비스의 아이덴티티라 값·개수·순서를 바꾸지 않는다 (`eventColors`도 그대로 옮김)
+- 기능 단계 순서 변경: 공지 → 한마디 → 합주표 → 팀 에서 **합주표(V-2) → 팀(V-3) → 한마디(V-4) → 공지(V-5)** 로 (합주표·팀으로 디자인 컨셉을 먼저 잡기 위해)
+- `MODERNIZATION.md` 10번: React Compiler 판단 → V-1에서 켜기로 확정
+- `CLAUDE.md`: 팀 색 유지·모바일 우선 규칙 추가
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -572,7 +584,7 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 | Zustand | ~~`context/drawer`~~ ✅ 3-9 / `context/team`·`ensemble`은 Zustand가 아니라 폼 로컬 상태로 | View 개편 |
 | Tailwind CSS v4 | styled-components | View 개편 |
 | shadcn/ui | antd (`PinInput` → input-otp), **알림 기능 새로 추가**(Sonner, 기존 `useMessage`는 3-6 폐기 때 삭제) | View 개편 |
-| (검토) React Compiler | 수동 `useCallback`/`useMemo` | View 개편 시작 시점에 판단 |
+| React Compiler | 수동 `useCallback`/`useMemo` | View 개편 V-1에서 켜기 (V-0 확정) |
 
 ### 환경
 - 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
@@ -581,4 +593,4 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 1. ~~2단계 TS 전환~~ ✅ 완료
 2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)
 3. ~~3단계 내부 로직 개선~~ ✅ 완료 (2026-11-23)
-4. View 개편: 계획 `docs/VIEW_REDESIGN_PLAN.md` (V-0 사전 결정부터)
+4. View 개편: 계획 `docs/VIEW_REDESIGN_PLAN.md` (V-0 ✅, 다음은 V-1 기반 작업)

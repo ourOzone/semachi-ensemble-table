@@ -6,7 +6,6 @@ import {
     type ReactNode,
     type SetStateAction,
 } from 'react';
-import { checkTeamPin } from '@/api/team';
 
 export interface TeamContextValue {
     id: string;

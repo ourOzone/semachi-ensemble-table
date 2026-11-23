@@ -24,6 +24,7 @@ beforeAll(() => server.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => {
     cleanup(); // globals: false 이므로 RTL 자동 cleanup이 동작하지 않아 직접 호출
     server.resetHandlers();
+    server.events.removeAllListeners(); // test/requests.ts의 recordRequests 리스너 정리
 });
 
 afterAll(() => server.close());

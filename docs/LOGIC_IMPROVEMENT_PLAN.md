@@ -141,7 +141,7 @@
 - 결과: 성공·실패·"이미 삭제됨"을 사용자에게 알리지 않는다 (흐름 제어·초기화는 그대로). F5·P4는 대상이 사라져 해소
 - **View 개편 때 새 알림 기능을 추가한다** (아래 "View 개편 때 넘겨주는 것")
 
-### 3-7. 변경을 mutation으로: 공지·한마디 (P2)
+### 3-7. 변경을 mutation으로: 공지·한마디 (P2) ✅
 - `useAddNotice`·`useDeleteNotice`, `useAddNote`·`useDeleteNote`
 - 컨테이너의 `handleXxx`는 mutation 호출과 UI 반응만 남긴다. 클릭 시점의 존재 확인은 제거한다(결정 5). deps가 `[]`였던 `handleClickDelete` 문제(F9)도 함께 해소된다.
 - `checkXxxExists`는 PIN Drawer가 prop으로 쓰므로 남긴다.

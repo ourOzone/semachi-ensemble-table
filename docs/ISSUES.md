@@ -42,7 +42,7 @@
 | F6 | 🟡 | 합주 수정 PIN 단계의 네트워크 오류가 `console.error`로만 처리되어 사용자에게 알림이 없다 | `UpdateEnsembleDrawer1.tsx` | 코드 | View (PIN 단계 Drawer). 현재는 알림 기능 자체가 없음(V6) |
 | F7 | 🟡 | 반복 합주의 "다음 날짜"가 오늘·다른 요일로 재계산되면 자정이 아니라 **현재 시각**이 붙는다. 이 값으로 미루기를 하면 시각이 붙은 날짜가 서버에 저장된다 | `context/fetch.tsx` → `lib/board` | 재현 (characterization test로 고정) | ✅ 3-3 (2026-11-20). 다시 계산한 날짜는 그날 0시 |
 | F8 | 🟡 | 팀 목록에 없는 팀의 합주는 `teamColor`가 `-1`이 되어 그대로 CSS 배경색 값이 된다 (팀 삭제는 합주도 지우므로 드묾) | `context/fetch.tsx` → `lib/board`, `board/index.tsx` | 재현 (characterization test) | ✅ 3-3 (2026-11-20). `theme.blueGray`로 표시, 타입도 `string`으로 |
-| F9 | 🟡 | `useCallback` 의존성 누락 31건(`exhaustive-deps`). 예: 공지·한마디의 `handleClickDelete`는 deps가 `[]`라 첫 렌더링의 함수를 계속 참조한다. 지금은 참조하는 값들이 대부분 고정이라 눈에 띄는 오동작은 확인하지 못함 | 여러 곳 | 린트 | 컨테이너·App: 3-5~3-9 (App의 effect 의존성 경고 2건은 3-5에서 해소, 31건 → 남은 경고는 3-10에서 집계) / Drawer: View |
+| F9 | 🟡 | `useCallback` 의존성 누락 31건(`exhaustive-deps`). 예: 공지·한마디의 `handleClickDelete`는 deps가 `[]`라 첫 렌더링의 함수를 계속 참조한다. 지금은 참조하는 값들이 대부분 고정이라 눈에 띄는 오동작은 확인하지 못함 | 여러 곳 | 린트 | 컨테이너·App: 3-5~3-9 (App의 effect 의존성 경고 2건은 3-5에서 해소. 3-7에서 공지·한마디 컨테이너의 경고 해소, deps `[]`였던 `handleClickDelete` 포함. 남은 경고는 3-10에서 집계) / Drawer: View |
 | F10 | 🟡 | 합주 정보 Drawer가 `handleSkip`으로 prop을 받지만 부모는 `handleSkipEnsemble`로 넘겨 항상 `undefined`. 실제로 쓰이지 않아 동작 영향 없음 | `EnsembleInfoDrawer.tsx` | 코드 | View |
 | F11 | ⚪ | 쓰이지 않는 prop·인자: `NoticeDrawer`의 `setId`, 공지 추가의 `pin` 인자(부모가 버림), `Header`의 `scrollPosition`, Input에 없는 `controls={false}`(8곳) | 여러 곳 | 코드 (타입 주석으로 표시) | View |
 
@@ -50,8 +50,8 @@
 
 | ID | 심각도 | 내용 | 대응 (단계) |
 |---|---|---|---|
-| P1 | 🟡 | `fetchData`가 4개 API를 순서대로 기다린다(병렬 아님). 무엇이든 하나 바뀌면 전체를 다시 불러온다 | ✅ 병렬 조회 3-5 (2026-11-20). "하나 바뀌면 전체를 다시 불러옴"은 임시 `useRefetchAll`로 남아 3-7·3-8에서 해소 |
-| P2 | 🟡 | 거의 모든 변경 전에 `xxxExists`로 존재 확인 요청을 한 번 더 보낸다 (PIN 입력·버튼 클릭마다 중복) | 404를 mutation 에러로 처리 (3-7·3-8). 합주 추가의 팀 확인(B4)과 PIN Drawer 안의 확인은 유지 → View·B1 대응 |
+| P1 | 🟡 | `fetchData`가 4개 API를 순서대로 기다린다(병렬 아님). 무엇이든 하나 바뀌면 전체를 다시 불러온다 | ✅ 병렬 조회 3-5 (2026-11-20). "하나 바뀌면 전체를 다시 불러옴": 공지·한마디는 ✅ 3-7(해당 목록만), 팀·합주는 임시 `useRefetchAll`로 남아 3-8에서 해소 |
+| P2 | 🟡 | 거의 모든 변경 전에 `xxxExists`로 존재 확인 요청을 한 번 더 보낸다 (PIN 입력·버튼 클릭마다 중복) | 404를 mutation 에러로 처리. 공지·한마디 ✅ 3-7 (삭제 흐름의 존재 확인 3회 → 1회), 팀·합주 3-8. 합주 추가의 팀 확인(B4)과 PIN Drawer 안의 확인은 유지 → View·B1 대응 |
 | P3 | 🟡 | Context Provider의 `value`가 매 렌더링 새 객체라, 입력 한 글자마다 구독하는 컴포넌트 전체가 다시 렌더링된다 | View (입력값이 폼 로컬 상태로 이동). Drawer 상태만 3-9에서 Zustand |
 | P4 | 🟡 | `useMessage`가 렌더링마다 새 객체를 반환해 이를 의존하는 `useCallback`이 사실상 무의미. 거의 같은 알림 함수 4개가 반복 | ✅ 해소: 알림 기능 삭제 (2026-11-23, 3-6 폐기) |
 | P5 | 🟡 | 수정 취소 복원용 `orgXxx` 상태를 따로 복제해 관리 (team·ensemble context) | View (단일 Drawer 폼의 초기값으로 대체) |
@@ -70,7 +70,7 @@
 | V4 | 🟡 | antd Drawer의 deprecated prop `maskStyle` 사용 |
 | V5 | 🟡 | JS 번들 936kB (500kB 경고). 대부분 antd. 2단계 중 +79kB는 React 19가 주원인으로 판단 |
 | V6 | 🟡 | **알림 기능이 없다.** 3-6(알림 중앙화)을 폐기하면서 기존 알림(`useMessage`)을 삭제했다(2026-11-23). 성공·실패·"이미 삭제됨"을 사용자에게 알리지 않는다 → View 개편 때 Sonner 등으로 새로 추가 (`MODERNIZATION.md` View 개편 체크리스트) |
-| V7 | ⚪ | 공용 Drawer가 열림 애니메이션이 끝난 뒤 첫 입력칸으로 포커스를 옮긴다(`afterOpenChange`). 그 전에 다른 칸에 입력 중이면 포커스가 되돌아간다 (팀 추가 PIN 단계의 "한 번 더" 칸). 사람이 겪을 가능성은 낮음. 테스트는 포커스가 옮겨진 뒤 입력하도록 수정 |
+| V7 | ⚪ | 공용 Drawer가 열림 애니메이션이 끝난 뒤 첫 입력칸으로 포커스를 옮긴다(`afterOpenChange`). 그 전에 다른 칸에 입력 중이면 포커스가 되돌아간다 (팀 추가 PIN 단계의 "한 번 더" 칸, 한마디·공지 등록의 PIN 칸도 같은 구조). 사람이 겪을 가능성은 낮음. 테스트는 포커스가 옮겨진 뒤 입력하도록 수정 |
 
 ## 5. 환경 · 테스트
 
@@ -81,7 +81,7 @@
 | E3 | 🟡 | `.claude/settings.json`의 권한 허용 목록이 `npm run ...`, `npx vitest ...` 기준이라 pnpm 전환 후 명령과 맞지 않음 → ✅ 3-0에서 pnpm 기준으로 갱신 (2026-11-20) |
 | E4 | ⚪ | 테스트가 antd 내부 구현에 의존하는 부분: 비활성 버튼의 `visibility: hidden`(`findEnabledButton`), Drawer 클래스(`findDrawer`), 달력 셀 `td[title]`. antd 교체 시 함께 수정 |
 | E5 | ⚪ | jsdom의 XHR이 mock 응답에도 CORS를 검사해, 테스트 페이지 origin을 API origin으로 맞춰 둠 (`vite.config.mts`) |
-| E6 | 🟡 | 흐름 테스트가 간헐적으로 실패했다 (`--maxWorkers=4`에서 잘 재현, 2단계부터 있었고 3-5 이후 잦아짐). ✅ 원인 3가지를 테스트 쪽에서 수정 (2026-11-23): ① Board `openEnsembleInfo`가 `findAllByText`의 두 번째 요소를 클릭 → 합주표가 늦게 그려지면 `undefined` 클릭 ② Teams `openTeamInfo`가 첫 번째 `'테스트밴드'`를 클릭 → 가끔 합주 블록이 잡혀 Drawer가 닫힘 ③ 팀 추가 PIN 단계에서 Drawer의 지연 포커스(V7). 수정 후 기본 3회·`--maxWorkers=4` 4회 모두 통과. 알림 삭제로 렌더링 타이밍도 바뀌어, 각 수정의 기여도를 완전히 분리하지는 못함 |
+| E6 | 🟡 | 흐름 테스트가 간헐적으로 실패했다 (`--maxWorkers=4`에서 잘 재현, 2단계부터 있었고 3-5 이후 잦아짐). ✅ 원인 3가지를 테스트 쪽에서 수정 (2026-11-23): ① Board `openEnsembleInfo`가 `findAllByText`의 두 번째 요소를 클릭 → 합주표가 늦게 그려지면 `undefined` 클릭 ② Teams `openTeamInfo`가 첫 번째 `'테스트밴드'`를 클릭 → 가끔 합주 블록이 잡혀 Drawer가 닫힘 ③ 팀 추가 PIN 단계에서 Drawer의 지연 포커스(V7). 수정 후 기본 3회·`--maxWorkers=4` 4회 모두 통과. 알림 삭제로 렌더링 타이밍도 바뀌어, 각 수정의 기여도를 완전히 분리하지는 못함. 3-7에서 한마디·공지 등록 테스트가 드물게 실패(2/9회) → 같은 구조(③)로 보고 포커스를 기다리도록 수정. 실패 시점 DOM으로 확인하지는 못했다(재현 12회 중 0회). 수정 후 6회 통과 |
 
 ---
 

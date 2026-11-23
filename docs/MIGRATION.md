@@ -8,7 +8,7 @@
 |---|---|
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
-| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-5 ✅, 3-6 ❌ 폐기·알림 기능 삭제) |
+| 3. 내부 로직 개선 | 🔄 진행 중 (계획: `docs/LOGIC_IMPROVEMENT_PLAN.md`, 3-0~3-5 ✅, 3-6 ❌ 폐기·알림 기능 삭제, 3-7 ✅) |
 
 ## 작업 로그
 
@@ -448,6 +448,24 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - `useRefetchAll` 등 3-5의 구조는 그대로
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 74/74 (3회) / `pnpm exec vitest run --maxWorkers=4` ✅ 4회 / `pnpm build` ✅ (JS 1,035kB) / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 57 (deps의 `message` 제거로 3건 감소)
+
+### 2026-11-23 — 3-7: 공지·한마디 변경을 mutation으로 (P1·P2 일부)
+
+- `src/queries/notes.ts`에 mutation 훅 추가: `useAddNote`·`useDeleteNote`·`useAddNotice`·`useDeleteNotice`, 목록 다시 불러오기 `useRefreshNotes`·`useRefreshNotices`
+  - 훅의 책임: 서버 요청 + **해당 목록만** 다시 불러오기 (이전: 4개 목록 전체). 추가는 성공 시, 삭제는 성공·실패(404 포함) 모두 (이전 `finally`와 같음)
+  - 다시 불러오기는 기다리지 않는다 (이전 `fetchData()`도 기다리지 않고 Drawer를 닫음)
+- 컨테이너(`notice/index`·`note/index`): `handleXxx`는 `mutateAsync` + UI 반응(입력값 초기화·Drawer 닫기)만. `useRefetchAll` 사용 중단
+- 사전 결정 5 (동작 변경): 삭제 X 버튼 클릭 시점과 삭제 직전의 존재 확인 요청을 제거. PIN Drawer 안의 확인(`checkXxxExists` prop)은 유지 → 삭제 흐름의 존재 확인 3회 → 1회. 이미 삭제된 경우는 서버의 404로 다른 실패와 같이 처리 (알림이 없으므로 화면 결과는 같음: Drawer 닫기·목록 다시 불러오기)
+- `NoticeDrawer`의 `handleClickDelete` prop 타입: `Promise<void>` → `void` (동기 함수가 됨, 타입만 변경)
+- 쓰지 않던 `checkNotePin` import 제거. 두 컨테이너의 `exhaustive-deps` 경고 해소 (deps `[]`였던 `handleClickDelete` 포함, F9 일부)
+- 테스트
+  - `src/test/requests.ts`: `recordRequests()`·`countOf()` (요청 기록 헬퍼, 리스너는 `setup.ts`의 afterEach에서 정리)
+  - `src/queries/notes.test.tsx` 5개: 추가 후 해당 목록만, 추가 실패 시 다시 불러오지 않음, 삭제 404여도 다시 불러옴 (한마디·공지)
+  - 흐름 테스트: 삭제 흐름의 존재 확인 1회, 삭제 후 해당 목록만 다시 불러오는지 확인 추가
+  - 변형 검사 7/7 검출 (처음 1개 생존: 추가 실패 테스트가 비동기 다시 불러오기 시작 전에 세고 있었음 → 잠시 기다린 뒤 세도록 수정)
+  - 한마디·공지 등록 테스트가 드물게 실패 → 팀 추가 PIN 단계(V7)와 같은 구조로 보고 Drawer의 포커스 이동을 기다린 뒤 입력하도록 수정 (실패 시점 DOM으로 확인하지는 못함)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 79/79 (3회) / `pnpm exec vitest run --maxWorkers=4` ✅ 3회 / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 50 (컨테이너 경고 7건 감소)
 
 ## 남은 일
 

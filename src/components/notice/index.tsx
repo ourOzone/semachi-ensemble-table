@@ -1,9 +1,8 @@
 import { useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useDrawerContext } from '@/context';
-import { useNotices } from '@/queries/notes';
-import { useRefetchAll } from '@/queries/refetchAll';
-import { addNotice, deleteNotice, noticeExists } from '@/api/notice';
+import { useAddNotice, useDeleteNotice, useNotices, useRefreshNotices } from '@/queries/notes';
+import { noticeExists } from '@/api/notice';
 import { Button } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
 import NoticeDrawer from './NoticeDrawer';
@@ -12,14 +11,15 @@ import DeleteNoticeDrawer from './DeleteNoticeDrawer';
 
 const Notice = () => {
     const notices = useNotices();
-    // fetchData: 화면 전체 다시 불러오기 (임시, 3-7·3-8에서 mutation으로 대체)
-    const fetchData = useRefetchAll();
+    const refreshNotices = useRefreshNotices();
+    const { mutateAsync: addNoticeAsync } = useAddNotice();
+    const { mutateAsync: deleteNoticeAsync } = useDeleteNotice();
     const [id, setId] = useState('');
     const [text, setText] = useState('');
     const [pin, setPin] = useState('');
     const { openDrawer, closeAllDrawers } = useDrawerContext();
 
-    // 이미 삭제된 공지인지 체크. 이미 있는 공지를 다루는 모든 작업에 적용해야 함, true를 리턴 시 각 작업 진행
+    // 이미 삭제된 공지인지 체크. PIN 확인 Drawer가 PIN을 확인하기 전에 사용한다 (true를 리턴하면 계속 진행)
     const checkNoticeExists = useCallback(
         async (id: string) => {
             try {
@@ -30,18 +30,17 @@ const Notice = () => {
                 setText('');
                 setPin('');
                 closeAllDrawers();
-                fetchData();
+                refreshNotices();
                 return false;
             }
         },
-        [closeAllDrawers, fetchData],
+        [closeAllDrawers, refreshNotices],
     );
 
     const handleAddNotice = useCallback(
         async (text: string) => {
             try {
-                await addNotice(text);
-                fetchData();
+                await addNoticeAsync(text);
                 setText('');
                 setPin('');
                 closeAllDrawers();
@@ -49,36 +48,32 @@ const Notice = () => {
                 // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             }
         },
-        [fetchData],
+        [addNoticeAsync, closeAllDrawers],
     );
 
-    const handleClickDelete = useCallback(async (id: string) => {
-        try {
-            if (await checkNoticeExists(id)) {
-                setId(id);
-                openDrawer('deleteNotice');
-            }
-        } catch {
-            // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
-        }
-    }, []);
+    // 삭제 X 버튼: 바로 PIN 확인 Drawer를 연다 (이전에는 여기서 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
+    const handleClickDelete = useCallback(
+        (id: string) => {
+            setId(id);
+            openDrawer('deleteNotice');
+        },
+        [openDrawer],
+    );
 
+    // 이미 삭제됐으면 서버가 404를 준다 → 다른 실패와 같이 처리 (이전에는 삭제 전에 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
     const handleDeleteNotice = useCallback(
         async (id: string) => {
             try {
-                if (await checkNoticeExists(id)) {
-                    await deleteNotice(id);
-                }
+                await deleteNoticeAsync(id);
             } catch {
                 // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
             } finally {
                 setId('');
                 setPin('');
                 closeAllDrawers();
-                fetchData();
             }
         },
-        [closeAllDrawers, fetchData],
+        [closeAllDrawers, deleteNoticeAsync],
     );
 
     return (

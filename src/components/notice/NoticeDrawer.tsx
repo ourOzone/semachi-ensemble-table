@@ -11,7 +11,7 @@ interface NoticeDrawerProps {
     notices: Notice[];
     /** 부모가 넘기지만 사용하지 않음 (3단계 정리 대상) */
     setId: Dispatch<SetStateAction<string>>;
-    handleClickDelete: (id: string) => Promise<void>;
+    handleClickDelete: (id: string) => void;
 }
 
 const NoticeDrawer = ({ drawerId, notices, handleClickDelete }: NoticeDrawerProps) => {

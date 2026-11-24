@@ -12,13 +12,11 @@ import { useRefreshTeamsAndEnsembles, useTeams } from '@/queries/teams';
 import WeekCalendar from '@/components/schedule/WeekCalendar';
 import SlotDrawer, { type SlotView } from '@/components/schedule/SlotDrawer';
 import EnsembleInfoDrawer from '@/components/schedule/EnsembleInfoDrawer';
-import UpdateEnsembleDrawer1 from './updateEnsembleDrawers/UpdateEnsembleDrawer1';
 import UpdateEnsembleDrawer2 from './updateEnsembleDrawers/UpdateEnsembleDrawer2';
 import UpdateEnsembleDrawer3 from './updateEnsembleDrawers/UpdateEnsembleDrawer3';
 import UpdateEnsembleDrawer4 from './updateEnsembleDrawers/UpdateEnsembleDrawer4';
-import DeleteEnsembleDrawer from './DeleteEnsembleDrawer';
-import SkipEnsembleDrawer from './SkipEnsembleDrawer';
 import dayjs, { type Dayjs } from 'dayjs';
+import { toast } from 'sonner';
 import { toEnsembleRequest } from '@/lib/ensemble';
 import { getRegularNextDate, resolveSlotTap, type CalendarEvent } from '@/lib/calendar';
 import type { DayIndex, TimeSlot } from '@/types';
@@ -36,7 +34,7 @@ interface BoardProps {
 }
 
 // 합주표 (View 개편 V-2: 주 단위 캘린더 + 아래에서 올라오는 합주 정보·합주 잡기 Drawer).
-// 수정·미루기·삭제의 PIN·입력 단계는 아직 옛 Drawer다
+// PIN 단계는 합주 정보 Drawer 안에 있고, 수정의 입력 단계(반복 여부·날짜·시간)는 아직 옛 Drawer다
 const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
     const teams = useTeams();
     const week = useWeekSchedule(weekStart);
@@ -144,8 +142,12 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
                 setOpenedDrawers(['ensembleInfo']);
                 return true;
             } catch (err) {
-                if (isNotFound(err)) handleEnsembleGone();
-                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
+                if (isNotFound(err)) {
+                    handleEnsembleGone();
+                    toast.error('이미 삭제된 합주예요.');
+                } else {
+                    toast.error('저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+                }
                 return false;
             }
         },
@@ -156,8 +158,11 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
         async (id: string) => {
             try {
                 await deleteEnsembleAsync(id);
-            } catch {
-                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
+                toast.success('삭제했어요.');
+            } catch (err) {
+                // 이미 삭제됐으면(404) 결과는 같다
+                if (isNotFound(err)) toast.success('삭제했어요.');
+                else toast.error('삭제하지 못했어요. 잠시 후 다시 시도해 주세요.');
             } finally {
                 setEnsembleStates();
                 closeAllDrawers();
@@ -188,6 +193,7 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
             if (saved) {
                 setNextDate((prev) => dayjs(prev).add(7, 'day'));
             }
+            return saved;
         },
         [handleUpdateEnsemble, setNextDate],
     );
@@ -217,6 +223,7 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
                 endTime,
             );
             if (saved) setNextDate(regular);
+            return saved;
         },
         [handleUpdateEnsemble, setNextDate],
     );
@@ -240,6 +247,7 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
                 endTime,
             );
             if (saved) setRepeat(true);
+            return saved;
         },
         [handleUpdateEnsemble, setRepeat],
     );
@@ -260,42 +268,16 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
             <EnsembleInfoDrawer
                 checkEnsembleExists={checkEnsembleExists}
                 handleClickTeamInfo={handleClickTeamInfo}
-            />
-            <UpdateEnsembleDrawer1
-                drawerId="updateEnsemble1"
-                checkEnsembleExists={checkEnsembleExists}
+                handleSkipEnsemble={handleSkipEnsemble}
+                handleUnskipEnsemble={handleUnskipEnsemble}
+                handleRepeatEnsemble={handleRepeatEnsemble}
+                handleDeleteEnsemble={handleDeleteEnsemble}
             />
             <UpdateEnsembleDrawer2 drawerId="updateEnsemble2" />
             <UpdateEnsembleDrawer3 drawerId="updateEnsemble3" />
             <UpdateEnsembleDrawer4
                 drawerId="updateEnsemble4"
                 handleUpdateEnsemble={handleUpdateEnsemble}
-            />
-            <DeleteEnsembleDrawer
-                drawerId="deleteEnsemble"
-                checkEnsembleExists={checkEnsembleExists}
-                handleDeleteEnsemble={handleDeleteEnsemble}
-            />
-            <SkipEnsembleDrawer
-                drawerId="skipEnsemble"
-                title="PIN 입력해야 미룰 수 있어요 🔑"
-                label="일주일 미뤄요"
-                checkEnsembleExists={checkEnsembleExists}
-                handleSkipEnsemble={handleSkipEnsemble}
-            />
-            <SkipEnsembleDrawer
-                drawerId="unskipEnsemble"
-                title="PIN 입력해야 앞당길 수 있어요 🔑"
-                label="바로 할래요"
-                checkEnsembleExists={checkEnsembleExists}
-                handleSkipEnsemble={handleUnskipEnsemble}
-            />
-            <SkipEnsembleDrawer
-                drawerId="repeatEnsemble"
-                title="PIN 입력해야 반복으로 바꿀 수 있어요 🔑"
-                label="매주 반복해요"
-                checkEnsembleExists={checkEnsembleExists}
-                handleSkipEnsemble={handleRepeatEnsemble}
             />
         </>
     );

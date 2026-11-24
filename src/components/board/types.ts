@@ -25,7 +25,8 @@ type EnsembleArgs = [
  */
 export type HandleUpdateEnsemble = (...args: EnsembleArgs) => Promise<boolean>;
 
-/** PIN Drawer(SkipEnsembleDrawer)가 호출하는 처리: 미루기(nextDate 7일 뒤) · 미루기 취소 · 매주 반복으로 바꾸기 */
-export type HandleSkipEnsemble = (...args: EnsembleArgs) => Promise<void>;
+/** 합주 정보 Drawer의 PIN 단계 뒤 처리: 미루기(nextDate 7일 뒤) · 바로 하기(미루기 취소) · 매주 반복으로 바꾸기. 저장에 성공하면 true */
+export type HandleSkipEnsemble = (...args: EnsembleArgs) => Promise<boolean>;
 
+/** 삭제. 결과와 관계없이 Drawer를 모두 닫는다 (성공·실패 알림) */
 export type HandleDeleteEnsemble = (id: string) => Promise<void>;

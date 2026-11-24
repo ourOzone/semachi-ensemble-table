@@ -102,6 +102,23 @@
     --color-event-8: #6a7f9a;
     --color-event-9: #6a7f9a;
     --color-event-10: #6a7f9a;
+
+    /* 틀린 PIN: 좌우로 짧게 흔들기 */
+    --animate-shake: shake 0.36s ease-in-out;
+    @keyframes shake {
+        0%,
+        100% {
+            translate: 0;
+        }
+        20%,
+        60% {
+            translate: -6px;
+        }
+        40%,
+        80% {
+            translate: 6px;
+        }
+    }
 }
 
 /*

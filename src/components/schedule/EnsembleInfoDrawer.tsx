@@ -4,6 +4,7 @@ import {
     CalendarCheck,
     CalendarClock,
     CalendarOff,
+    ChevronLeft,
     ChevronRight,
     Pencil,
     Repeat,
@@ -18,7 +19,12 @@ import {
     DrawerDescription,
     DrawerTitle,
 } from '@/components/ui/drawer';
-import type { CheckEnsembleExists, HandleClickTeamInfo } from '@/components/board/types';
+import type {
+    CheckEnsembleExists,
+    HandleClickTeamInfo,
+    HandleDeleteEnsemble,
+    HandleSkipEnsemble,
+} from '@/components/board/types';
 import { useTeamContext, useEnsembleContext } from '@/context';
 import { days, eventIds } from '@/constants';
 import { buildColorMap } from '@/lib/board';
@@ -38,17 +44,26 @@ import {
     scrollAreaClassName,
     sheetClassName,
 } from './drawerParts';
+import PinStep from './PinStep';
 
 // 합주 정보 Drawer (View 개편 V-2). 아래에서 올라오고, 아래로 끌어내리면 닫힌다 (vaul).
 // 위쪽은 팀 색 머리(팀 이름·요일·시간·반복 여부), 아래는 다음 합주와 미루기·바로 하기(미루기 취소)·수정·삭제.
 // 서버 데이터로는 "미룬 반복 합주"와 "처음부터 미래에 시작하는 반복 합주"를 구분할 수 없어(ISSUES V9),
 // 두 경우 모두에 맞는 문구를 쓴다 ("…엔 합주가 없어요", "…부터 바로 하기").
-// 미루기 등의 PIN·입력 단계는 아직 옛 Drawer라, 그 Drawer가 쌓이면 이 Drawer는 잠시 내려간다 (stores/drawer의 BOTTOM_DRAWERS).
+// 미루기·바로 하기·반복으로 바꾸기·삭제·수정의 PIN 단계는 이 Drawer 안에서 내용을 바꿔 보여준다 (step, 뒤로 가면 정보로).
+// 수정의 다음 단계(반복 여부·날짜·시간)는 아직 옛 Drawer라, 그 Drawer가 쌓이면 이 Drawer는 잠시 내려간다 (stores/drawer의 BOTTOM_DRAWERS).
 
 interface EnsembleInfoDrawerProps {
     checkEnsembleExists: CheckEnsembleExists;
     handleClickTeamInfo: HandleClickTeamInfo;
+    handleSkipEnsemble: HandleSkipEnsemble;
+    handleUnskipEnsemble: HandleSkipEnsemble;
+    handleRepeatEnsemble: HandleSkipEnsemble;
+    handleDeleteEnsemble: HandleDeleteEnsemble;
 }
+
+/** Drawer 안의 단계: 정보, 또는 그 동작의 PIN 확인 */
+type Step = 'info' | 'skip' | 'unskip' | 'repeat' | 'delete' | 'update';
 
 /** 보여주는 합주 (Drawer가 열려 있을 때의 context 값) */
 interface ShownEnsemble {
@@ -104,6 +119,10 @@ const ActionButton = ({ icon: Icon, danger = false, onClick, children }: ActionB
 const EnsembleInfoDrawer = ({
     checkEnsembleExists,
     handleClickTeamInfo,
+    handleSkipEnsemble,
+    handleUnskipEnsemble,
+    handleRepeatEnsemble,
+    handleDeleteEnsemble,
 }: EnsembleInfoDrawerProps) => {
     const teams = useTeams();
     const { id: teamId, name, setTeamStates } = useTeamContext();
@@ -134,6 +153,7 @@ const EnsembleInfoDrawer = ({
     const liveKey = live
         ? [id, teamId, name, repeat, nextDate!.valueOf(), startTime, endTime].join('|')
         : null;
+    const [step, setStep] = useState<Step>('info');
     const [shown, setShown] = useState<{
         key: string | null;
         ensemble: ShownEnsemble;
@@ -141,7 +161,9 @@ const EnsembleInfoDrawer = ({
         now: Dayjs;
     } | null>(null);
     if (live && liveKey !== shown?.key) {
+        // 새로 열리거나 저장으로 값이 바뀌면 정보 단계부터
         setShown({ key: liveKey, ensemble: live, now: dayjs() });
+        setStep('info');
     } else if (!live && shown && shown.key !== null) {
         setShown({ ...shown, key: null }); // 다시 열면 새로 붙잡는다
     }
@@ -152,23 +174,39 @@ const EnsembleInfoDrawer = ({
         setEnsembleStates();
     };
 
-    // 다음 단계(옛 Drawer)로 가기 전에 합주가 아직 있는지 확인한다 (없으면 checkEnsembleExists가 Drawer를 모두 닫는다)
-    const goNext = async (next: () => void) => {
+    // PIN 단계로 가기 전에 합주가 아직 있는지 확인한다 (없으면 checkEnsembleExists가 Drawer를 모두 닫는다).
+    // PIN을 넣을 때 한 번 더 확인하던 것은 없앴다: 그새 삭제됐으면 저장할 때 서버가 404를 준다 (이미 삭제됨 처리)
+    const goStep = async (next: Step) => {
         try {
-            if (await checkEnsembleExists(id)) next();
+            if (await checkEnsembleExists(id)) setStep(next);
         } catch {
-            // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
+            // checkEnsembleExists는 실패를 false로 돌려준다
         }
     };
 
-    const handleClickUpdate = () =>
-        goNext(() => {
-            // 수정하다 뒤로 가면 원래 값으로 되돌리기 위해 저장해 둔다
-            setEnsembleOrgStates(repeat, nextDate, startTime, endTime);
-            setStartTime(null);
-            setEndTime(null);
-            openDrawer('updateEnsemble1');
-        });
+    // 수정: PIN이 맞으면 다음 단계(옛 Drawer: 반복 여부 → 날짜 → 시간)로
+    const startUpdate = () => {
+        // 수정하다 뒤로 가면 원래 값으로 되돌리기 위해 저장해 둔다 (UpdateEnsembleDrawer2의 onClose)
+        setEnsembleOrgStates(repeat, nextDate, startTime, endTime);
+        setStartTime(null);
+        setEndTime(null);
+        openDrawer('updateEnsemble2');
+    };
+
+    // PIN이 맞은 뒤 확인 버튼. 삭제는 Drawer가 모두 닫힌다
+    const runAction = async (action: Exclude<Step, 'info' | 'update'>) => {
+        if (action === 'delete') {
+            await handleDeleteEnsemble(id);
+            return;
+        }
+        const handler = {
+            skip: handleSkipEnsemble,
+            unskip: handleUnskipEnsemble,
+            repeat: handleRepeatEnsemble,
+        }[action];
+        // 저장에 성공하면 값(날짜·반복)이 바뀌어 위의 붙잡기에서 정보 단계로 돌아간다. 실패하면 PIN 단계에 머문다
+        await handler(id, teamId, repeat, nextDate, startTime, endTime);
+    };
 
     // 머리 색: 팀의 지금 색 (캘린더 블록과 같음)
     const color = shown
@@ -187,6 +225,77 @@ const EnsembleInfoDrawer = ({
         const noun = isEvent ? '일정' : '합주';
         const skipped = skippedDates.length > 0;
         const timeRange = formatTimeRange(ensemble.startTime, ensemble.endTime);
+
+        if (step !== 'info') {
+            const object = `${noun}${isEvent ? '을' : '를'}`;
+            const pinStep = {
+                skip: { title: `${formatDate(next.add(7, 'day'))}로 미룰까요?`, label: '미루기' },
+                unskip: {
+                    title: `${skippedDates[0] ? formatDate(skippedDates[0]) : ''}부터 바로 할까요?`,
+                    label: '바로 하기',
+                },
+                repeat: { title: '매주 반복으로 바꿀까요?', label: '매주 반복으로 바꾸기' },
+                delete: { title: `${object} 삭제할까요?`, label: '삭제하기' },
+                update: { title: `${object} 수정할까요?`, label: undefined },
+            }[step];
+            return (
+                <div className={scrollAreaClassName}>
+                    <div
+                        key={step}
+                        className="px-5 pt-[26px] pb-[calc(24px+env(safe-area-inset-bottom))] duration-200 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-4 md:px-7"
+                    >
+                        <div className="flex items-center justify-between">
+                            <button
+                                type="button"
+                                aria-label="뒤로"
+                                className={`${pressable} -ml-2 inline-flex size-10 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100`}
+                                onClick={() => setStep('info')}
+                            >
+                                <ChevronLeft className="size-6" aria-hidden />
+                            </button>
+                            <DrawerClose asChild>
+                                <button
+                                    type="button"
+                                    aria-label="닫기"
+                                    className={`${pressable} -mr-2 inline-flex size-10 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100`}
+                                >
+                                    <X className="size-6" aria-hidden />
+                                </button>
+                            </DrawerClose>
+                        </div>
+                        {/* 어떤 합주인지 */}
+                        <p className="mt-3 flex min-w-0 items-center gap-1.5 text-[14px] text-neutral-500">
+                            <span
+                                className="size-2.5 shrink-0 rounded-full"
+                                style={{ backgroundColor: color }}
+                            />
+                            <span className="truncate">
+                                {ensemble.name} · {days[day]} {timeRange}
+                            </span>
+                        </p>
+                        <DrawerTitle className="mt-1.5 text-[24px] leading-tight font-bold text-ink md:text-[26px]">
+                            {pinStep.title}
+                        </DrawerTitle>
+                        <DrawerDescription className="mt-1.5 text-[15px] text-neutral-500">
+                            {step === 'delete' && '삭제하면 되돌릴 수 없어요. '}
+                            {step === 'update'
+                                ? '팀 PIN 4자리를 입력하면 다음 단계로 넘어가요'
+                                : '팀 PIN 4자리를 입력해 주세요'}
+                        </DrawerDescription>
+                        <div className="mt-7">
+                            <PinStep
+                                teamId={ensemble.teamId}
+                                confirmLabel={pinStep.label}
+                                danger={step === 'delete'}
+                                onConfirm={() =>
+                                    step === 'update' ? startUpdate() : runAction(step)
+                                }
+                            />
+                        </div>
+                    </div>
+                </div>
+            );
+        }
 
         return (
             <div className={scrollAreaClassName}>
@@ -282,37 +391,24 @@ const EnsembleInfoDrawer = ({
 
                     <div className="mt-5 flex flex-col gap-2.5">
                         {ensemble.repeat ? (
-                            <ActionButton
-                                icon={CalendarClock}
-                                onClick={() => goNext(() => openDrawer('skipEnsemble'))}
-                            >
+                            <ActionButton icon={CalendarClock} onClick={() => goStep('skip')}>
                                 {formatDate(next.add(7, 'day'))}로 미루기
                             </ActionButton>
                         ) : (
-                            <ActionButton
-                                icon={Repeat}
-                                onClick={() => goNext(() => openDrawer('repeatEnsemble'))}
-                            >
+                            <ActionButton icon={Repeat} onClick={() => goStep('repeat')}>
                                 매주 반복으로 바꾸기
                             </ActionButton>
                         )}
                         {skipped && (
-                            <ActionButton
-                                icon={Undo2}
-                                onClick={() => goNext(() => openDrawer('unskipEnsemble'))}
-                            >
+                            <ActionButton icon={Undo2} onClick={() => goStep('unskip')}>
                                 {formatDate(skippedDates[0]!)}부터 바로 하기
                             </ActionButton>
                         )}
                         <div className="grid grid-cols-2 gap-2.5">
-                            <ActionButton icon={Pencil} onClick={handleClickUpdate}>
+                            <ActionButton icon={Pencil} onClick={() => goStep('update')}>
                                 수정
                             </ActionButton>
-                            <ActionButton
-                                icon={Trash2}
-                                danger
-                                onClick={() => goNext(() => openDrawer('deleteEnsemble'))}
-                            >
+                            <ActionButton icon={Trash2} danger onClick={() => goStep('delete')}>
                                 삭제
                             </ActionButton>
                         </div>
@@ -329,8 +425,11 @@ const EnsembleInfoDrawer = ({
             <DrawerContent
                 className={sheetClassName}
                 overlayClassName={overlayClassName}
-                // 손잡이는 팀 색 머리 위에 겹친다
-                handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-white/60"
+                // 손잡이는 머리 위에 겹친다 (정보: 팀 색 머리, PIN: 흰 머리)
+                handleClassName={cn(
+                    'absolute inset-x-0 top-2.5 z-10 mt-0 w-10',
+                    step === 'info' ? 'bg-white/60' : 'bg-neutral-300',
+                )}
             >
                 {content}
             </DrawerContent>

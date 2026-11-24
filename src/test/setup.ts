@@ -24,6 +24,8 @@ Object.defineProperty(window, 'matchMedia', {
 Element.prototype.setPointerCapture ??= () => {};
 Element.prototype.releasePointerCapture ??= () => {};
 Element.prototype.hasPointerCapture ??= () => false;
+// jsdom에는 elementFromPoint가 없다. input-otp(PIN 칸)가 비밀번호 관리자 아이콘 자리를 살피려고 호출한다
+document.elementFromPoint ??= () => null;
 
 // vaul은 열고 닫는 애니메이션 CSS를 스스로 넣는다. jsdom은 애니메이션을 실행하지 않아 animationend가 오지 않으므로,
 // 닫힌 Drawer가 DOM에서 빠지지 않는다 (Radix Presence가 애니메이션 종료를 기다림) → 테스트에서는 애니메이션을 끈다

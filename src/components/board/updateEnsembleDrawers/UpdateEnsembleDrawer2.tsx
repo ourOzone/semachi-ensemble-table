@@ -10,7 +10,8 @@ interface UpdateEnsembleDrawer2Props {
 }
 
 const UpdateEnsembleDrawer2 = ({ drawerId }: UpdateEnsembleDrawer2Props) => {
-    const { setRepeat } = useEnsembleContext();
+    const { id, setRepeat, orgRepeat, orgNextDate, orgStartTime, orgEndTime, setEnsembleStates } =
+        useEnsembleContext();
     const { openDrawer } = useDrawerContext();
 
     const handleClick = useCallback(
@@ -22,8 +23,12 @@ const UpdateEnsembleDrawer2 = ({ drawerId }: UpdateEnsembleDrawer2Props) => {
     );
 
     return (
-        // onClose시 repeat은 초기화 필요 없음
-        <Drawer drawerId={drawerId}>
+        // 뒤로 가면 합주 정보 Drawer로 돌아간다: 수정하기 전 값으로 되돌린다
+        // (PIN 단계가 합주 정보 Drawer 안으로 옮겨져, 이전 PIN Drawer(UpdateEnsembleDrawer1)의 되돌리기를 여기로 옮김)
+        <Drawer
+            drawerId={drawerId}
+            onClose={() => setEnsembleStates(id, orgRepeat, orgNextDate, orgStartTime, orgEndTime)}
+        >
             <Title>매주 할 건가요 📆</Title>
             <ButtonWrapper>
                 <OptionButton onClick={() => handleClick(true)}>

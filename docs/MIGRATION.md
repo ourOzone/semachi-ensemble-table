@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15차 PIN 단계 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -755,6 +755,23 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 확인: 360·390·430px에서 한 칸 블록은 한 줄, 두 개 겹친 칸은 날짜 숨김
 
 **검증:** `pnpm typecheck` ✅ / `pnpm format:check` ✅ (테스트는 표시 변경이라 돌리지 않음)
+
+### 2026-11-24 — View 개편 V-2 (15차): PIN 단계를 새 Drawer로
+
+- 지금 → 바꾼 후
+  - 미루기·바로 하기·반복으로 바꾸기·삭제·수정의 PIN 단계: 옛 Drawer가 오른쪽에서 쌓임(합주 정보 Drawer는 내려감) → 합주 정보 Drawer 안에서 내용이 바뀜 (뒤로 가면 정보로). 제목 "PIN 입력해야 미룰 수 있어요 🔑" 등 → "12/10(목)로 미룰까요?"·"합주를 삭제할까요?" 등 + 어떤 합주인지(팀 색 점·이름·요일·시간)
+  - PIN 입력창: 한 칸 → 4칸(숫자만, 점으로 가림). 확인 버튼 문구 "일주일 미뤄요"·"바로 할래요"·"매주 반복해요"·"진짜 삭제해요" → "미루기"·"바로 하기"·"매주 반복으로 바꾸기"·"삭제하기"(빨강)
+  - PIN 표시: 4자리를 넣으면 응답 전에도 빨강(틀림) → 응답 전에는 "확인하는 중…", 응답 뒤에 틀리면 빨강 + 흔들기 + "PIN이 맞지 않아요", 맞으면 "확인됐어요". 응답 전에 PIN을 고치면 이전 응답은 버림
+  - 존재 확인 요청: 동작 버튼을 누를 때 + PIN을 넣을 때 → 버튼을 누를 때만 (그새 삭제되면 저장 때 서버 404로 "이미 삭제됨" 처리). 미루기 흐름 2회 → 1회
+  - 알림 (ISSUES V6 일부): 합주 저장 실패·이미 삭제됨, 삭제 성공·실패, PIN 확인 실패. 저장에 실패하면 PIN 단계에 머문다 (이전: 알림 없이 PIN Drawer에 머묾)
+  - 수정: PIN이 맞으면 바로 다음 단계(옛 Drawer)인 것은 같음. 다음 단계에서 뒤로 가면 합주 정보로 돌아오며 원래 값으로 되돌림 (이전: PIN Drawer로 돌아가고, PIN Drawer를 닫을 때 되돌림)
+- 구조: `schedule/PinStep.tsx`(PIN 상태: 입력 중 → 확인 중 → 맞음/틀림 → 저장 중), `components/ui/input-otp.tsx`(shadcn, 점 가림 `mask` 추가), `index.css`에 흔들기 애니메이션. 합주 정보 Drawer에 단계(`step`). `HandleSkipEnsemble`은 성공 여부를 돌려줌. 옛 `SkipEnsembleDrawer`·`DeleteEnsembleDrawer`·`UpdateEnsembleDrawer1` 삭제, `DrawerId` 5개 제거. 의존성 `input-otp` 1.5
+- 테스트: `setup.ts`에 `elementFromPoint` 빈 구현(jsdom에 없음, input-otp가 호출). `Board.test.tsx`를 새 PIN 단계 기준으로 다시 씀 (10개 → 14개: 확인 중엔 틀림 표시 없음, 늦은 응답 버림, 수정 중 뒤로 가면 원래 값, PIN 단계 뒤로 가기 추가). 변형 검사 7/8 (남은 1개는 중복 코드라 삭제)
+- 확인: Playwright(가짜 응답, PIN 확인 600ms 지연) 390·1280px에서 빈 칸·입력 중·확인 중·틀림·맞음 화면, 입력창 자동 포커스
+- 번들: 1,182kB → 1,203kB (gzip 376 → 383kB, input-otp)
+- 추가 제안(적용하지 않음): 계획 문서 "PIN·변경 흐름 추가 제안"
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 145/145 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 26 (옛 PIN Drawer 삭제로 6건 감소, 새 코드 0건) / `pnpm format:check` ✅
 
 ## 남은 일
 

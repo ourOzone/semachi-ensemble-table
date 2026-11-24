@@ -11,7 +11,7 @@ import { renderApp } from '@/test/render';
 import { countOf, recordRequests } from '@/test/requests';
 import { server } from '@/test/server';
 
-// 합주표 흐름 테스트: 합주 블록 → 합주 정보 Drawer(아래에서 올라옴) → 수정 / 미루기 / 미루기 취소 / 반복으로 바꾸기 / 삭제.
+// 합주표 흐름 테스트: 합주 블록 → 합주 정보 Drawer(아래에서 올라옴) → 수정 / 미루기 / 바로 하기(미루기 취소) / 반복으로 바꾸기 / 삭제.
 // fixtures의 합주: 매주 반복, 다음 날짜 2026-11-23(월), 시간칸 2~3 (10:00 - 11:00)
 // 미루기 등의 PIN·입력 단계는 아직 옛 Drawer(antd)다
 
@@ -87,9 +87,9 @@ describe('합주표', () => {
         expect(drawer.getByText('10:00 – 11:00 · 1시간')).toBeInTheDocument();
         expect(drawer.getByText('3일 뒤')).toBeInTheDocument();
         expect(drawer.getByRole('button', { name: '11/30(월)로 미루기' })).toBeInTheDocument();
-        // 미루지 않았으면 쉬는 날·미루기 취소가 없다
-        expect(drawer.queryByText(/쉬어요/)).not.toBeInTheDocument();
-        expect(drawer.queryByRole('button', { name: /미루기 취소/ })).not.toBeInTheDocument();
+        // 미루지 않았으면 합주 없는 날·바로 하기가 없다
+        expect(drawer.queryByText(/없어요/)).not.toBeInTheDocument();
+        expect(drawer.queryByRole('button', { name: /바로 하기/ })).not.toBeInTheDocument();
         expect(useDrawerStore.getState().openedDrawers).toEqual(['ensembleInfo']);
         // 블록 클릭 시점의 존재 확인 요청은 없다 (이전: 1회, 사전 결정 5)
         expect(countOf(requests, 'GET /ensemble/ensemble-1')).toBe(0);
@@ -157,7 +157,7 @@ describe('합주표', () => {
         ).toBeInTheDocument();
     });
 
-    it('미루기: PIN이 맞으면 다음 합주를 7일 뒤로 미루고, 쉬는 날과 미루기 취소를 보여준다', async () => {
+    it('미루기: PIN이 맞으면 다음 합주를 7일 뒤로 미루고, 합주 없는 날과 바로 하기를 보여준다', async () => {
         const { user, dialog } = await openEnsembleInfo();
 
         await user.click(within(dialog).getByRole('button', { name: '11/30(월)로 미루기' }));
@@ -173,10 +173,10 @@ describe('합주표', () => {
         // 저장에 성공하면 합주 정보 Drawer가 다시 올라와 바뀐 날짜를 보여준다
         const reopened = within(await findDialog(/10:00 – 11:00/));
         expect(reopened.getByText('11/30(월)')).toBeInTheDocument();
-        expect(reopened.getByText('11/23(월) 쉬어요')).toBeInTheDocument();
-        expect(reopened.getByRole('button', { name: '12/7(월)로 더 미루기' })).toBeInTheDocument();
+        expect(reopened.getByText('11/23(월)엔 합주가 없어요')).toBeInTheDocument();
+        expect(reopened.getByRole('button', { name: '12/7(월)로 미루기' })).toBeInTheDocument();
         expect(
-            reopened.getByRole('button', { name: '미루기 취소 (11/23(월))' }),
+            reopened.getByRole('button', { name: '11/23(월)부터 바로 하기' }),
         ).toBeInTheDocument();
         // 존재 확인은 정보 Drawer의 미루기 버튼·PIN Drawer 2회 (이전: 블록 클릭·미루기 처리·수정 처리까지 5회, 사전 결정 5)
         expect(countOf(requests, 'GET /ensemble/ensemble-1')).toBe(2);
@@ -204,19 +204,19 @@ describe('합주표', () => {
         await user.click(pinDrawer.querySelector<HTMLElement>('.ant-drawer-close')!);
         const reopened = within(await findDialog(/10:00 – 11:00/));
         expect(reopened.getByText('11/23(월)')).toBeInTheDocument();
-        expect(reopened.queryByText(/쉬어요/)).not.toBeInTheDocument();
+        expect(reopened.queryByText(/없어요/)).not.toBeInTheDocument();
     });
 
-    it('미루기 취소: 여러 번 미뤘어도 한 번에 원래 날짜로 되돌린다', async () => {
+    it('바로 하기(미루기 취소): 여러 번 미뤘어도 한 번에 원래 날짜로 되돌린다', async () => {
         mockEnsemble({ nextDate: '2026-12-07T00:00:00.000Z' }); // 11/23·11/30 두 번 미룸
         const { user, dialog } = await openEnsembleInfo({ nextWeek: true });
         const drawer = within(dialog);
-        expect(drawer.getByText('11/23(월)부터 2주 쉬어요')).toBeInTheDocument();
+        expect(drawer.getByText('11/23(월) ~ 11/30(월)엔 합주가 없어요')).toBeInTheDocument();
         expect(drawer.getByText('12/7(월)')).toBeInTheDocument();
         expect(drawer.getByText('17일 뒤')).toBeInTheDocument();
 
-        await user.click(drawer.getByRole('button', { name: '미루기 취소 (11/23(월))' }));
-        await confirmPin(user, /PIN 입력해야 미루기를 취소할 수 있어요/, '미루기 취소해요');
+        await user.click(drawer.getByRole('button', { name: '11/23(월)부터 바로 하기' }));
+        await confirmPin(user, /PIN 입력해야 앞당길 수 있어요/, '바로 할래요');
 
         await waitFor(() => expect(putBody).toBeDefined());
         expect(putBody).toMatchObject({
@@ -229,7 +229,7 @@ describe('합주표', () => {
         expect(dayjs(putBody!.nextDate as string).format('YYYY-MM-DD')).toBe('2026-11-23');
         const reopened = within(await findDialog(/10:00 – 11:00/));
         expect(reopened.getByText('11/23(월)')).toBeInTheDocument();
-        expect(reopened.queryByText(/쉬어요/)).not.toBeInTheDocument();
+        expect(reopened.queryByText(/없어요/)).not.toBeInTheDocument();
     });
 
     it('일회성 합주: 합주 날짜를 보여주고, 매주 반복으로 바꿀 수 있다', async () => {

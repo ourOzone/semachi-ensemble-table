@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockInitialData } from '@/test/fixtures';
@@ -50,12 +50,17 @@ describe('합주판 (주 단위 캘린더)', () => {
         const user = userEvent.setup();
         renderApp();
 
-        expect(
-            await screen.findByRole('button', { name: '테스트밴드 10:00–11:00 이번 주 쉼' }),
-        ).toBeInTheDocument();
+        const skipped = await screen.findByRole('button', {
+            name: '테스트밴드 10:00–11:00 이번 주 쉼',
+        });
+        // 점선 블록은 시간 대신 다음 합주 날짜 (반복이면 "~")
+        expect(within(skipped).getByText('11/23~')).toBeInTheDocument();
+        expect(within(skipped).queryByText('10:00–11:00')).not.toBeInTheDocument();
 
         await user.click(screen.getByRole('button', { name: '다음 주' }));
-        expect(screen.getByRole('button', { name: '테스트밴드 10:00–11:00' })).toBeInTheDocument();
+        const normal = screen.getByRole('button', { name: '테스트밴드 10:00–11:00' });
+        // 넓을 때의 한 줄·아주 좁을 때의 두 줄 표시가 함께 들어 있다 (CSS로 하나만 보임)
+        expect(within(normal).getAllByText('10:00–11:00').length).toBeGreaterThan(0);
     });
 
     it('팀 목록은 "전체"로 펼치고, 펼친 동안은 "닫기"로 접는다', async () => {

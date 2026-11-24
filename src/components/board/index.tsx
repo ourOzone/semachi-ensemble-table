@@ -173,7 +173,8 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
         [handleUpdateEnsemble, setNextDate],
     );
 
-    // 미루기 취소: 여러 번 미뤘어도 한 번에 되돌린다. 미루지 않았다면 다음 합주였을 날짜(오늘부터 처음 오는 그 요일)로 저장
+    // 바로 하기(미루기 취소): 여러 번 미뤘어도 한 번에 되돌린다. 미루지 않았다면 다음 합주였을 날짜(오늘부터 처음 오는 그 요일)로 저장.
+    // 처음부터 미래에 시작하도록 잡은 합주라면 시작을 앞당기는 것이 된다 (서버 데이터로 둘을 구분할 수 없음, ISSUES V9)
     const handleUnskipEnsemble = useCallback(
         async (
             id: string,
@@ -263,8 +264,8 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
             />
             <SkipEnsembleDrawer
                 drawerId="unskipEnsemble"
-                title="PIN 입력해야 미루기를 취소할 수 있어요 🔑"
-                label="미루기 취소해요"
+                title="PIN 입력해야 앞당길 수 있어요 🔑"
+                label="바로 할래요"
                 checkEnsembleExists={checkEnsembleExists}
                 handleSkipEnsemble={handleUnskipEnsemble}
             />

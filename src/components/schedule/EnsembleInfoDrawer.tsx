@@ -32,7 +32,9 @@ import theme from '@/styles/theme';
 import type { TimeSlot } from '@/types';
 
 // 합주 정보 Drawer (View 개편 V-2). 아래에서 올라오고, 아래로 끌어내리면 닫힌다 (vaul).
-// 위쪽은 팀 색 머리(팀 이름·요일·시간·반복 여부), 아래는 다음 합주와 미루기·미루기 취소·수정·삭제.
+// 위쪽은 팀 색 머리(팀 이름·요일·시간·반복 여부), 아래는 다음 합주와 미루기·바로 하기(미루기 취소)·수정·삭제.
+// 서버 데이터로는 "미룬 반복 합주"와 "처음부터 미래에 시작하는 반복 합주"를 구분할 수 없어(ISSUES V9),
+// 두 경우 모두에 맞는 문구를 쓴다 ("…엔 합주가 없어요", "…부터 바로 하기").
 // 미루기 등의 PIN·입력 단계는 아직 옛 Drawer라, 그 Drawer가 쌓이면 이 Drawer는 잠시 내려간다 (stores/drawer의 BOTTOM_DRAWERS).
 
 interface EnsembleInfoDrawerProps {
@@ -260,8 +262,8 @@ const EnsembleInfoDrawer = ({
                                 aria-hidden
                             />
                             {skippedDates.length === 1
-                                ? `${formatDate(skippedDates[0]!)} 쉬어요`
-                                : `${formatDate(skippedDates[0]!)}부터 ${skippedDates.length}주 쉬어요`}
+                                ? `${formatDate(skippedDates[0]!)}엔 ${noun}${isEvent ? '이' : '가'} 없어요`
+                                : `${formatDate(skippedDates[0]!)} ~ ${formatDate(skippedDates[skippedDates.length - 1]!)}엔 ${noun}${isEvent ? '이' : '가'} 없어요`}
                         </div>
                     )}
 
@@ -293,7 +295,7 @@ const EnsembleInfoDrawer = ({
                                 icon={CalendarClock}
                                 onClick={() => goNext(() => openDrawer('skipEnsemble'))}
                             >
-                                {formatDate(next.add(7, 'day'))}로 {skipped ? '더 ' : ''}미루기
+                                {formatDate(next.add(7, 'day'))}로 미루기
                             </ActionButton>
                         ) : (
                             <ActionButton
@@ -308,7 +310,7 @@ const EnsembleInfoDrawer = ({
                                 icon={Undo2}
                                 onClick={() => goNext(() => openDrawer('unskipEnsemble'))}
                             >
-                                미루기 취소 ({formatDate(skippedDates[0]!)})
+                                {formatDate(skippedDates[0]!)}부터 바로 하기
                             </ActionButton>
                         )}
                         <div className="grid grid-cols-2 gap-2.5">

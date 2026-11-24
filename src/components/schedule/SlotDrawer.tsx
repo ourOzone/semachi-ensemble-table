@@ -21,6 +21,7 @@ import {
     scrollAreaClassName,
     sheetClassName,
 } from './drawerParts';
+import { openAddEnsemble } from './addEnsembleStore';
 
 // 합주 잡기 Drawer (View 개편 V-2). 합주판에서 시간을 눌렀을 때 아래에서 올라온다.
 // - 빈 시간: 누른 시간과 비어 있다는 것, "이 시간에 합주 잡기"
@@ -220,11 +221,18 @@ const SlotDrawer = ({ view, onSelect }: SlotDrawerProps) => {
                     )}
                 </div>
 
+                {/* 누른 날짜와 시작 시간(빈 시간: 누른 칸, 겹친 합주: 위에 보이는 시간의 시작)을 채운 합주 잡기 Drawer로 */}
                 <BookFooter
                     label={
                         tap.kind === 'list'
                             ? '같은 시간에 다른 팀 합주 잡기'
                             : '이 시간에 합주 잡기'
+                    }
+                    onClick={() =>
+                        openAddEnsemble({
+                            date,
+                            startTime: tap.kind === 'list' ? axis!.min : tap.slot,
+                        })
                     }
                 />
             </div>

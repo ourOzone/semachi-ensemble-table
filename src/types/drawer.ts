@@ -26,10 +26,7 @@ export type DrawerId =
     // 합주
     | 'ensembleInfo'
     | 'slotInfo'
-    | 'addEnsemble1'
-    | 'addEnsemble2'
-    | 'addEnsemble3'
-    | 'addEnsemble4'
+    | 'addEnsemble'
     | 'updateEnsemble2'
     | 'updateEnsemble3'
     | 'updateEnsemble4';

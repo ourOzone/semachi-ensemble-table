@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~20차 PIN 단계 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~20차 PIN 단계·21차 합주 잡기 Drawer 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -829,6 +829,24 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 테스트: 19차 스크롤 되돌리기 테스트를 body 고정·복원 테스트로 교체, 헤더 숨김이 고정 중 스크롤을 무시하는 테스트 추가. 변형 검사 5/5
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 151/151 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 26 (새 코드 0건) / `pnpm format:check` ✅
+
+### 2026-11-24 — View 개편 V-2 (21차): 합주 잡기(추가) Drawer
+
+- 지금 → 바꾼 후
+  - 합주 추가: 오른쪽에서 쌓이는 옛 Drawer 4단계(반복 여부 → 달력 → 시작·끝 칸 → 완료 화면 "락앤롤!") → 아래에서 올라오는 Drawer 하나(팀 → 반복 → 날짜 → 시작 시간·소요 시간). 저장에 성공하면 모두 닫고 "합주를 잡았어요." 알림, 실패하면 알리고 Drawer에 머묾
+  - 시간 고르기: 시작 칸과 끝 칸을 차례로 누름 → 시작 시간 칩 + 소요 시간(30분·1시간·2시간·직접 입력 ±30분, 기본 2시간)
+  - 팀: 팀 정보에서만 열 수 있어 팀이 정해져 있었음 → Drawer 안에서 고름(팀 색 칩, 소모임·일정 포함). 팀 정보·소모임 정보에서 열면 골라져 있음
+  - 합주판의 "이 시간에 합주 잡기"·"같은 시간에 다른 팀 합주 잡기"(합주 잡기·합주 정보 Drawer): "준비 중" 알림 → 그 날짜·시작 시간을 채운 합주 잡기 Drawer (ISSUES V11)
+  - 그날 동방 막대·겹침 알림 (새 기능), 이미 4개가 겹친 시간은 잡을 수 없음 (새 기능, 반복이면 이후 주까지)
+  - 저장 직전 팀 존재 확인(B4): 팀은 그대로, 소모임·일정은 고정 id라 확인하지 않음. 팀이 그새 삭제됐으면 "이미 삭제된 팀이에요." 알림
+  - 서버에 보내는 날짜: 고른 때의 시각(옛 antd 달력) → 그날의 합주 시작 시각
+- 구조: `schedule/AddEnsembleDrawer.tsx`(입력은 로컬 상태), `schedule/addEnsembleStore.ts`(여는 곳마다 미리 채울 값), `lib/calendar`에 `eventsOnDate`·`overlapping`·`findOverlapLimit`·`MAX_OVERLAP`, `drawerParts`에 `formatSlots`, `BookFooter`에 `onClick`. `components/ui/calendar.tsx`(shadcn, 린트 경고가 나는 인라인 컴포넌트를 모듈 수준으로). 옛 `AddEnsembleDrawer1~4`·`HandleAddEnsemble` 삭제, `DrawerId` `addEnsemble1~4` → `addEnsemble`
+- 사전 결정 3(react-hook-form)과 다르게 `useState`: 텍스트 입력 없이 칩·달력·± 버튼뿐이라
+- 확인: Playwright(가짜 데이터·가짜 저장 응답) Chrome 390·1280px, WebKit(아이폰 UA) 390px — 빈 칸에서 열기 → 팀·반복 고르기 → 직접 입력 → 저장(보낸 본문 확인), 4개 겹친 곳에서 막힘, 팀 정보에서 열기(달력) → 닫으면 팀 정보로. 가로 넘침 없음, 새 콘솔 오류 없음
+- 테스트: `schedule/AddEnsembleDrawer.test.tsx` 7개(빈 칸에서 저장, 소요 시간, 23시 칸에서 1시간, 쉬는 합주는 겹침 아님, 겹친 목록에서·겹침 알림, 최대 4개, 합주 정보에서), `Teams.test.tsx` 합주 추가 2개 → 4개(팀 정보에서 저장, 닫으면 팀 정보로, 팀 삭제됨, 저장 실패), `lib/calendar.test.ts` 6개. 변형 검사 15/15 (처음 3개 생존: 1개는 문법 오류가 나는 잘못된 변형, 2개는 테스트 추가)
+- 번들: 1,203kB → 1,301kB (gzip 383 → 414kB, react-day-picker·date-fns)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 166/166 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 4·경고 25 (옛 합주 추가 Drawer 삭제로 2건 감소, 새 코드 0건) / `pnpm format:check` ✅
 
 ## 남은 일
 

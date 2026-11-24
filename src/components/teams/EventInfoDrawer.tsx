@@ -3,7 +3,8 @@ import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import { useTeamContext, useDrawerContext } from '@/context';
+import { useTeamContext } from '@/context';
+import { openAddEnsemble } from '@/components/schedule/addEnsembleStore';
 import type { DrawerId } from '@/types';
 
 const name2FullName: Record<string, string> = {
@@ -25,8 +26,7 @@ interface EventInfoDrawerProps {
 }
 
 const EventInfoDrawer = ({ drawerId }: EventInfoDrawerProps) => {
-    const { name, setTeamStates } = useTeamContext();
-    const { openDrawer } = useDrawerContext();
+    const { id, name, setTeamStates } = useTeamContext();
 
     // const handleClick = (value) => {
     //     openDrawer('addTeam2');
@@ -38,7 +38,10 @@ const EventInfoDrawer = ({ drawerId }: EventInfoDrawerProps) => {
                 <Card>
                     <Name>{name2FullName[name]}</Name>
                     <ButtonWrapper>
-                        <StyledButton type="primary" onClick={() => openDrawer('addEnsemble1')}>
+                        <StyledButton
+                            type="primary"
+                            onClick={() => openAddEnsemble({ teamId: id, returnTo: 'eventInfo' })}
+                        >
                             <PlusOutlined />
                             일정 추가
                         </StyledButton>

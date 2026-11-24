@@ -57,8 +57,10 @@ describe('합주 잡기 Drawer', () => {
         expect(drawer.getByText('11월 21일')).toBeInTheDocument();
         expect(drawer.getByText('비어 있는 시간이에요')).toBeInTheDocument();
         expect(drawer.getByText('09:00 – 24:00 동안 잡힌 합주가 없어요')).toBeInTheDocument();
+        // 누른 날짜·시간을 채운 합주 잡기 Drawer로 바뀐다 (자세한 것은 AddEnsembleDrawer.test.tsx)
         await user.click(drawer.getByRole('button', { name: '이 시간에 합주 잡기' }));
-        expect(await screen.findByText('준비 중인 기능이에요')).toBeInTheDocument();
+        await findDialog('합주 잡기');
+        expect(useDrawerStore.getState().openedDrawers).toEqual(['addEnsemble']);
     });
 
     it('빈 구간은 앞뒤 합주 사이까지 (월요일 10:00~11:00 합주가 있는 다음 주)', async () => {

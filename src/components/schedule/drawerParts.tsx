@@ -1,6 +1,5 @@
 import type { Dayjs } from 'dayjs';
 import { CalendarPlus } from 'lucide-react';
-import { toast } from 'sonner';
 import { days, idx2hour } from '@/constants';
 import type { TimeSlot } from '@/types';
 
@@ -14,6 +13,13 @@ export function formatDate(date: Dayjs): string {
 /** "20:00 – 22:00" (endTime은 마지막 시간칸이라 끝나는 시각은 다음 칸의 시작) */
 export function formatTimeRange(startTime: TimeSlot, endTime: TimeSlot): string {
     return `${idx2hour[startTime] ?? ''} – ${idx2hour[endTime + 1] ?? ''}`;
+}
+
+/** 시간칸 수의 길이: "2시간", "1시간 30분", "30분" (시간칸 하나 = 30분) */
+export function formatSlots(slots: number): string {
+    const hours = Math.floor(slots / 2);
+    const minutes = slots % 2 === 1 ? '30분' : '';
+    return hours > 0 ? `${hours}시간${minutes ? ` ${minutes}` : ''}` : minutes;
 }
 
 /** 누를 수 있는 것: 마우스를 올리면 바탕이 바뀌고, 누르면 살짝 작아짐 */
@@ -40,14 +46,14 @@ export const scrollAreaClassName =
 
 /**
  * 맨 아래 "합주 잡기" 줄 (합주 정보: "같은 시간에 다른 팀 합주 잡기", 빈 시간: "이 시간에 합주 잡기").
- * 합주를 잡을 팀을 고르는 화면이 아직 없어 "준비 중" 알림만 띄운다 (ISSUES V11)
+ * 누르면 그 날짜·시간을 채운 합주 잡기 Drawer로 바뀐다 (21차, 이전: "준비 중" 알림. ISSUES V11)
  */
-export const BookFooter = ({ label }: { label: string }) => (
+export const BookFooter = ({ label, onClick }: { label: string; onClick: () => void }) => (
     <div className="border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)]">
         <button
             type="button"
             className="flex w-full items-center justify-center gap-1.5 py-4 text-[15px] font-medium text-[#1d5fb4] transition-colors duration-150 hover:bg-neutral-50 active:bg-neutral-100"
-            onClick={() => toast('준비 중인 기능이에요')}
+            onClick={onClick}
         >
             <CalendarPlus className="size-[18px]" aria-hidden />
             {label}

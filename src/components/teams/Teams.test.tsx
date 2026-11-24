@@ -5,12 +5,14 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { url } from '@/constants';
 import { mockInitialData } from '@/test/fixtures';
-import { findDrawer, findEnabledButton } from '@/test/queries';
+import { useDrawerStore } from '@/stores/drawer';
+import { findDialog, findDrawer, findEnabledButton } from '@/test/queries';
 import { renderApp } from '@/test/render';
 import { countOf, recordRequests } from '@/test/requests';
 import { server } from '@/test/server';
 
-// 팀 기능 흐름 테스트: 팀 추가 6단계, 팀 정보, 팀 수정 5단계, 팀 삭제, 합주 추가 4단계, 소모임 정보.
+// 팀 기능 흐름 테스트: 팀 추가 6단계, 팀 정보, 팀 수정 5단계, 팀 삭제, 팀 정보에서 합주 잡기, 소모임 정보.
+// 합주 잡기 Drawer 자체(합주판에서 열기, 겹침 등)는 schedule/AddEnsembleDrawer.test.tsx
 // Drawer가 스택으로 쌓여 같은 문구의 버튼("확인")이 여러 개 있으므로 Drawer 범위로 찾는다.
 
 /** 팀 추가 흐름을 PIN 확인까지 입력하고 "완료"를 누른다 */
@@ -40,20 +42,36 @@ async function fillAddTeam(user: ReturnType<typeof userEvent.setup>) {
     await user.click(await findEnabledButton('완료'));
 }
 
-/** 팀 정보 Drawer에서 합주 추가 흐름(하루만 · 2026-11-27 · 19:00~21:00)을 입력하고 "이대로 할래요"를 누른다 */
+/**
+ * 팀 정보 Drawer에서 합주 잡기 Drawer를 열어(팀은 골라져 있음) 이번 한 번 · 2026-11-27 · 19:00부터 2시간(기본)을 고르고
+ * "합주 잡기"를 누른다. 저장 버튼은 빠진 것을 알려 준다
+ */
 async function fillAddEnsemble(user: ReturnType<typeof userEvent.setup>) {
     await user.click(screen.getByRole('button', { name: /합주 추가/ }));
-    await user.click(await screen.findByText(/하루만 할래요/));
+    const drawer = within(await findDialog('합주 잡기'));
+    expect(drawer.getByRole('button', { name: /^테스트밴드\s*바꾸기$/ })).toBeInTheDocument();
+    expect(drawer.getByRole('button', { name: '반복 여부를 골라 주세요' })).toBeDisabled();
 
-    await screen.findByText(/언제 할래요/);
-    const cell = document.querySelector<HTMLElement>('td[title="2026-11-27"]');
-    expect(cell).not.toBeNull();
-    await user.click(cell!);
+    await user.click(drawer.getByRole('radio', { name: '이번 한 번' }));
+    expect(drawer.getByRole('button', { name: '날짜를 골라 주세요' })).toBeDisabled();
+    // 팀 정보에서 열면 달력이 펼쳐져 있다
+    await user.click(drawer.getByRole('button', { name: /11월 27일/ }));
+    expect(drawer.getByRole('button', { name: '시작 시간을 골라 주세요' })).toBeDisabled();
 
-    // 시간: 19:00부터 21:00까지 → 시간칸 20 ~ 23
-    await user.click(await screen.findByRole('button', { name: '19:00' }));
-    await user.click(screen.getByRole('button', { name: '21:00' }));
-    await user.click(await findEnabledButton('이대로 할래요'));
+    // 시간: 19:00부터 2시간 → 시간칸 20 ~ 23
+    await user.click(drawer.getByRole('radio', { name: '19:00' }));
+    expect(drawer.getByRole('radio', { name: '2시간' })).toBeChecked();
+    await user.click(drawer.getByRole('button', { name: '합주 잡기' }));
+    return drawer;
+}
+
+/** 이미 열린 합주 잡기 Drawer(팀 정보에서 엶)에서 이번 한 번 · 11/27 · 19:00을 고르고 저장을 누른다 */
+async function fillAddEnsembleAfterOpen(user: ReturnType<typeof userEvent.setup>) {
+    const drawer = within(await findDialog('합주 잡기'));
+    await user.click(drawer.getByRole('radio', { name: '이번 한 번' }));
+    await user.click(drawer.getByRole('button', { name: /11월 27일/ }));
+    await user.click(drawer.getByRole('radio', { name: '19:00' }));
+    await user.click(drawer.getByRole('button', { name: '합주 잡기' }));
 }
 
 /** 팀 버튼('테스트밴드')을 눌러 팀 정보 Drawer를 연다 */
@@ -274,7 +292,7 @@ describe('팀', () => {
         });
     });
 
-    describe('합주 추가', () => {
+    describe('합주 잡기 (팀 정보에서)', () => {
         beforeEach(() => {
             // 달력 날짜 고정: 2026-11-20(금). Date만 가짜로 바꿔 user-event·MSW 타이머에는 영향 없음
             vi.useFakeTimers({ toFake: ['Date'] });
@@ -285,7 +303,7 @@ describe('팀', () => {
             vi.useRealTimers();
         });
 
-        it('반복 여부 → 날짜 → 시간을 고르면 서버에 보내고 완료 화면을 띄운다', async () => {
+        it('팀이 골라져 있고, 반복 여부 → 날짜 → 시간을 고르면 서버에 보내고 닫으며 알린다', async () => {
             let posted: Record<string, unknown> | undefined;
             server.use(
                 http.post(`${url}/ensemble`, async ({ request }) => {
@@ -297,7 +315,10 @@ describe('팀', () => {
 
             await fillAddEnsemble(user);
 
-            expect(await screen.findByText(/등록했어요/)).toBeInTheDocument();
+            // 완료 화면 Drawer 대신 알림 (이전: "락앤롤!")
+            expect(await screen.findByText('합주를 잡았어요.')).toBeInTheDocument();
+            expect(screen.getByText('테스트밴드 · 11/27(금) 19:00 – 21:00')).toBeInTheDocument();
+            expect(useDrawerStore.getState().openedDrawers).toEqual([]);
             expect(posted).toMatchObject({
                 teamId: 'team-1',
                 teamName: '테스트밴드',
@@ -308,13 +329,47 @@ describe('팀', () => {
                 type: '일회성',
                 due: '2026-11-27',
             });
-            expect(dayjs(posted!.nextDate as string).format('YYYY-MM-DD')).toBe('2026-11-27');
+            // 날짜에 시작 시각을 붙여 보낸다 (서버가 지난 일회성 합주를 날짜로 걸러 냄)
+            expect(dayjs(posted!.nextDate as string).format('YYYY-MM-DD HH:mm')).toBe(
+                '2026-11-27 19:00',
+            );
             // 서버가 팀 존재를 검사하지 않아(ISSUES B4) 저장 직전 확인은 유지: 팀 정보 Drawer의 합주 추가 버튼 + 저장 직전 = 2회
             expect(countOf(requests, 'GET /team/team-1')).toBe(2);
         });
 
+        it('저장하지 않고 닫으면 팀 정보로 돌아간다', async () => {
+            const user = await openTeamInfo();
+            await user.click(screen.getByRole('button', { name: /합주 추가/ }));
+            const drawer = within(await findDialog('합주 잡기'));
+
+            await user.click(drawer.getByRole('button', { name: '닫기' }));
+
+            await waitFor(() =>
+                expect(useDrawerStore.getState().openedDrawers).toEqual(['teamInfo']),
+            );
+        });
+
+        it('팀이 그새 삭제됐으면 저장하지 않고 모두 닫으며 알린다', async () => {
+            let attempted = false;
+            server.use(
+                http.post(`${url}/ensemble`, () => {
+                    attempted = true;
+                    return HttpResponse.json({ id: 'x' });
+                }),
+            );
+            const user = await openTeamInfo();
+            await user.click(screen.getByRole('button', { name: /합주 추가/ }));
+            await findDialog('합주 잡기');
+            server.use(http.get(`${url}/team/:id`, () => new HttpResponse(null, { status: 404 })));
+            await fillAddEnsembleAfterOpen(user);
+
+            expect(await screen.findByText('이미 삭제된 팀이에요.')).toBeInTheDocument();
+            expect(useDrawerStore.getState().openedDrawers).toEqual([]);
+            expect(attempted).toBe(false);
+        });
+
         // F3: 이전에는 저장 결과와 관계없이 완료 화면을 열었다
-        it('저장에 실패하면 완료 화면을 열지 않고 시간 선택 단계에 머문다', async () => {
+        it('저장에 실패하면 알리고 Drawer에 머물러 다시 누를 수 있다', async () => {
             vi.spyOn(console, 'error').mockImplementation(() => {});
             let attempted = false;
             server.use(
@@ -325,12 +380,14 @@ describe('팀', () => {
             );
             const user = await openTeamInfo();
 
-            await fillAddEnsemble(user);
+            const drawer = await fillAddEnsemble(user);
 
             await waitFor(() => expect(attempted).toBe(true));
-            await new Promise((resolve) => setTimeout(resolve, 100));
-            expect(screen.queryByText(/등록했어요/)).not.toBeInTheDocument();
-            expect(screen.getByText('이대로 할래요')).toBeInTheDocument();
+            expect(
+                await screen.findByText('저장하지 못했어요. 잠시 후 다시 시도해 주세요.'),
+            ).toBeInTheDocument();
+            expect(useDrawerStore.getState().openedDrawers).toEqual(['addEnsemble']);
+            expect(drawer.getByRole('button', { name: '합주 잡기' })).toBeEnabled();
         });
     });
 

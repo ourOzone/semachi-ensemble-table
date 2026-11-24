@@ -41,6 +41,7 @@ import {
     BookFooter,
     boxShape,
     formatDate,
+    formatSlots,
     formatTimeRange,
     overlayClassName,
     pressable,
@@ -48,6 +49,7 @@ import {
     sheetClassName,
 } from './drawerParts';
 import PinStep from './PinStep';
+import { openAddEnsemble } from './addEnsembleStore';
 
 // 합주 정보 Drawer (View 개편 V-2). 아래에서 올라오고, 아래로 끌어내리면 닫힌다 (vaul).
 // 위쪽은 팀 색 머리(팀 이름·요일·시간·반복 여부), 아래는 다음 합주와 미루기·바로 하기(미루기 취소)·수정·삭제.
@@ -77,14 +79,6 @@ interface ShownEnsemble {
     nextDate: Dayjs;
     startTime: TimeSlot;
     endTime: TimeSlot;
-}
-
-/** "2시간", "1시간 30분", "30분" (시간칸 하나 = 30분) */
-function formatDuration(startTime: TimeSlot, endTime: TimeSlot): string {
-    const slots = endTime + 1 - startTime;
-    const hours = Math.floor(slots / 2);
-    const minutes = slots % 2 === 1 ? '30분' : '';
-    return hours > 0 ? `${hours}시간${minutes ? ` ${minutes}` : ''}` : minutes;
 }
 
 /** 오늘부터 며칠 뒤인지: "오늘", "내일", "이틀 뒤", "9일 뒤" */
@@ -390,7 +384,8 @@ const EnsembleInfoDrawer = ({
                         <div className="min-w-0">
                             <p className="text-[18px] font-bold text-ink">{formatDate(next)}</p>
                             <p className="mt-0.5 text-[14px] text-neutral-600">
-                                {timeRange} · {formatDuration(ensemble.startTime, ensemble.endTime)}
+                                {timeRange} ·{' '}
+                                {formatSlots(ensemble.endTime + 1 - ensemble.startTime)}
                             </p>
                         </div>
                         <span className="shrink-0 rounded-full bg-neutral-200/70 px-2.5 py-1 text-[13px] text-neutral-600">
@@ -429,7 +424,17 @@ const EnsembleInfoDrawer = ({
                     </div>
                 </div>
 
-                {!isEvent && <BookFooter label="같은 시간에 다른 팀 합주 잡기" />}
+                {!isEvent && (
+                    <BookFooter
+                        label="같은 시간에 다른 팀 합주 잡기"
+                        // 다음 합주 날짜·시작 시간을 채운 합주 잡기 Drawer로 바뀐다 (보던 합주의 상태는 비운다)
+                        onClick={() => {
+                            setTeamStates();
+                            setEnsembleStates();
+                            openAddEnsemble({ date: next, startTime: ensemble.startTime });
+                        }}
+                    />
+                )}
             </div>
         );
     })();

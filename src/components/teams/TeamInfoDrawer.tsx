@@ -3,7 +3,8 @@ import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { Button, Divider, Segmented } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
+import { useTeamContext, useDrawerContext } from '@/context';
+import { openAddEnsemble } from '@/components/schedule/addEnsembleStore';
 import type { DrawerId } from '@/types';
 import type { CheckTeamExists } from './types';
 
@@ -16,19 +17,15 @@ interface TeamInfoDrawerProps {
 
 const TeamInfoDrawer = ({ drawerId, checkTeamExists }: TeamInfoDrawerProps) => {
     const { id, type, name, desc, setTeamOrgStates } = useTeamContext();
-    const { setStartTime, setEndTime } = useEnsembleContext();
     const { openDrawer, closeAllDrawers } = useDrawerContext();
     const [option, setOption] = useState('팀원');
 
     const handleClickAddEnsemble = useCallback(
         async (id: string) => {
-            if (await checkTeamExists(id)) {
-                setStartTime(null);
-                setEndTime(null);
-                openDrawer('addEnsemble1');
-            }
+            // 팀을 골라 둔 합주 잡기 Drawer로 바뀐다 (닫으면 팀 정보로 돌아온다, View 개편 V-2 21차)
+            if (await checkTeamExists(id)) openAddEnsemble({ teamId: id, returnTo: 'teamInfo' });
         },
-        [checkTeamExists, openDrawer],
+        [checkTeamExists],
     );
 
     const handleClickUpdateTeam = useCallback(

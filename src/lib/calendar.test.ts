@@ -6,6 +6,8 @@ import type { EnsembleResponse } from '@/types';
 import {
     assignLanes,
     eventsAtSlot,
+    eventsOnDate,
+    findOverlapLimit,
     freeRangeAt,
     formatSlotRange,
     formatWeekRange,
@@ -13,6 +15,7 @@ import {
     getOccurrence,
     getRegularNextDate,
     getWeekStart,
+    overlapping,
     resolveSlotTap,
     toWeekSchedule,
 } from './calendar';
@@ -320,5 +323,107 @@ describe('합주 잡기 Drawer: 시간칸 누르기', () => {
         expect(freeRangeAt(day, 5)).toEqual({ startTime: 0, endTime: 5 });
         expect(freeRangeAt(day, 6)).toBeNull();
         expect(freeRangeAt([], 10)).toEqual({ startTime: 0, endTime: 29 });
+    });
+});
+
+describe('합주 잡기: 그날 합주와 겹침', () => {
+    const base: EnsembleResponse = {
+        _id: 'e1',
+        teamId: 'team-1',
+        teamName: 'A',
+        day: 3, // 목요일
+        startTime: 20,
+        endTime: 23,
+        repeat: true,
+        nextDate: '2026-11-26T00:00:00',
+        due: '2099-12-31T00:00:00.000Z',
+    };
+    const now = dayjs('2026-11-24T10:00'); // 화요일
+    const thu = dayjs('2026-11-26');
+    const at = (id: string, patch: Partial<EnsembleResponse>): EnsembleResponse => ({
+        ...base,
+        _id: id,
+        teamName: id,
+        ...patch,
+    });
+
+    it('eventsOnDate: 그날 보이는 합주 (다른 요일·다른 주의 일회성은 빠짐)', () => {
+        const ensembles = [
+            base,
+            at('B', { day: 4 }),
+            at('C', { repeat: false, nextDate: '2026-12-03T00:00:00' }),
+        ];
+        const events = eventsOnDate(ensembles, {}, thu, now);
+        expect(events.map((e) => [e.name, e.status])).toEqual([
+            ['A', 'normal'],
+            ['C', 'skipped'], // 미래 일회성은 그 전 주들에 점선
+        ]);
+        expect(eventsOnDate(ensembles, {}, dayjs('2026-12-03'), now).map((e) => e.name)).toEqual([
+            'A',
+            'C',
+        ]);
+    });
+
+    it('overlapping: 시간이 겹치는 것만, 시작이 빠른 순', () => {
+        const events = [
+            { name: 'late', startTime: 24, endTime: 25 },
+            { name: 'before', startTime: 10, endTime: 19 },
+            { name: 'early', startTime: 18, endTime: 20 },
+            { name: 'touch', startTime: 23, endTime: 23 },
+        ];
+        expect(overlapping(events, { startTime: 20, endTime: 23 }).map((e) => e.name)).toEqual([
+            'early',
+            'touch',
+        ]);
+    });
+
+    describe('findOverlapLimit: 최대 4개', () => {
+        const three = [base, at('B', {}), at('C', { startTime: 22, endTime: 25 })];
+        const new1 = { date: thu, repeat: false, startTime: 22, endTime: 23 };
+
+        it('이미 4개가 겹친 시간이면 그 날짜, 3개까지는 null', () => {
+            expect(findOverlapLimit(three, new1)).toBeNull();
+            const four = [...three, at('D', { startTime: 23, endTime: 23 })];
+            expect(findOverlapLimit(four, new1)?.format('YYYY-MM-DD')).toBe('2026-11-26');
+            // 4개가 겹친 23시 칸을 빼면 괜찮다
+            expect(findOverlapLimit(four, { ...new1, endTime: 22 })).toBeNull();
+            // 다른 요일은 세지 않는다
+            expect(findOverlapLimit(four, { ...new1, date: dayjs('2026-11-27') })).toBeNull();
+        });
+
+        it('그날 쉬는(미룬) 합주는 세지 않는다', () => {
+            const four = [...three, at('D', { nextDate: '2026-12-03T00:00:00' })];
+            expect(findOverlapLimit(four, new1)).toBeNull();
+            // 다음 주부터는 4개
+            expect(
+                findOverlapLimit(four, { ...new1, date: dayjs('2026-12-03') })?.format(
+                    'YYYY-MM-DD',
+                ),
+            ).toBe('2026-12-03');
+        });
+
+        it('반복이면 이후 주에 4개가 되는 날짜도 막는다', () => {
+            const later = [
+                ...three,
+                at('D', { repeat: false, nextDate: '2026-12-10T00:00:00' }),
+                at('E', { nextDate: '2026-12-17T00:00:00', startTime: 0, endTime: 1 }),
+            ];
+            expect(findOverlapLimit(later, new1)).toBeNull();
+            expect(findOverlapLimit(later, { ...new1, repeat: true })?.format('YYYY-MM-DD')).toBe(
+                '2026-12-10',
+            );
+            // 일회성 D의 날짜가 반복 시작 전이면 세지 않는다
+            expect(
+                findOverlapLimit(later, { ...new1, repeat: true, date: dayjs('2026-12-17') }),
+            ).toBeNull();
+        });
+
+        it('반복 합주의 nextDate가 요일과 어긋나도 그 뒤 처음 오는 그 요일부터 센다', () => {
+            // D는 12/5(토)부터 매주 목요일 (요일 3)
+            const later = [...three, at('D', { nextDate: '2026-12-05T00:00:00' })];
+            expect(findOverlapLimit(later, { ...new1, repeat: true })?.format('YYYY-MM-DD')).toBe(
+                '2026-12-10',
+            );
+        });
     });
 });

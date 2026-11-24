@@ -1,9 +1,10 @@
 import { useCallback } from 'react';
-import dayjs, { type Dayjs } from 'dayjs';
-import type { Team, TimeSlot } from '@/types';
+import dayjs from 'dayjs';
+import { toast } from 'sonner';
+import type { Team } from '@/types';
 import { isNotFound } from '@/api';
 import { teamExists } from '@/api/team';
-import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
+import { useTeamContext, useDrawerContext } from '@/context';
 import { useAddEnsemble } from '@/queries/ensembles';
 import {
     useAddTeam,
@@ -12,10 +13,15 @@ import {
     useTeams,
     useUpdateTeam,
 } from '@/queries/teams';
-import { eventIds } from '@/constants';
+import { eventIds, idx2hour } from '@/constants';
 import { buildColorMap } from '@/lib/board';
 import { toEnsembleRequest } from '@/lib/ensemble';
 import TeamChips, { type Chip } from '@/components/schedule/TeamChips';
+import AddEnsembleDrawer, {
+    type AddEnsembleInput,
+    type TeamOption,
+} from '@/components/schedule/AddEnsembleDrawer';
+import { formatDate, formatTimeRange } from '@/components/schedule/drawerParts';
 import theme from '@/styles/theme';
 import TeamInfoDrawer from './TeamInfoDrawer';
 import EventInfoDrawer from './EventInfoDrawer';
@@ -31,10 +37,6 @@ import UpdateTeamDrawer3 from './updateTeamDrawers/UpdateTeamDrawer3';
 import UpdateTeamDrawer4 from './updateTeamDrawers/UpdateTeamDrawer4';
 import UpdateTeamDrawer5 from './updateTeamDrawers/UpdateTeamDrawer5';
 import DeleteTeamDrawer from './DeleteTeamDrawer';
-import AddEnsembleDrawer1 from './addEnsembleDrawers/AddEnsembleDrawer1';
-import AddEnsembleDrawer2 from './addEnsembleDrawers/AddEnsembleDrawer2';
-import AddEnsembleDrawer3 from './addEnsembleDrawers/AddEnsembleDrawer3';
-import AddEnsembleDrawer4 from './addEnsembleDrawers/AddEnsembleDrawer4';
 
 const eventNames1 = ['보소', '기소', '베소', '드소', '키소'];
 const eventNames2 = ['메인 회의', '재학생 회의', '회의', '오디션', '합주 불가', '동방 사용 불가'];
@@ -47,7 +49,6 @@ const Teams = () => {
     const { mutateAsync: deleteTeamAsync } = useDeleteTeam();
     const { mutateAsync: addEnsembleAsync } = useAddEnsemble();
     const { setTeamStates } = useTeamContext();
-    const { setEnsembleStates } = useEnsembleContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
 
     // 이미 삭제된 팀을 만났을 때: 상태·Drawer 초기화 후 팀·합주 목록을 다시 불러온다
@@ -138,34 +139,36 @@ const Teams = () => {
         [closeAllDrawers, deleteTeamAsync, setTeamStates],
     );
 
+    // 합주 잡기 Drawer의 저장 (View 개편 V-2 21차). 성공하면 Drawer를 모두 닫고 알림 (이전: 완료 화면 Drawer "락앤롤!")
     const handleAddEnsemble = useCallback(
-        async (
-            id: string,
-            name: string,
-            repeat: boolean,
-            nextDate: Dayjs | null,
-            startTime: TimeSlot | null,
-            endTime: TimeSlot | null,
-        ) => {
+        async ({ team, repeat, date, startTime, endTime }: AddEnsembleInput) => {
             try {
-                // 서버가 팀 존재를 검사하지 않으므로(ISSUES B4) 사전 확인을 유지한다
-                if (await checkTeamExists(id)) {
-                    // 선택을 마친 뒤에만 호출되어 null이 아님 (null이면 nextDate.day()에서 TypeError → catch, 기존 동작)
-                    await addEnsembleAsync({
-                        teamName: name,
-                        ...toEnsembleRequest(id, repeat, nextDate!, startTime!, endTime!),
-                    });
-                    setTeamStates(); // 초기화
-                    setEnsembleStates();
-                    return true;
+                // 서버가 팀 존재를 검사하지 않으므로(ISSUES B4) 사전 확인을 유지한다.
+                // 소모임·일정은 팀 목록에 없는 고정 id라 확인하지 않는다 (옛 흐름은 확인 요청을 보냈다)
+                if (!team.isEvent && !(await checkTeamExists(team.id))) {
+                    toast.error('이미 삭제된 팀이에요.'); // checkTeamExists가 Drawer를 모두 닫았다
+                    return false;
                 }
-                return false; // 팀이 이미 삭제됨 (checkTeamExists가 Drawer를 닫음)
+                // 날짜에 시작 시각을 붙여 보낸다: 서버는 지난 일회성 합주를 날짜로 걸러 내는데(오늘 0시 기준),
+                // 0시로 보내면 서버 시간대에 따라 그날이 되기 전에 지난 것으로 걸러질 수 있다 (옛 달력은 고른 때의 시각이 붙었다)
+                const [hour = 0, minute = 0] = (idx2hour[startTime] ?? '').split(':').map(Number);
+                const nextDate = date.hour(hour).minute(minute);
+                await addEnsembleAsync({
+                    teamName: team.name,
+                    ...toEnsembleRequest(team.id, repeat, nextDate, startTime, endTime),
+                });
+                setTeamStates(); // 초기화
+                closeAllDrawers();
+                toast.success(team.isEvent ? '일정을 잡았어요.' : '합주를 잡았어요.', {
+                    description: `${team.name} · ${formatDate(date)}${repeat ? '부터 매주' : ''} ${formatTimeRange(startTime, endTime)}`,
+                });
+                return true;
             } catch {
-                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
+                toast.error('저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
                 return false;
             }
         },
-        [addEnsembleAsync, checkTeamExists, setEnsembleStates, setTeamStates],
+        [addEnsembleAsync, checkTeamExists, closeAllDrawers, setTeamStates],
     );
 
     // 팀 목록 (View 개편 V-2: 한 줄로 줄이고 "전체"로 펼침). 색은 합주표와 같은 매핑(buildColorMap)
@@ -181,6 +184,20 @@ const Teams = () => {
         name,
         color: theme.eventColors[idx] ?? theme.blueGray,
         onClick: () => handleClickEvent(eventIds[idx]!, name), // eventIds와 같은 순서
+    }));
+
+    // 합주 잡기 Drawer의 팀 고르기 (팀 목록과 같은 색)
+    const teamOptions: TeamOption[] = teams.map((team, idx) => ({
+        id: team.id,
+        name: team.name,
+        color: teamChips[idx]!.color,
+        isEvent: false,
+    }));
+    const eventOptions: TeamOption[] = eventChips.map((chip, idx) => ({
+        id: eventIds[idx]!, // eventIds와 같은 순서
+        name: chip.name,
+        color: chip.color,
+        isEvent: true,
     }));
 
     return (
@@ -206,10 +223,11 @@ const Teams = () => {
                 checkTeamExists={checkTeamExists}
                 handleDeleteTeam={handleDeleteTeam}
             />
-            <AddEnsembleDrawer1 drawerId="addEnsemble1" />
-            <AddEnsembleDrawer2 drawerId="addEnsemble2" />
-            <AddEnsembleDrawer3 drawerId="addEnsemble3" handleAddEnsemble={handleAddEnsemble} />
-            <AddEnsembleDrawer4 drawerId="addEnsemble4" />
+            <AddEnsembleDrawer
+                teams={teamOptions}
+                events={eventOptions}
+                onSubmit={handleAddEnsemble}
+            />
         </>
     );
 };

@@ -43,7 +43,7 @@ async function fillAddTeam(user: ReturnType<typeof userEvent.setup>) {
 }
 
 /**
- * 팀 정보 Drawer에서 합주 잡기 Drawer를 열어(팀은 골라져 있음) 이번 한 번 · 2026-11-27 · 19:00부터 2시간(기본)을 고르고
+ * 팀 정보 Drawer에서 합주 잡기 Drawer를 열어(팀은 골라져 있음) 한 번만 · 2026-11-27 · 19:00부터 2시간(기본)을 고르고
  * "합주 잡기"를 누른다. 저장 버튼은 빠진 것을 알려 준다
  */
 async function fillAddEnsemble(user: ReturnType<typeof userEvent.setup>) {
@@ -52,8 +52,12 @@ async function fillAddEnsemble(user: ReturnType<typeof userEvent.setup>) {
     expect(drawer.getByRole('button', { name: /^테스트밴드\s*바꾸기$/ })).toBeInTheDocument();
     expect(drawer.getByRole('button', { name: '반복 여부를 골라 주세요' })).toBeDisabled();
 
-    await user.click(drawer.getByRole('radio', { name: '이번 한 번' }));
+    await user.click(drawer.getByRole('radio', { name: '한 번만' }));
     expect(drawer.getByRole('button', { name: '날짜를 골라 주세요' })).toBeDisabled();
+    expect(drawer.getByRole('button', { name: '날짜 선택' })).toHaveAttribute(
+        'aria-expanded',
+        'true',
+    );
     // 팀 정보에서 열면 달력이 펼쳐져 있다
     await user.click(drawer.getByRole('button', { name: /11월 27일/ }));
     expect(drawer.getByRole('button', { name: '시작 시간을 골라 주세요' })).toBeDisabled();
@@ -61,14 +65,15 @@ async function fillAddEnsemble(user: ReturnType<typeof userEvent.setup>) {
     // 시간: 19:00부터 2시간 → 시간칸 20 ~ 23
     await user.click(drawer.getByRole('radio', { name: '19:00' }));
     expect(drawer.getByRole('radio', { name: '2시간' })).toBeChecked();
+    expect(drawer.getByText('11월 27일 금요일 한 번만 · 19:00 – 21:00')).toBeInTheDocument();
     await user.click(drawer.getByRole('button', { name: '합주 잡기' }));
     return drawer;
 }
 
-/** 이미 열린 합주 잡기 Drawer(팀 정보에서 엶)에서 이번 한 번 · 11/27 · 19:00을 고르고 저장을 누른다 */
+/** 이미 열린 합주 잡기 Drawer(팀 정보에서 엶)에서 한 번만 · 11/27 · 19:00을 고르고 저장을 누른다 */
 async function fillAddEnsembleAfterOpen(user: ReturnType<typeof userEvent.setup>) {
     const drawer = within(await findDialog('합주 잡기'));
-    await user.click(drawer.getByRole('radio', { name: '이번 한 번' }));
+    await user.click(drawer.getByRole('radio', { name: '한 번만' }));
     await user.click(drawer.getByRole('button', { name: /11월 27일/ }));
     await user.click(drawer.getByRole('radio', { name: '19:00' }));
     await user.click(drawer.getByRole('button', { name: '합주 잡기' }));

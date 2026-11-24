@@ -430,4 +430,31 @@ describe('합주표', () => {
             });
         }
     });
+
+    it('PIN 단계 동안 뒤 페이지 스크롤을 고정한다 (사파리가 입력칸을 보이려고 스크롤해도 되돌림)', async () => {
+        const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+        const setScrollY = (y: number) =>
+            Object.defineProperty(window, 'scrollY', { configurable: true, value: y });
+        setScrollY(200);
+        try {
+            const { user, dialog } = await openEnsembleInfo();
+            await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+            await findDialog('합주를 삭제할까요?');
+
+            // 틀린 PIN을 비울 때 등 사파리가 페이지를 내림 → 원래 위치로
+            setScrollY(260);
+            window.dispatchEvent(new Event('scroll'));
+            expect(scrollTo).toHaveBeenLastCalledWith(window.scrollX, 200);
+
+            // 정보 단계로 돌아가면 고정하지 않는다
+            await user.click(screen.getByRole('button', { name: '뒤로' }));
+            await findDialog('월 10:00 – 11:00');
+            scrollTo.mockClear();
+            setScrollY(300);
+            window.dispatchEvent(new Event('scroll'));
+            expect(scrollTo).not.toHaveBeenCalled();
+        } finally {
+            setScrollY(0);
+        }
+    });
 });

@@ -1,4 +1,4 @@
-import { useState, type ComponentType, type ReactNode } from 'react';
+import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
@@ -215,6 +215,20 @@ const EnsembleInfoDrawer = ({
     // 키보드 위 막대(완료 버튼)와 반투명 키보드 사이로 뒤 화면이 비치지 않는다
     // (17차, 이전: Drawer를 키보드 높이만큼 올렸더니 아이폰에서 그 아래가 비었다)
     const { inset, viewportHeight, visibleBottom } = useKeyboardInset();
+
+    // PIN 단계 동안 뒤 페이지의 스크롤 위치를 고정한다 (19차).
+    // 아이폰 사파리는 입력칸에 포커스가 가거나 커서가 움직일 때마다(틀린 PIN을 비울 때 등) 입력칸을 보이려고 페이지를 스크롤한다.
+    // Drawer 위치는 보이는 영역 기준으로 직접 맞추므로 이 스크롤은 필요 없고, 뒤 합주판만 계속 내려갔다
+    const pinStepOpen = open && step !== 'info';
+    useEffect(() => {
+        if (!pinStepOpen) return;
+        const lockedY = window.scrollY;
+        const keep = () => {
+            if (window.scrollY !== lockedY) window.scrollTo(window.scrollX, lockedY);
+        };
+        window.addEventListener('scroll', keep);
+        return () => window.removeEventListener('scroll', keep);
+    }, [pinStepOpen]);
 
     // 머리 색: 팀의 지금 색 (캘린더 블록과 같음)
     const color = shown
@@ -455,7 +469,7 @@ const EnsembleInfoDrawer = ({
             >
                 {content}
             </DrawerContent>
-            {open && step !== 'info' && visibleBottom !== null && (
+            {pinStepOpen && visibleBottom !== null && (
                 <KeyboardCover visibleBottom={visibleBottom} />
             )}
         </Drawer>
@@ -464,6 +478,11 @@ const EnsembleInfoDrawer = ({
 
 /** KeyboardCover가 보이는 영역 아래 끝보다 얼마나 위에서 시작하는지 (Drawer 아래에 숨는 부분, 줄바꿈 오차 여유) */
 const KEYBOARD_COVER_OVERLAP = 240;
+/**
+ * 흰 판의 높이: 키보드(약 300~400px)와 그 위 막대를 덮고도 남게. 너무 길면 문서가 그만큼 길어져
+ * 사파리가 입력칸을 보이려고 스크롤할 공간이 생긴다 (19차 이전 3000px: 틀릴 때마다 뒤 페이지가 계속 내려갔다)
+ */
+const KEYBOARD_COVER_HEIGHT = 1000;
 
 /**
  * 아이폰 사파리 26: 키보드 위 막대(^ v 완료)와 반투명 키보드 쪽에는 고정(position: fixed) 요소가 아니라
@@ -476,8 +495,11 @@ const KeyboardCover = ({ visibleBottom }: { visibleBottom: number }) =>
         <div
             aria-hidden
             data-keyboard-cover
-            className="pointer-events-none absolute inset-x-0 z-40 h-[3000px] bg-white"
-            style={{ top: `${visibleBottom - KEYBOARD_COVER_OVERLAP}px` }}
+            className="pointer-events-none absolute inset-x-0 z-40 bg-white"
+            style={{
+                top: `${visibleBottom - KEYBOARD_COVER_OVERLAP}px`,
+                height: `${KEYBOARD_COVER_HEIGHT}px`,
+            }}
         />,
         document.body,
     );

@@ -9,7 +9,7 @@ import type { DrawerId } from '@/types';
  * 아래에서 올라오는 새 Drawer(View 개편, vaul). 옛 Drawer(antd, 오른쪽에서 열림)와 달리 본문을 밀지 않고,
  * 스택의 맨 위일 때만 열린다 (위에 옛 Drawer가 쌓이면 잠시 내려갔다가, 그 Drawer가 닫히면 다시 올라온다)
  */
-export const BOTTOM_DRAWERS: readonly DrawerId[] = ['ensembleInfo'];
+export const BOTTOM_DRAWERS: readonly DrawerId[] = ['ensembleInfo', 'slotInfo'];
 
 /** 스택에서 옛 Drawer(오른쪽에서 열림)만 */
 export function sideDrawers(openedDrawers: readonly DrawerId[]): DrawerId[] {

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { isNotFound } from '@/api';
 import { ensembleExists } from '@/api/ensemble';
 import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
@@ -10,6 +10,7 @@ import {
 } from '@/queries/ensembles';
 import { useRefreshTeamsAndEnsembles, useTeams } from '@/queries/teams';
 import WeekCalendar from '@/components/schedule/WeekCalendar';
+import SlotDrawer, { type SlotView } from '@/components/schedule/SlotDrawer';
 import EnsembleInfoDrawer from '@/components/schedule/EnsembleInfoDrawer';
 import UpdateEnsembleDrawer1 from './updateEnsembleDrawers/UpdateEnsembleDrawer1';
 import UpdateEnsembleDrawer2 from './updateEnsembleDrawers/UpdateEnsembleDrawer2';
@@ -19,8 +20,8 @@ import DeleteEnsembleDrawer from './DeleteEnsembleDrawer';
 import SkipEnsembleDrawer from './SkipEnsembleDrawer';
 import dayjs, { type Dayjs } from 'dayjs';
 import { toEnsembleRequest } from '@/lib/ensemble';
-import { getRegularNextDate, type CalendarEvent } from '@/lib/calendar';
-import type { TimeSlot } from '@/types';
+import { getRegularNextDate, resolveSlotTap, type CalendarEvent } from '@/lib/calendar';
+import type { DayIndex, TimeSlot } from '@/types';
 import 'dayjs/locale/ko';
 
 dayjs.locale('ko');
@@ -34,7 +35,7 @@ interface BoardProps {
     direction: 'prev' | 'next' | null;
 }
 
-// 합주표 (View 개편 V-2: 주 단위 캘린더 + 아래에서 올라오는 합주 정보 Drawer).
+// 합주표 (View 개편 V-2: 주 단위 캘린더 + 아래에서 올라오는 합주 정보·합주 잡기 Drawer).
 // 수정·미루기·삭제의 PIN·입력 단계는 아직 옛 Drawer다
 const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
     const teams = useTeams();
@@ -69,15 +70,33 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
         [handleEnsembleGone],
     );
 
-    // 합주 블록 클릭: 바로 정보 Drawer를 연다 (이전에는 여기서 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
+    // 합주 블록 클릭: 바로 정보 Drawer를 연다 (이전에는 여기서 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5).
+    // 합주 잡기 Drawer의 목록에서 고른 경우에도 쓰므로, 열린 Drawer를 정보 Drawer로 바꾼다
     const handleEnsembleClick = useCallback(
         ({ id, teamId, name, repeat, nextDate, startTime, endTime }: CalendarEvent) => {
             setTeamStates(teamId, '', name);
             setEnsembleStates(id, repeat, nextDate, startTime, endTime);
-            openDrawer('ensembleInfo');
+            setOpenedDrawers(['ensembleInfo']);
         },
-        [openDrawer, setTeamStates, setEnsembleStates],
+        [setOpenedDrawers, setTeamStates, setEnsembleStates],
     );
+
+    // 시간칸 클릭 (빈 칸, 또는 이름이 안 보이는 겹친 곳): 그 시간에 합주가 하나면 그 합주의 정보,
+    // 없으면 빈 시간, 둘 이상이면 겹친 합주 목록을 합주 잡기 Drawer로 보여준다
+    const [slotView, setSlotView] = useState<SlotView | null>(null);
+    const handleSlotClick = (day: DayIndex, slot: TimeSlot) => {
+        const tap = resolveSlotTap(week[day] ?? [], slot);
+        if (tap.kind === 'single') {
+            handleEnsembleClick(tap.event);
+            return;
+        }
+        setSlotView({
+            date: weekStart.add(day, 'day'),
+            day,
+            tap: tap.kind === 'empty' ? { kind: 'empty', slot, range: tap.range } : tap,
+        });
+        openDrawer('slotInfo');
+    };
 
     // 합주 정보 Drawer에서 팀 이름 클릭 (id는 team id). 합주 정보 Drawer를 팀 정보 Drawer로 바꾼다
     // (이전: 합주 정보 위에 쌓여, 뒤로 가면 합주 정보로 돌아왔다).
@@ -233,9 +252,11 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
                 todayIdx={todayIdx}
                 direction={direction}
                 onClickEvent={handleEnsembleClick}
+                onClickSlot={handleSlotClick}
             />
 
             {/* DRAWERS */}
+            <SlotDrawer view={slotView} onSelect={handleEnsembleClick} />
             <EnsembleInfoDrawer
                 checkEnsembleExists={checkEnsembleExists}
                 handleClickTeamInfo={handleClickTeamInfo}

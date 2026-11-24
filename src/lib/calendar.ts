@@ -117,10 +117,55 @@ export function getEnsembleSchedule(
     return { nextDate, skippedDates };
 }
 
-interface SlotRange {
+export interface SlotRange {
     startTime: TimeSlot;
     /** 마지막 시간칸 (포함) */
     endTime: TimeSlot;
+}
+
+/** 하루의 합주 중 시간칸 slot에 걸친 것들 (시작이 빠른 순, 같으면 긴 것 먼저) */
+export function eventsAtSlot<T extends SlotRange>(events: readonly T[], slot: TimeSlot): T[] {
+    return events
+        .filter((event) => event.startTime <= slot && slot <= event.endTime)
+        .sort((a, b) => a.startTime - b.startTime || b.endTime - a.endTime);
+}
+
+/** slot을 포함하고 합주가 하나도 없는 연속 구간. slot에 합주가 있으면 null */
+export function freeRangeAt(events: readonly SlotRange[], slot: TimeSlot): SlotRange | null {
+    const busy = (s: TimeSlot) => events.some((e) => e.startTime <= s && s <= e.endTime);
+    if (busy(slot)) return null;
+    let startTime = slot;
+    let endTime = slot;
+    while (startTime > 0 && !busy(startTime - 1)) startTime--;
+    while (endTime < 29 && !busy(endTime + 1)) endTime++;
+    return { startTime, endTime };
+}
+
+/**
+ * 하루 칸의 시간칸 slot을 눌렀을 때 무엇을 보여줄지.
+ * - empty: 그 시간에 합주가 없음 (비어 있는 구간 range)
+ * - single: 그 시간에 합주가 하나뿐 → 그 합주의 정보
+ * - list: 둘 이상 겹침 → 겹친 합주 목록 (누른 게 어느 합주인지 알 수 없으므로)
+ * 예: A 12~14시, B·C 13~15시 → 12~13시는 A, 13~14시는 A·B·C, 14~15시는 B·C
+ */
+export type SlotTap<T> =
+    | { kind: 'empty'; range: SlotRange }
+    | { kind: 'single'; event: T }
+    | { kind: 'list'; events: T[] };
+
+export function resolveSlotTap<T extends SlotRange>(
+    events: readonly T[],
+    slot: TimeSlot,
+): SlotTap<T> {
+    const hits = eventsAtSlot(events, slot);
+    if (hits.length === 0) {
+        return {
+            kind: 'empty',
+            range: freeRangeAt(events, slot) ?? { startTime: slot, endTime: slot },
+        };
+    }
+    if (hits.length === 1) return { kind: 'single', event: hits[0]! };
+    return { kind: 'list', events: hits };
 }
 
 export type WithLane<T> = T & {

@@ -25,6 +25,7 @@ export type DrawerId =
     | 'updateTeam5'
     // 합주
     | 'ensembleInfo'
+    | 'slotInfo'
     | 'deleteEnsemble'
     | 'skipEnsemble'
     | 'unskipEnsemble'

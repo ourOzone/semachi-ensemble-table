@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -717,6 +717,22 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 테스트: 흐름 테스트 문구 갱신, `Schedule.test.tsx`에 점선 블록 날짜 확인 추가
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 132/132 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 32 (새 코드 0건) / `pnpm format:check` ✅
+
+### 2026-11-24 — View 개편 V-2 (11차): 합주 잡기 Drawer
+
+- 지금 → 바꾼 후
+  - 합주판의 빈 시간: 눌러도 아무 일 없음 → 30분 칸마다 마우스를 올리면 옅은 회색·손가락 커서, 누르면 합주 잡기 Drawer (요일·시간, 날짜, "비어 있는 시간이에요" + 그날 앞뒤 합주 사이의 빈 구간, "이 시간에 합주 잡기"). 지난 요일은 누를 수 없음
+  - 이름이 안 보이는 폭(1024px 미만)에서 3개 이상 겹친 블록: 누른 블록의 정보 → 누른 위치의 시간에 걸친 합주가 하나면 그 합주의 정보, 둘 이상이면 겹친 합주 목록 (누르면 합주 정보 Drawer로 바뀜, "같은 시간에 다른 팀 합주 잡기"). 1024px 이상·2개 이하 겹침은 그대로 누른 블록의 정보
+  - 합주 정보 Drawer를 열 때 Drawer 스택을 정보 Drawer 하나로 바꾼다 (이전: 쌓기. 달력에서 열 때는 결과 같음, 목록에서 고르면 목록 Drawer가 정보 Drawer로 바뀜)
+- 구조
+  - `lib/calendar`: `eventsAtSlot`·`freeRangeAt`·`resolveSlotTap` (순수 함수, `SlotRange` export)
+  - `schedule/SlotDrawer.tsx` 새로 만듦, `DrawerId`·`BOTTOM_DRAWERS`에 `slotInfo`. 내용은 Board의 상태(닫혀도 지우지 않아 내려가는 동안 유지)
+  - `schedule/drawerParts.tsx`: 두 Drawer가 함께 쓰는 날짜·시간 형식, 바깥 틀·스크롤 영역 클래스, "합주 잡기" 줄(`BookFooter`). 합주 정보 Drawer는 이것을 쓰도록 정리 (화면 변화 없음)
+  - `WeekCalendar`: 시간칸 버튼(키보드 Tab 순서에서는 뺌), 블록을 누른 위치로 시간칸 계산(키보드로 누르면 블록의 정보)
+- 확인: Playwright(가짜 데이터) 390px 터치 — 4개 겹친 날 블록 위쪽(3개 겹침) → 목록, 아래쪽(혼자) → 바로 정보, 빈 칸 → 빈 시간 Drawer. 1280px — 칸 마우스 올림 색·커서, 겹친 블록 → 바로 정보
+- 테스트: `lib/calendar.test.ts` 3개, `schedule/SlotDrawer.test.tsx` 6개 추가. 변형 검사 7/7
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 141/141 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 32 (새 코드 0건) / `pnpm format:check` ✅
 
 ## 남은 일
 

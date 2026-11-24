@@ -1,8 +1,9 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, MouseEvent } from 'react';
 import type { Dayjs } from 'dayjs';
 import { days, hours, idx2hour } from '@/constants';
 import { formatSlotRange, type CalendarEvent, type WithLane } from '@/lib/calendar';
 import { cn } from '@/lib/utils';
+import type { DayIndex, TimeSlot } from '@/types';
 
 // 주 단위 캘린더 (View 개편 V-2). 가로선만 있는 흰 바탕 표에 합주를 시간 길이만큼의 블록으로 그린다.
 // 시간칸(30분) 하나의 높이는 --slot (모바일 22px, PC 30px). 블록 위치·높이는 --slot의 배수다.
@@ -36,6 +37,23 @@ interface WeekCalendarProps {
     /** 주를 바꿀 때 들어오는 방향 (애니메이션). 처음 그릴 때는 null */
     direction: 'prev' | 'next' | null;
     onClickEvent: (event: CalendarEvent) => void;
+    /** 시간칸을 누름: 빈 칸, 또는 이름이 안 보이는 곳(3개 이상 겹침, 1024px 미만)의 블록 (Board가 resolveSlotTap으로 처리) */
+    onClickSlot: (day: DayIndex, slot: TimeSlot) => void;
+}
+
+/** 3개 이상 겹친 블록에 이름이 보이는 폭 (EventBlock의 max-lg:hidden과 같은 기준, Tailwind lg) */
+const NAMES_VISIBLE_QUERY = '(min-width: 64rem)';
+
+/** 블록 안에서 누른 위치의 시간칸. 위치를 알 수 없으면(키보드·테스트 환경) 블록의 첫 칸 */
+function slotAtPointer(
+    e: MouseEvent<HTMLElement>,
+    { startTime, endTime }: CalendarEvent,
+): TimeSlot {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.height <= 0) return startTime;
+    const slots = endTime - startTime + 1;
+    const offset = Math.floor(((e.clientY - rect.top) / rect.height) * slots);
+    return startTime + Math.min(slots - 1, Math.max(0, offset));
 }
 
 const WeekCalendar = ({
@@ -44,7 +62,21 @@ const WeekCalendar = ({
     todayIdx,
     direction,
     onClickEvent,
+    onClickSlot,
 }: WeekCalendarProps) => {
+    // 이름이 안 보이는 좁은 화면에서 3개 이상 겹친 블록을 누르면, 누른 시간에 겹친 합주를 보여준다 (마우스·터치로 누른 경우만)
+    const handleBlockClick = (
+        e: MouseEvent<HTMLElement>,
+        day: DayIndex,
+        event: WithLane<CalendarEvent>,
+    ) => {
+        if (event.lanes >= 3 && e.detail > 0 && !window.matchMedia(NAMES_VISIBLE_QUERY).matches) {
+            onClickSlot(day, slotAtPointer(e, event));
+            return;
+        }
+        onClickEvent(event);
+    };
+
     return (
         <div className="mt-3 overflow-hidden [--hour-col:28px] [--slot:22px] md:mt-4 md:[--hour-col:44px] md:[--slot:30px]">
             {/* 주가 바뀌면 새로 그려지며(key) 옆에서 살짝 밀려 들어온다. 투명도는 바꾸지 않는다 (흰색으로 깜빡임) */}
@@ -115,23 +147,44 @@ const WeekCalendar = ({
                         ))}
                     </div>
 
-                    {week.map((events, idx) => (
-                        <div
-                            key={idx}
-                            className={cn(
-                                'relative h-[calc(var(--slot)*30)]',
-                                idx === todayIdx && 'bg-today-tint',
-                            )}
-                        >
-                            {events.map((event) => (
-                                <EventBlock
-                                    key={event.id}
-                                    event={event}
-                                    onClick={() => onClickEvent(event)}
-                                />
-                            ))}
-                        </div>
-                    ))}
+                    {week.map((events, idx) => {
+                        const date = weekStart.add(idx, 'day');
+                        // 지난 요일은 합주를 잡을 수 없으므로 빈 칸을 누를 수 없다
+                        const isPast = todayIdx !== null && idx < todayIdx;
+                        return (
+                            <div
+                                key={idx}
+                                className={cn(
+                                    'relative h-[calc(var(--slot)*30)]',
+                                    idx === todayIdx && 'bg-today-tint',
+                                )}
+                            >
+                                {/* 시간칸(30분): 마우스를 올리면 옅은 회색, 누르면 합주 잡기 Drawer. 블록 아래에 깔린다 */}
+                                {!isPast &&
+                                    Array.from({ length: SLOT_COUNT }, (_, slot) => (
+                                        <button
+                                            key={slot}
+                                            type="button"
+                                            tabIndex={-1}
+                                            aria-label={`${date.month() + 1}월 ${date.date()}일 ${days[idx]} ${idx2hour[slot]}`}
+                                            className="absolute inset-x-0 transition-colors duration-100 hover:bg-neutral-900/[0.05]"
+                                            style={{
+                                                top: `calc(var(--slot) * ${slot})`,
+                                                height: 'var(--slot)',
+                                            }}
+                                            onClick={() => onClickSlot(idx, slot)}
+                                        />
+                                    ))}
+                                {events.map((event) => (
+                                    <EventBlock
+                                        key={event.id}
+                                        event={event}
+                                        onClick={(e) => handleBlockClick(e, idx, event)}
+                                    />
+                                ))}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>
@@ -151,7 +204,7 @@ function nameLines(
 
 interface EventBlockProps {
     event: WithLane<CalendarEvent>;
-    onClick: () => void;
+    onClick: (e: MouseEvent<HTMLElement>) => void;
 }
 
 function EventBlock({ event, onClick }: EventBlockProps) {

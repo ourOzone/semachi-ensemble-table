@@ -4,7 +4,6 @@ import {
     CalendarCheck,
     CalendarClock,
     CalendarOff,
-    CalendarPlus,
     ChevronRight,
     Pencil,
     Repeat,
@@ -12,7 +11,6 @@ import {
     Undo2,
     X,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import {
     Drawer,
     DrawerClose,
@@ -22,7 +20,7 @@ import {
 } from '@/components/ui/drawer';
 import type { CheckEnsembleExists, HandleClickTeamInfo } from '@/components/board/types';
 import { useTeamContext, useEnsembleContext } from '@/context';
-import { days, eventIds, idx2hour } from '@/constants';
+import { days, eventIds } from '@/constants';
 import { buildColorMap } from '@/lib/board';
 import { getEnsembleSchedule } from '@/lib/calendar';
 import { cn } from '@/lib/utils';
@@ -30,6 +28,16 @@ import { useTeams } from '@/queries/teams';
 import { useDrawerStore } from '@/stores/drawer';
 import theme from '@/styles/theme';
 import type { TimeSlot } from '@/types';
+import {
+    BookFooter,
+    boxShape,
+    formatDate,
+    formatTimeRange,
+    overlayClassName,
+    pressable,
+    scrollAreaClassName,
+    sheetClassName,
+} from './drawerParts';
 
 // 합주 정보 Drawer (View 개편 V-2). 아래에서 올라오고, 아래로 끌어내리면 닫힌다 (vaul).
 // 위쪽은 팀 색 머리(팀 이름·요일·시간·반복 여부), 아래는 다음 합주와 미루기·바로 하기(미루기 취소)·수정·삭제.
@@ -53,16 +61,6 @@ interface ShownEnsemble {
     endTime: TimeSlot;
 }
 
-/** "11/26(목)" */
-function formatDate(date: Dayjs): string {
-    return `${date.month() + 1}/${date.date()}(${days[(date.day() + 6) % 7]})`;
-}
-
-/** "20:00 – 22:00" */
-function formatTimeRange(startTime: TimeSlot, endTime: TimeSlot): string {
-    return `${idx2hour[startTime] ?? ''} – ${idx2hour[endTime + 1] ?? ''}`;
-}
-
 /** "2시간", "1시간 30분", "30분" (시간칸 하나 = 30분) */
 function formatDuration(startTime: TimeSlot, endTime: TimeSlot): string {
     const slots = endTime + 1 - startTime;
@@ -79,12 +77,6 @@ function formatDaysLeft(date: Dayjs, now: Dayjs): string {
     if (diff === 2) return '이틀 뒤';
     return `${diff}일 뒤`;
 }
-
-/** 누를 수 있는 것: 마우스를 올리면 바탕이 바뀌고, 누르면 살짝 작아짐 */
-const pressable = 'transition-[background-color,scale] duration-150 active:scale-[0.97]';
-
-// 모양이 고정된 버튼·카드는 스쿼클 (corner-shape 지원 브라우저만, 그 외는 일반 둥근 모서리)
-const boxShape = 'squircle rounded-2xl supports-[corner-shape:squircle]:rounded-[24px]';
 
 interface ActionButtonProps {
     icon: ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
@@ -197,8 +189,7 @@ const EnsembleInfoDrawer = ({
         const timeRange = formatTimeRange(ensemble.startTime, ensemble.endTime);
 
         return (
-            // 위 모서리는 바깥(Drawer)과 같은 모양으로 잘라 팀 색 머리가 모서리 밖으로 나가지 않게
-            <div className="squircle min-h-0 overflow-y-auto rounded-t-[24px] supports-[corner-shape:squircle]:rounded-t-[36px]">
+            <div className={scrollAreaClassName}>
                 {/* 머리: 팀 색 (손잡이는 이 위에 겹쳐 그린다) */}
                 <div
                     className="px-5 pt-[26px] pb-6 text-white md:px-7"
@@ -328,18 +319,7 @@ const EnsembleInfoDrawer = ({
                     </div>
                 </div>
 
-                {!isEvent && (
-                    <div className="border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)]">
-                        <button
-                            type="button"
-                            className="flex w-full items-center justify-center gap-1.5 py-4 text-[15px] font-medium text-[#1d5fb4] transition-colors duration-150 hover:bg-neutral-50 active:bg-neutral-100"
-                            onClick={() => toast('준비 중인 기능이에요')}
-                        >
-                            <CalendarPlus className="size-[18px]" aria-hidden />
-                            같은 시간에 다른 팀 합주 잡기
-                        </button>
-                    </div>
-                )}
+                {!isEvent && <BookFooter label="같은 시간에 다른 팀 합주 잡기" />}
             </div>
         );
     })();
@@ -347,10 +327,8 @@ const EnsembleInfoDrawer = ({
     return (
         <Drawer open={open} onOpenChange={(next) => !next && handleClose()}>
             <DrawerContent
-                // Drawer 자체는 흰 바탕: vaul이 Drawer 아래에 바탕색을 이어 붙여(::after) 위로 끌어올려도 뒤가 비치지 않고,
-                // 사파리 아래 도구 막대 쪽 여백도 흰색이 된다 (overflow-hidden이면 이 ::after가 잘린다)
-                className="ui mx-auto w-full max-w-[520px] bg-white data-[vaul-drawer-direction=bottom]:border-t-0 data-[vaul-drawer-direction=bottom]:max-h-[92dvh] data-[vaul-drawer-direction=bottom]:rounded-t-[24px] squircle supports-[corner-shape:squircle]:data-[vaul-drawer-direction=bottom]:rounded-t-[36px]"
-                overlayClassName="ui bg-black/40 supports-backdrop-filter:backdrop-blur-none"
+                className={sheetClassName}
+                overlayClassName={overlayClassName}
                 // 손잡이는 팀 색 머리 위에 겹친다
                 handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-white/60"
             >

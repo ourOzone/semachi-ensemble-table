@@ -5,12 +5,15 @@ import theme from '@/styles/theme';
 import type { EnsembleResponse } from '@/types';
 import {
     assignLanes,
+    eventsAtSlot,
+    freeRangeAt,
     formatSlotRange,
     formatWeekRange,
     getEnsembleSchedule,
     getOccurrence,
     getRegularNextDate,
     getWeekStart,
+    resolveSlotTap,
     toWeekSchedule,
 } from './calendar';
 
@@ -285,5 +288,37 @@ describe('toWeekSchedule', () => {
         const [monday] = toWeekSchedule([event, unknown], colorMap, dayjs('2026-11-23'), now);
         expect(monday?.find((e) => e.id === 'e3')?.isEvent).toBe(true);
         expect(monday?.find((e) => e.id === 'e4')?.color).toBe(theme.blueGray);
+    });
+});
+
+describe('합주 잡기 Drawer: 시간칸 누르기', () => {
+    // A 12~14시, B·C 13~15시 (시간칸: 12시 = 6, 13시 = 8, 14시 = 10, 15시 = 12)
+    const A = { id: 'A', startTime: 6, endTime: 9 };
+    const B = { id: 'B', startTime: 8, endTime: 11 };
+    const C = { id: 'C', startTime: 8, endTime: 11 };
+    const day = [B, C, A];
+
+    it('eventsAtSlot: 그 시간칸에 걸친 합주 (시작이 빠른 순)', () => {
+        expect(eventsAtSlot(day, 6).map((e) => e.id)).toEqual(['A']);
+        expect(eventsAtSlot(day, 8).map((e) => e.id)).toEqual(['A', 'B', 'C']);
+        expect(eventsAtSlot(day, 11).map((e) => e.id)).toEqual(['B', 'C']);
+        expect(eventsAtSlot(day, 12)).toEqual([]);
+    });
+
+    it('resolveSlotTap: 하나뿐이면 그 합주, 둘 이상이면 목록, 없으면 빈 구간', () => {
+        expect(resolveSlotTap(day, 7)).toEqual({ kind: 'single', event: A });
+        expect(resolveSlotTap(day, 9)).toEqual({ kind: 'list', events: [A, B, C] });
+        expect(resolveSlotTap(day, 10)).toEqual({ kind: 'list', events: [B, C] });
+        expect(resolveSlotTap(day, 14)).toEqual({
+            kind: 'empty',
+            range: { startTime: 12, endTime: 29 },
+        });
+    });
+
+    it('freeRangeAt: 앞뒤로 합주가 없는 데까지, 합주가 있으면 null', () => {
+        expect(freeRangeAt(day, 0)).toEqual({ startTime: 0, endTime: 5 });
+        expect(freeRangeAt(day, 5)).toEqual({ startTime: 0, endTime: 5 });
+        expect(freeRangeAt(day, 6)).toBeNull();
+        expect(freeRangeAt([], 10)).toEqual({ startTime: 0, endTime: 29 });
     });
 });

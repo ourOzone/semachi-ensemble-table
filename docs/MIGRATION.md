@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~17차 PIN 단계 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~18차 PIN 단계 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -795,6 +795,17 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 테스트: `Board.test.tsx`의 키보드 테스트를 아래 여백 기준으로 수정. 실제 아이폰 확인은 사용자
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 148/148 / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 26 (새 코드 0건) / `pnpm format:check` ✅
+
+### 2026-11-24 — View 개편 V-2 (18차): 키보드 위 막대 쪽 비침, 원인을 다시 찾아 수정
+
+- 증상: 아이폰에서 PIN 입력칸을 누르면 Drawer와 키보드 위 막대(^ v 완료) 사이·반투명 키보드 뒤로 합주판이 비침. 16차(Drawer를 올림)·17차(Drawer를 내리고 아래 여백) 모두 그대로였다
+- 원인: 사용자 스크린샷에서 어둡게 하는 덮개(fixed, 화면 전체)도 그 띠에는 닿지 않았다 → 그 띠에는 고정 요소가 아예 그려지지 않는다. 아이폰 사파리 26은 키보드 위 막대 쪽에 페이지 내용을 그대로 비춘다(오버레이의 합성 영역 밖)는 보고와 일치 (https://1ar.io/updates/safari-26-liquid-glass-web/, Apple 문서 없음). 그래서 Drawer의 흰 바탕·vaul의 흰 연장으로는 덮을 수 없었다
+- 수정: PIN 단계 동안 페이지 문서 안(body의 자식, position: absolute, z-40)에 흰 판(`KeyboardCover`)을 깔아, 보이는 영역 아래 끝 240px 위부터 아래 3000px를 덮는다. 보이는 영역 안에 걸친 부분은 Drawer 아래에 숨어 평소 화면은 그대로. `useKeyboardInset`이 보이는 영역 아래 끝의 문서 기준 위치(`visualViewport.pageTop + height`)도 돌려준다
+- 확인: Chrome·WebKit에서 페이지를 내리고(스크롤 잠금으로 body가 relative인 상태) 흰 판 위치가 계산과 같음, 화면 변화 없음. 실제 아이폰 확인은 사용자
+- 테스트: 흰 판이 PIN 단계에만, body의 자식으로, 계산한 위치에 생기는지 1개 추가, 훅 테스트에 문서 기준 위치 추가
+- ISSUES V12 추가 (앞으로 입력칸이 있는 Drawer에도 같은 처리 필요)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 149/149 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 26 (새 코드 0건) / `pnpm format:check` ✅
 
 ## 남은 일
 

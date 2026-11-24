@@ -367,7 +367,11 @@ describe('합주표', () => {
 
     it('화면 키보드가 열리면 내용을 키보드 위로 올리고 Drawer 흰 바탕으로 키보드 뒤까지 덮는다, 닫히면 원래대로', async () => {
         // 키보드 330px, 사파리가 보이는 영역을 120px 스크롤 → 가려진 아래쪽 210px, 보이는 높이 514px
-        const viewport = Object.assign(new EventTarget(), { height: 844, offsetTop: 0 });
+        const viewport = Object.assign(new EventTarget(), {
+            height: 844,
+            offsetTop: 0,
+            pageTop: 0,
+        });
         Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
         Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 });
         try {
@@ -375,18 +379,50 @@ describe('합주표', () => {
             expect(dialog.style.paddingBottom).toBe('');
             expect(dialog.style.maxHeight).toBe('min(92dvh, 832px)');
 
-            Object.assign(viewport, { height: 514, offsetTop: 120 });
+            Object.assign(viewport, { height: 514, offsetTop: 120, pageTop: 120 });
             viewport.dispatchEvent(new Event('resize'));
             // Drawer는 맨 아래에 둔 채(올리지 않음) 아래 여백 = 가려진 높이, 최대 높이 = 보이는 높이 - 12 + 여백
             await waitFor(() => expect(dialog.style.paddingBottom).toBe('210px'));
             expect(dialog.style.bottom).toBe('');
             expect(dialog.style.maxHeight).toBe('712px');
 
-            Object.assign(viewport, { height: 844, offsetTop: 0 });
+            Object.assign(viewport, { height: 844, offsetTop: 0, pageTop: 0 });
             viewport.dispatchEvent(new Event('resize'));
             await waitFor(() => expect(dialog.style.paddingBottom).toBe(''));
             // 높이를 고정해 두지 않는다 (vaul은 키보드를 닫을 때 처음 높이로 고정해, 내용이 바뀌면 스크롤이 생겼다)
             expect(dialog.style.height).toBe('');
+        } finally {
+            Object.defineProperty(window, 'visualViewport', {
+                configurable: true,
+                value: undefined,
+            });
+        }
+    });
+
+    it('PIN 단계에서는 키보드 쪽에 비치는 페이지를 문서 안의 흰 판으로 덮는다 (아이폰 사파리 26)', async () => {
+        // 보이는 영역: 문서 기준 120 ~ 634 (아래 끝 634) → 흰 판은 634 - 240 = 394부터
+        const viewport = Object.assign(new EventTarget(), {
+            height: 514,
+            offsetTop: 120,
+            pageTop: 120,
+        });
+        Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
+        Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 });
+        try {
+            const { user, dialog } = await openEnsembleInfo();
+            // 정보 단계(입력칸 없음)에서는 없다
+            expect(document.querySelector('[data-keyboard-cover]')).toBeNull();
+
+            await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+            await findDialog('합주를 삭제할까요?');
+            const cover = document.querySelector<HTMLElement>('[data-keyboard-cover]');
+            // 고정(fixed) 요소가 아니라 문서 안(body의 자식, absolute)이어야 키보드 쪽에 비친다
+            expect(cover?.parentElement).toBe(document.body);
+            expect(cover?.style.top).toBe('394px');
+
+            await user.click(screen.getByRole('button', { name: '뒤로' }));
+            await findDialog('월 10:00 – 11:00');
+            expect(document.querySelector('[data-keyboard-cover]')).toBeNull();
         } finally {
             Object.defineProperty(window, 'visualViewport', {
                 configurable: true,

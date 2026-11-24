@@ -1,4 +1,5 @@
 import { useState, type ComponentType, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
     CalendarCheck,
@@ -213,7 +214,7 @@ const EnsembleInfoDrawer = ({
     // Drawer 자체는 화면 맨 아래에 둔 채 키보드 높이만큼 아래 여백을 준다: Drawer의 흰 바탕이 키보드 뒤까지 덮어,
     // 키보드 위 막대(완료 버튼)와 반투명 키보드 사이로 뒤 화면이 비치지 않는다
     // (17차, 이전: Drawer를 키보드 높이만큼 올렸더니 아이폰에서 그 아래가 비었다)
-    const { inset, viewportHeight } = useKeyboardInset();
+    const { inset, viewportHeight, visibleBottom } = useKeyboardInset();
 
     // 머리 색: 팀의 지금 색 (캘린더 블록과 같음)
     const color = shown
@@ -454,8 +455,31 @@ const EnsembleInfoDrawer = ({
             >
                 {content}
             </DrawerContent>
+            {open && step !== 'info' && visibleBottom !== null && (
+                <KeyboardCover visibleBottom={visibleBottom} />
+            )}
         </Drawer>
     );
 };
+
+/** KeyboardCover가 보이는 영역 아래 끝보다 얼마나 위에서 시작하는지 (Drawer 아래에 숨는 부분, 줄바꿈 오차 여유) */
+const KEYBOARD_COVER_OVERLAP = 240;
+
+/**
+ * 아이폰 사파리 26: 키보드 위 막대(^ v 완료)와 반투명 키보드 쪽에는 고정(position: fixed) 요소가 아니라
+ * "페이지 내용"의 그 부분이 그대로 비친다 (어둡게 하는 덮개·Drawer·vaul의 흰 연장 모두 닿지 않음. 17차까지 그대로였던 이유).
+ * 그래서 페이지 문서 안에(absolute) 흰 판을 깔아, 보이는 영역 아래 끝 조금 위부터 그 아래를 덮는다.
+ * 보이는 영역 안에 걸친 부분은 Drawer(z-50) 아래에 숨는다. 보이는 영역 밖이라 다른 브라우저에서는 보이지 않는다
+ */
+const KeyboardCover = ({ visibleBottom }: { visibleBottom: number }) =>
+    createPortal(
+        <div
+            aria-hidden
+            data-keyboard-cover
+            className="pointer-events-none absolute inset-x-0 z-40 h-[3000px] bg-white"
+            style={{ top: `${visibleBottom - KEYBOARD_COVER_OVERLAP}px` }}
+        />,
+        document.body,
+    );
 
 export default EnsembleInfoDrawer;

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import styled from 'styled-components';
-import { cardRadius, squircleShadow } from '@/styles/cardRadius';
+import { cardRadius } from '@/styles/cardRadius';
 import { useDrawerContext } from '@/context';
 import { useAddNotice, useDeleteNotice, useNotices, useRefreshNotices } from '@/queries/notes';
 import { noticeExists } from '@/api/notice';
@@ -79,12 +79,10 @@ const Notice = () => {
 
     return (
         <>
-            <ShadowWrap>
-                <NoticeButton onClick={() => openDrawer('notice')}>
-                    <BellOutlined />
-                    <Text>{notices?.[0]?.text.split('\n')[0] || '공지가 딱히 없네요'}</Text>
-                </NoticeButton>
-            </ShadowWrap>
+            <NoticeButton onClick={() => openDrawer('notice')}>
+                <BellOutlined />
+                <Text>{notices?.[0]?.text.split('\n')[0] || '공지가 딱히 없네요'}</Text>
+            </NoticeButton>
             <NoticeDrawer
                 drawerId="notice"
                 notices={notices}
@@ -110,13 +108,6 @@ const Notice = () => {
         </>
     );
 };
-
-/** 스쿼클 대체 방식(사파리)에서 카드 그림자가 마스크에 잘려, 감싼 요소가 그림자를 그린다 */
-const ShadowWrap = styled.div`
-    width: 100%;
-    max-width: 1080px;
-    ${squircleShadow}
-`;
 
 const NoticeButton = styled(Button)`
     width: 100%;

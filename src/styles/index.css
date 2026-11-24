@@ -103,91 +103,29 @@
 }
 
 /*
- * 스쿼클: 아이폰 앱 아이콘처럼 곡률이 이어지는 모서리 (V-2).
- * 1) corner-shape 지원(Chrome·안드로이드 Chrome 139+): corner-shape: squircle
- * 2) 미지원 + -webkit-mask-box-image 지원(사파리·아이폰의 모든 브라우저 등): 같은 곡선(x⁴ + y⁴ = 1)의 SVG를 9분할 마스크로 씌운다.
- *    마스크는 요소 밖(그림자)과 테두리 모서리까지 자르므로, 테두리 있는 요소는 squircle-border, 그림자는 바깥 card-shadow로 따로 그린다.
- *    점선 테두리는 마스크로 따라 그릴 수 없어 squircle-native(일반 둥근 모서리로 둠)를 쓴다
- * 3) 둘 다 미지원(파이어폭스 등): 일반 둥근 모서리
- * 2)의 조건은 일부러 not (A or not B) 꼴로 쓴다. A and B 꼴이면 빌드의 CSS 최적화(lightningcss)가 -webkit-mask-box-image를
- * 접두사 없는 이름으로 바꿔, 접두사 이름만 아는 사파리에서 조건이 거짓이 된다 (개발 서버에서는 멀쩡해 보임)
- * 반지름: 스쿼클은 같은 반지름이면 덜 둥글어 보여 키운다. 1)은 supports-[corner-shape:squircle]:rounded-*, 2)는 --squircle-r
- * (기본 9999px = 알약·원. 마스크 너비가 요소보다 크면 비율대로 줄어 높이의 절반이 된다)
+ * 스쿼클: 아이폰 앱 아이콘처럼 곡률이 이어지는 모서리 (V-2). corner-shape를 지원하는 브라우저(Chrome 계열 139+)에서만 켜지고,
+ * 아니면(사파리·아이폰 전체, 파이어폭스) 일반 둥근 모서리. 스쿼클은 같은 반지름이면 덜 둥글어 보여, 요소마다
+ * supports-[corner-shape:squircle]:rounded-* 로 반지름을 키운다.
+ * 적용 기준 (V-2 7차, 사용자 결정): 모양이 고정돼 있고 일반 둥근 모서리로 보여도 어색하지 않은 곳만 (큰 카드, 합주 블록, 한마디).
+ * 알약·원 모양(rounded-full)은 스쿼클이면 모양 자체가 바뀌어 쓰지 않는다. 사파리용 대체 방식(SVG 마스크)은 6차에 넣었다가
+ * 크기가 바뀌는 요소에서 깨져 7차에 뺐다
  */
-:root {
-    --squircle-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cpath d='M0 100 0.4 63.9 1.7 49.1 3.9 38.1 6.9 29.3 10.9 22 15.9 15.9 22 10.9 29.3 6.9 38.1 3.9 49.1 1.7 63.9 0.4 100 0 200 0 236.1 0.4 250.9 1.7 261.9 3.9 270.7 6.9 278 10.9 284.1 15.9 289.1 22 293.1 29.3 296.1 38.1 298.3 49.1 299.6 63.9 300 100 300 200 299.6 236.1 298.3 250.9 296.1 261.9 293.1 270.7 289.1 278 284.1 284.1 278 289.1 270.7 293.1 261.9 296.1 250.9 298.3 236.1 299.6 200 300 100 300 63.9 299.6 49.1 298.3 38.1 296.1 29.3 293.1 22 289.1 15.9 284.1 10.9 278 6.9 270.7 3.9 261.9 1.7 250.9 0.4 236.1 0 200Z'/%3E%3C/svg%3E");
-}
-
 @utility squircle {
     @supports (corner-shape: squircle) {
         corner-shape: squircle;
     }
-    @supports not ((corner-shape: squircle) or (not (-webkit-mask-box-image: none))) {
-        border-radius: 0 !important;
-        -webkit-mask-box-image: var(--squircle-mask) 100 / var(--squircle-r, 9999px) stretch;
-    }
-}
-
-/* 점선 테두리처럼 마스크로 따라 그릴 수 없는 요소: corner-shape 지원 브라우저에서만 스쿼클, 아니면 일반 둥근 모서리 */
-@utility squircle-native {
-    @supports (corner-shape: squircle) {
-        corner-shape: squircle;
-    }
 }
 
 /*
- * 실선 테두리가 있는 요소. 대체 방식에서는 테두리(바깥 스쿼클, --squircle-stroke)와 바탕(안쪽 스쿼클, --squircle-fill)을
- * 두 겹의 가상 요소로 그린다. 그래서 바탕·테두리 색은 클래스(bg-*·border-*)와 함께 변수로도 지정한다
- */
-@utility squircle-border {
-    @supports (corner-shape: squircle) {
-        corner-shape: squircle;
-    }
-    @supports not ((corner-shape: squircle) or (not (-webkit-mask-box-image: none))) {
-        position: relative;
-        isolation: isolate;
-        border-radius: 0 !important;
-        border-color: transparent !important;
-        background-color: transparent !important;
-        box-shadow: none !important; /* 요소 자체의 그림자는 네모로 남으므로 끈다 */
-        &::before,
-        &::after {
-            content: '';
-            position: absolute;
-            z-index: -1;
-            pointer-events: none;
-            -webkit-mask-box-image: var(--squircle-mask) 100 / var(--squircle-r, 9999px) stretch;
-        }
-        &::before {
-            inset: calc(var(--squircle-bw, 1px) * -1);
-            background-color: var(--squircle-stroke);
-        }
-        &::after {
-            inset: 0;
-            background-color: var(--squircle-fill);
-        }
-    }
-}
-
-/*
- * 큰 카드(공지·합주판·한마디)의 모서리. 옛 코드(styled)는 같은 값을 src/styles/cardRadius.ts에서 가져다 쓴다.
- * 대체 방식(마스크)에서는 카드의 그림자가 잘리므로 카드를 card-shadow 요소로 감싸 그림자를 바깥에서 그린다
+ * 큰 카드(공지·합주판·한마디)의 모서리. 아이폰 앱 아이콘처럼 곡률이 이어지는 "스쿼클"을 지원하는 브라우저
+ * (corner-shape: Chrome·안드로이드)에서는 그걸 쓰고, 아니면(사파리 등) 일반 둥근 모서리. 스쿼클은 같은 반지름이면
+ * 덜 둥글어 보여 값을 키운다. 옛 코드(styled)는 같은 값을 src/styles/cardRadius.ts에서 가져다 쓴다
  */
 @utility rounded-card {
     border-radius: 18px;
     @supports (corner-shape: squircle) {
         border-radius: 28px;
         corner-shape: squircle;
-    }
-    @supports not ((corner-shape: squircle) or (not (-webkit-mask-box-image: none))) {
-        border-radius: 0;
-        -webkit-mask-box-image: var(--squircle-mask) 100 / 28px stretch;
-    }
-}
-
-@utility card-shadow {
-    @supports not ((corner-shape: squircle) or (not (-webkit-mask-box-image: none))) {
-        filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.08));
     }
 }
 

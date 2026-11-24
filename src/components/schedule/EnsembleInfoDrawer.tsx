@@ -30,6 +30,7 @@ import { days, eventIds } from '@/constants';
 import { buildColorMap } from '@/lib/board';
 import { getEnsembleSchedule } from '@/lib/calendar';
 import { cn } from '@/lib/utils';
+import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { useTeams } from '@/queries/teams';
 import { useDrawerStore } from '@/stores/drawer';
 import theme from '@/styles/theme';
@@ -193,20 +194,23 @@ const EnsembleInfoDrawer = ({
         openDrawer('updateEnsemble2');
     };
 
-    // PIN이 맞은 뒤 확인 버튼. 삭제는 Drawer가 모두 닫힌다
-    const runAction = async (action: Exclude<Step, 'info' | 'update'>) => {
+    // PIN이 맞은 뒤 실행 (삭제는 확인 버튼을 누른 뒤). 삭제는 Drawer가 모두 닫힌다.
+    // 저장에 성공하면 값(날짜·반복)이 바뀌어 위의 붙잡기에서 정보 단계로 돌아가고, 실패하면 false → PIN을 다시 넣는다
+    const runAction = async (action: Exclude<Step, 'info' | 'update'>): Promise<boolean> => {
         if (action === 'delete') {
             await handleDeleteEnsemble(id);
-            return;
+            return true;
         }
         const handler = {
             skip: handleSkipEnsemble,
             unskip: handleUnskipEnsemble,
             repeat: handleRepeatEnsemble,
         }[action];
-        // 저장에 성공하면 값(날짜·반복)이 바뀌어 위의 붙잡기에서 정보 단계로 돌아간다. 실패하면 PIN 단계에 머문다
-        await handler(id, teamId, repeat, nextDate, startTime, endTime);
+        return handler(id, teamId, repeat, nextDate, startTime, endTime);
     };
+
+    // 화면 키보드가 열리면 Drawer를 보이는 영역의 아래 끝(키보드 바로 위)에 두고 그 안에 들어가게 한다 (hooks/useKeyboardInset)
+    const { inset, viewportHeight } = useKeyboardInset();
 
     // 머리 색: 팀의 지금 색 (캘린더 블록과 같음)
     const color = shown
@@ -229,12 +233,13 @@ const EnsembleInfoDrawer = ({
         if (step !== 'info') {
             const object = `${noun}${isEvent ? '을' : '를'}`;
             const pinStep = {
-                skip: { title: `${formatDate(next.add(7, 'day'))}로 미룰까요?`, label: '미루기' },
+                // 확인 버튼은 되돌릴 수 없는 삭제만. 나머지는 PIN이 맞는 즉시 실행
+                skip: { title: `${formatDate(next.add(7, 'day'))}로 미룰까요?`, label: undefined },
                 unskip: {
                     title: `${skippedDates[0] ? formatDate(skippedDates[0]) : ''}부터 바로 할까요?`,
-                    label: '바로 하기',
+                    label: undefined,
                 },
-                repeat: { title: '매주 반복으로 바꿀까요?', label: '매주 반복으로 바꾸기' },
+                repeat: { title: '매주 반복으로 바꿀까요?', label: undefined },
                 delete: { title: `${object} 삭제할까요?`, label: '삭제하기' },
                 update: { title: `${object} 수정할까요?`, label: undefined },
             }[step];
@@ -277,10 +282,8 @@ const EnsembleInfoDrawer = ({
                             {pinStep.title}
                         </DrawerTitle>
                         <DrawerDescription className="mt-1.5 text-[15px] text-neutral-500">
-                            {step === 'delete' && '삭제하면 되돌릴 수 없어요. '}
-                            {step === 'update'
-                                ? '팀 PIN 4자리를 입력하면 다음 단계로 넘어가요'
-                                : '팀 PIN 4자리를 입력해 주세요'}
+                            {step === 'delete' && '삭제하면 되돌릴 수 없어요. '}팀 PIN 4자리를
+                            입력해 주세요
                         </DrawerDescription>
                         <div className="mt-7">
                             <PinStep
@@ -421,9 +424,21 @@ const EnsembleInfoDrawer = ({
     })();
 
     return (
-        <Drawer open={open} onOpenChange={(next) => !next && handleClose()}>
+        <Drawer
+            open={open}
+            onOpenChange={(next) => !next && handleClose()}
+            // 키보드 위치 맞추기는 직접 한다 (vaul의 방식은 아이폰 사파리에서 너무 올라가고 높이가 남는다: hooks/useKeyboardInset)
+            repositionInputs={false}
+        >
             <DrawerContent
                 className={sheetClassName}
+                style={{
+                    bottom: inset > 0 ? `${inset}px` : undefined,
+                    maxHeight:
+                        viewportHeight === null
+                            ? undefined
+                            : `min(92dvh, ${viewportHeight - 12}px)`,
+                }}
                 overlayClassName={overlayClassName}
                 // 손잡이는 머리 위에 겹친다 (정보: 팀 색 머리, PIN: 흰 머리)
                 handleClassName={cn(

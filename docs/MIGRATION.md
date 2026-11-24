@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15차 PIN 단계 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~16차 PIN 단계 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -772,6 +772,21 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 추가 제안(적용하지 않음): 계획 문서 "PIN·변경 흐름 추가 제안"
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 145/145 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 26 (옛 PIN Drawer 삭제로 6건 감소, 새 코드 0건) / `pnpm format:check` ✅
+
+### 2026-11-24 — View 개편 V-2 (16차): PIN 단계 다듬기, 스크롤·키보드 문제
+
+- 지금 → 바꾼 후
+  - 틀린 PIN: 빨간 칸에 남아 지우고 다시 넣어야 함 → 흔든 뒤 칸을 비우고 첫 칸으로 ("PIN이 맞지 않아요. 다시 입력해 주세요"는 다시 넣기 시작할 때까지)
+  - 미루기·바로 하기·반복으로 바꾸기: PIN이 맞으면 확인 버튼을 눌러 실행 → 바로 실행 ("저장하는 중…"). 삭제는 그대로 "삭제하기" 버튼
+  - 저장 실패: PIN 단계에 머물러 확인 버튼을 다시 누름 → 칸을 비워 PIN부터 다시 (알림은 그대로)
+  - 수정의 안내 문구 "팀 PIN 4자리를 입력하면 다음 단계로 넘어가요" → "팀 PIN 4자리를 입력해 주세요" (모든 동작 같은 문구)
+  - PC: PIN 단계로 바뀔 때 가로 스크롤 막대가 약 0.15초 생겼다 사라짐 → 없음 (밀려 들어오는 애니메이션의 가로 넘침을 숨김). Chrome에서 스크롤 막대를 켜고 프레임마다 측정해 전후 확인 (이전 10프레임 → 0)
+  - 아이폰 사파리 키보드: 입력칸을 누르면 Drawer가 너무 올라가 위가 잘리고 Drawer와 키보드 사이로 뒤 화면이 보임 → Drawer 아래 끝을 키보드 바로 위에, 높이는 보이는 영역 안으로. 키보드를 닫은 뒤 정보로 돌아가면 PIN 단계의 작은 높이가 남아 스크롤이 생김 → 남지 않음
+- 원인 (vaul 1.1의 `repositionInputs`): ① 사파리가 입력칸을 보이려고 보이는 영역을 위로 스크롤한 만큼을 빼지 않고 키보드 높이만큼 Drawer를 올려 두 번 올라갔다 ② 처음 키보드를 열 때의 Drawer 높이를 기억해 두었다가 키보드를 닫을 때 그 높이로 고정했다. → `repositionInputs={false}`, `hooks/useKeyboardInset`(`visualViewport`, `useSyncExternalStore`)으로 Drawer의 `bottom`·`max-height`만 정한다
+- 테스트: `hooks/useKeyboardInset.test.ts` 2개, `Board.test.tsx`에 키보드 위치 1개 추가, PIN 흐름 테스트를 바로 실행·비우기 기준으로 수정. 변형 검사 6/6. 실제 아이폰 키보드는 자동 확인이 불가해 사용자 확인 필요
+- 제안 6(수정 입력 단계를 같은 Drawer로)은 합주 추가 Drawer를 먼저 만든 뒤로 보류 (사용자 결정)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 148/148 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 26 (새 코드 0건) / `pnpm format:check` ✅
 
 ## 남은 일
 

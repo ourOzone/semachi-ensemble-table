@@ -31,9 +31,12 @@ export const sheetClassName =
 
 export const overlayClassName = 'ui bg-black/40 supports-backdrop-filter:backdrop-blur-none';
 
-/** Drawer 안의 스크롤 영역. 위 모서리를 바깥과 같은 모양으로 잘라 색 머리가 모서리 밖으로 나가지 않게 */
+/**
+ * Drawer 안의 스크롤 영역. 위 모서리를 바깥과 같은 모양으로 잘라 색 머리가 모서리 밖으로 나가지 않게.
+ * 가로는 숨긴다: 단계가 바뀔 때 옆에서 밀려 들어오는 애니메이션이 잠깐 오른쪽으로 넘쳐 가로 스크롤 막대가 생겼다 사라졌다 (PC)
+ */
 export const scrollAreaClassName =
-    'squircle min-h-0 overflow-y-auto rounded-t-[24px] supports-[corner-shape:squircle]:rounded-t-[36px]';
+    'squircle min-h-0 overflow-x-hidden overflow-y-auto rounded-t-[24px] supports-[corner-shape:squircle]:rounded-t-[36px]';
 
 /**
  * 맨 아래 "합주 잡기" 줄 (합주 정보: "같은 시간에 다른 팀 합주 잡기", 빈 시간: "이 시간에 합주 잡기").

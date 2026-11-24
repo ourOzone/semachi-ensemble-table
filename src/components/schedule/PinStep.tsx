@@ -8,22 +8,27 @@ import { cn } from '@/lib/utils';
 import { pressable } from './drawerParts';
 
 // PIN 4자리 확인 (View 개편 V-2: 합주 수정·미루기·바로 하기·반복으로 바꾸기·삭제).
-// 4자리를 다 넣으면 서버에 확인한다. 확인하는 동안은 "확인하는 중"으로 두고, 결과가 온 뒤에만 맞음·틀림을 보인다
-// (이전: 4자리를 넣는 즉시 틀림(빨강)으로 표시했다가 응답이 오면 바꿔, 맞는 PIN도 잠깐 빨갛게 보였다).
-// 응답이 오기 전에 PIN을 고치면 이전 응답은 버린다.
+// - 4자리를 다 넣으면 서버에 확인한다. 확인하는 동안은 "확인하는 중"으로 두고, 결과가 온 뒤에만 맞음·틀림을 보인다
+//   (이전: 4자리를 넣는 즉시 틀림(빨강)으로 표시했다가 응답이 오면 바꿔, 맞는 PIN도 잠깐 빨갛게 보였다).
+//   응답이 오기 전에 PIN을 고치면 이전 응답은 버린다.
+// - 맞으면: 확인 버튼이 없는 동작은 바로 실행, 있는 동작(삭제)은 버튼을 눌러 실행 (16차)
+// - 틀리면: 흔든 뒤 칸을 비워 첫 칸부터 다시 넣는다 (16차)
+// - 실행에 실패하면(onConfirm이 false) 칸을 비워 PIN부터 다시 (실패 알림은 실행한 쪽에서)
 
 const PIN_LENGTH = 4;
+/** 틀린 PIN을 비우기까지 (흔들기 애니메이션 0.36초가 끝난 뒤) */
+const CLEAR_DELAY_MS = 450;
 
 type Status = 'typing' | 'checking' | 'valid' | 'invalid' | 'submitting';
 
 interface PinStepProps {
     teamId: string;
-    /** 확인 버튼 문구. 없으면 PIN이 맞는 즉시 onConfirm (수정: 다음 단계로) */
+    /** 확인 버튼 문구. 없으면 PIN이 맞는 즉시 onConfirm */
     confirmLabel?: string;
     /** 되돌릴 수 없는 동작(삭제): 빨간 버튼 */
     danger?: boolean;
-    /** PIN이 맞은 뒤 실행. 실패해도 이 단계에 머물러 다시 누를 수 있다 */
-    onConfirm: () => Promise<unknown> | void;
+    /** PIN이 맞은 뒤 실행. false를 돌려주면(실패) PIN부터 다시 넣게 한다 */
+    onConfirm: () => Promise<boolean | void> | boolean | void;
 }
 
 const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepProps) => {
@@ -34,11 +39,23 @@ const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepPro
     // 마지막으로 입력한 PIN. 늦게 온 응답이 지금 PIN의 것인지 확인한다
     const latestPin = useRef('');
 
+    const reset = () => {
+        latestPin.current = '';
+        setPin('');
+    };
+
     const confirm = async () => {
         setStatus('submitting');
+        let ok: boolean | void = false;
         try {
-            await onConfirm();
-        } finally {
+            ok = await onConfirm();
+        } catch {
+            ok = false;
+        }
+        if (ok === false) {
+            reset();
+            setStatus('typing');
+        } else {
             setStatus('valid');
         }
     };
@@ -57,18 +74,24 @@ const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepPro
             if (!ok) {
                 setStatus('invalid');
                 setAttempt((n) => n + 1);
+                // 흔들기가 끝나면 비운다 (그새 다시 넣기 시작했으면 두기)
+                setTimeout(() => {
+                    if (latestPin.current === value) reset();
+                }, CLEAR_DELAY_MS);
                 return;
             }
             setStatus('valid');
             if (!confirmLabel) await confirm();
         } catch {
             if (latestPin.current !== value) return;
+            reset();
             setStatus('typing');
             toast.error('PIN을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.');
         }
     };
 
     const invalid = status === 'invalid';
+    const ready = status === 'valid' || status === 'submitting';
 
     return (
         <div className="flex flex-col items-center">
@@ -116,12 +139,19 @@ const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepPro
                         확인하는 중…
                     </>
                 )}
-                {invalid && 'PIN이 맞지 않아요'}
-                {(status === 'valid' || status === 'submitting') && (
+                {invalid && 'PIN이 맞지 않아요. 다시 입력해 주세요'}
+                {status === 'submitting' && !confirmLabel ? (
                     <>
-                        <Check className="size-4 text-ink" aria-hidden />
-                        <span className="text-ink">확인됐어요</span>
+                        <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                        저장하는 중…
                     </>
+                ) : (
+                    ready && (
+                        <>
+                            <Check className="size-4 text-ink" aria-hidden />
+                            <span className="text-ink">확인됐어요</span>
+                        </>
+                    )
                 )}
             </p>
 
@@ -134,9 +164,7 @@ const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepPro
                         pressable,
                         'mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-[16px] font-bold text-white disabled:active:scale-100',
                         danger ? 'bg-red-600 hover:bg-red-700' : 'bg-ink hover:bg-neutral-800',
-                        status !== 'valid' &&
-                            status !== 'submitting' &&
-                            'bg-neutral-100 text-neutral-400 hover:bg-neutral-100',
+                        !ready && 'bg-neutral-100 text-neutral-400 hover:bg-neutral-100',
                     )}
                 >
                     {status === 'submitting' && (

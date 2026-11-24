@@ -46,7 +46,7 @@ async function enterPin(user: User, pin = '1234') {
     await user.type(await screen.findByLabelText('PIN 4자리'), pin);
 }
 
-/** PIN을 넣고, 확인되면 확인 버튼을 누른다 */
+/** PIN을 넣고, 확인되면 확인 버튼을 누른다 (확인 버튼은 삭제만. 나머지는 PIN이 맞으면 바로 실행) */
 async function confirmPin(user: User, label: string) {
     await enterPin(user);
     const button = await screen.findByRole('button', { name: label });
@@ -176,7 +176,7 @@ describe('합주표', () => {
         // 정보 단계로 돌아와 미루기: 원래 시간으로 저장된다 (되돌리지 않으면 시간이 비어 있다)
         const info = await findDialog('월 10:00 – 11:00');
         await user.click(within(info).getByRole('button', { name: '11/30(월)로 미루기' }));
-        await confirmPin(user, '미루기');
+        await enterPin(user);
         await waitFor(() => expect(putBody).toBeDefined());
         expect(putBody).toMatchObject({ startTime: 2, endTime: 3, repeat: true });
     });
@@ -188,7 +188,9 @@ describe('합주표', () => {
         // PIN 단계는 같은 Drawer 안에서 바뀐다 (Drawer를 쌓지 않음)
         await findDialog('11/30(월)로 미룰까요?');
         expect(useDrawerStore.getState().openedDrawers).toEqual(['ensembleInfo']);
-        await confirmPin(user, '미루기');
+        // PIN이 맞으면 확인 버튼 없이 바로 저장한다
+        await enterPin(user);
+        expect(screen.queryByRole('button', { name: '미루기' })).not.toBeInTheDocument();
 
         await waitFor(() => expect(putBody).toBeDefined());
         expect(putBody).toMatchObject({ teamId: 'team-1', repeat: true, startTime: 2, endTime: 3 });
@@ -206,29 +208,27 @@ describe('합주표', () => {
     });
 
     // F4: 이전에는 저장을 기다리지 않고 화면의 날짜를 먼저 바꿔, 저장이 실패해도 바뀐 날짜가 보였다
-    it('미루기: 저장에 실패하면 알림을 띄우고 PIN 단계에 머문다. 뒤로 가면 날짜는 그대로', async () => {
+    it('미루기: 저장에 실패하면 알림을 띄우고 PIN 단계에 머물러 다시 넣게 한다. 뒤로 가면 날짜는 그대로', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         server.use(http.put(`${url}/ensemble`, () => new HttpResponse(null, { status: 500 })));
         const { user, dialog } = await openEnsembleInfo();
 
         await user.click(within(dialog).getByRole('button', { name: '11/30(월)로 미루기' }));
-        await confirmPin(user, '미루기');
+        await enterPin(user);
 
         expect(
             await screen.findByText('저장하지 못했어요. 잠시 후 다시 시도해 주세요.'),
         ).toBeInTheDocument();
         const pinStep = await findDialog('11/30(월)로 미룰까요?');
-        // 다시 누를 수 있다
-        await waitFor(() =>
-            expect(within(pinStep).getByRole('button', { name: '미루기' })).toBeEnabled(),
-        );
+        // PIN 칸을 비워 다시 넣게 한다
+        await waitFor(() => expect(screen.getByLabelText('PIN 4자리')).toHaveValue(''));
         await user.click(within(pinStep).getByRole('button', { name: '뒤로' }));
         const info = within(await findDialog('월 10:00 – 11:00'));
         expect(info.getByText('11/23(월)')).toBeInTheDocument();
         expect(info.queryByText(/없어요/)).not.toBeInTheDocument();
     });
 
-    it('PIN: 확인하는 동안은 틀림으로 표시하지 않고, 틀리면 확인 버튼을 누를 수 없다', async () => {
+    it('PIN: 확인하는 동안은 틀림으로 표시하지 않고, 틀리면 확인 버튼을 누를 수 없고 칸을 비운다', async () => {
         let respond: (ok: boolean) => void = () => {};
         server.use(
             http.post(`${url}/check-team-pin`, async () => {
@@ -242,12 +242,19 @@ describe('합주표', () => {
 
         // 응답 전 (이전: 4자리를 넣는 즉시 빨간색 → 맞는 PIN도 잠깐 빨갛게 보였다)
         expect(await screen.findByText('확인하는 중…')).toBeInTheDocument();
-        expect(screen.queryByText('PIN이 맞지 않아요')).not.toBeInTheDocument();
+        expect(screen.queryByText(/PIN이 맞지 않아요/)).not.toBeInTheDocument();
         expect(screen.getByLabelText('PIN 4자리')).not.toHaveAttribute('aria-invalid', 'true');
 
         respond(false);
-        expect(await screen.findByText('PIN이 맞지 않아요')).toBeInTheDocument();
+        expect(
+            await screen.findByText('PIN이 맞지 않아요. 다시 입력해 주세요'),
+        ).toBeInTheDocument();
         expect(screen.getByRole('button', { name: '삭제하기' })).toBeDisabled();
+        // 흔들기가 끝나면 칸을 비운다 (안내 문구는 다시 넣기 시작할 때까지 남는다)
+        await waitFor(() => expect(screen.getByLabelText('PIN 4자리')).toHaveValue(''));
+        expect(screen.getByText('PIN이 맞지 않아요. 다시 입력해 주세요')).toBeInTheDocument();
+        await user.type(screen.getByLabelText('PIN 4자리'), '1');
+        expect(screen.queryByText(/PIN이 맞지 않아요/)).not.toBeInTheDocument();
     });
 
     it('PIN: 응답이 오기 전에 PIN을 고치면 이전 응답은 버린다', async () => {
@@ -274,7 +281,7 @@ describe('합주표', () => {
         pending[0]!(false); // 늦게 온 "틀림"
         await delay(50);
         expect(button).toBeEnabled();
-        expect(screen.queryByText('PIN이 맞지 않아요')).not.toBeInTheDocument();
+        expect(screen.queryByText(/PIN이 맞지 않아요/)).not.toBeInTheDocument();
     });
 
     it('바로 하기(미루기 취소): 여러 번 미뤘어도 한 번에 원래 날짜로 되돌린다', async () => {
@@ -287,7 +294,7 @@ describe('합주표', () => {
 
         await user.click(drawer.getByRole('button', { name: '11/23(월)부터 바로 하기' }));
         await findDialog('11/23(월)부터 바로 할까요?');
-        await confirmPin(user, '바로 하기');
+        await enterPin(user);
 
         await waitFor(() => expect(putBody).toBeDefined());
         expect(putBody).toMatchObject({
@@ -314,7 +321,7 @@ describe('합주표', () => {
 
         await user.click(drawer.getByRole('button', { name: '매주 반복으로 바꾸기' }));
         await findDialog('매주 반복으로 바꿀까요?');
-        await confirmPin(user, '매주 반복으로 바꾸기');
+        await enterPin(user);
 
         await waitFor(() => expect(putBody).toBeDefined());
         expect(putBody).toMatchObject({
@@ -356,5 +363,32 @@ describe('합주표', () => {
         await user.click(within(pinStep).getByRole('button', { name: '뒤로' }));
 
         expect(await findDialog('월 10:00 – 11:00')).toBeInTheDocument();
+    });
+
+    it('화면 키보드가 열리면 Drawer를 보이는 영역 아래 끝에 두고, 닫히면 원래대로', async () => {
+        // 키보드 330px, 사파리가 보이는 영역을 120px 스크롤 → 가려진 아래쪽 210px, 보이는 높이 514px
+        const viewport = Object.assign(new EventTarget(), { height: 844, offsetTop: 0 });
+        Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
+        Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 });
+        try {
+            const { dialog } = await openEnsembleInfo();
+            expect(dialog.style.bottom).toBe('');
+
+            Object.assign(viewport, { height: 514, offsetTop: 120 });
+            viewport.dispatchEvent(new Event('resize'));
+            await waitFor(() => expect(dialog.style.bottom).toBe('210px'));
+            expect(dialog.style.maxHeight).toBe('min(92dvh, 502px)');
+
+            Object.assign(viewport, { height: 844, offsetTop: 0 });
+            viewport.dispatchEvent(new Event('resize'));
+            await waitFor(() => expect(dialog.style.bottom).toBe(''));
+            // 높이를 고정해 두지 않는다 (vaul은 키보드를 닫을 때 처음 높이로 고정해, 내용이 바뀌면 스크롤이 생겼다)
+            expect(dialog.style.height).toBe('');
+        } finally {
+            Object.defineProperty(window, 'visualViewport', {
+                configurable: true,
+                value: undefined,
+            });
+        }
     });
 });

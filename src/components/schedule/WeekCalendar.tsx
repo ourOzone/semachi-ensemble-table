@@ -226,13 +226,15 @@ function EventBlock({ event, onClick }: EventBlockProps) {
     // 시간은 PC에서 항상 보이게 자리를 먼저 잡는다. 겹쳐서 폭이 좁으면 두 줄로 나뉠 수 있어 두 줄을 잡는다
     const timeLines = lanes >= 2 && !dateLabel ? 2 : 1; // 날짜는 짧아 한 줄
     const timeHeight = showTime ? SIZE.pc.time * TIME_LINE_HEIGHT * timeLines + 2 : 0;
+    // 점선 블록의 날짜는 모바일에서도 보이므로 모바일 이름 줄에서도 자리를 뺀다 (10px 한 줄)
+    const mobileDateHeight = showTime && dateLabel ? 10 * TIME_LINE_HEIGHT + 2 : 0;
 
     const style: CSSProperties & Record<`--${string}`, string> = {
         top: `calc(var(--slot) * ${startTime} + 1px)`,
         height: `calc(var(--slot) * ${slots} - 2px)`,
         left: `calc(${lane} * 100% / ${lanes} + 1px)`,
         width: `calc(100% / ${lanes} - 2px)`,
-        '--name-lines': String(nameLines(slots, SIZE.mobile)),
+        '--name-lines': String(nameLines(slots, SIZE.mobile, mobileDateHeight)),
         '--name-lines-md': String(nameLines(slots, SIZE.pc, timeHeight)),
     };
     if (skipped) {
@@ -277,15 +279,17 @@ function EventBlock({ event, onClick }: EventBlockProps) {
               시간 (PC): 한 줄에 들어가면 "18:00–20:00", 안 들어가면 언제나 시작·끝을 두 줄로 쌓는다 (하이픈 없이).
               이전에는 저절로 줄바꿈될 때 "18:00–" / "20:00", 아주 좁을 때 "18:00" / "20:00"로 하이픈이 들쭉날쭉했다.
               76px = 11px 글씨로 가장 긴 "HH:MM–HH:MM"의 폭 (NanumSquare Neo, Chrome 측정). 56px 이하는 글씨를 10px로
-              점선 블록은 시간 대신 날짜 (dateLabel).
+              점선 블록은 시간 대신 날짜 (dateLabel). 날짜는 짧아서 모바일에서도 보인다 (10px, 좁으면 줄바꿈).
               자리는 이름보다 먼저 잡는다 (--name-lines-md 계산에서 시간 두 줄 몫을 뺌)
             */}
             {showTime && (
                 <span
                     className={cn(
                         'mt-0.5 hidden shrink-0 text-[11px] leading-[1.3] opacity-90',
-                        // 3개 이상 겹치면 1024px 이상에서만 (그보다 좁으면 이름처럼 색 띠만)
-                        lanes >= 3 ? 'lg:block' : 'md:block',
+                        // 3개 이상 겹치면 1024px 이상에서만 (그보다 좁으면 이름처럼 색 띠만).
+                        // 시간은 PC에서만, 점선 블록의 날짜는 모바일에서도
+                        lanes >= 3 ? 'lg:block' : dateLabel ? 'block' : 'md:block',
+                        dateLabel && 'text-[10px] wrap-anywhere md:text-[11px]',
                     )}
                 >
                     {dateLabel ?? (

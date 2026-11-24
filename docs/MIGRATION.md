@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영) 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -666,6 +666,28 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 확인: Chrome(카드·블록만 스쿼클, 칩은 알약), WebKit에서 지원 조건을 끈 경우(전부 일반 둥근 모서리, 마스크 없음)
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 120/120 / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 41 (새 코드 0건) / `pnpm format:check` ✅
+
+### 2026-11-24 — View 개편 V-2 (8차): 합주 정보 Drawer (사용자 시안)
+
+- 지금 → 바꾼 후
+  - 합주 정보 Drawer: 오른쪽에서 열리는 옛 Drawer(antd) → 아래에서 올라오는 Drawer(vaul), 아래로 끌어내리거나 바깥·닫기 버튼·Esc로 닫힘. PC는 가운데 520px 폭. 머리는 팀의 지금 색
+  - 팀 정보 보기: "팀 정보 보기" 버튼, 합주 정보 위에 쌓임(뒤로 가면 합주 정보) → 머리의 팀 이름 버튼, 팀 정보 Drawer로 바뀜
+  - 미루기 버튼: "다음 번에 안 해요 (다음 합주를 M/D로)" → "M/D(요일)로 미루기", 미룬 상태면 "더 미루기". PIN 확인 버튼 "다음 번에 안 해요" → "일주일 미뤄요"
+  - **미루기 취소 (새 기능)**: 미룬 상태면 쉬는 날("11/26(목) 쉬어요", 여러 주면 "…부터 N주 쉬어요")과 "미루기 취소" 버튼. 여러 번 미뤘어도 한 번에 되돌린다 (PIN 필요)
+  - **매주 반복으로 바꾸기 (새 기능)**: 일회성 합주는 미루기 대신 이 버튼 (PIN 필요, 날짜·시간 그대로)
+  - 캘린더: 두 주 이상 미룬 반복 합주가 마지막 주만 "쉼", 그 전 주는 안 보임 → 미룬 주 모두 "쉼" (ISSUES V9)
+  - 다음 합주 표시: "2026-11-23 (월)" + "10:00 - 11:00" + "매주 이 시간에 반복" → "11/23(월)" + "10:00 – 11:00 · 1시간" + "3일 뒤", 반복 여부는 머리에
+  - "같은 시간에 다른 팀 합주 잡기": 버튼만 있고 "준비 중" 알림 (ISSUES V11)
+- 구조
+  - `schedule/EnsembleInfoDrawer.tsx` 새로 만들고 옛 `board/EnsembleInfoDrawer.tsx` 삭제. 보여줄 값은 열려 있는 동안의 context 값을 붙잡아 두어, 닫히며 초기화되거나 수정 단계로 넘어가며 시간이 비워져도 내려가는 동안 내용이 유지된다
+  - PIN·입력 단계는 아직 옛 Drawer. 옛 Drawer가 쌓이면 새 Drawer는 내려가고(스택 맨 위일 때만 열림), 닫히면 다시 올라온다. 새 Drawer는 본문을 밀지 않고, 바깥 어둡게는 옛 Drawer 중 맨 아래 것만 (`stores/drawer`의 `BOTTOM_DRAWERS`·`sideDrawers`, App·공용 Drawer). 옛 Drawer만 열린 화면은 이전과 같다
+  - `lib/calendar`: `getRegularNextDate`(미루지 않았다면 다음 합주였을 날짜), `getEnsembleSchedule`(다음 합주·쉬는 날짜들), `getOccurrence`에 선택 인자 `regularDate` (기존 동작은 그대로, 기존 테스트 수정 없음)
+  - shadcn `DrawerContent`에 `overlayClassName`·`handleClassName` 추가. `SkipEnsembleDrawer`에 문구 props(`title`·`label`), `DrawerId`에 `unskipEnsemble`·`repeatEnsemble`
+- 확인: Playwright(가짜 데이터, 변경 요청은 가짜 응답)로 390·1280px에서 반복·미룬 상태(1주·2주)·일회성(노랑)·팀 아닌 일정, 미루기 → PIN Drawer(입력칸 포커스) → 저장 → 다시 올라와 "더 미루기"·"미루기 취소" 표시, 팀 이름 → 팀 정보 Drawer, 손잡이를 아래로 끌어 닫힘
+- 테스트: `Board.test.tsx`를 새 Drawer 기준으로 다시 씀 (5개 → 9개: 표시, 닫기, 팀 정보로 바뀜, 수정 후 돌아옴, 미루기 후 쉬는 날, 미루기 저장 실패, 미루기 취소(두 번 미룬 합주), 반복으로 바꾸기, 삭제). `lib/calendar.test.ts` 6개 추가. 변형 검사 10/10
+- 번들: 1,102kB → 1,182kB (gzip 350 → 376kB). 이제 앱에서 vaul·Radix Dialog를 실제로 쓴다 (이전에는 테스트에서만 써서 번들에서 빠졌다)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 131/131 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 32 (옛 합주 정보 Drawer 삭제로 9건 감소, 새 코드 0건) / `pnpm format:check` ✅
 
 ## 남은 일
 

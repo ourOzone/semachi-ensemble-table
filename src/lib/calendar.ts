@@ -2,7 +2,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { eventIds, idx2hour } from '@/constants';
 import theme from '@/styles/theme';
 import type { DayIndex, EnsembleResponse, TimeSlot } from '@/types';
-import { resolveNextDate } from './board';
+import { resolveNextDate, slotEndTime } from './board';
 import { getTodayIdx } from './week';
 
 // 주 단위 캘린더(View 개편 V-2)용 순수 함수. 서버 데이터(합주 = 요일 + 시간칸 + 반복 여부 + 다음 날짜)는 그대로 두고,
@@ -39,17 +39,37 @@ export function formatSlotRange(startTime: TimeSlot, endTime: TimeSlot): string 
 export type OccurrenceStatus = 'normal' | 'skipped';
 
 /**
+ * 반복 합주를 미루지 않았다면 다음 합주였을 날짜 (그날 0시): 오늘부터 처음 오는 그 요일.
+ * 오늘이 그 요일이면 오늘 합주가 아직 안 끝났을 때만 오늘, 끝났으면 7일 뒤 (resolveNextDate와 같은 기준)
+ */
+export function getRegularNextDate(
+    { day, endTime }: { day: DayIndex; endTime: TimeSlot },
+    now: Dayjs,
+): Dayjs {
+    const today = now.startOf('day');
+    const weekday = (day + 1) % 7; // 월요일 0 → dayjs의 day()(일요일 0)
+    if (weekday === now.day()) {
+        const [hour, minute] = slotEndTime(endTime);
+        return now.hour(hour).minute(minute).isAfter(now) ? today : today.add(7, 'day');
+    }
+    return today.add((7 + weekday - now.day()) % 7, 'day');
+}
+
+/**
  * 합주가 date(그 합주 요일의 날짜)에 어떻게 보이는지. 안 보이면 null.
  * - 일회성: nextDate 그날만
  * - 반복: nextDate 이후(당일 포함)는 매주 합주. nextDate 직전 1주는 "쉼"
- *   (미루기는 nextDate를 7일 뒤로 옮기므로, 옮겨지기 전 날짜가 nextDate - 7이다)
+ *   (미루기는 nextDate를 7일 뒤로 옮기므로, 옮겨지기 전 날짜가 nextDate - 7이다).
+ *   regularDate(미루지 않았다면 다음 합주였을 날짜, getRegularNextDate)를 주면 그날부터 nextDate 전까지도 모두 "쉼"
+ *   (여러 번 미룬 경우)
  *
  * 한계: 서버에는 "언제부터 시작"과 "미룬 날짜"가 따로 저장되지 않는다. 그래서 시작일이 미래인 반복 합주도
- * 시작 직전 주에 "쉼"으로 보이고, 두 주 이상 연속으로 미루면 마지막 주만 "쉼"으로 보인다.
+ * 시작 전 주들이 "쉼"으로 보인다 (ISSUES V9).
  */
 export function getOccurrence(
     { repeat, nextDate }: Pick<EnsembleResponse, 'repeat' | 'nextDate'>,
     date: Dayjs,
+    regularDate?: Dayjs,
 ): OccurrenceStatus | null {
     const next = dayjs(nextDate).startOf('day');
     const day = date.startOf('day');
@@ -58,7 +78,40 @@ export function getOccurrence(
     }
     if (!day.isBefore(next)) return 'normal';
     if (!day.isBefore(next.subtract(7, 'day'))) return 'skipped';
+    if (regularDate && !day.isBefore(regularDate, 'day')) return 'skipped';
     return null;
+}
+
+/** 합주 정보 Drawer에 보여줄 날짜들 */
+export interface EnsembleSchedule {
+    /** 다음 합주 날짜 (미뤘으면 미룬 뒤 날짜). resolveNextDate 결과 */
+    nextDate: Dayjs;
+    /** 미뤄서 쉬는 날짜들 (오래된 순, 7일 간격). 미루지 않았거나 일회성이면 빈 배열 */
+    skippedDates: Dayjs[];
+}
+
+/**
+ * 다음 합주와 쉬는 날짜들. 반복 합주에서 미루지 않았다면 다음 합주였을 날짜(getRegularNextDate)부터
+ * 다음 합주 전까지가 쉬는 날짜다. 미루기 취소는 다음 날짜를 skippedDates[0]으로 되돌린다.
+ * 한계: 시작일이 미래인 반복 합주도 시작 전 주들이 쉬는 날짜로 나온다 (ISSUES V9)
+ */
+export function getEnsembleSchedule(
+    ensemble: Pick<EnsembleResponse, 'repeat' | 'nextDate' | 'day' | 'endTime'>,
+    now: Dayjs,
+): EnsembleSchedule {
+    const nextDate = resolveNextDate(ensemble, now);
+    const skippedDates: Dayjs[] = [];
+    if (ensemble.repeat) {
+        const next = nextDate.startOf('day');
+        for (
+            let date = getRegularNextDate(ensemble, now);
+            date.isBefore(next, 'day');
+            date = date.add(7, 'day')
+        ) {
+            skippedDates.push(date);
+        }
+    }
+    return { nextDate, skippedDates };
 }
 
 interface SlotRange {
@@ -142,7 +195,11 @@ export function toWeekSchedule(
 
     for (const ensemble of ensembles) {
         const { _id: id, teamId, teamName, day, startTime, endTime, repeat } = ensemble;
-        const status = getOccurrence(ensemble, weekStart.add(day, 'day'));
+        const status = getOccurrence(
+            ensemble,
+            weekStart.add(day, 'day'),
+            repeat ? getRegularNextDate(ensemble, now) : undefined,
+        );
         if (!status) continue;
         // day(0~6) 범위는 응답 스키마(ensembleResponseSchema)에서 검증된다
         days[day]!.push({

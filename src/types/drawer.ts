@@ -27,6 +27,8 @@ export type DrawerId =
     | 'ensembleInfo'
     | 'deleteEnsemble'
     | 'skipEnsemble'
+    | 'unskipEnsemble'
+    | 'repeatEnsemble'
     | 'addEnsemble1'
     | 'addEnsemble2'
     | 'addEnsemble3'

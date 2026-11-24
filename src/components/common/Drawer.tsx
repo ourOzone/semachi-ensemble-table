@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { Drawer as AntDrawer, type InputRef } from 'antd';
 import { LeftOutlined } from '@ant-design/icons';
 import { useDrawerContext } from '@/context';
+import { sideDrawers } from '@/stores/drawer';
 import { media } from '@/styles/media';
 import type { DrawerId } from '@/types';
 
@@ -66,7 +67,8 @@ const Drawer = ({
 
     return (
         <StyledDrawer
-            maskStyle={{ opacity: openedDrawers?.[0] === drawerId ? 1 : 0 }}
+            // 옛 Drawer 중 맨 아래 것만 바깥을 어둡게 한다 (아래에서 올라오는 새 Drawer는 위에 옛 Drawer가 쌓이면 내려간다)
+            maskStyle={{ opacity: sideDrawers(openedDrawers)[0] === drawerId ? 1 : 0 }}
             openedDrawers={openedDrawers}
             drawerId={drawerId}
             width={drawerWidth}

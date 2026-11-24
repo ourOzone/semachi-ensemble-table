@@ -12,14 +12,21 @@ import type { CheckEnsembleExists, HandleSkipEnsemble } from './types';
 
 const maxInput = 4;
 
+// 미루기·미루기 취소·매주 반복으로 바꾸기의 PIN 확인 Drawer (옛 Drawer). 문구와 처리 함수만 다르다
+
 interface SkipEnsembleDrawerProps {
     drawerId: DrawerId;
+    title: string;
+    /** 확인 버튼 문구 */
+    label: string;
     checkEnsembleExists: CheckEnsembleExists;
     handleSkipEnsemble: HandleSkipEnsemble;
 }
 
 const SkipEnsembleDrawer = ({
     drawerId,
+    title,
+    label,
     checkEnsembleExists,
     handleSkipEnsemble,
 }: SkipEnsembleDrawerProps) => {
@@ -75,7 +82,7 @@ const SkipEnsembleDrawer = ({
 
     return (
         <Drawer drawerId={drawerId} onClose={onClose} focusInputRef={focusInputRef}>
-            <Title>PIN 입력해야 미룰 수 있어요 🔑</Title>
+            <Title>{title}</Title>
             <InputWrapper>
                 <StyledInput
                     ref={focusInputRef}
@@ -97,7 +104,7 @@ const SkipEnsembleDrawer = ({
             </InputWrapper>
 
             <OkButton
-                label="다음 번에 안 해요"
+                label={label}
                 onClick={() => handleClickSkip(id, teamId, repeat, nextDate, startTime, endTime)}
                 disabled={error || pin.length !== maxInput}
             />

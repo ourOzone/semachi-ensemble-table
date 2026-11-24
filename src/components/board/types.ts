@@ -7,7 +7,7 @@ import type { TimeSlot } from '@/types';
 /** 합주가 아직 있으면 true. 삭제됐으면 경고를 띄우고 상태·Drawer를 초기화한 뒤 false */
 export type CheckEnsembleExists = (id: string) => Promise<boolean>;
 
-/** 합주 정보 Drawer에서 "팀 정보 보기" (teamId로 팀 정보 Drawer를 연다) */
+/** 합주 정보 Drawer에서 팀 이름 클릭 (teamId로 팀 정보 Drawer로 바꾼다) */
 export type HandleClickTeamInfo = (teamId: string) => void;
 
 type EnsembleArgs = [
@@ -25,7 +25,7 @@ type EnsembleArgs = [
  */
 export type HandleUpdateEnsemble = (...args: EnsembleArgs) => Promise<boolean>;
 
-/** 미루기 ("다음 번에 안 해요"): nextDate를 7일 뒤로 저장한다 */
+/** PIN Drawer(SkipEnsembleDrawer)가 호출하는 처리: 미루기(nextDate 7일 뒤) · 미루기 취소 · 매주 반복으로 바꾸기 */
 export type HandleSkipEnsemble = (...args: EnsembleArgs) => Promise<void>;
 
 export type HandleDeleteEnsemble = (id: string) => Promise<void>;

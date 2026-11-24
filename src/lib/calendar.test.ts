@@ -7,7 +7,9 @@ import {
     assignLanes,
     formatSlotRange,
     formatWeekRange,
+    getEnsembleSchedule,
     getOccurrence,
+    getRegularNextDate,
     getWeekStart,
     toWeekSchedule,
 } from './calendar';
@@ -68,6 +70,82 @@ describe('getOccurrence', () => {
                 dayjs('2026-11-23'),
             ),
         ).toBe('normal');
+    });
+});
+
+describe('getOccurrence: 여러 번 미룬 반복 합주', () => {
+    it('regularDate부터 nextDate 전까지 모두 쉼, regularDate 전은 기존 규칙', () => {
+        const repeat = { repeat: true, nextDate: '2026-12-07T00:00:00.000Z' }; // 3주 미룸
+        const regular = dayjs('2026-11-16');
+        expect(getOccurrence(repeat, dayjs('2026-11-16'), regular)).toBe('skipped');
+        expect(getOccurrence(repeat, dayjs('2026-11-23'), regular)).toBe('skipped');
+        expect(getOccurrence(repeat, dayjs('2026-11-30'), regular)).toBe('skipped');
+        expect(getOccurrence(repeat, dayjs('2026-12-07'), regular)).toBe('normal');
+        expect(getOccurrence(repeat, dayjs('2026-11-09'), regular)).toBeNull();
+        // regularDate 없이는 직전 주만
+        expect(getOccurrence(repeat, dayjs('2026-11-23'))).toBeNull();
+    });
+});
+
+describe('getRegularNextDate', () => {
+    // 2026-11-20 금요일 10:00
+    const now = dayjs('2026-11-20T10:00');
+
+    it('오늘부터 처음 오는 그 요일 0시', () => {
+        expect(getRegularNextDate({ day: 0, endTime: 3 }, now).format('YYYY-MM-DD HH:mm')).toBe(
+            '2026-11-23 00:00',
+        );
+        expect(getRegularNextDate({ day: 5, endTime: 3 }, now).format('YYYY-MM-DD')).toBe(
+            '2026-11-21',
+        );
+        expect(getRegularNextDate({ day: 3, endTime: 3 }, now).format('YYYY-MM-DD')).toBe(
+            '2026-11-26',
+        );
+    });
+
+    it('오늘이 그 요일이면 끝나기 전엔 오늘, 끝났으면 다음 주', () => {
+        // 마지막 시간칸 1 = 10:00에 끝남(지금과 같음 → 끝남), 2 = 10:30에 끝남
+        expect(getRegularNextDate({ day: 4, endTime: 1 }, now).format('YYYY-MM-DD')).toBe(
+            '2026-11-27',
+        );
+        expect(getRegularNextDate({ day: 4, endTime: 2 }, now).format('YYYY-MM-DD')).toBe(
+            '2026-11-20',
+        );
+    });
+});
+
+describe('getEnsembleSchedule', () => {
+    const now = dayjs('2026-11-20T10:00'); // 금요일
+    const thursday = { repeat: true, day: 3, endTime: 3 };
+
+    it('미루지 않은 반복 합주: 쉬는 날짜 없음', () => {
+        const { nextDate, skippedDates } = getEnsembleSchedule(
+            { ...thursday, nextDate: '2026-10-01T00:00:00.000Z' },
+            now,
+        );
+        expect(nextDate.format('YYYY-MM-DD')).toBe('2026-11-26');
+        expect(skippedDates).toEqual([]);
+    });
+
+    it('두 번 미룬 반복 합주: 정규 날짜부터 다음 합주 전까지 쉼', () => {
+        const { nextDate, skippedDates } = getEnsembleSchedule(
+            { ...thursday, nextDate: '2026-12-10T00:00:00.000Z' },
+            now,
+        );
+        expect(nextDate.format('YYYY-MM-DD')).toBe('2026-12-10');
+        expect(skippedDates.map((d) => d.format('YYYY-MM-DD'))).toEqual([
+            '2026-11-26',
+            '2026-12-03',
+        ]);
+    });
+
+    it('일회성: 쉬는 날짜 없음', () => {
+        const { nextDate, skippedDates } = getEnsembleSchedule(
+            { ...thursday, repeat: false, nextDate: '2026-12-10T00:00:00.000Z' },
+            now,
+        );
+        expect(nextDate.format('YYYY-MM-DD')).toBe('2026-12-10');
+        expect(skippedDates).toEqual([]);
     });
 });
 
@@ -171,6 +249,18 @@ describe('toWeekSchedule', () => {
 
         expect(toWeekSchedule([base], colorMap, dayjs('2026-11-09'), now)[0]).toEqual([]);
         expect(toWeekSchedule([oneTime], colorMap, dayjs('2026-11-30'), now)[2]).toHaveLength(1);
+    });
+
+    it('여러 번 미룬 반복 합주는 쉬는 주마다 쉼으로 보인다', () => {
+        const skipped3 = { ...base, nextDate: '2026-12-14T00:00:00.000Z' }; // 11/23·30·12/7 쉼
+        for (const week of ['2026-11-23', '2026-11-30', '2026-12-07']) {
+            expect(toWeekSchedule([skipped3], colorMap, dayjs(week), now)[0]?.[0]?.status).toBe(
+                'skipped',
+            );
+        }
+        expect(toWeekSchedule([skipped3], colorMap, dayjs('2026-12-14'), now)[0]?.[0]?.status).toBe(
+            'normal',
+        );
     });
 
     it('팀 아닌 일정은 isEvent, 색 매핑에 없는 팀은 회청색', () => {

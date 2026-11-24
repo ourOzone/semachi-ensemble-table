@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { useDrawerStore } from '@/stores/drawer';
+import { sideDrawers, useDrawerStore } from '@/stores/drawer';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Notice from '@/components/notice';
@@ -16,7 +16,7 @@ function App() {
     return (
         <>
             <Header />
-            <Container openedDrawers={openedDrawers}>
+            <Container openedDrawers={sideDrawers(openedDrawers)}>
                 <Notice />
                 <Schedule />
                 <Note />
@@ -27,7 +27,7 @@ function App() {
 }
 
 interface ContainerProps {
-    /** Drawer가 하나라도 열려 있으면 본문을 왼쪽으로 민다 */
+    /** 옛 Drawer(오른쪽에서 열림)가 하나라도 열려 있으면 본문을 왼쪽으로 민다. 아래에서 올라오는 새 Drawer는 빼고 넘긴다 */
     openedDrawers: DrawerId[];
 }
 

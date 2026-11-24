@@ -36,12 +36,18 @@ function DrawerOverlay({
 
 function DrawerContent({
     className,
+    overlayClassName,
+    handleClassName,
     children,
     ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+}: React.ComponentProps<typeof DrawerPrimitive.Content> & {
+    overlayClassName?: string;
+    /** 위쪽 손잡이(아래로 끌어 닫기) 막대 */
+    handleClassName?: string;
+}) {
     return (
         <DrawerPortal data-slot="drawer-portal">
-            <DrawerOverlay />
+            <DrawerOverlay className={overlayClassName} />
             <DrawerPrimitive.Content
                 data-slot="drawer-content"
                 className={cn(
@@ -50,7 +56,12 @@ function DrawerContent({
                 )}
                 {...props}
             >
-                <div className="mx-auto mt-4 hidden h-1 w-[100px] shrink-0 rounded-full bg-muted group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
+                <div
+                    className={cn(
+                        'mx-auto mt-4 hidden h-1 w-[100px] shrink-0 rounded-full bg-muted group-data-[vaul-drawer-direction=bottom]/drawer-content:block',
+                        handleClassName,
+                    )}
+                />
                 {children}
             </DrawerPrimitive.Content>
         </DrawerPortal>

@@ -10,7 +10,7 @@ import {
 } from '@/queries/ensembles';
 import { useRefreshTeamsAndEnsembles, useTeams } from '@/queries/teams';
 import WeekCalendar from '@/components/schedule/WeekCalendar';
-import EnsembleInfoDrawer from './EnsembleInfoDrawer';
+import EnsembleInfoDrawer from '@/components/schedule/EnsembleInfoDrawer';
 import UpdateEnsembleDrawer1 from './updateEnsembleDrawers/UpdateEnsembleDrawer1';
 import UpdateEnsembleDrawer2 from './updateEnsembleDrawers/UpdateEnsembleDrawer2';
 import UpdateEnsembleDrawer3 from './updateEnsembleDrawers/UpdateEnsembleDrawer3';
@@ -19,7 +19,7 @@ import DeleteEnsembleDrawer from './DeleteEnsembleDrawer';
 import SkipEnsembleDrawer from './SkipEnsembleDrawer';
 import dayjs, { type Dayjs } from 'dayjs';
 import { toEnsembleRequest } from '@/lib/ensemble';
-import type { CalendarEvent } from '@/lib/calendar';
+import { getRegularNextDate, type CalendarEvent } from '@/lib/calendar';
 import type { TimeSlot } from '@/types';
 import 'dayjs/locale/ko';
 
@@ -34,7 +34,8 @@ interface BoardProps {
     direction: 'prev' | 'next' | null;
 }
 
-// 합주표 (View 개편 V-2: 주 단위 캘린더). 합주 정보·수정·미루기·삭제 Drawer는 아직 옛 Drawer다
+// 합주표 (View 개편 V-2: 주 단위 캘린더 + 아래에서 올라오는 합주 정보 Drawer).
+// 수정·미루기·삭제의 PIN·입력 단계는 아직 옛 Drawer다
 const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
     const teams = useTeams();
     const week = useWeekSchedule(weekStart);
@@ -43,7 +44,7 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
     const { mutateAsync: updateEnsembleAsync } = useUpdateEnsemble();
     const { mutateAsync: deleteEnsembleAsync } = useDeleteEnsemble();
     const { setTeamStates } = useTeamContext();
-    const { setEnsembleStates, setNextDate } = useEnsembleContext();
+    const { setEnsembleStates, setNextDate, setRepeat } = useEnsembleContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
 
     // 이미 삭제된 합주를 만났을 때: 상태·Drawer 초기화 후 합주 목록을 다시 불러온다
@@ -78,7 +79,8 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
         [openDrawer, setTeamStates, setEnsembleStates],
     );
 
-    // 합주 정보 Drawer에서 팀 정보 보기 클릭 (id는 team id).
+    // 합주 정보 Drawer에서 팀 이름 클릭 (id는 team id). 합주 정보 Drawer를 팀 정보 Drawer로 바꾼다
+    // (이전: 합주 정보 위에 쌓여, 뒤로 가면 합주 정보로 돌아왔다).
     // 불러온 팀 목록에서 찾는다. 없으면 이미 삭제된 팀 (이전에는 존재 확인 요청 후 찾았다: 사전 결정 5)
     const handleClickTeamInfo = useCallback(
         (id: string) => {
@@ -91,13 +93,14 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
                 return;
             }
             setTeamStates(id, team.type, team.name, team.desc);
-            openDrawer('teamInfo');
+            setEnsembleStates();
+            setOpenedDrawers(['teamInfo']);
         },
         [
             closeAllDrawers,
-            openDrawer,
             refreshTeamsAndEnsembles,
             setEnsembleStates,
+            setOpenedDrawers,
             setTeamStates,
             teams,
         ],
@@ -170,6 +173,57 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
         [handleUpdateEnsemble, setNextDate],
     );
 
+    // 미루기 취소: 여러 번 미뤘어도 한 번에 되돌린다. 미루지 않았다면 다음 합주였을 날짜(오늘부터 처음 오는 그 요일)로 저장
+    const handleUnskipEnsemble = useCallback(
+        async (
+            id: string,
+            teamId: string,
+            repeat: boolean,
+            nextDate: Dayjs | null,
+            startTime: TimeSlot | null,
+            endTime: TimeSlot | null,
+        ) => {
+            // 정보 Drawer가 열려 있는 동안 호출되어 null이 아님
+            const regular = getRegularNextDate(
+                { day: (nextDate!.day() + 6) % 7, endTime: endTime! },
+                dayjs(),
+            );
+            const saved = await handleUpdateEnsemble(
+                id,
+                teamId,
+                repeat,
+                regular,
+                startTime,
+                endTime,
+            );
+            if (saved) setNextDate(regular);
+        },
+        [handleUpdateEnsemble, setNextDate],
+    );
+
+    // 일회성 합주를 매주 반복으로 바꾸기 (날짜·시간은 그대로)
+    const handleRepeatEnsemble = useCallback(
+        async (
+            id: string,
+            teamId: string,
+            _repeat: boolean,
+            nextDate: Dayjs | null,
+            startTime: TimeSlot | null,
+            endTime: TimeSlot | null,
+        ) => {
+            const saved = await handleUpdateEnsemble(
+                id,
+                teamId,
+                true,
+                nextDate,
+                startTime,
+                endTime,
+            );
+            if (saved) setRepeat(true);
+        },
+        [handleUpdateEnsemble, setRepeat],
+    );
+
     return (
         <>
             <WeekCalendar
@@ -182,10 +236,8 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
 
             {/* DRAWERS */}
             <EnsembleInfoDrawer
-                drawerId="ensembleInfo"
                 checkEnsembleExists={checkEnsembleExists}
                 handleClickTeamInfo={handleClickTeamInfo}
-                handleSkipEnsemble={handleSkipEnsemble}
             />
             <UpdateEnsembleDrawer1
                 drawerId="updateEnsemble1"
@@ -204,8 +256,24 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
             />
             <SkipEnsembleDrawer
                 drawerId="skipEnsemble"
+                title="PIN 입력해야 미룰 수 있어요 🔑"
+                label="일주일 미뤄요"
                 checkEnsembleExists={checkEnsembleExists}
                 handleSkipEnsemble={handleSkipEnsemble}
+            />
+            <SkipEnsembleDrawer
+                drawerId="unskipEnsemble"
+                title="PIN 입력해야 미루기를 취소할 수 있어요 🔑"
+                label="미루기 취소해요"
+                checkEnsembleExists={checkEnsembleExists}
+                handleSkipEnsemble={handleUnskipEnsemble}
+            />
+            <SkipEnsembleDrawer
+                drawerId="repeatEnsemble"
+                title="PIN 입력해야 반복으로 바꿀 수 있어요 🔑"
+                label="매주 반복해요"
+                checkEnsembleExists={checkEnsembleExists}
+                handleSkipEnsemble={handleRepeatEnsemble}
             />
         </>
     );

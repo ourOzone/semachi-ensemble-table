@@ -25,7 +25,7 @@ interface TeamChipsProps {
 const pressable = 'transition-[filter,background-color,scale] duration-150 active:scale-[0.97]';
 
 const chipBase = cn(
-    'squircle inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-medium whitespace-nowrap md:h-9 md:px-4 md:text-[15px]',
+    'inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-medium whitespace-nowrap md:h-9 md:px-4 md:text-[15px]',
     pressable,
 );
 
@@ -43,7 +43,9 @@ const TeamChips = ({ teams, events, onAddTeam }: TeamChipsProps) => {
                 setScrolled(false);
             }}
             className={cn(
-                'squircle inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-300 bg-neutral-100 px-2.5 text-sm font-medium text-black hover:bg-neutral-200 md:hidden',
+                'squircle-border inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-300 bg-neutral-100 px-2.5 text-sm font-medium text-black hover:bg-neutral-200 md:hidden',
+                // 스쿼클 대체 방식(사파리)에서 쓰는 테두리·바탕 색 (위 border·bg와 같은 값)
+                '[--squircle-fill:var(--color-neutral-100)] [--squircle-stroke:var(--color-neutral-300)] hover:[--squircle-fill:var(--color-neutral-200)]',
                 pressable,
             )}
         >
@@ -79,7 +81,8 @@ const TeamChips = ({ teams, events, onAddTeam }: TeamChipsProps) => {
                 onClick={onAddTeam}
                 className={cn(
                     chipBase,
-                    'gap-1 border border-dashed border-neutral-500 bg-white text-neutral-800 hover:bg-neutral-100',
+                    // 점선 테두리는 대체 방식으로 따라 그릴 수 없어 지원 브라우저에서만 스쿼클
+                    'squircle-native gap-1 border border-dashed border-neutral-500 bg-white text-neutral-800 hover:bg-neutral-100',
                 )}
             >
                 <Plus className="size-3.5" aria-hidden />팀 추가
@@ -129,7 +132,7 @@ function ChipButton({ chip }: { chip: Chip }) {
         <button
             type="button"
             onClick={chip.onClick}
-            className={cn(chipBase, 'text-white hover:brightness-90')}
+            className={cn(chipBase, 'squircle text-white hover:brightness-90')}
             style={{ backgroundColor: chip.color }}
         >
             {chip.name}

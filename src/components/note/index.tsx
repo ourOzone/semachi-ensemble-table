@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import styled from 'styled-components';
-import { squircle } from '@/styles/cardRadius';
+import { squircleBordered, squircleNative, squircleShadow } from '@/styles/cardRadius';
 import { useDrawerContext } from '@/context';
 import { useAddNote, useDeleteNote, useNotes, useRefreshNotes } from '@/queries/notes';
 import { noteExists } from '@/api/note';
@@ -78,45 +78,54 @@ const Note = () => {
     );
 
     return (
-        <Container>
-            <AddButton onClick={() => openDrawer('addNote')}>
-                <PlusCircleOutlined />
-                멋진 한마디 남겨요 (일주일 후 자동 삭제돼요)
-            </AddButton>
-            {notes &&
-                notes.map((note) => (
-                    <NoteCard key={note.id}>
-                        <NoteText>{note.text}</NoteText>
-                        <NoteDeleteButton onClick={() => handleClickDelete(note.id)}>
-                            <CloseOutlined />
-                        </NoteDeleteButton>
-                    </NoteCard>
-                ))}
-            <AddNoteDrawer
-                drawerId="addNote"
-                text={text}
-                setText={setText}
-                pin={pin}
-                setPin={setPin}
-                handleAddNote={handleAddNote}
-            />
-            <DeleteNoteDrawer
-                drawerId="deleteNote"
-                id={id}
-                pin={pin}
-                setPin={setPin}
-                checkNoteExists={checkNoteExists}
-                handleDeleteNote={handleDeleteNote}
-            />
-        </Container>
+        <ShadowWrap>
+            <Container>
+                <AddButton onClick={() => openDrawer('addNote')}>
+                    <PlusCircleOutlined />
+                    멋진 한마디 남겨요 (일주일 후 자동 삭제돼요)
+                </AddButton>
+                {notes &&
+                    notes.map((note) => (
+                        <NoteCard key={note.id}>
+                            <NoteText>{note.text}</NoteText>
+                            <NoteDeleteButton onClick={() => handleClickDelete(note.id)}>
+                                <CloseOutlined />
+                            </NoteDeleteButton>
+                        </NoteCard>
+                    ))}
+                <AddNoteDrawer
+                    drawerId="addNote"
+                    text={text}
+                    setText={setText}
+                    pin={pin}
+                    setPin={setPin}
+                    handleAddNote={handleAddNote}
+                />
+                <DeleteNoteDrawer
+                    drawerId="deleteNote"
+                    id={id}
+                    pin={pin}
+                    setPin={setPin}
+                    checkNoteExists={checkNoteExists}
+                    handleDeleteNote={handleDeleteNote}
+                />
+            </Container>
+        </ShadowWrap>
     );
 };
+
+/** 스쿼클 대체 방식(사파리)에서 카드 그림자가 마스크에 잘려, 감싼 요소가 그림자를 그린다 */
+const ShadowWrap = styled.div`
+    width: 100%;
+    max-width: 1080px;
+    ${squircleShadow}
+`;
 
 const AddButton = styled(Button)`
     display: flex;
     justify-content: flex-start;
     align-items: center;
-    ${squircle('1rem', '1.5rem')}
+    ${squircleNative('1rem', '1.5rem')}
     border: 0.125rem dashed ${({ theme }) => theme.darkGray};
     height: 5.5rem;
     box-shadow: none;
@@ -143,8 +152,8 @@ const NoteCard = styled.div`
     justify-content: space-between;
     margin-top: 0.5rem;
     min-height: 5rem;
-    ${squircle('1rem', '1.5rem')}
     border: 1px solid ${({ theme }) => theme.border};
+    ${({ theme }) => squircleBordered('1rem', '1.5rem', '1px', theme.border, theme.container)}
     box-shadow: 0 0.125rem 0 rgba(0, 0, 0, 0.02);
 `;
 

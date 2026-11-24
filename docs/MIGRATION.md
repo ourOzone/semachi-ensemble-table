@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~5차(사용자 수정 반영) 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~6차(사용자 수정 반영) 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -641,6 +641,18 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 확인: Chrome에서 팀 칩·팀 추가·다음 주·합주 블록·드라이브 버튼의 커서(pointer)·마우스 올림 전후 스타일·`corner-shape`. 옛 Drawer 화면은 0픽셀 차이 (달력 Drawer의 40픽셀은 날짜가 하루 지나 23일이 지난 날짜로 바뀐 것)
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 120/120 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 41 (새 코드 0건) / `pnpm format:check` ✅
+
+### 2026-11-24 — View 개편 V-2 (6차): 사파리(아이폰)에서도 스쿼클
+
+- 원인: `corner-shape`는 Chrome 계열만 지원(사파리 미지원). 아이폰은 모든 브라우저가 사파리 엔진이라 모바일에서 브라우저와 관계없이 안 보였다
+- 지금 → 바꾼 후
+  - 사파리: 일반 둥근 모서리 → SVG 마스크로 같은 스쿼클 (팀 칩·"전체"·"오늘"·화살표·오늘 날짜·합주 블록·헤더 버튼·큰 카드 3개·한마디 카드). 점선 테두리 요소 3종은 일반 둥근 모서리 그대로 (ISSUES V10)
+  - 사파리에서 큰 카드의 그림자: 요소 그림자(box-shadow) → 감싼 요소의 drop-shadow (마스크가 그림자를 자르므로. 모양은 비슷)
+  - Chrome: 변화 없음
+- 빌드 함정 발견: `@supports (A) and (-webkit-mask-box-image: none)`은 lightningcss가 접두사를 떼어 빌드 결과에서만 사파리 조건이 거짓이 됨 → 같은 뜻의 `not ((A) or (not (B)))` 꼴로 바꾸고 `src/styles/squircle.test.ts`(2개)로 고정
+- 확인: Playwright WebKit(사파리 엔진)을 설치해, `corner-shape` 지원 조건을 응답에서 강제로 끈 채(아이폰 사파리와 같은 경로) 개발 서버·빌드 결과 모두 마스크 적용과 화면 확인. 독립 시험 페이지에서 `corner-shape`와 마스크 결과가 같은 모양인지 Chromium·WebKit 비교. 옛 Drawer 화면은 Chrome에서 변화 없음
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 122/122 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 41 (새 코드 0건) / `pnpm format:check` ✅
 
 ## 남은 일
 

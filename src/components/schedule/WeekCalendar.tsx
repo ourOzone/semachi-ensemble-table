@@ -10,6 +10,9 @@ import type { DayIndex, TimeSlot } from '@/types';
 
 const SLOT_COUNT = 30; // 09:00 ~ 24:00, 30분 단위
 
+/** 아주 옅은 회색 바탕을 까는 요일 (화·목·토: 월 0 기준) */
+const ALT_DAYS: readonly number[] = [1, 3, 5];
+
 // 블록 글씨 크기 (px). 줄 수 계산에 쓰므로 아래 클래스와 맞춘다
 const SIZE = {
     mobile: { slot: 22, padY: 2, name: 11 },
@@ -156,7 +159,10 @@ const WeekCalendar = ({
                                 key={idx}
                                 className={cn(
                                     'relative h-[calc(var(--slot)*30)]',
-                                    idx === todayIdx && 'bg-today-tint',
+                                    // 오늘 열이 화·목·토여도 오늘 표시가 우선
+                                    idx === todayIdx
+                                        ? 'bg-today-tint'
+                                        : ALT_DAYS.includes(idx) && 'bg-day-alt',
                                 )}
                             >
                                 {/* 시간칸(30분): 마우스를 올리면 옅은 회색, 누르면 합주 잡기 Drawer. 블록 아래에 깔린다 */}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isPageScrollLocked } from '@/lib/pageScrollLock';
 
 /** 이 높이보다 위에서는 항상 보인다 (헤더 높이 정도) */
 const SHOW_NEAR_TOP = 64;
@@ -15,6 +16,9 @@ export function useHideOnScroll(): boolean {
     useEffect(() => {
         let lastY = window.scrollY;
         const onScroll = () => {
+            // 뒤 페이지 고정 중(PIN 입력 등)에는 scrollY가 0이 되고, 풀면 원래 위치로 돌아온다 → 무시
+            // (무시하지 않으면 고정할 때 맨 위로 본 것으로 여겨 헤더가 나타났다가 풀 때 다시 숨었다)
+            if (isPageScrollLocked()) return;
             const y = window.scrollY;
             if (Math.abs(y - lastY) < MIN_DELTA) return;
             setHidden(y > lastY && y > SHOW_NEAR_TOP);

@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~19차 PIN 단계 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~20차 PIN 단계 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -816,6 +816,19 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 테스트: 스크롤 고정 1개 추가 (PIN 단계에서 되돌림, 정보 단계로 돌아가면 고정하지 않음). 변형 검사 3/3. 실제 아이폰 확인은 사용자
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 150/150 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 26 (새 코드 0건) / `pnpm format:check` ✅
+
+### 2026-11-24 — View 개편 V-2 (20차): PIN 단계 뒤 페이지 고정을 깜빡임 없이
+
+- 지금 → 바꾼 후: PIN을 틀릴 때마다 화면 전체가 위로 올라갔다 내려오며 위쪽이 하얗게 깜빡임(19차) → 움직이지 않음
+- 원인: 19차는 사파리가 입력칸을 보이려고 페이지를 스크롤한 뒤 원래 위치로 되돌렸다. 스크롤된 화면이 한 번 그려진 뒤 되돌아가 깜빡였다
+- 수정: 되돌리지 않고 스크롤할 공간을 없앤다. PIN 단계 동안 body를 `position: fixed`(top: -스크롤 위치, Radix 스크롤 잠금의 `position: relative !important`를 important로 덮음)로 두고, 나오면 원래 위치로 (`lib/pageScrollLock`). 화면은 그대로이고 문서에 스크롤할 공간이 없다
+  - vaul에도 같은 기능(`usePositionFixed`)이 있지만 vaul의 Trigger로 열었을 때만 켜져(`hasBeenOpened`), Drawer 스택으로 여는 이 앱에서는 한 번도 동작하지 않았다 (vaul 코드로 확인)
+  - 흰 판(18차)은 body 기준이 되므로 고정할 때의 스크롤(`--locked-scroll-y`)을 더해 위치를 잡는다
+  - 고정하면 scrollY가 0이 되어 헤더 숨김(`useHideOnScroll`)이 맨 위로 본 것으로 여겨 헤더가 나타났다 → 고정 중에는 무시
+- 확인: 아이폰 사파리 UA의 WebKit·Chrome에서 페이지를 500px 내린 뒤 PIN 단계: 문서 스크롤 공간 0, 틀린 PIN 3번에도 scrollY·흰 판 위치 그대로, 뒤 화면 픽셀 비교 0(Drawer 높이가 바뀐 부분 제외, 헤더 안 나타남), 뒤로 가면 scrollY 500·화면 동일. 실제 아이폰 확인은 사용자
+- 테스트: 19차 스크롤 되돌리기 테스트를 body 고정·복원 테스트로 교체, 헤더 숨김이 고정 중 스크롤을 무시하는 테스트 추가. 변형 검사 5/5
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 151/151 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 26 (새 코드 0건) / `pnpm format:check` ✅
 
 ## 남은 일
 

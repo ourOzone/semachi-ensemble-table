@@ -418,7 +418,8 @@ describe('합주표', () => {
             const cover = document.querySelector<HTMLElement>('[data-keyboard-cover]');
             // 고정(fixed) 요소가 아니라 문서 안(body의 자식, absolute)이어야 키보드 쪽에 비친다
             expect(cover?.parentElement).toBe(document.body);
-            expect(cover?.style.top).toBe('394px');
+            // body가 고정되면 body 기준이라 고정할 때의 스크롤(--locked-scroll-y)을 더한다
+            expect(cover?.style.top).toBe('calc(var(--locked-scroll-y, 0px) + 394px)');
 
             await user.click(screen.getByRole('button', { name: '뒤로' }));
             await findDialog('월 10:00 – 11:00');
@@ -431,30 +432,30 @@ describe('합주표', () => {
         }
     });
 
-    it('PIN 단계 동안 뒤 페이지 스크롤을 고정한다 (사파리가 입력칸을 보이려고 스크롤해도 되돌림)', async () => {
+    it('PIN 단계 동안 뒤 페이지를 스크롤할 수 없게 고정하고, 나오면 원래 위치로', async () => {
         const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
-        const setScrollY = (y: number) =>
-            Object.defineProperty(window, 'scrollY', { configurable: true, value: y });
-        setScrollY(200);
+        Object.defineProperty(window, 'scrollY', { configurable: true, value: 200 });
         try {
             const { user, dialog } = await openEnsembleInfo();
+            expect(document.body.style.position).toBe('');
+
             await user.click(within(dialog).getByRole('button', { name: '삭제' }));
             await findDialog('합주를 삭제할까요?');
+            // body를 고정(화면은 그대로: top = -스크롤 위치)해 사파리가 입력칸을 보이려고 페이지를 스크롤할 공간이 없다
+            // (19차: 스크롤된 뒤 되돌려 깜빡였다)
+            expect(document.body.style.getPropertyValue('position')).toBe('fixed');
+            expect(document.body.style.getPropertyPriority('position')).toBe('important');
+            expect(document.body.style.top).toBe('-200px');
+            // 흰 판은 body 기준이 되므로 고정할 때의 스크롤만큼 더한다
+            expect(document.body.style.getPropertyValue('--locked-scroll-y')).toBe('200px');
 
-            // 틀린 PIN을 비울 때 등 사파리가 페이지를 내림 → 원래 위치로
-            setScrollY(260);
-            window.dispatchEvent(new Event('scroll'));
-            expect(scrollTo).toHaveBeenLastCalledWith(window.scrollX, 200);
-
-            // 정보 단계로 돌아가면 고정하지 않는다
             await user.click(screen.getByRole('button', { name: '뒤로' }));
             await findDialog('월 10:00 – 11:00');
-            scrollTo.mockClear();
-            setScrollY(300);
-            window.dispatchEvent(new Event('scroll'));
-            expect(scrollTo).not.toHaveBeenCalled();
+            expect(document.body.style.getPropertyValue('position')).toBe('');
+            expect(document.body.style.top).toBe('');
+            expect(scrollTo).toHaveBeenLastCalledWith(0, 200);
         } finally {
-            setScrollY(0);
+            Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
         }
     });
 });

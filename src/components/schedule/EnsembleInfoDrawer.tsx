@@ -32,6 +32,7 @@ import { buildColorMap } from '@/lib/board';
 import { getEnsembleSchedule } from '@/lib/calendar';
 import { cn } from '@/lib/utils';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
+import { LOCKED_SCROLL_VAR, lockPageScroll } from '@/lib/pageScrollLock';
 import { useTeams } from '@/queries/teams';
 import { useDrawerStore } from '@/stores/drawer';
 import theme from '@/styles/theme';
@@ -216,19 +217,11 @@ const EnsembleInfoDrawer = ({
     // (17차, 이전: Drawer를 키보드 높이만큼 올렸더니 아이폰에서 그 아래가 비었다)
     const { inset, viewportHeight, visibleBottom } = useKeyboardInset();
 
-    // PIN 단계 동안 뒤 페이지의 스크롤 위치를 고정한다 (19차).
+    // PIN 단계 동안 뒤 페이지를 스크롤할 수 없게 고정한다 (20차, lib/pageScrollLock).
     // 아이폰 사파리는 입력칸에 포커스가 가거나 커서가 움직일 때마다(틀린 PIN을 비울 때 등) 입력칸을 보이려고 페이지를 스크롤한다.
     // Drawer 위치는 보이는 영역 기준으로 직접 맞추므로 이 스크롤은 필요 없고, 뒤 합주판만 계속 내려갔다
     const pinStepOpen = open && step !== 'info';
-    useEffect(() => {
-        if (!pinStepOpen) return;
-        const lockedY = window.scrollY;
-        const keep = () => {
-            if (window.scrollY !== lockedY) window.scrollTo(window.scrollX, lockedY);
-        };
-        window.addEventListener('scroll', keep);
-        return () => window.removeEventListener('scroll', keep);
-    }, [pinStepOpen]);
+    useEffect(() => (pinStepOpen ? lockPageScroll() : undefined), [pinStepOpen]);
 
     // 머리 색: 팀의 지금 색 (캘린더 블록과 같음)
     const color = shown
@@ -497,7 +490,8 @@ const KeyboardCover = ({ visibleBottom }: { visibleBottom: number }) =>
             data-keyboard-cover
             className="pointer-events-none absolute inset-x-0 z-40 bg-white"
             style={{
-                top: `${visibleBottom - KEYBOARD_COVER_OVERLAP}px`,
+                // body가 고정(lockPageScroll)되면 body 기준 위치라 고정할 때의 스크롤만큼 더한다
+                top: `calc(var(${LOCKED_SCROLL_VAR}, 0px) + ${visibleBottom - KEYBOARD_COVER_OVERLAP}px)`,
                 height: `${KEYBOARD_COVER_HEIGHT}px`,
             }}
         />,

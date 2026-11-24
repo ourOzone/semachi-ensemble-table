@@ -103,6 +103,17 @@
 }
 
 /*
+ * 스쿼클: 아이폰 앱 아이콘처럼 곡률이 이어지는 모서리 (V-2). 지원 브라우저(corner-shape: Chrome·안드로이드)에서만 켜지고,
+ * 아니면(사파리 등) 일반 둥근 모서리 그대로. 스쿼클은 같은 반지름이면 덜 둥글어 보여, 요소마다
+ * supports-[corner-shape:squircle]:rounded-* 로 반지름을 키운다. rounded-full(알약·원)은 그대로 둬도 스쿼클 모양이 된다
+ */
+@utility squircle {
+    @supports (corner-shape: squircle) {
+        corner-shape: squircle;
+    }
+}
+
+/*
  * 큰 카드(공지·합주판·한마디)의 모서리. 아이폰 앱 아이콘처럼 곡률이 이어지는 "스쿼클"을 지원하는 브라우저
  * (corner-shape: Chrome·안드로이드)에서는 그걸 쓰고, 아니면(사파리 등) 일반 둥근 모서리. 스쿼클은 같은 반지름이면
  * 덜 둥글어 보여 값을 키운다. 옛 코드(styled)는 같은 값을 src/styles/cardRadius.ts에서 가져다 쓴다
@@ -250,5 +261,9 @@
         font-size: var(--text-sm);
         line-height: 1.5;
         color: var(--color-foreground);
+    }
+    /* 누를 수 있는 것은 손가락 커서 (Tailwind 기본값은 버튼도 화살표 커서) */
+    .ui :is(button, a[href]):not(:disabled) {
+        cursor: pointer;
     }
 }

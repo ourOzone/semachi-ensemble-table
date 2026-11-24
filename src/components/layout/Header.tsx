@@ -26,7 +26,7 @@ const Header = () => {
                     href={DRIVE_URL}
                     aria-label="회칙 등 문서 (구글 드라이브)"
                     title="회칙 등 문서 구글 드라이브"
-                    className="inline-flex size-10 items-center justify-center rounded-full text-ink hover:bg-black/5"
+                    className="squircle inline-flex size-10 items-center justify-center rounded-full text-ink transition-[background-color,scale] duration-150 hover:bg-black/5 active:scale-[0.95]"
                 >
                     <BookMarked className="size-6" aria-hidden />
                 </a>

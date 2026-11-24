@@ -73,7 +73,7 @@ const WeekCalendar = ({
                                 </span>
                                 <span
                                     className={cn(
-                                        'flex size-7 items-center justify-center rounded-full text-[15px] font-bold text-neutral-900 md:size-9 md:text-xl',
+                                        'squircle flex size-7 items-center justify-center rounded-full text-[15px] font-bold text-neutral-900 md:size-9 md:text-xl',
                                         isToday && 'bg-today text-white',
                                     )}
                                     aria-current={isToday ? 'date' : undefined}
@@ -186,11 +186,16 @@ function EventBlock({ event, onClick }: EventBlockProps) {
             onClick={onClick}
             aria-label={`${name} ${time}${skipped ? ' 이번 주 쉼' : ''}`}
             className={cn(
-                '@container absolute flex flex-col overflow-hidden rounded-md px-0.5 py-0.5 text-left md:rounded-lg md:py-1',
+                '@container squircle absolute flex flex-col overflow-hidden rounded-md px-0.5 py-0.5 text-left transition-[filter,background-color] duration-150 md:rounded-lg md:py-1',
+                // 스쿼클이면 반지름을 키워 일반 둥근 모서리와 비슷한 크기로 보이게
+                'supports-[corner-shape:squircle]:rounded-[11px] md:supports-[corner-shape:squircle]:rounded-[15px]',
                 // 3개 이상 겹치면 폭이 좁아 PC에서도 좌우 여백을 줄인다 (시간 글자가 잘리지 않게)
                 lanes >= 3 ? 'md:px-0.5' : 'md:px-1.5',
                 // 쉼: 바탕을 비워 뒤의 가로선이 보이게
-                skipped ? 'border-[1.5px] border-dashed bg-transparent' : 'text-white',
+                // 마우스를 올리면: 색 블록은 살짝 진하게, 쉼(바탕 없음)은 옅은 회색 바탕
+                skipped
+                    ? 'border-[1.5px] border-dashed bg-transparent hover:bg-neutral-500/5'
+                    : 'text-white hover:brightness-90',
             )}
             style={style}
         >

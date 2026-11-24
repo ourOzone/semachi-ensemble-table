@@ -114,7 +114,10 @@
   - 캘린더 맨 아래에 24 라벨과 가로선 (표의 끝 표시)
   - 오늘 표시: 파랑 → 파란빛이 은은한 회색(슬레이트) `#4a5568`
   - 큰 카드(공지·합주판·한마디) 모서리: 24px → **스쿼클**(아이폰 앱 아이콘처럼 곡률이 이어지는 모서리, `corner-shape: squircle`, 28px). 지원하지 않는 브라우저(사파리 등)는 일반 둥근 모서리 18px. 새 코드는 `rounded-card`(index.css), 옛 styled 코드는 `src/styles/cardRadius.ts`
-- [ ] 5차 이후: 사용자 상세 수정 → 합주 정보·수정·미루기·삭제 단일 Drawer(V-2 본 작업)
+- [x] **5차: 사용자 상세 수정 반영 (2026-11-24)**
+  - 스쿼클을 메인 화면 전체로: 팀 칩·"전체"·"팀 추가", 주 이동·"오늘" 버튼, 오늘 날짜 표시, 합주 블록, 헤더 드라이브 버튼, 한마디 추가 버튼·카드. 새 코드는 `squircle` 유틸리티(index.css, 지원 브라우저에서만 `corner-shape: squircle`), 옛 코드는 `styles/cardRadius.ts`의 `squircle()`. 알약 모양(rounded-full)은 스쿼클이면 끝이 덜 둥근 둥근 사각형이 된다
+  - 누를 수 있는 것: `.ui` 안의 버튼·링크는 손가락 커서(index.css base). 마우스를 올리면 색 버튼(팀 칩·합주 블록)은 살짝 진하게, 흰 버튼은 옅은 회색 바탕, 쉼 블록은 옅은 회색 바탕. 누르면 살짝 작아짐(블록 제외). 마우스 올림 효과는 마우스가 있는 기기에서만 (Tailwind `hover:`)
+- [ ] 6차 이후: 사용자 상세 수정 → 합주 정보·수정·미루기·삭제 단일 Drawer(V-2 본 작업)
 - [ ] V-2 끝에 정리: 옛 합주표용 `toBoard`·`useBoard`·`isSkipped`·`EnsembleBoard`·`EnsembleBlock` (새 캘린더로 대체되어 테스트에서만 쓰임)
 
 #### 나중에 할 일 (사용자 요청 메모)
@@ -130,7 +133,7 @@
 
 ### V-6 상세 (일괄 정리)
 - 끝까지 손대지 않은 View: `layout`(Footer. Header는 V-2에서 새로 만듦), `common`(Drawer·OkButton·PinInput·Tooltip·Container), App의 본문 밀기(`openedDrawers` 기반 translate), `media`·`styled.d.ts`
-- 공존 기간 장치 제거: `src/styles/legacy.css`와 `legacy` 레이어, `src/styles/cardRadius.ts`(옛 카드용 모서리), `index.html`의 레이어 선언 중 `antd`, `src/index.tsx`의 `StyleProvider`·`IconProvider`, 테스트 setup의 vaul 외 antd용 보정(`matchMedia` 등은 필요 여부 확인)
+- 공존 기간 장치 제거: `src/styles/legacy.css`와 `legacy` 레이어, `src/styles/cardRadius.ts`(옛 코드용 스쿼클), `index.html`의 레이어 선언 중 `antd`, `src/index.tsx`의 `StyleProvider`·`IconProvider`, 테스트 setup의 vaul 외 antd용 보정(`matchMedia` 등은 필요 여부 확인)
 - `theme.ts` 제거 전: `lib/board`의 `buildColorMap`이 `theme.teamColors`를 쓴다 → 팀 색 상수를 로직 층으로 옮겨야 한다 (로직 변경이므로 먼저 보고. `tokens.test.ts`도 그 상수와 비교하도록)
 - 제거: `antd`, `@ant-design/icons`, `@ant-design/cssinjs`, `@ant-design/v5-patch-for-react-19`(+ `src/index.tsx`의 import), `styled-components`, `src/styles/theme.ts`(토큰으로 이전 완료 후), `context/team`·`context/ensemble`·`ContextProvider`, 호환용 `useDrawerContext` 별칭
 - `stores/drawer`를 단일 Drawer 구조에 맞게 줄인다 (스택이 필요 없으면 "열린 Drawer 하나 + 대상 id")

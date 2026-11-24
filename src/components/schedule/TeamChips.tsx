@@ -21,8 +21,13 @@ interface TeamChipsProps {
     onAddTeam: () => void;
 }
 
-const chipBase =
-    'inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-medium whitespace-nowrap md:h-9 md:px-4 md:text-[15px]';
+// 누르는 느낌: 마우스를 올리면(마우스가 있는 기기만) 색이 살짝 진해지고, 누르면 살짝 작아진다
+const pressable = 'transition-[filter,background-color,scale] duration-150 active:scale-[0.97]';
+
+const chipBase = cn(
+    'squircle inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-medium whitespace-nowrap md:h-9 md:px-4 md:text-[15px]',
+    pressable,
+);
 
 const TeamChips = ({ teams, events, onAddTeam }: TeamChipsProps) => {
     const [expanded, setExpanded] = useState(false);
@@ -37,7 +42,10 @@ const TeamChips = ({ teams, events, onAddTeam }: TeamChipsProps) => {
                 setExpanded((prev) => !prev);
                 setScrolled(false);
             }}
-            className="inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-300 bg-neutral-100 px-2.5 text-sm font-medium text-black md:hidden"
+            className={cn(
+                'squircle inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-300 bg-neutral-100 px-2.5 text-sm font-medium text-black hover:bg-neutral-200 md:hidden',
+                pressable,
+            )}
         >
             {expanded ? (
                 <>
@@ -71,7 +79,7 @@ const TeamChips = ({ teams, events, onAddTeam }: TeamChipsProps) => {
                 onClick={onAddTeam}
                 className={cn(
                     chipBase,
-                    'gap-1 border border-dashed border-neutral-500 bg-white text-neutral-800',
+                    'gap-1 border border-dashed border-neutral-500 bg-white text-neutral-800 hover:bg-neutral-100',
                 )}
             >
                 <Plus className="size-3.5" aria-hidden />팀 추가
@@ -121,7 +129,7 @@ function ChipButton({ chip }: { chip: Chip }) {
         <button
             type="button"
             onClick={chip.onClick}
-            className={cn(chipBase, 'text-white')}
+            className={cn(chipBase, 'text-white hover:brightness-90')}
             style={{ backgroundColor: chip.color }}
         >
             {chip.name}

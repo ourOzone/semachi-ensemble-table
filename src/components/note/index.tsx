@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import styled from 'styled-components';
+import { squircle } from '@/styles/cardRadius';
 import { useDrawerContext } from '@/context';
 import { useAddNote, useDeleteNote, useNotes, useRefreshNotes } from '@/queries/notes';
 import { noteExists } from '@/api/note';
@@ -115,7 +116,7 @@ const AddButton = styled(Button)`
     display: flex;
     justify-content: flex-start;
     align-items: center;
-    border-radius: 1rem;
+    ${squircle('1rem', '1.5rem')}
     border: 0.125rem dashed ${({ theme }) => theme.darkGray};
     height: 5.5rem;
     box-shadow: none;
@@ -142,7 +143,7 @@ const NoteCard = styled.div`
     justify-content: space-between;
     margin-top: 0.5rem;
     min-height: 5rem;
-    border-radius: 1rem;
+    ${squircle('1rem', '1.5rem')}
     border: 1px solid ${({ theme }) => theme.border};
     box-shadow: 0 0.125rem 0 rgba(0, 0, 0, 0.02);
 `;

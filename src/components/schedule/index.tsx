@@ -10,8 +10,11 @@ import { getTodayIdx } from '@/lib/week';
 // 이번 주부터 MAX_WEEK_OFFSET주 뒤까지 볼 수 있다 (지난 주는 보여주지 않는다).
 // `ui` 클래스: 옛 전역 스타일이 적용되지 않는 새 코드 영역 (src/styles/index.css)
 
-const navButton =
-    'inline-flex size-8 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100 disabled:text-neutral-300 disabled:hover:bg-transparent md:size-10';
+// 누를 수 있는 버튼: 스쿼클 모양, 마우스를 올리면 옅은 회색 바탕, 누르면 살짝 작아짐 (비활성이면 없음)
+const pressable =
+    'squircle transition-[background-color,scale] duration-150 enabled:active:scale-[0.95]';
+
+const navButton = `${pressable} inline-flex size-8 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100 disabled:text-neutral-300 disabled:hover:bg-transparent md:size-10`;
 
 type Direction = 'prev' | 'next' | null;
 
@@ -50,7 +53,7 @@ const Schedule = () => {
                     </button>
                     <button
                         type="button"
-                        className="h-8 rounded-full border border-neutral-300 px-3 text-[13px] font-medium text-neutral-800 hover:bg-neutral-50 disabled:text-neutral-400 md:h-10 md:px-4 md:text-[15px]"
+                        className={`${pressable} h-8 rounded-full border border-neutral-300 px-3 text-[13px] font-medium text-neutral-800 hover:bg-neutral-100 disabled:text-neutral-400 disabled:hover:bg-transparent md:h-10 md:px-4 md:text-[15px]`}
                         disabled={week.offset === 0}
                         onClick={() => moveTo(0)}
                     >

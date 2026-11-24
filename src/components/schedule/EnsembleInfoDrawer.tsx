@@ -209,7 +209,10 @@ const EnsembleInfoDrawer = ({
         return handler(id, teamId, repeat, nextDate, startTime, endTime);
     };
 
-    // 화면 키보드가 열리면 Drawer를 보이는 영역의 아래 끝(키보드 바로 위)에 두고 그 안에 들어가게 한다 (hooks/useKeyboardInset)
+    // 화면 키보드가 열리면 내용을 보이는 영역의 아래 끝(키보드 바로 위)까지 올리고, 그 안에 들어가게 한다 (hooks/useKeyboardInset).
+    // Drawer 자체는 화면 맨 아래에 둔 채 키보드 높이만큼 아래 여백을 준다: Drawer의 흰 바탕이 키보드 뒤까지 덮어,
+    // 키보드 위 막대(완료 버튼)와 반투명 키보드 사이로 뒤 화면이 비치지 않는다
+    // (17차, 이전: Drawer를 키보드 높이만큼 올렸더니 아이폰에서 그 아래가 비었다)
     const { inset, viewportHeight } = useKeyboardInset();
 
     // 머리 색: 팀의 지금 색 (캘린더 블록과 같음)
@@ -433,11 +436,14 @@ const EnsembleInfoDrawer = ({
             <DrawerContent
                 className={sheetClassName}
                 style={{
-                    bottom: inset > 0 ? `${inset}px` : undefined,
+                    paddingBottom: inset > 0 ? `${inset}px` : undefined,
+                    // 높이에는 아래 여백(키보드)이 들어가므로, 보이는 부분 = 보이는 영역 - 위 12px
                     maxHeight:
                         viewportHeight === null
                             ? undefined
-                            : `min(92dvh, ${viewportHeight - 12}px)`,
+                            : inset > 0
+                              ? `${viewportHeight - 12 + inset}px`
+                              : `min(92dvh, ${viewportHeight - 12}px)`,
                 }}
                 overlayClassName={overlayClassName}
                 // 손잡이는 머리 위에 겹친다 (정보: 팀 색 머리, PIN: 흰 머리)

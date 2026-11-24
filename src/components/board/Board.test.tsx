@@ -365,23 +365,26 @@ describe('합주표', () => {
         expect(await findDialog('월 10:00 – 11:00')).toBeInTheDocument();
     });
 
-    it('화면 키보드가 열리면 Drawer를 보이는 영역 아래 끝에 두고, 닫히면 원래대로', async () => {
+    it('화면 키보드가 열리면 내용을 키보드 위로 올리고 Drawer 흰 바탕으로 키보드 뒤까지 덮는다, 닫히면 원래대로', async () => {
         // 키보드 330px, 사파리가 보이는 영역을 120px 스크롤 → 가려진 아래쪽 210px, 보이는 높이 514px
         const viewport = Object.assign(new EventTarget(), { height: 844, offsetTop: 0 });
         Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport });
         Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 });
         try {
             const { dialog } = await openEnsembleInfo();
-            expect(dialog.style.bottom).toBe('');
+            expect(dialog.style.paddingBottom).toBe('');
+            expect(dialog.style.maxHeight).toBe('min(92dvh, 832px)');
 
             Object.assign(viewport, { height: 514, offsetTop: 120 });
             viewport.dispatchEvent(new Event('resize'));
-            await waitFor(() => expect(dialog.style.bottom).toBe('210px'));
-            expect(dialog.style.maxHeight).toBe('min(92dvh, 502px)');
+            // Drawer는 맨 아래에 둔 채(올리지 않음) 아래 여백 = 가려진 높이, 최대 높이 = 보이는 높이 - 12 + 여백
+            await waitFor(() => expect(dialog.style.paddingBottom).toBe('210px'));
+            expect(dialog.style.bottom).toBe('');
+            expect(dialog.style.maxHeight).toBe('712px');
 
             Object.assign(viewport, { height: 844, offsetTop: 0 });
             viewport.dispatchEvent(new Event('resize'));
-            await waitFor(() => expect(dialog.style.bottom).toBe(''));
+            await waitFor(() => expect(dialog.style.paddingBottom).toBe(''));
             // 높이를 고정해 두지 않는다 (vaul은 키보드를 닫을 때 처음 높이로 고정해, 내용이 바뀌면 스크롤이 생겼다)
             expect(dialog.style.height).toBe('');
         } finally {

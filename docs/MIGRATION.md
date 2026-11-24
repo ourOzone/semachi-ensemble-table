@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~16차 PIN 단계 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~17차 PIN 단계 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -787,6 +787,14 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 제안 6(수정 입력 단계를 같은 Drawer로)은 합주 추가 Drawer를 먼저 만든 뒤로 보류 (사용자 결정)
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 148/148 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 26 (새 코드 0건) / `pnpm format:check` ✅
+
+### 2026-11-24 — View 개편 V-2 (17차): 키보드 뒤까지 흰 바탕
+
+- 지금 → 바꾼 후: 아이폰에서 PIN 입력칸을 누르면 Drawer와 키보드 위 막대(완료 버튼) 사이가 비어 뒤 합주판이 보이고, 반투명 키보드 뒤로도 합주판이 비침 → Drawer의 흰 바탕이 키보드 뒤 화면 맨 아래까지 덮음
+- 방법: 16차는 Drawer를 키보드 높이만큼 올렸다(`bottom`). 그 아래는 vaul이 붙이는 흰 연장(`::after`)이 덮어야 하는데 아이폰 키보드가 열린 상태에서는 덮이지 않았다 (데스크톱 WebKit에서는 재현되지 않음). → Drawer는 화면 맨 아래에 두고 아래 여백(`padding-bottom`)을 키보드 높이만큼 줘 내용만 키보드 위로 올린다. 최대 높이 = 보이는 높이 - 12px + 여백 (내용이 보이는 영역 안에 들어감)
+- 테스트: `Board.test.tsx`의 키보드 테스트를 아래 여백 기준으로 수정. 실제 아이폰 확인은 사용자
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 148/148 / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 26 (새 코드 0건) / `pnpm format:check` ✅
 
 ## 남은 일
 

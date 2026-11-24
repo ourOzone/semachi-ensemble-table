@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 /**
  * 화면 키보드 등으로 가려진 아래쪽 높이(inset)와 보이는 영역의 높이(viewportHeight), px.
- * 아래에서 올라오는 Drawer를 보이는 영역의 아래 끝(키보드 바로 위)에 두고, 보이는 영역 안에 들어가게 할 때 쓴다.
+ * 아래에서 올라오는 Drawer의 내용을 보이는 영역의 아래 끝(키보드 바로 위)까지 올리고(아래 여백), 보이는 영역 안에 들어가게 할 때 쓴다.
  *
  * vaul의 repositionInputs를 쓰지 않는 이유 (V-2 16차, 아이폰 사파리):
  * - 키보드가 열리면 사파리가 입력칸을 보이려고 보이는 영역(visual viewport)을 위로 스크롤하는데, vaul은 이를 빼지 않고

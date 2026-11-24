@@ -206,7 +206,6 @@ function EventBlock({ event, onClick }: EventBlockProps) {
                     'max-h-[calc(var(--name-lines)*1.4em-0.15em)] shrink-0 overflow-hidden text-[11px] leading-[1.4] font-medium wrap-anywhere md:max-h-[calc(var(--name-lines-md)*1.4em-0.15em)] md:text-sm',
                     // 3개 이상 겹치면 1024px 미만(모바일·태블릿)에서는 폭이 20px 안팎이라 색 띠만
                     lanes >= 3 && 'max-lg:hidden',
-                    skipped && 'line-through',
                 )}
             >
                 {name}

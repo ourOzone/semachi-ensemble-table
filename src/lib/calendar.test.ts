@@ -85,6 +85,16 @@ describe('getOccurrence: 여러 번 미룬 반복 합주', () => {
         // regularDate 없이는 직전 주만
         expect(getOccurrence(repeat, dayjs('2026-11-23'))).toBeNull();
     });
+
+    it('미래로 잡은 일회성: regularDate부터 그 날짜 전까지 쉼, 그 날짜는 합주, 뒤는 안 보임', () => {
+        const oneTime = { repeat: false, nextDate: '2026-12-07T00:00:00.000Z' };
+        const regular = dayjs('2026-11-23');
+        expect(getOccurrence(oneTime, dayjs('2026-11-16'), regular)).toBeNull();
+        expect(getOccurrence(oneTime, dayjs('2026-11-23'), regular)).toBe('skipped');
+        expect(getOccurrence(oneTime, dayjs('2026-11-30'), regular)).toBe('skipped');
+        expect(getOccurrence(oneTime, dayjs('2026-12-07'), regular)).toBe('normal');
+        expect(getOccurrence(oneTime, dayjs('2026-12-14'), regular)).toBeNull();
+    });
 });
 
 describe('getRegularNextDate', () => {
@@ -248,7 +258,13 @@ describe('toWeekSchedule', () => {
         expect(before[2]).toEqual([]);
 
         expect(toWeekSchedule([base], colorMap, dayjs('2026-11-09'), now)[0]).toEqual([]);
-        expect(toWeekSchedule([oneTime], colorMap, dayjs('2026-11-30'), now)[2]).toHaveLength(1);
+        expect(toWeekSchedule([oneTime], colorMap, dayjs('2026-11-30'), now)[2]?.[0]?.status).toBe(
+            'normal',
+        );
+        // 그 날짜 전 주(오늘 이후)는 쉼
+        expect(toWeekSchedule([oneTime], colorMap, dayjs('2026-11-23'), now)[2]?.[0]?.status).toBe(
+            'skipped',
+        );
     });
 
     it('여러 번 미룬 반복 합주는 쉬는 주마다 쉼으로 보인다', () => {

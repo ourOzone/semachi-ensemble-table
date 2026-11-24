@@ -57,7 +57,7 @@ export function getRegularNextDate(
 
 /**
  * 합주가 date(그 합주 요일의 날짜)에 어떻게 보이는지. 안 보이면 null.
- * - 일회성: nextDate 그날만
+ * - 일회성: nextDate 그날만. regularDate를 주면 그날부터 nextDate 전까지는 "쉼" (미래로 잡은 일회성 합주)
  * - 반복: nextDate 이후(당일 포함)는 매주 합주. nextDate 직전 1주는 "쉼"
  *   (미루기는 nextDate를 7일 뒤로 옮기므로, 옮겨지기 전 날짜가 nextDate - 7이다).
  *   regularDate(미루지 않았다면 다음 합주였을 날짜, getRegularNextDate)를 주면 그날부터 nextDate 전까지도 모두 "쉼"
@@ -74,7 +74,10 @@ export function getOccurrence(
     const next = dayjs(nextDate).startOf('day');
     const day = date.startOf('day');
     if (!repeat) {
-        return day.isSame(next, 'day') ? 'normal' : null;
+        if (day.isSame(next, 'day')) return 'normal';
+        return regularDate && !day.isBefore(regularDate, 'day') && day.isBefore(next)
+            ? 'skipped'
+            : null;
     }
     if (!day.isBefore(next)) return 'normal';
     if (!day.isBefore(next.subtract(7, 'day'))) return 'skipped';
@@ -198,7 +201,7 @@ export function toWeekSchedule(
         const status = getOccurrence(
             ensemble,
             weekStart.add(day, 'day'),
-            repeat ? getRegularNextDate(ensemble, now) : undefined,
+            getRegularNextDate(ensemble, now),
         );
         if (!status) continue;
         // day(0~6) 범위는 응답 스키마(ensembleResponseSchema)에서 검증된다

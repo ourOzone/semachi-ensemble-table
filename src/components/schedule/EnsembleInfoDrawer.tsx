@@ -195,9 +195,13 @@ const EnsembleInfoDrawer = ({
         const timeRange = formatTimeRange(ensemble.startTime, ensemble.endTime);
 
         return (
-            <div className="min-h-0 overflow-y-auto">
-                {/* 머리: 팀 색 */}
-                <div className="px-5 pt-3 pb-6 text-white md:px-7">
+            // 위 모서리는 바깥(Drawer)과 같은 모양으로 잘라 팀 색 머리가 모서리 밖으로 나가지 않게
+            <div className="squircle min-h-0 overflow-y-auto rounded-t-[24px] supports-[corner-shape:squircle]:rounded-t-[36px]">
+                {/* 머리: 팀 색 (손잡이는 이 위에 겹쳐 그린다) */}
+                <div
+                    className="px-5 pt-[26px] pb-6 text-white md:px-7"
+                    style={{ backgroundColor: color }}
+                >
                     <div className="flex items-center justify-between gap-3">
                         {isEvent ? (
                             <span className="truncate rounded-full bg-white/20 px-4 py-1.5 text-[17px] font-bold">
@@ -341,11 +345,12 @@ const EnsembleInfoDrawer = ({
     return (
         <Drawer open={open} onOpenChange={(next) => !next && handleClose()}>
             <DrawerContent
-                className="ui mx-auto w-full max-w-[520px] overflow-hidden bg-white data-[vaul-drawer-direction=bottom]:border-t-0 data-[vaul-drawer-direction=bottom]:max-h-[92dvh] data-[vaul-drawer-direction=bottom]:rounded-t-[24px] squircle supports-[corner-shape:squircle]:data-[vaul-drawer-direction=bottom]:rounded-t-[36px]"
+                // Drawer 자체는 흰 바탕: vaul이 Drawer 아래에 바탕색을 이어 붙여(::after) 위로 끌어올려도 뒤가 비치지 않고,
+                // 사파리 아래 도구 막대 쪽 여백도 흰색이 된다 (overflow-hidden이면 이 ::after가 잘린다)
+                className="ui mx-auto w-full max-w-[520px] bg-white data-[vaul-drawer-direction=bottom]:border-t-0 data-[vaul-drawer-direction=bottom]:max-h-[92dvh] data-[vaul-drawer-direction=bottom]:rounded-t-[24px] squircle supports-[corner-shape:squircle]:data-[vaul-drawer-direction=bottom]:rounded-t-[36px]"
                 overlayClassName="ui bg-black/40 supports-backdrop-filter:backdrop-blur-none"
-                handleClassName="mt-2.5 w-10 bg-white/60"
-                // 손잡이·머리 뒤 바탕을 팀 색으로 (본문은 흰 바탕)
-                style={{ backgroundColor: color }}
+                // 손잡이는 팀 색 머리 위에 겹친다
+                handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-white/60"
             >
                 {content}
             </DrawerContent>

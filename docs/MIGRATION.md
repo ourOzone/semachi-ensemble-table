@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9차 수정 완료 (2026-11-24, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -688,6 +688,20 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 번들: 1,102kB → 1,182kB (gzip 350 → 376kB). 이제 앱에서 vaul·Radix Dialog를 실제로 쓴다 (이전에는 테스트에서만 써서 번들에서 빠졌다)
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 131/131 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 32 (옛 합주 정보 Drawer 삭제로 9건 감소, 새 코드 0건) / `pnpm format:check` ✅
+
+### 2026-11-24 — View 개편 V-2 (9차): 합주 정보 Drawer 모바일 수정, 점선 블록
+
+- 지금 → 바꾼 후
+  - 아이폰 사파리에서 Drawer 아래(브라우저 도구 막대 쪽) 여백: 팀 색 → 흰색
+  - Drawer를 위로 끌어올리면: 아래가 뚫려 합주판이 비침 → 흰색으로 이어져 가려짐
+  - 합주판 점선 블록의 이름: 취소선 → 취소선 없음
+  - 미래로 잡은 일회성 합주: 그 날짜에만 보임 → 오늘부터 그 날짜 전까지 같은 요일·시간에 점선 (반복 합주를 미루거나 미래에 시작하는 경우와 같은 표시)
+- 원인: Drawer 전체 바탕을 팀 색으로 칠하고 `overflow-hidden`을 걸었다. vaul은 Drawer 아래에 같은 바탕색의 `::after`를 이어 붙여 끌어올려도 뒤가 보이지 않게 하는데, 그 색이 팀 색이었고 `overflow-hidden`에 잘렸다. → Drawer는 흰 바탕·잘라내지 않음, 팀 색은 머리에만, 위 모서리는 안쪽 스크롤 영역에서 자름, 손잡이는 머리 위에 겹침
+- `lib/calendar`의 `getOccurrence`: 일회성도 `regularDate`(오늘부터 처음 오는 그 요일)를 받으면 그날부터 합주 날짜 전까지 "쉼". `toWeekSchedule`은 모든 합주에 넘김
+- 확인: Playwright WebKit(사파리 엔진)·Chrome, 390px. 아래로 내렸다가 위로 끌어올리는 동작 재현, Drawer를 60px 위로 옮긴 상태에서 아래가 흰색인지, 점선 블록 취소선 없음·미래 일회성 점선
+- 테스트: `lib/calendar.test.ts`에 미래 일회성 2개 (1개 추가, 1개 보강)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 132/132 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 5·경고 32 (새 코드 0건) / `pnpm format:check` ✅
 
 ## 남은 일
 

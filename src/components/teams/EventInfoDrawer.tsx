@@ -1,11 +1,28 @@
 import { useState } from 'react';
-import Drawer from '@/components/common/Drawer';
-import styled from 'styled-components';
-import { Button } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
-import { useTeamContext } from '@/context';
+import { CalendarPlus, X } from 'lucide-react';
+import {
+    Drawer,
+    DrawerClose,
+    DrawerContent,
+    DrawerDescription,
+    DrawerTitle,
+} from '@/components/ui/drawer';
+import {
+    boxShape,
+    overlayClassName,
+    pressable,
+    scrollAreaClassName,
+    sheetClassName,
+} from '@/components/schedule/drawerParts';
 import { openAddEnsemble } from '@/components/schedule/addEnsembleStore';
-import type { DrawerId } from '@/types';
+import { eventIds } from '@/constants';
+import { useTeamContext } from '@/context';
+import { useDrawerStore } from '@/stores/drawer';
+import { EVENT_STRIPES } from '@/styles/patterns';
+import theme from '@/styles/theme';
+
+// 소모임·회의 등 정보 Drawer (View 개편 V-3). 팀 정보 Drawer와 같은 모양의 머리만 있다 (전체 이름 + 일정 잡기).
+// 이전: 오른쪽에서 열리는 옛 Drawer
 
 const name2FullName: Record<string, string> = {
     보소: '보컬 소모임',
@@ -13,94 +30,77 @@ const name2FullName: Record<string, string> = {
     베소: '베이스 소모임',
     드소: '드럼 소모임',
     키소: '키보드 소모임',
-    '메인 회의': '메인 회의',
-    '재학생 회의': '재학생 회의',
-    회의: '회의',
-    오디션: '오디션',
-    '합주 불가': '합주 불가',
-    '동방 사용 불가': '동방 사용 불가',
 };
 
-interface EventInfoDrawerProps {
-    drawerId: DrawerId;
-}
-
-const EventInfoDrawer = ({ drawerId }: EventInfoDrawerProps) => {
+const EventInfoDrawer = () => {
     const { id, name, setTeamStates } = useTeamContext();
+    const openedDrawers = useDrawerStore((state) => state.openedDrawers);
+    const closeDrawer = useDrawerStore((state) => state.closeDrawer);
+    const open = openedDrawers[openedDrawers.length - 1] === 'eventInfo';
 
-    // const handleClick = (value) => {
-    //     openDrawer('addTeam2');
-    // };
+    // 내려가는 동안 내용이 그대로 보이게 열려 있을 때의 값을 붙잡아 둔다
+    const [shown, setShown] = useState<{ id: string; name: string } | null>(null);
+    if (open && id && (shown?.id !== id || shown.name !== name)) setShown({ id, name });
+
+    const handleClose = () => {
+        closeDrawer();
+        setTeamStates();
+    };
+
+    const idx = shown ? eventIds.indexOf(shown.id) : -1;
+    const color = theme.eventColors[idx] ?? theme.blueGray;
+    const club = shown ? name2FullName[shown.name] : undefined; // 소모임이면 전체 이름
 
     return (
-        <>
-            <Drawer drawerId={drawerId} onClose={setTeamStates} background>
-                <Card>
-                    <Name>{name2FullName[name]}</Name>
-                    <ButtonWrapper>
-                        <StyledButton
-                            type="primary"
-                            onClick={() => openAddEnsemble({ teamId: id, returnTo: 'eventInfo' })}
+        <Drawer open={open} onOpenChange={(next) => !next && handleClose()}>
+            <DrawerContent
+                className={sheetClassName}
+                overlayClassName={overlayClassName}
+                handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-white/60"
+            >
+                {shown && (
+                    <div className={scrollAreaClassName}>
+                        {/* 합주판 블록·팀 목록 칩과 같은 줄무늬 */}
+                        <div
+                            className="px-5 pt-[26px] pb-[calc(24px+env(safe-area-inset-bottom))] text-white md:px-7"
+                            style={{ backgroundColor: color, backgroundImage: EVENT_STRIPES }}
                         >
-                            <PlusOutlined />
-                            일정 추가
-                        </StyledButton>
-                    </ButtonWrapper>
-                </Card>
-            </Drawer>
-        </>
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 pt-1.5">
+                                    <DrawerTitle className="text-[28px] leading-tight font-bold break-keep text-white md:text-[32px]">
+                                        {club ?? shown.name}
+                                    </DrawerTitle>
+                                    <DrawerDescription className="mt-1.5 text-[15px] text-white/90">
+                                        {club ? '소모임' : '팀 아닌 일정'}
+                                    </DrawerDescription>
+                                </div>
+                                <DrawerClose asChild>
+                                    <button
+                                        type="button"
+                                        aria-label="닫기"
+                                        className={`${pressable} -mr-2 inline-flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/20`}
+                                    >
+                                        <X className="size-6" aria-hidden />
+                                    </button>
+                                </DrawerClose>
+                            </div>
+                            <button
+                                type="button"
+                                className={`${pressable} ${boxShape} mt-5 flex h-12 w-full items-center justify-center gap-1.5 bg-white px-3 text-[16px] font-bold text-black/85 hover:bg-white/90 md:h-13`}
+                                // 일정을 골라 둔 합주 잡기 Drawer로 바뀐다 (닫으면 이 Drawer로 돌아온다)
+                                onClick={() =>
+                                    openAddEnsemble({ teamId: shown.id, returnTo: 'eventInfo' })
+                                }
+                            >
+                                <CalendarPlus className="size-5 shrink-0" aria-hidden />
+                                일정 잡기
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </DrawerContent>
+        </Drawer>
     );
 };
-
-interface CardProps {
-    /** 사용처 없음 */
-    heightFix?: boolean;
-}
-
-const Card = styled.div<CardProps>`
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background-color: ${({ theme }) => theme.white};
-    border: 1px solid ${({ theme }) => theme.border};
-    border-radius: 1.5rem;
-    box-shadow: 0 0.25rem 0 rgba(0, 0, 0, 0.02);
-    padding: 1rem;
-    margin-bottom: 1rem;
-    gap: 3rem;
-    ${({ heightFix }) => (heightFix ? `height: 27.5rem` : '')};
-`;
-
-const ButtonWrapper = styled.div`
-    display: flex;
-    gap: 1.5rem;
-    width: 100%;
-    justify-content: center;
-`;
-
-const Name = styled.span`
-    font-size: 2rem;
-    font-family: Bold;
-    text-align: center;
-    margin-top: 0.5rem;
-`;
-
-const StyledButton = styled(Button)`
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    border-radius: 1.5rem;
-    height: auto;
-
-    & span {
-        margin: 1rem 0 !important;
-        font-family: Bold;
-        font-size: 1.5rem !important;
-    }
-    & svg {
-        font-size: 1.5rem;
-    }
-`;
 
 export default EventInfoDrawer;

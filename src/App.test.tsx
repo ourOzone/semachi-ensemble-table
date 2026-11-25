@@ -14,7 +14,7 @@ import { server } from '@/test/server';
 const KNOWN_WARNINGS = [
     /React does not recognize the `%s` prop on a DOM element/, // styled-components props가 DOM으로 전달됨
     /Received `%s` for a non-boolean attribute/, // 위와 같음 (boolean props)
-    /Each child in a list should have a unique "key" prop/, // TeamInfoDrawer의 key 없는 Fragment map
+    /Each child in a list should have a unique "key" prop/, // 옛 완료 화면 Result의 extra 배열 (옛 TeamInfoDrawer의 Fragment map은 V-3 4차에 사라짐)
     /\[antd: Drawer\] `maskStyle` is deprecated/,
 ];
 
@@ -58,7 +58,7 @@ describe('App', () => {
         await user.click(teamButton!);
 
         expect(await screen.findByText('보컬A')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /합주 추가/ })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: '합주 잡기' })).toBeInTheDocument();
         expect(unexpectedWarnings()).toEqual([]);
     });
 });

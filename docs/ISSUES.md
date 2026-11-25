@@ -65,7 +65,7 @@
 | ID | 심각도 | 내용 |
 |---|---|---|
 | V1 | 🟡 | styled-components 커스텀 props가 DOM으로 새어 React 경고 발생 (`scrollPosition`, `isEvent`, `openedDrawers`, `row`, `idx`, `gray`, `teamColor`, `visible`, `error`, `controls` 등). App 테스트에 기존 경고로 허용 중 |
-| V2 | 🟡 | 리스트 key 누락: `TeamInfoDrawer`의 key 없는 Fragment map, 완료 화면 `Result`의 `extra={[<OkButton />]}` 2곳(`jsx-key` 린트 에러) |
+| V2 | 🟡 | 리스트 key 누락: ~~`TeamInfoDrawer`의 key 없는 Fragment map~~(V-3 4차, 새 팀 정보 Drawer로 해소), 완료 화면 `Result`의 `extra={[<OkButton />]}` 2곳(`jsx-key` 린트 에러) |
 | V3 | 🟡 | effect 안에서 바로 setState (`set-state-in-effect` 린트 에러 3건): `Drawer`의 창 너비, 팀 이름 입력의 무작위 예시 이름 2곳 |
 | V4 | 🟡 | antd Drawer의 deprecated prop `maskStyle` 사용 |
 | V5 | 🟡 | JS 번들 936kB (500kB 경고). 대부분 antd. 2단계 중 +79kB는 React 19가 주원인으로 판단. 3단계 완료 1,039kB, V-1 후 1,091kB(gzip 340kB, Sonner·lucide·React Compiler 런타임). antd 제거(V-6) 후 다시 측정 |

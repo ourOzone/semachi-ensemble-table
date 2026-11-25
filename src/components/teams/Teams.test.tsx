@@ -47,7 +47,9 @@ async function fillAddTeam(user: ReturnType<typeof userEvent.setup>) {
  * "합주 잡기"를 누른다. 저장 버튼은 빠진 것을 알려 준다
  */
 async function fillAddEnsemble(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(screen.getByRole('button', { name: /합주 추가/ }));
+    await user.click(
+        within(await findDialog('테스트밴드')).getByRole('button', { name: '합주 잡기' }),
+    );
     const drawer = within(await findDialog('합주 잡기'));
     expect(drawer.getByRole('button', { name: /^테스트밴드\s*바꾸기$/ })).toBeInTheDocument();
     expect(drawer.getByRole('button', { name: '반복 여부를 골라 주세요' })).toBeDisabled();
@@ -143,12 +145,15 @@ describe('팀', () => {
         expect(screen.getByText('PIN 만들어요 🔑')).toBeInTheDocument();
     });
 
-    it('팀 정보: 팀원과 셋리를 탭으로 전환해 보여준다', async () => {
-        const user = await openTeamInfo();
+    it('팀 정보: 종류·팀원·셋리스트를 한 화면에 보여준다', async () => {
+        await openTeamInfo();
+        const drawer = within(await findDialog('테스트밴드'));
 
-        expect(screen.getByText('드럼D')).toBeInTheDocument();
-        await user.click(screen.getByText('셋리'));
-        expect(await screen.findByText('셋리스트')).toBeInTheDocument();
+        // 이전: 팀원·셋리를 탭으로 전환 (V-3)
+        expect(drawer.getByText('세마치공연 · 정기/연말')).toBeInTheDocument();
+        expect(drawer.getByText('보컬A')).toBeInTheDocument();
+        expect(drawer.getByText('매니저F')).toBeInTheDocument();
+        expect(drawer.getByText('셋리스트', { selector: 'div' })).toBeInTheDocument();
         // 팀 클릭 시점의 존재 확인 요청은 없다 (이전: 1회, 사전 결정 5)
         expect(countOf(requests, 'GET /team/team-1')).toBe(0);
     });
@@ -341,7 +346,9 @@ describe('팀', () => {
 
         it('저장하지 않고 닫으면 팀 정보로 돌아간다', async () => {
             const user = await openTeamInfo();
-            await user.click(screen.getByRole('button', { name: /합주 추가/ }));
+            await user.click(
+                within(await findDialog('테스트밴드')).getByRole('button', { name: '합주 잡기' }),
+            );
             const drawer = within(await findDialog('합주 잡기'));
 
             await user.click(drawer.getByRole('button', { name: '닫기' }));
@@ -360,7 +367,9 @@ describe('팀', () => {
                 }),
             );
             const user = await openTeamInfo();
-            await user.click(screen.getByRole('button', { name: /합주 추가/ }));
+            await user.click(
+                within(await findDialog('테스트밴드')).getByRole('button', { name: '합주 잡기' }),
+            );
             await findDialog('합주 잡기');
             server.use(http.get(`${url}/team/:id`, () => new HttpResponse(null, { status: 404 })));
             await fillAddEnsembleAfterOpen(user);
@@ -398,6 +407,7 @@ describe('팀', () => {
         renderApp();
 
         await user.click(await screen.findByText('보소'));
-        expect(await screen.findByText('보컬 소모임')).toBeInTheDocument();
+        const drawer = within(await findDialog('보컬 소모임'));
+        expect(drawer.getByRole('button', { name: '일정 잡기' })).toBeInTheDocument();
     });
 });

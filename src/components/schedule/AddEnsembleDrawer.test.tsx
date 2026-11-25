@@ -515,7 +515,7 @@ describe('합주 잡기 Drawer: 스크롤·막대 끌기', () => {
         renderApp();
         const teamList = await screen.findByRole('group', { name: '팀 목록' });
         await user.click(await within(teamList).findByText('테스트밴드'));
-        await user.click(await screen.findByRole('button', { name: /합주 추가/ }));
+        await user.click(await screen.findByRole('button', { name: '합주 잡기' }));
         await findDialog('합주 잡기');
 
         expect(scrollTo).toHaveBeenCalledTimes(1);

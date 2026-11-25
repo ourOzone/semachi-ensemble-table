@@ -239,8 +239,8 @@ const Teams = () => {
             />
 
             {/* DRAWERS */}
-            <TeamInfoDrawer drawerId="teamInfo" checkTeamExists={checkTeamExists} />
-            <EventInfoDrawer drawerId="eventInfo" />
+            <TeamInfoDrawer checkTeamExists={checkTeamExists} />
+            <EventInfoDrawer />
             <AddTeamDrawer1 drawerId="addTeam1" />
             <AddTeamDrawer2 drawerId="addTeam2" />
             <AddTeamDrawer3 drawerId="addTeam3" />

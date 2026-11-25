@@ -251,7 +251,7 @@ describe('toWeekSchedule', () => {
         expect(week.slice(1).every((day) => day.length === 0)).toBe(true);
     });
 
-    it('nextDate 직전 주는 쉼, 그 전 주와 일회성의 다른 주는 빠진다', () => {
+    it('nextDate 직전 주는 쉼, 이번 주보다 앞선 주는 빠진다', () => {
         const oneTime = {
             ...base,
             _id: 'e2',
@@ -261,15 +261,29 @@ describe('toWeekSchedule', () => {
         };
         const before = toWeekSchedule([base, oneTime], colorMap, dayjs('2026-11-16'), now);
         expect(before[0]?.[0]?.status).toBe('skipped');
-        expect(before[2]).toEqual([]);
+        // 미래 일회성 합주는 오늘보다 앞선 이번 주 요일(수 11/18, 오늘은 금 11/20)에도 점선 (24차, 이전: 안 보임)
+        expect(before[2]?.[0]?.status).toBe('skipped');
 
         expect(toWeekSchedule([base], colorMap, dayjs('2026-11-09'), now)[0]).toEqual([]);
         expect(toWeekSchedule([oneTime], colorMap, dayjs('2026-11-30'), now)[2]?.[0]?.status).toBe(
             'normal',
         );
-        // 그 날짜 전 주(오늘 이후)는 쉼
+        // 그 날짜 전 주는 쉼
         expect(toWeekSchedule([oneTime], colorMap, dayjs('2026-11-23'), now)[2]?.[0]?.status).toBe(
             'skipped',
+        );
+    });
+
+    it('미래에 시작하는(미룬) 반복 합주는 오늘보다 앞선 이번 주 요일에도 쉼 (24차)', () => {
+        // 화요일 합주, 12/8부터 (오늘은 금 11/20 → 이번 주 화요일 11/17은 이미 지남)
+        const tuesday = { ...base, day: 1, nextDate: '2026-12-08T00:00:00' };
+        for (const week of ['2026-11-16', '2026-11-23', '2026-11-30']) {
+            expect(toWeekSchedule([tuesday], colorMap, dayjs(week), now)[1]?.[0]?.status).toBe(
+                'skipped',
+            );
+        }
+        expect(toWeekSchedule([tuesday], colorMap, dayjs('2026-12-07'), now)[1]?.[0]?.status).toBe(
+            'normal',
         );
     });
 

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { Check, LoaderCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -93,8 +93,14 @@ const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepPro
     const invalid = status === 'invalid';
     const ready = status === 'valid' || status === 'submitting';
 
+    // 확인 버튼이 있는 단계(삭제)는 PIN이 맞으면 Enter로도 실행한다 (24차, PC). 입력칸에서 Enter = 폼 제출
+    const handleSubmit = (e: FormEvent) => {
+        e.preventDefault();
+        if (confirmLabel && status === 'valid') void confirm();
+    };
+
     return (
-        <div className="flex flex-col items-center">
+        <form className="flex flex-col items-center" onSubmit={handleSubmit}>
             <div key={attempt} className={cn(invalid && 'animate-shake')}>
                 <InputOTP
                     maxLength={PIN_LENGTH}
@@ -157,9 +163,8 @@ const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepPro
 
             {confirmLabel && (
                 <button
-                    type="button"
+                    type="submit"
                     disabled={status !== 'valid'}
-                    onClick={confirm}
                     className={cn(
                         pressable,
                         'mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-[16px] font-bold text-white disabled:active:scale-100',
@@ -173,7 +178,7 @@ const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepPro
                     {confirmLabel}
                 </button>
             )}
-        </div>
+        </form>
     );
 };
 

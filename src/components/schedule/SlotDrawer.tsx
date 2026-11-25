@@ -8,7 +8,9 @@ import {
     DrawerTitle,
 } from '@/components/ui/drawer';
 import { days, idx2hour } from '@/constants';
-import type { CalendarEvent, SlotRange } from '@/lib/calendar';
+import { isSlotFull, type CalendarEvent, type SlotRange } from '@/lib/calendar';
+import { ensemblesQueryOptions } from '@/queries/ensembles';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useDrawerStore } from '@/stores/drawer';
 import type { DayIndex, TimeSlot } from '@/types';
@@ -64,6 +66,7 @@ const SlotDrawer = ({ view, onSelect }: SlotDrawerProps) => {
     const openedDrawers = useDrawerStore((state) => state.openedDrawers);
     const closeDrawer = useDrawerStore((state) => state.closeDrawer);
     const open = openedDrawers[openedDrawers.length - 1] === 'slotInfo';
+    const { data: ensembles = [] } = useQuery(ensemblesQueryOptions);
 
     const content = (() => {
         if (!view) return null;
@@ -234,6 +237,8 @@ const SlotDrawer = ({ view, onSelect }: SlotDrawerProps) => {
                             startTime: tap.kind === 'list' ? axis!.min : tap.slot,
                         })
                     }
+                    // 그 시간에 이미 4개가 겹쳐 있으면 잡을 수 없다 (24차)
+                    full={tap.kind === 'list' && isSlotFull(ensembles, date, axis!.min)}
                 />
             </div>
         );

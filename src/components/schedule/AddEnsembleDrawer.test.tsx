@@ -225,6 +225,129 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
         expect(drawer.getByRole('button', { name: '합주 잡기' })).toBeEnabled();
     });
 
+    it('그 시간에 이미 4개가 겹쳐 있으면 "같은 시간에 다른 팀 합주 잡기"를 누를 수 없다 (목록·합주 정보)', async () => {
+        // 10:00(시간칸 2)에 4개
+        mockSaturday([
+            ['A팀', 2, 5],
+            ['B팀', 2, 6],
+            ['C팀', 2, 6],
+            ['D팀', 2, 3],
+        ]);
+        const user = userEvent.setup();
+        renderApp();
+
+        await user.click(await screen.findByRole('button', { name: 'B팀 10:00–12:30' }));
+        const list = within(await findDialog(/^토 /));
+        const full = list.getByRole('button', { name: '4개가 겹쳐 있어 더 잡을 수 없어요' });
+        expect(full).toBeDisabled();
+
+        await user.click(list.getByRole('button', { name: 'A팀 합주 정보' }));
+        const info = within(await findDialog(/토 10:00 – 12:00/));
+        expect(
+            info.getByRole('button', { name: '4개가 겹쳐 있어 더 잡을 수 없어요' }),
+        ).toBeDisabled();
+        expect(useDrawerStore.getState().openedDrawers).toEqual(['ensembleInfo']);
+    });
+
+    it('저장 직전에 합주 목록을 다시 불러와, 그새 4개가 됐으면 저장하지 않는다', async () => {
+        let posted = false;
+        mockSaturday([
+            ['A팀', 6, 9],
+            ['B팀', 6, 9],
+            ['C팀', 6, 9],
+        ]);
+        server.use(
+            http.post(`${url}/ensemble`, () => {
+                posted = true;
+                return HttpResponse.json({ id: 'new' });
+            }),
+        );
+        const user = userEvent.setup();
+        renderApp();
+        // 빈 13:00 칸에서 열고 12:00으로 옮김 (3개와 겹침: 아직 잡을 수 있음)
+        const drawer = await openFromEmptySlot(user, '11월 21일 토 14:00');
+        await user.click(drawer.getByRole('radio', { name: '테스트밴드' }));
+        await user.click(drawer.getByRole('radio', { name: '한 번만' }));
+        drawer.getByRole('slider', { name: '시작 시간' }).focus();
+        await user.keyboard('{PageDown}{PageDown}');
+        expect(drawer.getByRole('status')).toHaveTextContent('A팀 일정 외 2개와 겹쳐요');
+        const save = drawer.getByRole('button', { name: '합주 잡기' });
+        expect(save).toBeEnabled();
+
+        // 그새 다른 사람이 D팀을 잡았다
+        mockSaturday([
+            ['A팀', 6, 9],
+            ['B팀', 6, 9],
+            ['C팀', 6, 9],
+            ['D팀', 6, 9],
+        ]);
+        await user.click(save);
+
+        expect(
+            await screen.findByText(
+                '그사이 이 시간에 합주가 4개 잡혔어요. 다른 시간을 골라 주세요.',
+            ),
+        ).toBeInTheDocument();
+        expect(posted).toBe(false);
+        // 다시 불러온 목록으로 Drawer에도 막힘이 보인다
+        await waitFor(() =>
+            expect(drawer.getByRole('status')).toHaveTextContent(
+                '이 시간엔 이미 4개가 겹쳐 있어요',
+            ),
+        );
+        expect(useDrawerStore.getState().openedDrawers).toEqual(['addEnsemble']);
+    });
+
+    it('"같은 시간에 다른 팀 합주 잡기"의 날짜는 캘린더에서 보던 날 (합주의 다음 날짜가 아님)', async () => {
+        // 토요일 합주, 12/5부터 (이번 주 11/21·다음 주 11/28에는 점선)
+        server.use(
+            http.get(`${url}/ensembles`, () =>
+                HttpResponse.json([
+                    {
+                        ...ensembles[0]!,
+                        day: 5,
+                        startTime: 2,
+                        endTime: 3,
+                        nextDate: '2026-12-05T00:00:00',
+                    },
+                ]),
+            ),
+        );
+        const user = userEvent.setup();
+        renderApp();
+
+        await user.click(await screen.findByRole('button', { name: /^테스트밴드 / }));
+        let info = within(await findDialog(/토 10:00 – 11:00/));
+        await user.click(info.getByRole('button', { name: '같은 시간에 다른 팀 합주 잡기' }));
+        let drawer = within(await findDialog('합주 잡기'));
+        // 이전: 12/5
+        expect(drawer.getByText('11월 21일 토요일 · 10:00 – 12:00')).toBeInTheDocument();
+        await user.click(drawer.getByRole('button', { name: '닫기' }));
+
+        await user.click(screen.getByRole('button', { name: '다음 주' }));
+        await user.click(await screen.findByRole('button', { name: /^테스트밴드 / }));
+        info = within(await findDialog(/토 10:00 – 11:00/));
+        await user.click(info.getByRole('button', { name: '같은 시간에 다른 팀 합주 잡기' }));
+        drawer = within(await findDialog('합주 잡기'));
+        expect(drawer.getByText('11월 28일 토요일 · 10:00 – 12:00')).toBeInTheDocument();
+    });
+
+    it('캘린더에서 지난 요일의 합주로 열면 다음에 오는 그 요일로', async () => {
+        // 월요일 합주 (오늘은 금 11/20 → 이번 주 월 11/16은 지남)
+        server.use(
+            http.get(`${url}/ensembles`, () =>
+                HttpResponse.json([{ ...ensembles[0]!, nextDate: '2026-11-16T00:00:00' }]),
+            ),
+        );
+        const user = userEvent.setup();
+        renderApp();
+        await user.click(await screen.findByRole('button', { name: '테스트밴드 10:00–11:00' }));
+        const info = within(await findDialog(/월 10:00 – 11:00/));
+        await user.click(info.getByRole('button', { name: '같은 시간에 다른 팀 합주 잡기' }));
+        const drawer = within(await findDialog('합주 잡기'));
+        expect(drawer.getByText('11월 23일 월요일 · 10:00 – 12:00')).toBeInTheDocument();
+    });
+
     it('반복 종료 날짜: 매주 반복일 때만, 지정하면 그 날짜를 due로 보낸다', async () => {
         let posted: Record<string, unknown> | undefined;
         server.use(

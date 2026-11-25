@@ -74,13 +74,16 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
 
     // 합주 블록 클릭: 바로 정보 Drawer를 연다 (이전에는 여기서 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5).
     // 합주 잡기 Drawer의 목록에서 고른 경우에도 쓰므로, 열린 Drawer를 정보 Drawer로 바꾼다
+    // 누른 블록의 캘린더 날짜 (보던 주의 그 요일): "같은 시간에 다른 팀 합주 잡기"의 날짜 (24차)
+    const [calendarDate, setCalendarDate] = useState<Dayjs | null>(null);
     const handleEnsembleClick = useCallback(
-        ({ id, teamId, name, repeat, nextDate, startTime, endTime }: CalendarEvent) => {
+        ({ id, teamId, name, repeat, nextDate, startTime, endTime, day }: CalendarEvent) => {
             setTeamStates(teamId, '', name);
             setEnsembleStates(id, repeat, nextDate, startTime, endTime);
+            setCalendarDate(weekStart.add(day, 'day'));
             setOpenedDrawers(['ensembleInfo']);
         },
-        [setOpenedDrawers, setTeamStates, setEnsembleStates],
+        [setOpenedDrawers, setTeamStates, setEnsembleStates, weekStart],
     );
 
     // 시간칸 클릭 (빈 칸, 또는 이름이 안 보이는 겹친 곳): 그 시간에 합주가 하나면 그 합주의 정보,
@@ -288,6 +291,7 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
                 handleUnskipEnsemble={handleUnskipEnsemble}
                 handleRepeatEnsemble={handleRepeatEnsemble}
                 handleDeleteEnsemble={handleDeleteEnsemble}
+                calendarDate={calendarDate}
             />
             <UpdateEnsembleDrawer2 drawerId="updateEnsemble2" />
             <UpdateEnsembleDrawer3 drawerId="updateEnsemble3" />

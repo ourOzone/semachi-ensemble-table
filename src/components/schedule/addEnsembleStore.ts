@@ -1,4 +1,4 @@
-import type { Dayjs } from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import { create } from 'zustand';
 import { useDrawerStore } from '@/stores/drawer';
 import type { DrawerId, TimeSlot } from '@/types';
@@ -27,6 +27,13 @@ export const useAddEnsembleStore = create<AddEnsembleState>()(() => ({ session: 
 
 /** 합주 잡기 Drawer를 연다. 열린 Drawer는 모두 이 Drawer로 바뀐다 (옛 Drawer 위에 쌓으면 옛 Drawer가 위에 그려진다) */
 export function openAddEnsemble(preset: AddEnsemblePreset) {
-    useAddEnsembleStore.setState((state) => ({ session: state.session + 1, preset }));
+    // 캘린더에서 지난 요일(이번 주 앞쪽)을 보고 열었으면 다음에 오는 그 요일로 (지난 날짜에는 잡을 수 없다)
+    let date = preset.date?.startOf('day');
+    const today = dayjs().startOf('day');
+    while (date && date.isBefore(today)) date = date.add(7, 'day');
+    useAddEnsembleStore.setState((state) => ({
+        session: state.session + 1,
+        preset: { ...preset, date },
+    }));
     useDrawerStore.getState().setOpenedDrawers(['addEnsemble']);
 }

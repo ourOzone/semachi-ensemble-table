@@ -1,6 +1,7 @@
 import type { Dayjs } from 'dayjs';
-import { CalendarPlus } from 'lucide-react';
+import { CalendarPlus, OctagonAlert } from 'lucide-react';
 import { days, idx2hour } from '@/constants';
+import { MAX_OVERLAP } from '@/lib/calendar';
 import type { TimeSlot } from '@/types';
 
 // 합주판의 아래에서 올라오는 Drawer들(합주 정보·합주 잡기)이 함께 쓰는 모양·문구
@@ -48,15 +49,34 @@ export const scrollAreaClassName =
  * 맨 아래 "합주 잡기" 줄 (합주 정보: "같은 시간에 다른 팀 합주 잡기", 빈 시간: "이 시간에 합주 잡기").
  * 누르면 그 날짜·시간을 채운 합주 잡기 Drawer로 바뀐다 (21차, 이전: "준비 중" 알림. ISSUES V11)
  */
-export const BookFooter = ({ label, onClick }: { label: string; onClick: () => void }) => (
+export const BookFooter = ({
+    label,
+    onClick,
+    full = false,
+}: {
+    label: string;
+    onClick: () => void;
+    /** 그 시간에 이미 MAX_OVERLAP개가 겹쳐 있으면 누를 수 없고 이유를 보여 준다 (24차) */
+    full?: boolean;
+}) => (
     <div className="border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)]">
         <button
             type="button"
-            className="flex w-full items-center justify-center gap-1.5 py-4 text-[15px] font-medium text-[#1d5fb4] transition-colors duration-150 hover:bg-neutral-50 active:bg-neutral-100"
+            disabled={full}
+            className="flex w-full items-center justify-center gap-1.5 py-4 text-[15px] font-medium text-[#1d5fb4] transition-colors duration-150 hover:bg-neutral-50 active:bg-neutral-100 disabled:text-neutral-400 disabled:hover:bg-white disabled:active:bg-white"
             onClick={onClick}
         >
-            <CalendarPlus className="size-[18px]" aria-hidden />
-            {label}
+            {full ? (
+                <>
+                    <OctagonAlert className="size-[18px]" aria-hidden />
+                    {MAX_OVERLAP}개가 겹쳐 있어 더 잡을 수 없어요
+                </>
+            ) : (
+                <>
+                    <CalendarPlus className="size-[18px]" aria-hidden />
+                    {label}
+                </>
+            )}
         </button>
     </div>
 );

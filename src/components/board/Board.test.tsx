@@ -375,6 +375,63 @@ describe('합주표', () => {
         await waitFor(() => expect(useDrawerStore.getState().openedDrawers).toEqual([]));
     });
 
+    it('삭제: PIN이 맞으면 Enter로도 삭제한다 (PC)', async () => {
+        let deleted = false;
+        server.use(
+            http.delete(`${url}/ensemble`, () => {
+                deleted = true;
+                return HttpResponse.json({ id: 'ensemble-1' });
+            }),
+        );
+        const { user, dialog } = await openEnsembleInfo();
+        await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+        await findDialog('합주를 삭제할까요?');
+        await enterPin(user);
+        await waitFor(() => expect(screen.getByRole('button', { name: '삭제하기' })).toBeEnabled());
+
+        await user.keyboard('{Enter}');
+        await waitFor(() => expect(deleted).toBe(true));
+    });
+
+    it('삭제: PIN 확인 전에는 Enter를 눌러도 삭제하지 않는다', async () => {
+        let deleted = false;
+        server.use(
+            http.post(`${url}/check-team-pin`, async () => {
+                await new Promise((resolve) => setTimeout(resolve, 300));
+                return HttpResponse.json(true);
+            }),
+            http.delete(`${url}/ensemble`, () => {
+                deleted = true;
+                return HttpResponse.json({ id: 'ensemble-1' });
+            }),
+        );
+        const { user, dialog } = await openEnsembleInfo();
+        await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+        await findDialog('합주를 삭제할까요?');
+        await enterPin(user);
+        await user.keyboard('{Enter}'); // 확인 중
+        await waitFor(() => expect(screen.getByRole('button', { name: '삭제하기' })).toBeEnabled());
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(deleted).toBe(false);
+    });
+
+    it('반복 종료 날짜 뒤로는 미룰 수 없다', async () => {
+        // 다음 합주 11/23, 미루면 11/30인데 11/29에 끝남
+        mockEnsemble({ due: '2026-11-29T00:00:00.000Z' });
+        const { dialog } = await openEnsembleInfo();
+        expect(within(dialog).getByRole('button', { name: '11/30(월)로 미루기' })).toBeDisabled();
+        expect(
+            within(dialog).getByText('반복 종료(11/29(일)) 뒤로는 미룰 수 없어요'),
+        ).toBeInTheDocument();
+    });
+
+    it('반복 종료 날짜 당일까지는 미룰 수 있다', async () => {
+        mockEnsemble({ due: '2026-11-30T00:00:00.000Z' });
+        const { dialog } = await openEnsembleInfo();
+        expect(within(dialog).getByRole('button', { name: '11/30(월)로 미루기' })).toBeEnabled();
+        expect(within(dialog).queryByText(/뒤로는 미룰 수 없어요/)).not.toBeInTheDocument();
+    });
+
     it('PIN 단계에서 뒤로 가면 정보로 돌아간다', async () => {
         const { user, dialog } = await openEnsembleInfo();
         await user.click(within(dialog).getByRole('button', { name: '삭제' }));

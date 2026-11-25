@@ -29,7 +29,7 @@ import type {
 import { useTeamContext, useEnsembleContext } from '@/context';
 import { days, eventIds } from '@/constants';
 import { buildColorMap } from '@/lib/board';
-import { getEnsembleSchedule } from '@/lib/calendar';
+import { getEnsembleSchedule, isSlotFull } from '@/lib/calendar';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
@@ -68,6 +68,8 @@ interface EnsembleInfoDrawerProps {
     handleUnskipEnsemble: HandleSkipEnsemble;
     handleRepeatEnsemble: HandleSkipEnsemble;
     handleDeleteEnsemble: HandleDeleteEnsemble;
+    /** 캘린더에서 누른 블록의 날짜 (보고 있던 주의 그 요일). "같은 시간에 다른 팀 합주 잡기"의 날짜 (24차) */
+    calendarDate: Dayjs | null;
 }
 
 /** Drawer 안의 단계: 정보, 또는 그 동작의 PIN 확인 */
@@ -96,17 +98,25 @@ function formatDaysLeft(date: Dayjs, now: Dayjs): string {
 interface ActionButtonProps {
     icon: ComponentType<{ className?: string; 'aria-hidden'?: boolean }>;
     danger?: boolean;
+    disabled?: boolean;
     onClick: () => void;
     children: ReactNode;
 }
 
-const ActionButton = ({ icon: Icon, danger = false, onClick, children }: ActionButtonProps) => (
+const ActionButton = ({
+    icon: Icon,
+    danger = false,
+    disabled = false,
+    onClick,
+    children,
+}: ActionButtonProps) => (
     <button
         type="button"
+        disabled={disabled}
         className={cn(
             pressable,
             boxShape,
-            'flex h-13 w-full items-center justify-center gap-2 border border-neutral-200 bg-white px-3 text-[16px] font-medium hover:bg-neutral-50 md:h-14',
+            'flex h-13 w-full items-center justify-center gap-2 border border-neutral-200 bg-white px-3 text-[16px] font-medium hover:bg-neutral-50 disabled:text-neutral-300 disabled:hover:bg-white disabled:active:scale-100 md:h-14',
             danger ? 'text-red-700 hover:bg-red-50' : 'text-ink',
         )}
         onClick={onClick}
@@ -123,6 +133,7 @@ const EnsembleInfoDrawer = ({
     handleUnskipEnsemble,
     handleRepeatEnsemble,
     handleDeleteEnsemble,
+    calendarDate,
 }: EnsembleInfoDrawerProps) => {
     const teams = useTeams();
     const { data: ensembleList } = useQuery(ensemblesQueryOptions);
@@ -242,6 +253,13 @@ const EnsembleInfoDrawer = ({
         // 서버 기록도 반복일 때만 (일회성을 반복으로 바꾼 직후에는 다시 불러오기 전까지 기록의 due가 일회성 날짜다)
         const record = ensembleList?.find(({ _id: ensembleId }) => ensembleId === ensemble.id);
         const repeatEnd = ensemble.repeat && record?.repeat ? getRepeatEnd(record.due, now) : null;
+        // 반복 종료 날짜 뒤로는 미룰 수 없다 (24차, 이전: 12/10에 끝나는 합주를 12/15로 미룰 수 있었다)
+        const skipTo = next.add(7, 'day');
+        const canSkip = !repeatEnd || !skipTo.isAfter(repeatEnd, 'day');
+        // 같은 시간에 다른 팀 합주 잡기: 날짜는 캘린더에서 보던 날 (24차, 이전: 이 합주의 다음 날짜).
+        // 그 시간에 이미 4개가 겹쳐 있으면 잡을 수 없다
+        const bookDate = calendarDate ?? next;
+        const bookFull = isSlotFull(ensembleList ?? [], bookDate, ensemble.startTime);
 
         if (step !== 'info') {
             const object = `${noun}${isEvent ? '을' : '를'}`;
@@ -410,9 +428,20 @@ const EnsembleInfoDrawer = ({
 
                     <div className="mt-5 flex flex-col gap-2.5">
                         {ensemble.repeat ? (
-                            <ActionButton icon={CalendarClock} onClick={() => goStep('skip')}>
-                                {formatDate(next.add(7, 'day'))}로 미루기
-                            </ActionButton>
+                            <>
+                                <ActionButton
+                                    icon={CalendarClock}
+                                    disabled={!canSkip}
+                                    onClick={() => goStep('skip')}
+                                >
+                                    {formatDate(skipTo)}로 미루기
+                                </ActionButton>
+                                {!canSkip && (
+                                    <p className="-mt-1 text-center text-[13px] text-neutral-500">
+                                        반복 종료({formatDate(repeatEnd!)}) 뒤로는 미룰 수 없어요
+                                    </p>
+                                )}
+                            </>
                         ) : (
                             <ActionButton icon={Repeat} onClick={() => goStep('repeat')}>
                                 매주 반복으로 바꾸기
@@ -437,11 +466,12 @@ const EnsembleInfoDrawer = ({
                 {!isEvent && (
                     <BookFooter
                         label="같은 시간에 다른 팀 합주 잡기"
-                        // 다음 합주 날짜·시작 시간을 채운 합주 잡기 Drawer로 바뀐다 (보던 합주의 상태는 비운다)
+                        // 캘린더에서 보던 날짜·이 합주의 시작 시간을 채운 합주 잡기 Drawer로 바뀐다 (보던 합주의 상태는 비운다)
+                        full={bookFull}
                         onClick={() => {
                             setTeamStates();
                             setEnsembleStates();
-                            openAddEnsemble({ date: next, startTime: ensemble.startTime });
+                            openAddEnsemble({ date: bookDate, startTime: ensemble.startTime });
                         }}
                     />
                 )}

@@ -97,21 +97,25 @@ const WeekCalendar = ({
                     {days.map((label, idx) => {
                         const isToday = idx === todayIdx;
                         return (
-                            <div key={label} className="flex flex-col items-center gap-1">
+                            // 요일을 크게, 날짜는 작게 (24차, 이전: 날짜를 크게). 오늘은 요일을 원으로
+                            <div
+                                key={label}
+                                className="flex flex-col items-center gap-0.5"
+                                aria-current={isToday ? 'date' : undefined}
+                            >
                                 <span
                                     className={cn(
-                                        'text-xs text-neutral-500 md:text-sm',
-                                        isToday && 'font-bold text-today',
+                                        'flex size-7 items-center justify-center rounded-full text-[15px] font-bold text-neutral-900 md:size-9 md:text-xl',
+                                        isToday && 'bg-today text-white',
                                     )}
                                 >
                                     {label}
                                 </span>
                                 <span
                                     className={cn(
-                                        'flex size-7 items-center justify-center rounded-full text-[15px] font-bold text-neutral-900 md:size-9 md:text-xl',
-                                        isToday && 'bg-today text-white',
+                                        'text-xs text-neutral-500 tabular-nums md:text-sm',
+                                        isToday && 'font-bold text-today',
                                     )}
-                                    aria-current={isToday ? 'date' : undefined}
                                 >
                                     {weekStart.add(idx, 'day').date()}
                                 </span>

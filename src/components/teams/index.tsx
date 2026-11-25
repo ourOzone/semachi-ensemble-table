@@ -5,7 +5,9 @@ import type { Team } from '@/types';
 import { isNotFound } from '@/api';
 import { teamExists } from '@/api/team';
 import { useTeamContext, useDrawerContext } from '@/context';
-import { useAddEnsemble } from '@/queries/ensembles';
+import { useQueryClient } from '@tanstack/react-query';
+import { ensemblesQueryOptions, useAddEnsemble } from '@/queries/ensembles';
+import { findOverlapLimit } from '@/lib/calendar';
 import {
     useAddTeam,
     useDeleteTeam,
@@ -48,6 +50,7 @@ const Teams = () => {
     const { mutateAsync: updateTeamAsync } = useUpdateTeam();
     const { mutateAsync: deleteTeamAsync } = useDeleteTeam();
     const { mutateAsync: addEnsembleAsync } = useAddEnsemble();
+    const queryClient = useQueryClient();
     const { setTeamStates } = useTeamContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
 
@@ -149,6 +152,18 @@ const Teams = () => {
                     toast.error('이미 삭제된 팀이에요.'); // checkTeamExists가 Drawer를 모두 닫았다
                     return false;
                 }
+                // 저장 직전에 합주 목록을 다시 불러와 4개 겹침을 한 번 더 확인한다 (24차).
+                // 다른 사람이 그새 같은 시간에 잡았을 수 있다. 다시 불러온 목록으로 Drawer에도 알림이 뜬다
+                const latest = await queryClient.fetchQuery({
+                    ...ensemblesQueryOptions,
+                    staleTime: 0,
+                });
+                if (
+                    findOverlapLimit(latest, { date, repeat, until: repeatEnd, startTime, endTime })
+                ) {
+                    toast.error('그사이 이 시간에 합주가 4개 잡혔어요. 다른 시간을 골라 주세요.');
+                    return false;
+                }
                 // 날짜에 시작 시각을 붙여 보낸다: 서버는 지난 일회성 합주를 날짜로 걸러 내는데(오늘 0시 기준),
                 // 0시로 보내면 서버 시간대에 따라 그날이 되기 전에 지난 것으로 걸러질 수 있다 (옛 달력은 고른 때의 시각이 붙었다)
                 const [hour = 0, minute = 0] = (idx2hour[startTime] ?? '').split(':').map(Number);
@@ -168,7 +183,7 @@ const Teams = () => {
                 return false;
             }
         },
-        [addEnsembleAsync, checkTeamExists, closeAllDrawers, setTeamStates],
+        [addEnsembleAsync, checkTeamExists, closeAllDrawers, queryClient, setTeamStates],
     );
 
     // 팀 목록 (View 개편 V-2: 한 줄로 줄이고 "전체"로 펼침). 색은 합주표와 같은 매핑(buildColorMap)

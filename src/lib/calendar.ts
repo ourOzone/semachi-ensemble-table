@@ -241,13 +241,13 @@ export function toWeekSchedule(
 ): WithLane<CalendarEvent>[][] {
     const days: CalendarEvent[][] = Array.from({ length: 7 }, () => []);
 
+    // 이번 주 월요일부터 합주 날짜 전까지는 모두 "쉼"(점선)으로 보인다 (24차).
+    // 이전에는 "오늘부터 처음 오는 그 요일"부터라, 오늘보다 앞선 이번 주 요일의 합주(예: 미래에 시작하는 화요일 합주를
+    // 수요일에 보면)는 이번 주 캘린더에서 사라졌다. 합주가 이미 그 요일에 있었는지는 데이터로 알 수 없다 (ISSUES V9)
+    const thisWeek = getWeekStart(now, 0);
     for (const ensemble of ensembles) {
         const { _id: id, teamId, teamName, day, startTime, endTime, repeat } = ensemble;
-        const status = getOccurrence(
-            ensemble,
-            weekStart.add(day, 'day'),
-            getRegularNextDate(ensemble, now),
-        );
+        const status = getOccurrence(ensemble, weekStart.add(day, 'day'), thisWeek);
         if (!status) continue;
         // day(0~6) 범위는 응답 스키마(ensembleResponseSchema)에서 검증된다
         days[day]!.push({
@@ -333,4 +333,19 @@ export function findOverlapLimit(
         }
     }
     return null;
+}
+
+/**
+ * 그 날짜의 시간칸 slot에 이미 MAX_OVERLAP개가 겹쳐 있는지 (그 시간에는 합주를 더 잡을 수 없다).
+ * "합주 잡기" 버튼을 막는 데 쓴다 (24차)
+ */
+export function isSlotFull(
+    ensembles: readonly EnsembleResponse[],
+    date: Dayjs,
+    slot: TimeSlot,
+): boolean {
+    return (
+        findOverlapLimit(ensembles, { date, repeat: false, startTime: slot, endTime: slot }) !==
+        null
+    );
 }

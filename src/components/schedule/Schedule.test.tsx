@@ -29,8 +29,8 @@ describe('합주판 (주 단위 캘린더)', () => {
         const today = screen.getByRole('button', { name: '오늘' });
         expect(prev).toBeDisabled();
         expect(today).toBeDisabled();
-        // 오늘(20일) 표시. 시간 라벨 '20'과 겹치므로 속성으로 찾는다
-        expect(document.querySelector('[aria-current="date"]')).toHaveTextContent(/^20$/);
+        // 오늘(금요일 20일) 표시. 시간 라벨 '20'과 겹치므로 속성으로 찾는다 (요일이 크고 날짜가 작게: 24차)
+        expect(document.querySelector('[aria-current="date"]')).toHaveTextContent(/^금\s*20$/);
 
         await user.click(next);
         expect(screen.getByRole('heading', { name: '11월 23일 – 29일' })).toBeInTheDocument();

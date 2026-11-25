@@ -18,8 +18,11 @@ import type { TimeSlot } from '@/types';
 
 const SLOT_COUNT = 30; // 09:00 ~ 24:00, 30분 단위
 
-/** 아주 옅은 회색 바탕을 까는 요일 (화·목·토: dayjs의 day(), 일 0) */
-const ALT_DAYS: readonly number[] = [2, 4, 6];
+/**
+ * 아주 옅은 회색 바탕을 까는 열: 왼쪽부터 1·3·5·7번째 (28차, 이전: 화·목·토 요일 기준).
+ * 보기 방식(오늘부터·요일 고정)과 관계없이 열 위치로 정해 줄을 눈으로 따라가기 쉽게
+ */
+const isAltColumn = (column: number) => column % 2 === 0;
 
 // 블록 글씨 크기 (px). 줄 수 계산에 쓰므로 아래 클래스와 맞춘다
 const SIZE = {
@@ -110,8 +113,6 @@ const WeekCalendar = ({
         }
         onClickEvent(event, boardDays[column]!.date);
     };
-    // 요일 고정 보기의 첫 화면에서만 "다음주" 줄이 생긴다 (그 줄이 있는 열과 없는 열의 높이를 맞춘다)
-    const hasNextWeek = boardDays.some((day) => day.nextWeek);
 
     return (
         <div className="mt-3 overflow-hidden [--hour-col:28px] [--slot:22px] md:mt-4 md:[--hour-col:44px] md:[--slot:30px]">
@@ -157,12 +158,13 @@ const WeekCalendar = ({
                                 >
                                     {dayLabel(date)}
                                 </span>
-                                {/* 요일 고정 보기: 지난 요일 대신 들어간 다음 주 날짜 */}
-                                {hasNextWeek && (
-                                    <span className="h-3.5 text-[10px] leading-3.5 whitespace-nowrap text-neutral-400 md:h-4 md:text-[11px] md:leading-4">
-                                        {nextWeek && '다음주'}
-                                    </span>
-                                )}
+                                {/*
+                                  요일 고정 보기: 지난 요일 대신 들어간 다음 주 날짜에 "다음주".
+                                  자리는 늘 잡아 둔다 (28차, 이전: 그 글자가 있는 화면에서만 줄이 생겨 주를 넘길 때마다 시간표가 오르내렸다)
+                                */}
+                                <span className="h-3.5 text-[10px] leading-3.5 whitespace-nowrap text-neutral-400 md:h-4 md:text-[11px] md:leading-4">
+                                    {nextWeek && '다음주'}
+                                </span>
                             </div>
                         );
                     })}
@@ -205,10 +207,10 @@ const WeekCalendar = ({
                                 key={date.valueOf()}
                                 className={cn(
                                     'relative h-[calc(var(--slot)*30)]',
-                                    // 오늘 열이 화·목·토여도 오늘 표시가 우선
+                                    // 오늘 열이 회색 열이어도 오늘 표시가 우선
                                     date.isSame(today, 'day')
                                         ? 'bg-today-tint'
-                                        : ALT_DAYS.includes(date.day()) && 'bg-day-alt',
+                                        : isAltColumn(column) && 'bg-day-alt',
                                 )}
                             >
                                 {/* 시간칸(30분): 마우스를 올리면 옅은 회색, 누르면 합주 잡기 Drawer. 블록 아래에 깔린다 */}
@@ -301,8 +303,12 @@ function EventBlock({ event, onClick }: EventBlockProps) {
             aria-label={`${name} ${time}${skipped ? ' 이번 주 쉼' : ''}`}
             data-one-time={event.repeat ? undefined : ''}
             className={cn(
-                // 일회성 구멍 반지름 (모든 길이 같음)
-                !event.repeat && '[--notch:3px] md:[--notch:3.5px]',
+                // 일회성 구멍 반지름 (모든 길이 같음). 점선 블록은 둘레에 반원 테두리를 그려 같은 크기여도 더 커 보여
+                // 구멍을 0.5px 줄인다 (28차: 테두리 바깥 반지름이 실선 블록의 구멍보다 1px 남짓 컸다)
+                !event.repeat &&
+                    (skipped
+                        ? '[--notch:2.5px] md:[--notch:3px]'
+                        : '[--notch:3px] md:[--notch:3.5px]'),
                 '@container squircle absolute flex flex-col overflow-hidden rounded-md px-0.5 py-0.5 text-left transition-[filter,background-color] duration-150 md:rounded-lg md:py-1',
                 // 스쿼클이면 반지름을 키워 일반 둥근 모서리와 비슷한 크기로 보이게
                 'supports-[corner-shape:squircle]:rounded-[11px] md:supports-[corner-shape:squircle]:rounded-[15px]',

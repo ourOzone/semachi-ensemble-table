@@ -52,14 +52,14 @@ import {
     sheetClassName,
 } from './drawerParts';
 import PinStep from './PinStep';
-import { openAddEnsemble } from './addEnsembleStore';
+import { openAddEnsemble, openUpdateEnsemble } from './addEnsembleStore';
 
 // 합주 정보 Drawer (View 개편 V-2). 아래에서 올라오고, 아래로 끌어내리면 닫힌다 (vaul).
 // 위쪽은 팀 색 머리(팀 이름·요일·시간·반복 여부), 아래는 다음 합주와 미루기·바로 하기(미루기 취소)·수정·삭제.
 // 서버 데이터로는 "미룬 반복 합주"와 "처음부터 미래에 시작하는 반복 합주"를 구분할 수 없어(ISSUES V9),
 // 두 경우 모두에 맞는 문구를 쓴다 ("…엔 합주가 없어요", "…부터 바로 하기").
 // 미루기·바로 하기·반복으로 바꾸기·삭제·수정의 PIN 단계는 이 Drawer 안에서 내용을 바꿔 보여준다 (step, 뒤로 가면 정보로).
-// 수정의 다음 단계(반복 여부·날짜·시간)는 아직 옛 Drawer라, 그 Drawer가 쌓이면 이 Drawer는 잠시 내려간다 (stores/drawer의 BOTTOM_DRAWERS).
+// 수정은 PIN이 맞으면 합주 수정 Drawer(합주 잡기 Drawer의 수정 모드, 31차)로 바뀌고, 저장하거나 닫으면 다시 이 Drawer로 온다.
 
 interface EnsembleInfoDrawerProps {
     checkEnsembleExists: CheckEnsembleExists;
@@ -138,26 +138,15 @@ const EnsembleInfoDrawer = ({
     const teams = useTeams();
     const { data: ensembleList } = useQuery(ensemblesQueryOptions);
     const { id: teamId, name, setTeamStates } = useTeamContext();
-    const {
-        id,
-        repeat,
-        nextDate,
-        startTime,
-        endTime,
-        setStartTime,
-        setEndTime,
-        setEnsembleStates,
-        setEnsembleOrgStates,
-    } = useEnsembleContext();
+    const { id, repeat, nextDate, startTime, endTime, setEnsembleStates } = useEnsembleContext();
     const openedDrawers = useDrawerStore((state) => state.openedDrawers);
-    const openDrawer = useDrawerStore((state) => state.openDrawer);
     const closeDrawer = useDrawerStore((state) => state.closeDrawer);
 
-    // 스택의 맨 위일 때만 열린다 (위에 옛 Drawer가 쌓이면 잠시 내려간다)
+    // 스택의 맨 위일 때만 열린다
     const open = openedDrawers[openedDrawers.length - 1] === 'ensembleInfo';
 
-    // 보여줄 값은 열려 있는 동안의 context 값을 붙잡아 둔다. 닫히면서 context가 초기화되거나,
-    // 수정 단계로 넘어가며 시간이 비워져도 내려가는 동안 내용이 그대로 보이게 한다
+    // 보여줄 값은 열려 있는 동안의 context 값을 붙잡아 둔다. 닫히면서 context가 초기화되어도
+    // 내려가는 동안 내용이 그대로 보이게 한다
     const live: ShownEnsemble | null =
         open && nextDate && startTime !== null && endTime !== null
             ? { id, teamId, name, repeat, nextDate, startTime, endTime }
@@ -194,15 +183,6 @@ const EnsembleInfoDrawer = ({
         } catch {
             // checkEnsembleExists는 실패를 false로 돌려준다
         }
-    };
-
-    // 수정: PIN이 맞으면 다음 단계(옛 Drawer: 반복 여부 → 날짜 → 시간)로
-    const startUpdate = () => {
-        // 수정하다 뒤로 가면 원래 값으로 되돌리기 위해 저장해 둔다 (UpdateEnsembleDrawer2의 onClose)
-        setEnsembleOrgStates(repeat, nextDate, startTime, endTime);
-        setStartTime(null);
-        setEndTime(null);
-        openDrawer('updateEnsemble2');
     };
 
     // PIN이 맞은 뒤 실행 (삭제는 확인 버튼을 누른 뒤). 삭제는 Drawer가 모두 닫힌다.
@@ -260,6 +240,18 @@ const EnsembleInfoDrawer = ({
         // 그 시간에 이미 4개가 겹쳐 있으면 잡을 수 없다
         const bookDate = calendarDate ?? next;
         const bookFull = isSlotFull(ensembleList ?? [], bookDate, ensemble.startTime);
+        // 수정: PIN이 맞으면 지금 값을 채운 합주 수정 Drawer로 (31차, 이전: 옛 Drawer 반복 여부 → 날짜 → 시간).
+        // context는 그대로 둔다: 저장하지 않고 닫으면 이 Drawer가 같은 내용으로 다시 열린다
+        const startUpdate = () =>
+            openUpdateEnsemble({
+                id: ensemble.id,
+                team: { id: ensemble.teamId, name: ensemble.name, color, isEvent },
+                repeat: ensemble.repeat,
+                date: next.startOf('day'),
+                startTime: ensemble.startTime,
+                endTime: ensemble.endTime,
+                repeatEnd,
+            });
 
         if (step !== 'info') {
             const object = `${noun}${isEvent ? '을' : '를'}`;

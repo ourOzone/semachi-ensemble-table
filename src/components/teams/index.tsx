@@ -15,15 +15,15 @@ import {
     useTeams,
     useUpdateTeam,
 } from '@/queries/teams';
-import { eventIds, idx2hour } from '@/constants';
+import { eventIds } from '@/constants';
 import { buildColorMap } from '@/lib/board';
-import { toEnsembleRequest } from '@/lib/ensemble';
+import { toEnsembleRequest, withStartTime } from '@/lib/ensemble';
 import TeamChips, { type Chip } from '@/components/schedule/TeamChips';
 import AddEnsembleDrawer, {
     type AddEnsembleInput,
     type TeamOption,
 } from '@/components/schedule/AddEnsembleDrawer';
-import { formatDate, formatTimeRange } from '@/components/schedule/drawerParts';
+import { formatEnsembleSummary } from '@/components/schedule/drawerParts';
 import theme from '@/styles/theme';
 import TeamInfoDrawer from './TeamInfoDrawer';
 import EventInfoDrawer from './EventInfoDrawer';
@@ -164,10 +164,8 @@ const Teams = () => {
                     toast.error('그사이 이 시간에 합주가 4개 잡혔어요. 다른 시간을 골라 주세요.');
                     return false;
                 }
-                // 날짜에 시작 시각을 붙여 보낸다: 서버는 지난 일회성 합주를 날짜로 걸러 내는데(오늘 0시 기준),
-                // 0시로 보내면 서버 시간대에 따라 그날이 되기 전에 지난 것으로 걸러질 수 있다 (옛 달력은 고른 때의 시각이 붙었다)
-                const [hour = 0, minute = 0] = (idx2hour[startTime] ?? '').split(':').map(Number);
-                const nextDate = date.hour(hour).minute(minute);
+                // 날짜에 시작 시각을 붙여 보낸다 (lib/ensemble의 withStartTime)
+                const nextDate = withStartTime(date, startTime);
                 await addEnsembleAsync({
                     teamName: team.name,
                     ...toEnsembleRequest(team.id, repeat, nextDate, startTime, endTime, repeatEnd),
@@ -175,7 +173,14 @@ const Teams = () => {
                 setTeamStates(); // 초기화
                 closeAllDrawers();
                 toast.success(team.isEvent ? '일정을 잡았어요.' : '합주를 잡았어요.', {
-                    description: `${team.name} · ${formatDate(date)}${repeat ? '부터 매주' : ''} ${formatTimeRange(startTime, endTime)}${repeatEnd ? ` (${formatDate(repeatEnd)}까지)` : ''}`,
+                    description: formatEnsembleSummary({
+                        team,
+                        repeat,
+                        date,
+                        startTime,
+                        endTime,
+                        repeatEnd,
+                    }),
                 });
                 return true;
             } catch {

@@ -1,4 +1,5 @@
 import dayjs, { type Dayjs } from 'dayjs';
+import { idx2hour } from '@/constants';
 import type { EnsembleUpdateRequest, TimeSlot } from '@/types';
 
 /**
@@ -28,6 +29,16 @@ export function toEnsembleRequest(
             ? (repeatEnd?.format('YYYY-MM-DD') ?? NO_REPEAT_END)
             : nextDate.format('YYYY-MM-DD'),
     };
+}
+
+/**
+ * 서버에 보내는 합주 날짜: 그날에 시작 시각을 붙인다 (합주 잡기 21차·수정 31차).
+ * 서버는 지난 일회성 합주를 날짜로 걸러 내는데(오늘 0시 기준), 0시로 보내면 서버 시간대에 따라
+ * 그날이 되기 전에 지난 것으로 걸러질 수 있다 (옛 달력은 고른 때의 시각이 붙었다)
+ */
+export function withStartTime(date: Dayjs, startTime: TimeSlot): Dayjs {
+    const [hour = 0, minute = 0] = (idx2hour[startTime] ?? '').split(':').map(Number);
+    return date.startOf('day').hour(hour).minute(minute);
 }
 
 /** 반복 종료 날짜가 없음(계속 반복)을 뜻하는 due */

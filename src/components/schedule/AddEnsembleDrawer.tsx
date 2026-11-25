@@ -51,7 +51,7 @@ import { ensemblesQueryOptions } from '@/queries/ensembles';
 import { useTeams } from '@/queries/teams';
 import { useDrawerStore } from '@/stores/drawer';
 import type { TimeSlot } from '@/types';
-import { useAddEnsembleStore, type AddEnsemblePreset } from './addEnsembleStore';
+import { useAddEnsembleStore, type AddEnsemblePreset, type EditTarget } from './addEnsembleStore';
 import {
     boxShape,
     formatDate,
@@ -72,6 +72,9 @@ import {
 // - 그날 동방에 잡힌 합주를 가로 막대로 보여주고, 겹치면 알린다. 한 시간에 MAX_OVERLAP개가 넘게 겹치면 잡을 수 없다
 // - 무언가를 고르면 그 항목의 소제목이 Drawer 맨 위에 오게 스크롤한다 (22차, 더 내려갈 곳이 없으면 거기까지)
 // 입력값은 이 Drawer의 로컬 상태다 (열 때마다 addEnsembleStore의 미리 채울 값으로 새로 시작).
+// 합주 수정도 이 Drawer다 (31차, mode="update", 이전: 옛 Drawer 3단계 반복 여부 → 달력 → 시작·끝 칸).
+// 합주 정보에서 PIN이 맞으면 열리고(openUpdateEnsemble), 지금 값이 채워져 있다. 팀은 바꿀 수 없다(PIN이 그 팀의 PIN).
+// 겹침은 수정하는 합주 자신을 빼고 센다. 바뀐 것이 없으면 저장할 수 없다
 
 /** 팀 고르기 목록의 한 항목 (팀 또는 소모임·일정) */
 export interface TeamOption {
@@ -94,10 +97,16 @@ export interface AddEnsembleInput {
 }
 
 interface AddEnsembleDrawerProps {
-    teams: TeamOption[];
-    events: TeamOption[];
-    /** 저장. 성공하면 true (Drawer는 호출한 쪽이 닫는다), 실패하면 false (입력을 그대로 두고 다시 누를 수 있다) */
-    onSubmit: (input: AddEnsembleInput) => Promise<boolean>;
+    /** add: 합주 잡기(addEnsemble), update: 합주 수정(updateEnsemble, 31차) */
+    mode?: 'add' | 'update';
+    /** 고를 수 있는 팀·소모임 (합주 잡기만. 수정은 팀을 바꿀 수 없다) */
+    teams?: TeamOption[];
+    events?: TeamOption[];
+    /**
+     * 저장. 성공하면 true (Drawer는 호출한 쪽이 닫는다), 실패하면 false (입력을 그대로 두고 다시 누를 수 있다).
+     * 수정이면 target이 그 합주
+     */
+    onSubmit: (input: AddEnsembleInput, target: EditTarget | null) => Promise<boolean>;
 }
 
 /** 시간칸 수 (09:00 ~ 24:00, 30분 단위) */
@@ -115,13 +124,23 @@ type SectionKey = 'team' | 'repeat' | 'date' | 'time' | 'end';
 const formatLongDate = (date: Dayjs) =>
     `${date.month() + 1}월 ${date.date()}일 ${days[getTodayIdx(date)]}요일`;
 
-const AddEnsembleDrawer = ({ teams, events, onSubmit }: AddEnsembleDrawerProps) => {
+const AddEnsembleDrawer = ({
+    mode = 'add',
+    teams = [],
+    events = [],
+    onSubmit,
+}: AddEnsembleDrawerProps) => {
     const openedDrawers = useDrawerStore((state) => state.openedDrawers);
     const setOpenedDrawers = useDrawerStore((state) => state.setOpenedDrawers);
     const closeAllDrawers = useDrawerStore((state) => state.closeAllDrawers);
     const session = useAddEnsembleStore((state) => state.session);
     const preset = useAddEnsembleStore((state) => state.preset);
-    const open = openedDrawers[openedDrawers.length - 1] === 'addEnsemble';
+    const edit = useAddEnsembleStore((state) => state.edit);
+    const open =
+        openedDrawers[openedDrawers.length - 1] ===
+        (mode === 'update' ? 'updateEnsemble' : 'addEnsemble');
+    // 합주 잡기·수정 Drawer는 같은 store로 열린다. 이 Drawer의 모드로 연 것만 그린다
+    const forThisMode = (edit !== null) === (mode === 'update');
 
     // 저장하지 않고 닫으면 연 곳(팀 정보 등)으로 돌아간다. 저장에 성공하면 호출한 쪽이 모두 닫는다
     const handleClose = () => {
@@ -137,10 +156,11 @@ const AddEnsembleDrawer = ({ teams, events, onSubmit }: AddEnsembleDrawerProps) 
                 handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-neutral-300"
             >
                 {/* 열 때마다(session) 입력을 새로 시작한다. 닫히는 동안은 마지막 입력이 그대로 보인다 */}
-                {session > 0 && (
+                {session > 0 && forThisMode && (
                     <AddEnsembleForm
                         key={session}
                         preset={preset}
+                        edit={edit}
                         teams={teams}
                         events={events}
                         onSubmit={onSubmit}
@@ -151,27 +171,39 @@ const AddEnsembleDrawer = ({ teams, events, onSubmit }: AddEnsembleDrawerProps) 
     );
 };
 
-interface AddEnsembleFormProps extends AddEnsembleDrawerProps {
+interface AddEnsembleFormProps {
     preset: AddEnsemblePreset;
+    edit: EditTarget | null;
+    teams: TeamOption[];
+    events: TeamOption[];
+    onSubmit: AddEnsembleDrawerProps['onSubmit'];
 }
 
-const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormProps) => {
+const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleFormProps) => {
     const [teamId, setTeamId] = useState<string | null>(preset.teamId ?? null);
-    const team = [...teams, ...events].find((option) => option.id === teamId) ?? null;
+    const team = edit
+        ? edit.team
+        : ([...teams, ...events].find((option) => option.id === teamId) ?? null);
     const [teamOpen, setTeamOpen] = useState(team === null);
-    const [repeat, setRepeat] = useState<boolean | null>(null);
-    const [date, setDate] = useState<Dayjs | null>(preset.date ?? null);
+    // 수정이면 모두 지금 값으로 시작한다
+    const [repeat, setRepeat] = useState<boolean | null>(edit?.repeat ?? null);
+    const [date, setDate] = useState<Dayjs | null>(edit?.date ?? preset.date ?? null);
     const [dateOpen, setDateOpen] = useState(date === null);
     // 시작 시간: 합주판에서 열면 누른 시간, 팀 정보에서 열면 12:00 (그날 동방 막대의 창이 처음부터 보이게, 23차)
-    const [startTime, setStartTime] = useState<TimeSlot>(preset.startTime ?? DEFAULT_START);
+    const initialStart = edit?.startTime ?? preset.startTime ?? DEFAULT_START;
+    const [startTime, setStartTime] = useState<TimeSlot>(initialStart);
     // 소요 시간(시간칸 수). 24:00을 넘지 않게
-    const [duration, setDuration] = useState(
-        Math.min(DEFAULT_DURATION, SLOT_COUNT - (preset.startTime ?? DEFAULT_START)),
+    const initialDuration = edit
+        ? edit.endTime + 1 - edit.startTime
+        : Math.min(DEFAULT_DURATION, SLOT_COUNT - initialStart);
+    const [duration, setDuration] = useState(initialDuration);
+    // 수정하는 합주의 길이가 칩(30분·1시간·2시간)에 없으면 직접 입력으로
+    const [customDuration, setCustomDuration] = useState(
+        edit !== null && !DURATION_CHIPS.some((slots) => slots === initialDuration),
     );
-    const [customDuration, setCustomDuration] = useState(false);
     // 반복 종료 날짜 (매주 반복일 때만, 고르지 않아도 됨 = 계속 반복). 이 날짜 이후에 자동으로 삭제된다 (서버 due)
-    const [hasRepeatEnd, setHasRepeatEnd] = useState(false);
-    const [repeatEnd, setRepeatEnd] = useState<Dayjs | null>(null);
+    const [hasRepeatEnd, setHasRepeatEnd] = useState(edit?.repeatEnd != null);
+    const [repeatEnd, setRepeatEnd] = useState<Dayjs | null>(edit?.repeatEnd ?? null);
     const [repeatEndOpen, setRepeatEndOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
@@ -183,7 +215,7 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
         target: SectionKey | 'bottom';
         smooth: boolean;
         count: number;
-    } | null>(preset.teamId ? { target: 'repeat', smooth: false, count: 0 } : null);
+    } | null>(preset.teamId && !edit ? { target: 'repeat', smooth: false, count: 0 } : null);
     const scrollToSection = (target: SectionKey | 'bottom') =>
         setScrollRequest((prev) => ({ target, smooth: true, count: (prev?.count ?? 0) + 1 }));
     useEffect(() => {
@@ -220,9 +252,12 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
         scrollToSection('date');
     };
 
-    // 그날 동방: 합주판과 같은 기준으로 그날 보이는 합주 (색은 팀의 지금 색)
+    // 그날 동방: 합주판과 같은 기준으로 그날 보이는 합주 (색은 팀의 지금 색). 수정이면 그 합주 자신은 빼고 본다
     const allTeams = useTeams();
-    const { data: ensembles = [] } = useQuery(ensemblesQueryOptions);
+    const { data: allEnsembles = [] } = useQuery(ensemblesQueryOptions);
+    const ensembles = edit
+        ? allEnsembles.filter(({ _id: ensembleId }) => ensembleId !== edit.id)
+        : allEnsembles;
     const dayEvents = date ? eventsOnDate(ensembles, buildColorMap(allTeams), date, dayjs()) : [];
     const conflicts = overlapping(
         dayEvents.filter((event) => event.status === 'normal'),
@@ -245,13 +280,24 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
             : repeat && hasRepeatEnd && !repeatEnd
               ? '종료 날짜를 골라 주세요'
               : null;
-    const ready = missing === null && limitDate === null && !submitting;
+    // 수정: 지금 값에서 바뀐 것이 없으면 저장할 수 없다
+    const unchanged =
+        edit !== null &&
+        repeat === edit.repeat &&
+        date !== null &&
+        date.isSame(edit.date, 'day') &&
+        range.startTime === edit.startTime &&
+        range.endTime === edit.endTime &&
+        (endDate === null
+            ? edit.repeatEnd === null
+            : edit.repeatEnd !== null && endDate.isSame(edit.repeatEnd, 'day'));
+    const ready = missing === null && limitDate === null && !unchanged && !submitting;
 
     const submit = async () => {
         if (!ready || !team || repeat === null || !date) return;
         setSubmitting(true);
         // 실패하면 입력을 그대로 두고 다시 누를 수 있게 한다 (성공하면 Drawer가 닫힌다)
-        const saved = await onSubmit({ team, repeat, date, ...range, repeatEnd: endDate });
+        const saved = await onSubmit({ team, repeat, date, ...range, repeatEnd: endDate }, edit);
         if (!saved) setSubmitting(false);
     };
 
@@ -270,7 +316,7 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
                 <div className="flex items-start justify-between gap-3 px-5 pt-[26px] md:px-7">
                     <div className="min-w-0">
                         <DrawerTitle className="text-[26px] leading-tight font-bold text-ink md:text-[28px]">
-                            {noun} 잡기
+                            {noun} {edit ? '수정' : '잡기'}
                         </DrawerTitle>
                         <DrawerDescription className="mt-1.5 truncate text-[15px] text-neutral-500">
                             {date
@@ -292,20 +338,24 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
                 <div className="flex flex-col gap-5 px-5 pt-5 pb-6 md:px-7">
                     {/* 팀 */}
                     <Section label="팀" sectionRef={sectionRef('team')}>
-                        {team && !teamOpen ? (
+                        {edit ? (
+                            // 수정: 팀은 바꿀 수 없다
+                            <div
+                                className={`${boxShape} flex h-14 w-full items-center justify-between gap-3 border border-neutral-200 bg-white pr-4 pl-2`}
+                            >
+                                <TeamBadge team={edit.team} />
+                                <span className="shrink-0 text-[13px] text-neutral-400">
+                                    팀은 바꿀 수 없어요
+                                </span>
+                            </div>
+                        ) : team && !teamOpen ? (
                             <button
                                 type="button"
                                 aria-expanded={false}
                                 className={`${pressable} ${boxShape} flex h-14 w-full items-center justify-between gap-3 border border-neutral-200 bg-white pr-3 pl-2 hover:bg-neutral-50`}
                                 onClick={() => setTeamOpen(true)}
                             >
-                                <span
-                                    className="inline-flex min-w-0 items-center gap-1.5 rounded-full py-2 pr-4 pl-3 text-[16px] font-bold text-white"
-                                    style={{ backgroundColor: team.color }}
-                                >
-                                    <Check className="size-4 shrink-0" aria-hidden />
-                                    <span className="truncate">{team.name}</span>
-                                </span>
+                                <TeamBadge team={team} checked />
                                 <span className="flex shrink-0 items-center gap-0.5 text-[14px] text-neutral-500">
                                     바꾸기
                                     <ChevronDown className="size-4" aria-hidden />
@@ -534,12 +584,32 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
                     {submitting
                         ? '저장하는 중…'
                         : (missing ??
-                          (limitDate ? `최대 ${MAX_OVERLAP}개까지만 가능해요` : `${noun} 잡기`))}
+                          (limitDate
+                              ? `최대 ${MAX_OVERLAP}개까지만 가능해요`
+                              : unchanged
+                                ? '바뀐 내용이 없어요'
+                                : edit
+                                  ? '수정하기'
+                                  : `${noun} 잡기`))}
                 </button>
             </div>
         </>
     );
 };
+
+/** 고른 팀 (팀 색 바탕 알약). 합주 잡기는 체크 표시, 수정은 없음 */
+const TeamBadge = ({ team, checked = false }: { team: TeamOption; checked?: boolean }) => (
+    <span
+        className={cn(
+            'inline-flex min-w-0 items-center gap-1.5 rounded-full py-2 pr-4 text-[16px] font-bold text-white',
+            checked ? 'pl-3' : 'pl-4',
+        )}
+        style={{ backgroundColor: team.color }}
+    >
+        {checked && <Check className="size-4 shrink-0" aria-hidden />}
+        <span className="truncate">{team.name}</span>
+    </span>
+);
 
 /** 둘 중 하나를 고르는 칸 (반복 여부, 반복 종료). 아무것도 고르지 않은 상태(null)도 있다 */
 function Segmented<T extends boolean>({

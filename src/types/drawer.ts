@@ -27,6 +27,4 @@ export type DrawerId =
     | 'ensembleInfo'
     | 'slotInfo'
     | 'addEnsemble'
-    | 'updateEnsemble2'
-    | 'updateEnsemble3'
-    | 'updateEnsemble4';
+    | 'updateEnsemble';

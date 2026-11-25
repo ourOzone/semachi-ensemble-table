@@ -19,12 +19,6 @@ type EnsembleArgs = [
     endTime: TimeSlot | null,
 ];
 
-/**
- * 합주 수정. 인자는 Ensemble context 값을 그대로 받으므로 null 허용 타입이지만,
- * Drawer에서 날짜·시간 선택을 마친 뒤에만 호출된다. 저장에 성공하면 true
- */
-export type HandleUpdateEnsemble = (...args: EnsembleArgs) => Promise<boolean>;
-
 /** 합주 정보 Drawer의 PIN 단계 뒤 처리: 미루기(nextDate 7일 뒤) · 바로 하기(미루기 취소) · 매주 반복으로 바꾸기. 저장에 성공하면 true */
 export type HandleSkipEnsemble = (...args: EnsembleArgs) => Promise<boolean>;
 

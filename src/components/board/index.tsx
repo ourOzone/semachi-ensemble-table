@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { isNotFound } from '@/api';
 import { ensembleExists } from '@/api/ensemble';
 import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     ensemblesQueryOptions,
     useDeleteEnsemble,
@@ -14,13 +14,14 @@ import { useRefreshTeamsAndEnsembles, useTeams } from '@/queries/teams';
 import WeekCalendar from '@/components/schedule/WeekCalendar';
 import SlotDrawer, { type SlotView } from '@/components/schedule/SlotDrawer';
 import EnsembleInfoDrawer from '@/components/schedule/EnsembleInfoDrawer';
-import UpdateEnsembleDrawer2 from './updateEnsembleDrawers/UpdateEnsembleDrawer2';
-import UpdateEnsembleDrawer3 from './updateEnsembleDrawers/UpdateEnsembleDrawer3';
-import UpdateEnsembleDrawer4 from './updateEnsembleDrawers/UpdateEnsembleDrawer4';
+import AddEnsembleDrawer, { type AddEnsembleInput } from '@/components/schedule/AddEnsembleDrawer';
+import type { EditTarget } from '@/components/schedule/addEnsembleStore';
+import { formatEnsembleSummary } from '@/components/schedule/drawerParts';
 import dayjs, { type Dayjs } from 'dayjs';
 import { toast } from 'sonner';
-import { getRepeatEnd, toEnsembleRequest } from '@/lib/ensemble';
+import { getRepeatEnd, toEnsembleRequest, withStartTime } from '@/lib/ensemble';
 import {
+    findOverlapLimit,
     getRegularNextDate,
     resolveSlotTap,
     type BoardDay,
@@ -43,7 +44,7 @@ interface BoardProps {
 }
 
 // 합주표 (View 개편 V-2: 주 단위 캘린더 + 아래에서 올라오는 합주 정보·합주 잡기 Drawer).
-// PIN 단계는 합주 정보 Drawer 안에 있고, 수정의 입력 단계(반복 여부·날짜·시간)는 아직 옛 Drawer다
+// PIN 단계는 합주 정보 Drawer 안에 있고, 수정은 PIN이 맞으면 합주 수정 Drawer(합주 잡기 Drawer의 수정 모드, 31차)
 const Board = ({ days, today, view, direction }: BoardProps) => {
     const teams = useTeams();
     const columns = useBoardSchedule(days.map((day) => day.date));
@@ -53,6 +54,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
     const refreshTeamsAndEnsembles = useRefreshTeamsAndEnsembles();
     const { mutateAsync: updateEnsembleAsync } = useUpdateEnsemble();
     const { mutateAsync: deleteEnsembleAsync } = useDeleteEnsemble();
+    const queryClient = useQueryClient();
     const { setTeamStates } = useTeamContext();
     const { setEnsembleStates, setNextDate, setRepeat } = useEnsembleContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
@@ -142,6 +144,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
         ],
     );
 
+    // 미루기·바로 하기·반복으로 바꾸기의 저장 (수정은 handleEditEnsemble).
     // 이미 삭제됐으면 서버가 404를 준다 → 이미 삭제된 합주 처리 (이전에는 수정 전에 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
     const handleUpdateEnsemble = useCallback(
         async (
@@ -158,7 +161,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
                 const current = ensembleList?.find(({ _id: ensembleId }) => ensembleId === id);
                 const repeatEnd =
                     repeat && current?.repeat ? getRepeatEnd(current.due, dayjs()) : null;
-                // 선택을 마친 뒤에만 호출되어 null이 아님 (null이면 nextDate.day()에서 TypeError → catch, 기존 동작)
+                // 정보 Drawer가 열려 있는 동안 호출되어 null이 아님 (null이면 nextDate.day()에서 TypeError → catch, 기존 동작)
                 await updateEnsembleAsync({
                     id,
                     ...toEnsembleRequest(
@@ -184,6 +187,57 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
         },
         [ensembleList, handleEnsembleGone, setOpenedDrawers, updateEnsembleAsync],
     );
+
+    // 합주 수정 Drawer에서 저장 (31차). 합주 잡기와 같이 저장 직전에 다시 불러와 4개 겹침을 한 번 더 확인한다 (자신은 빼고).
+    // 성공하면 합주 정보로 돌아와 바뀐 값을 보여준다. 반복 종료 날짜도 이 Drawer에서 고친 값으로 보낸다
+    const handleEditEnsemble = async (
+        { team, repeat, date, startTime, endTime, repeatEnd }: AddEnsembleInput,
+        target: EditTarget | null,
+    ) => {
+        if (!target) return false;
+        try {
+            const latest = await queryClient.fetchQuery({ ...ensemblesQueryOptions, staleTime: 0 });
+            const others = latest.filter(({ _id: ensembleId }) => ensembleId !== target.id);
+            if (findOverlapLimit(others, { date, repeat, until: repeatEnd, startTime, endTime })) {
+                toast.error('그사이 이 시간에 합주가 4개 잡혔어요. 다른 시간을 골라 주세요.');
+                return false;
+            }
+            await updateEnsembleAsync({
+                id: target.id,
+                ...toEnsembleRequest(
+                    team.id,
+                    repeat,
+                    withStartTime(date, startTime),
+                    startTime,
+                    endTime,
+                    repeatEnd,
+                ),
+            });
+            setEnsembleStates(target.id, repeat, date, startTime, endTime);
+            // 요일이 바뀌었을 수 있어 캘린더 날짜는 버린다 ("같은 시간에 다른 팀 합주 잡기"는 다음 합주 날짜로)
+            setCalendarDate(null);
+            setOpenedDrawers(['ensembleInfo']);
+            toast.success(team.isEvent ? '일정을 수정했어요.' : '합주를 수정했어요.', {
+                description: formatEnsembleSummary({
+                    team,
+                    repeat,
+                    date,
+                    startTime,
+                    endTime,
+                    repeatEnd,
+                }),
+            });
+            return true;
+        } catch (err) {
+            if (isNotFound(err)) {
+                handleEnsembleGone();
+                toast.error('이미 삭제된 합주예요.');
+            } else {
+                toast.error('저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+            }
+            return false;
+        }
+    };
 
     const handleDeleteEnsemble = useCallback(
         async (id: string) => {
@@ -309,12 +363,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
                 handleDeleteEnsemble={handleDeleteEnsemble}
                 calendarDate={calendarDate}
             />
-            <UpdateEnsembleDrawer2 drawerId="updateEnsemble2" />
-            <UpdateEnsembleDrawer3 drawerId="updateEnsemble3" />
-            <UpdateEnsembleDrawer4
-                drawerId="updateEnsemble4"
-                handleUpdateEnsemble={handleUpdateEnsemble}
-            />
+            <AddEnsembleDrawer mode="update" onSubmit={handleEditEnsemble} />
         </>
     );
 };

@@ -23,6 +23,25 @@ export function formatSlots(slots: number): string {
     return hours > 0 ? `${hours}시간${minutes ? ` ${minutes}` : ''}` : minutes;
 }
 
+/** 저장 알림의 설명: "테스트밴드 · 11/27(금)부터 매주 12:00 – 14:00 (12/25(금)까지)" */
+export function formatEnsembleSummary({
+    team,
+    repeat,
+    date,
+    startTime,
+    endTime,
+    repeatEnd,
+}: {
+    team: { name: string };
+    repeat: boolean;
+    date: Dayjs;
+    startTime: TimeSlot;
+    endTime: TimeSlot;
+    repeatEnd: Dayjs | null;
+}): string {
+    return `${team.name} · ${formatDate(date)}${repeat ? '부터 매주' : ''} ${formatTimeRange(startTime, endTime)}${repeatEnd ? ` (${formatDate(repeatEnd)}까지)` : ''}`;
+}
+
 /** 누를 수 있는 것: 마우스를 올리면 바탕이 바뀌고, 누르면 살짝 작아짐 */
 export const pressable = 'transition-[background-color,scale] duration-150 active:scale-[0.97]';
 

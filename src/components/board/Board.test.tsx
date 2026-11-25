@@ -6,14 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { url } from '@/constants';
 import { useDrawerStore } from '@/stores/drawer';
 import { ensembles, mockInitialData } from '@/test/fixtures';
-import { findDialog, findDrawer, findEnabledButton } from '@/test/queries';
+import { findDialog } from '@/test/queries';
 import { renderApp } from '@/test/render';
 import { countOf, recordRequests } from '@/test/requests';
 import { server } from '@/test/server';
 
 // 합주표 흐름 테스트: 합주 블록 → 합주 정보 Drawer(아래에서 올라옴) → 수정 / 미루기 / 바로 하기(미루기 취소) / 반복으로 바꾸기 / 삭제.
 // fixtures의 합주: 매주 반복, 다음 날짜 2026-11-23(월), 시간칸 2~3 (10:00 - 11:00)
-// PIN 단계는 합주 정보 Drawer 안에서 내용이 바뀐다. 수정의 입력 단계(반복 여부·날짜·시간)는 아직 옛 Drawer(antd)다
+// PIN 단계는 합주 정보 Drawer 안에서 내용이 바뀐다. 수정은 PIN이 맞으면 합주 수정 Drawer(합주 잡기 Drawer의 수정 모드, 31차)
 
 type User = ReturnType<typeof userEvent.setup>;
 
@@ -126,59 +126,142 @@ describe('합주표', () => {
         expect(await screen.findByText('보컬A')).toBeInTheDocument();
     });
 
-    it('합주를 수정하면 PIN → 반복 여부 → 날짜 → 시간 순으로 고르고 서버에 보낸다', async () => {
-        const { user, dialog } = await openEnsembleInfo();
-
+    /** 수정 → PIN → 합주 수정 Drawer (31차, 합주 잡기 Drawer의 수정 모드) */
+    async function openEdit(user: User, dialog: HTMLElement) {
         await user.click(within(dialog).getByRole('button', { name: '수정' }));
         await findDialog('합주를 수정할까요?');
-        // PIN이 맞으면 다음 단계로 자동 이동
         await enterPin(user);
-        await user.click(await screen.findByText(/매주 같은 타임에 할래요/));
+        return within(await findDialog('합주 수정'));
+    }
 
-        // 달력에서 2026-11-27(금) 선택
-        await screen.findByText(/언제 시작으로 바꾸나요/);
-        const cell = document.querySelector<HTMLElement>('td[title="2026-11-27"]');
-        expect(cell).not.toBeNull();
-        await user.click(cell!);
+    it('수정: PIN이 맞으면 지금 값을 채운 합주 수정 Drawer, 바꾸고 저장하면 합주 정보로 돌아와 바뀐 값을 보여준다', async () => {
+        const { user, dialog } = await openEnsembleInfo();
+        const drawer = await openEdit(user, dialog);
 
-        // 시간: 12:00부터 13:00까지 → 시간칸 6 ~ 7
-        await user.click(await screen.findByRole('button', { name: '12:00' }));
-        await user.click(screen.getByRole('button', { name: '13:00' }));
-        await user.click(await findEnabledButton('이대로 할래요'));
+        expect(useDrawerStore.getState().openedDrawers).toEqual(['updateEnsemble']);
+        // 팀은 바꿀 수 없다 (PIN이 이 팀의 PIN)
+        expect(drawer.getByText('팀은 바꿀 수 없어요')).toBeInTheDocument();
+        expect(drawer.queryByRole('radiogroup', { name: '팀' })).not.toBeInTheDocument();
+        expect(drawer.getByRole('radio', { name: '매주 반복' })).toBeChecked();
+        expect(drawer.getByRole('button', { name: '11월 23일 월요일' })).toBeInTheDocument();
+        expect(drawer.getByRole('slider', { name: '시작 시간' })).toHaveAttribute(
+            'aria-valuetext',
+            '10:00 – 11:00',
+        );
+        expect(drawer.getByRole('radio', { name: '1시간' })).toBeChecked();
+        expect(drawer.getByRole('radio', { name: '계속 반복' })).toBeChecked();
+        // 수정하는 합주 자신과는 겹치지 않는다
+        expect(drawer.queryByText(/겹쳐요/)).not.toBeInTheDocument();
+        // 바뀐 것이 없으면 저장할 수 없다
+        expect(drawer.getByRole('button', { name: '바뀐 내용이 없어요' })).toBeDisabled();
 
-        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
+        await user.click(drawer.getByRole('button', { name: '11월 23일 월요일' }));
+        await user.click(drawer.getByRole('button', { name: /11월 27일/ }));
+        await user.click(drawer.getByRole('radio', { name: '2시간' }));
+        await user.click(drawer.getByRole('button', { name: '수정하기' }));
+
         await waitFor(() => expect(putBody).toBeDefined());
         expect(putBody).toMatchObject({
             teamId: 'team-1',
             repeat: true,
-            startTime: 6,
-            endTime: 7,
+            startTime: 2,
+            endTime: 5,
             day: 4, // 금요일 (월요일 0 기준)
             type: '무기한',
             due: '2099-12-31',
         });
-        expect(dayjs(putBody!.nextDate as string).format('YYYY-MM-DD')).toBe('2026-11-27');
-        // 저장하면 합주 정보 Drawer로 돌아와 바뀐 값을 보여준다
-        const updated = await findDialog(/12:00 – 13:00/);
-        expect(
-            within(updated).getByRole('heading', { name: '금 12:00 – 13:00' }),
-        ).toBeInTheDocument();
+        // 날짜에 시작 시각을 붙여 보낸다 (합주 잡기와 같음)
+        expect(dayjs(putBody!.nextDate as string).format('YYYY-MM-DD HH:mm')).toBe(
+            '2026-11-27 10:00',
+        );
+        expect(await screen.findByText('합주를 수정했어요.')).toBeInTheDocument();
+        const updated = within(await findDialog('금 10:00 – 12:00'));
+        expect(updated.getByText('11/27(금)')).toBeInTheDocument();
+        expect(useDrawerStore.getState().openedDrawers).toEqual(['ensembleInfo']);
     });
 
-    it('수정을 시작했다가 뒤로 가면 원래 값으로 돌아와, 다른 동작도 원래 값으로 한다', async () => {
+    it('수정 Drawer를 저장하지 않고 닫으면 합주 정보로 돌아오고, 다른 동작도 원래 값으로 한다', async () => {
         const { user, dialog } = await openEnsembleInfo();
+        const drawer = await openEdit(user, dialog);
+        await user.click(drawer.getByRole('radio', { name: '2시간' }));
+        await user.click(drawer.getByRole('button', { name: '닫기' }));
 
-        await user.click(within(dialog).getByRole('button', { name: '수정' }));
-        await enterPin(user);
-        const step2 = await findDrawer(/매주 할 건가요/);
-        await user.click(step2.querySelector<HTMLElement>('.ant-drawer-close')!);
-
-        // 정보 단계로 돌아와 미루기: 원래 시간으로 저장된다 (되돌리지 않으면 시간이 비어 있다)
         const info = await findDialog('월 10:00 – 11:00');
+        expect(useDrawerStore.getState().openedDrawers).toEqual(['ensembleInfo']);
+        expect(putBody).toBeUndefined();
         await user.click(within(info).getByRole('button', { name: '11/30(월)로 미루기' }));
         await enterPin(user);
         await waitFor(() => expect(putBody).toBeDefined());
         expect(putBody).toMatchObject({ startTime: 2, endTime: 3, repeat: true });
+    });
+
+    it('수정: 반복 종료 날짜가 채워져 있고, 계속 반복으로 바꿀 수 있다', async () => {
+        mockEnsemble({ due: '2026-12-21T00:00:00.000Z' });
+        const { user, dialog } = await openEnsembleInfo();
+        const drawer = await openEdit(user, dialog);
+
+        expect(drawer.getByRole('radio', { name: '종료 날짜 지정' })).toBeChecked();
+        expect(drawer.getByRole('button', { name: '12월 21일 월요일까지' })).toBeInTheDocument();
+        expect(drawer.getByRole('button', { name: '바뀐 내용이 없어요' })).toBeDisabled();
+        await user.click(drawer.getByRole('radio', { name: '계속 반복' }));
+        await user.click(drawer.getByRole('button', { name: '수정하기' }));
+
+        await waitFor(() => expect(putBody).toBeDefined());
+        expect(putBody).toMatchObject({ repeat: true, type: '무기한', due: '2099-12-31' });
+    });
+
+    it('수정: 한 번만으로 바꾸면 그 날짜만 (due는 그 날짜)', async () => {
+        const { user, dialog } = await openEnsembleInfo();
+        const drawer = await openEdit(user, dialog);
+
+        await user.click(drawer.getByRole('radio', { name: '한 번만' }));
+        expect(drawer.queryByRole('radiogroup', { name: '반복 종료' })).not.toBeInTheDocument();
+        await user.click(drawer.getByRole('button', { name: '수정하기' }));
+
+        await waitFor(() => expect(putBody).toBeDefined());
+        expect(putBody).toMatchObject({ repeat: false, type: '일회성', due: '2026-11-23' });
+        const info = within(await findDialog('월 10:00 – 11:00'));
+        expect(info.getByText('이번 한 번')).toBeInTheDocument();
+    });
+
+    it('수정: 겹침은 자신을 빼고 센다 (다른 합주 3개와 같은 시간이어도 저장할 수 있다)', async () => {
+        const others = ['A', 'B', 'C'].map((name) => ({
+            ...ensembles[0]!,
+            _id: `other-${name}`,
+            teamId: `t-${name}`,
+            teamName: name,
+            repeat: false,
+            nextDate: '2026-11-23T00:00:00.000Z',
+        }));
+        server.use(
+            http.get(`${url}/ensembles`, () => HttpResponse.json([ensembles[0]!, ...others])),
+        );
+        // 좁은 화면이라 겹친 합주 목록이 먼저 열린다 → 테스트밴드를 고른다
+        const { user, dialog: list } = await openEnsembleInfo();
+        await user.click(within(list).getByRole('button', { name: '테스트밴드 합주 정보' }));
+        const drawer = await openEdit(user, await findDialog('월 10:00 – 11:00'));
+
+        expect(drawer.getByText(/외 2개와/)).toBeInTheDocument();
+        expect(drawer.queryByText(/4개가 겹쳐 있어요/)).not.toBeInTheDocument();
+        await user.click(drawer.getByRole('radio', { name: '2시간' }));
+        await user.click(drawer.getByRole('button', { name: '수정하기' }));
+        await waitFor(() => expect(putBody).toMatchObject({ startTime: 2, endTime: 5 }));
+    });
+
+    it('수정: 저장에 실패하면 알리고 수정 Drawer에 머문다', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        server.use(http.put(`${url}/ensemble`, () => new HttpResponse(null, { status: 500 })));
+        const { user, dialog } = await openEnsembleInfo();
+        const drawer = await openEdit(user, dialog);
+
+        await user.click(drawer.getByRole('radio', { name: '2시간' }));
+        await user.click(drawer.getByRole('button', { name: '수정하기' }));
+
+        expect(
+            await screen.findByText('저장하지 못했어요. 잠시 후 다시 시도해 주세요.'),
+        ).toBeInTheDocument();
+        expect(useDrawerStore.getState().openedDrawers).toEqual(['updateEnsemble']);
+        await waitFor(() => expect(drawer.getByRole('button', { name: '수정하기' })).toBeEnabled());
     });
 
     it('미루기: PIN이 맞으면 다음 합주를 7일 뒤로 미루고, 합주 없는 날과 바로 하기를 보여준다', async () => {

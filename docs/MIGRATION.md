@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~20차 PIN 단계·21~24차 합주 잡기 Drawer·25~30차 완료 (2026-11-25, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~20차 PIN 단계·21~24차 합주 잡기 Drawer·25~30차·31차 합주 수정 Drawer 완료 (2026-11-25, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -955,6 +955,22 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 테스트: `Schedule.test.tsx`에 헤더 링크 1개
 
 **검증:** `pnpm typecheck` ✅ / `Schedule.test.tsx` ✅ 8/8 / `pnpm format` 적용
+
+### 2026-11-25 — View 개편 V-2 (31차): 합주 수정 Drawer
+
+- 지금 → 바꾼 후
+  - 합주 수정: PIN → 오른쪽에서 쌓이는 옛 Drawer 3단계(반복 여부 → 달력 → 시작·끝 칸) → 아래에서 올라오는 합주 수정 Drawer 하나 (합주 잡기 Drawer의 수정 모드). 지금 값이 채워져 있음
+  - 팀: 바꿀 수 없음(그대로). 바뀐 것이 없으면 저장 버튼이 "바뀐 내용이 없어요"로 막힘
+  - 반복 종료 날짜: 수정에서 바꿀 수 없음(그대로 둠) → 바꿀 수 있음
+  - 겹침: 검사 없음 → 자신을 뺀 4개 겹침이면 막음, 저장 직전 다시 불러와 한 번 더 확인
+  - 저장: 알림 없이 정보로 → "합주를 수정했어요." 알림 + 정보로. 서버에 보내는 날짜에 고른 때 시각 → 시작 시각
+  - 수정 중 닫기: 원래 값으로 되돌리며 정보로 → 정보로 (값을 바꾸지 않으므로 되돌릴 것이 없음)
+- 구조: `addEnsembleStore`에 `edit`(`EditTarget`)·`openUpdateEnsemble`, `AddEnsembleDrawer`에 `mode`(Board가 수정 모드로 하나 더 그림), `DrawerId` `updateEnsemble2~4` → `updateEnsemble`, `lib/ensemble`의 `withStartTime`(합주 잡기와 공유), `drawerParts`의 `formatEnsembleSummary`(저장 알림 설명 공유). 옛 `UpdateEnsembleDrawer2~4`·`HandleUpdateEnsemble` 삭제
+- 테스트: `Board.test.tsx` 옛 수정 흐름 2개 → 6개 (지금 값·바뀐 것 없으면 막힘·저장 후 정보, 닫기, 반복 종료 채움·계속 반복으로, 한 번만으로, 자신을 뺀 겹침, 저장 실패)
+- 확인: Playwright Chrome 390·1280px, WebKit 390px — 2시간 30분 합주가 직접 입력으로 채워짐, 겹침 알림에 자신 없음, 2시간으로 바꿔 저장(보낸 본문의 반복 종료 날짜 유지) → 정보 "11:00 – 13:00", 가로 넘침 없음, 콘솔 오류 없음. 헤더 건의사항 아이콘
+- 번들: 1,301kB → 1,112kB (gzip 414 → 354kB). 옛 수정 달력이 마지막 antd DatePicker·Calendar 사용처였다
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 199/199 / `pnpm build` ✅ / `pnpm lint` → 에러 4·경고 24 (옛 수정 Drawer 삭제로 1건 감소, 새 코드 0건) / `pnpm format:check` ✅
 
 ## 남은 일
 

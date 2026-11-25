@@ -27,4 +27,6 @@ export type DrawerId =
     | 'ensembleInfo'
     | 'slotInfo'
     | 'addEnsemble'
-    | 'updateEnsemble';
+    | 'updateEnsemble'
+    // 설정 (V-3 1차)
+    | 'settings';

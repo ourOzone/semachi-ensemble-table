@@ -10,6 +10,24 @@
         <link rel="manifest" href="/manifest.json" />
         <title>세마치 합주판</title>
         <!--
+            다크 모드 (V-3 1차): 렌더링 전에 html에 dark 클래스를 붙여 첫 화면이 밝게 번쩍이지 않게 한다.
+            규칙은 src/components/settings/themeStore.ts와 같다 (기억한 값, 없으면 기기 설정)
+        -->
+        <script>
+            try {
+                var saved = localStorage.getItem('semachi.theme');
+                var dark = saved
+                    ? saved === 'dark'
+                    : matchMedia('(prefers-color-scheme: dark)').matches;
+                if (dark) {
+                    document.documentElement.classList.add('dark');
+                    document
+                        .querySelector('meta[name="theme-color"]')
+                        .setAttribute('content', '#111113');
+                }
+            } catch (e) {}
+        </script>
+        <!--
             CSS 레이어 순서 선언 (src/styles/index.css와 같은 순서). 레이어 순서는 문서에서 레이어 이름이 처음 나온 순서로 정해진다.
             antd 스타일(StyleProvider, src/index.tsx)은 body에 들어가므로, 여기서 먼저 선언해야 antd 레이어가 의도한 자리에 놓인다.
             antd 제거 시(V-6) 이 선언도 정리한다.

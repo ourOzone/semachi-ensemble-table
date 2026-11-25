@@ -70,30 +70,59 @@ describe('합주판 (주 단위 캘린더)', () => {
         expect(screen.getByRole('heading', { name: '이번 주' })).toBeInTheDocument();
     });
 
-    it('헤더 스위치는 어디를 눌러도 바뀐다: 오늘부터 보기(오늘이 맨 왼쪽) ↔ 요일 고정', async () => {
+    /** 헤더의 설정 버튼으로 설정 Drawer를 연다 (V-3 1차, 이전: 헤더에 보기 방식 스위치) */
+    async function openSettings(user: ReturnType<typeof userEvent.setup>) {
+        await user.click(screen.getByRole('button', { name: '설정' }));
+        return within(await screen.findByRole('dialog', { name: '설정' }));
+    }
+
+    it('설정의 "합주판 오늘부터 보기": 켜면 오늘이 맨 왼쪽, 끄면 요일 고정, 기억한다', async () => {
         const user = userEvent.setup();
         renderApp();
         await screen.findByRole('heading', { name: '이번 주' });
 
-        const toggle = screen.getByRole('switch', { name: '오늘부터 보기' });
+        const settings = await openSettings(user);
+        const toggle = settings.getByRole('switch', { name: '합주판 오늘부터 보기' });
         expect(toggle).not.toBeChecked();
         await user.click(toggle);
-
         expect(toggle).toBeChecked();
+        // 고른 방식은 기억한다
+        expect(localStorage.getItem('semachi.boardView')).toBe('rolling');
+        await user.click(settings.getByRole('button', { name: '닫기' }));
+
         expect(screen.getByRole('heading', { name: '이번 주' })).toBeInTheDocument();
         // 오늘(금)이 맨 왼쪽, 날마다 한 칸씩 밀린다
         expect(header()).toEqual(['금20', '토21', '일22', '월23', '화24', '수25', '목26']);
-        // 고른 방식은 기억한다
-        expect(localStorage.getItem('semachi.boardView')).toBe('rolling');
         // 다음 주는 보기 방식과 관계없이 일~토
         await user.click(screen.getByRole('button', { name: '다음 주' }));
         expect(header()).toEqual(['일22', '월23', '화24', '수25', '목26', '금27', '토28']);
 
-        await user.click(toggle);
+        const again = await openSettings(user);
+        await user.click(again.getByRole('switch', { name: '합주판 오늘부터 보기' }));
+        await user.click(again.getByRole('button', { name: '닫기' }));
         await user.click(screen.getByRole('button', { name: '오늘' }));
-        expect(toggle).not.toBeChecked();
         expect(header()).toEqual(WEEKDAY_VIEW);
         expect(localStorage.getItem('semachi.boardView')).toBe('weekday');
+    });
+
+    it('설정의 "다크 모드": 기본은 기기 설정(테스트 환경은 밝음), 켜면 html에 dark 클래스, 기억한다', async () => {
+        const user = userEvent.setup();
+        renderApp();
+        await screen.findByRole('heading', { name: '이번 주' });
+
+        const settings = await openSettings(user);
+        const toggle = settings.getByRole('switch', { name: '다크 모드' });
+        expect(toggle).not.toBeChecked();
+        expect(document.documentElement).not.toHaveClass('dark');
+
+        await user.click(toggle);
+        expect(toggle).toBeChecked();
+        expect(document.documentElement).toHaveClass('dark');
+        expect(localStorage.getItem('semachi.theme')).toBe('dark');
+
+        await user.click(toggle);
+        expect(document.documentElement).not.toHaveClass('dark');
+        expect(localStorage.getItem('semachi.theme')).toBe('light');
     });
 
     it('헤더에 건의사항(스프레드시트)·문서(드라이브) 링크', async () => {

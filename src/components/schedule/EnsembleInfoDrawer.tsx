@@ -116,7 +116,7 @@ const ActionButton = ({
         className={cn(
             pressable,
             boxShape,
-            'flex h-13 w-full items-center justify-center gap-2 border border-neutral-200 bg-white px-3 text-[16px] font-medium hover:bg-neutral-50 disabled:text-neutral-300 disabled:hover:bg-white disabled:active:scale-100 md:h-14',
+            'flex h-13 w-full items-center justify-center gap-2 border border-neutral-200 bg-surface px-3 text-[16px] font-medium hover:bg-neutral-50 disabled:text-neutral-300 disabled:hover:bg-surface disabled:active:scale-100 md:h-14',
             danger ? 'text-red-700 hover:bg-red-50' : 'text-ink',
         )}
         onClick={onClick}
@@ -374,7 +374,7 @@ const EnsembleInfoDrawer = ({
                 {/* 본문 */}
                 <div
                     className={cn(
-                        'bg-white px-5 pt-5 pb-5 md:px-7 md:pt-6',
+                        'bg-surface px-5 pt-5 pb-5 md:px-7 md:pt-6',
                         // 아래 줄이 없으면 본문이 화면 맨 아래 (아이폰 홈 막대 영역)
                         isEvent && 'pb-[calc(20px+env(safe-area-inset-bottom))]',
                     )}
@@ -525,7 +525,7 @@ const KeyboardCover = ({ visibleBottom }: { visibleBottom: number }) =>
         <div
             aria-hidden
             data-keyboard-cover
-            className="pointer-events-none absolute inset-x-0 z-40 bg-white"
+            className="pointer-events-none absolute inset-x-0 z-40 bg-surface"
             style={{
                 // body가 고정(lockPageScroll)되면 body 기준 위치라 고정할 때의 스크롤만큼 더한다
                 top: `calc(var(${LOCKED_SCROLL_VAR}, 0px) + ${visibleBottom - KEYBOARD_COVER_OVERLAP}px)`,

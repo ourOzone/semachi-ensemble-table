@@ -46,6 +46,7 @@ import {
     type WithLane,
 } from '@/lib/calendar';
 import { cn } from '@/lib/utils';
+import { EVENT_STRIPES } from '@/styles/patterns';
 import { getTodayIdx } from '@/lib/week';
 import { ensemblesQueryOptions } from '@/queries/ensembles';
 import { useTeams } from '@/queries/teams';
@@ -270,7 +271,7 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
         : null;
 
     const noun = team?.isEvent ? '일정' : '합주';
-    const color = team?.color ?? '#18181b';
+    const color = team?.color ?? 'var(--color-ink)';
     const missing = !team
         ? '팀을 골라 주세요'
         : repeat === null
@@ -341,7 +342,7 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
                         {edit ? (
                             // 수정: 팀은 바꿀 수 없다
                             <div
-                                className={`${boxShape} flex h-14 w-full items-center justify-between gap-3 border border-neutral-200 bg-white pr-4 pl-2`}
+                                className={`${boxShape} flex h-14 w-full items-center justify-between gap-3 border border-neutral-200 bg-surface pr-4 pl-2`}
                             >
                                 <TeamBadge team={edit.team} />
                                 <span className="shrink-0 text-[13px] text-neutral-400">
@@ -352,7 +353,7 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
                             <button
                                 type="button"
                                 aria-expanded={false}
-                                className={`${pressable} ${boxShape} flex h-14 w-full items-center justify-between gap-3 border border-neutral-200 bg-white pr-3 pl-2 hover:bg-neutral-50`}
+                                className={`${pressable} ${boxShape} flex h-14 w-full items-center justify-between gap-3 border border-neutral-200 bg-surface pr-3 pl-2 hover:bg-neutral-50`}
                                 onClick={() => setTeamOpen(true)}
                             >
                                 <TeamBadge team={team} checked />
@@ -563,12 +564,12 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
                 {/* 아래로 더 있으면 흐리게 (스크롤 막대 대신) */}
                 <div
                     aria-hidden
-                    className="pointer-events-none sticky bottom-0 -mt-6 h-6 bg-linear-to-t from-white to-transparent"
+                    className="pointer-events-none sticky bottom-0 -mt-6 h-6 bg-linear-to-t from-surface to-transparent"
                 />
             </div>
 
             {/* 저장 버튼은 스크롤과 관계없이 맨 아래 */}
-            <div className="border-t border-neutral-100 bg-white px-5 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] md:px-7">
+            <div className="border-t border-neutral-100 bg-surface px-5 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] md:px-7">
                 <button
                     type="button"
                     disabled={!ready}
@@ -576,7 +577,7 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
                         boxShape,
                         'flex h-14 w-full items-center justify-center text-[17px] font-bold transition-[background-color,scale] duration-150',
                         ready
-                            ? 'bg-ink text-white hover:bg-neutral-800 active:scale-[0.98]'
+                            ? 'bg-ink text-on-ink hover:bg-neutral-800 active:scale-[0.98]'
                             : 'bg-neutral-100 text-neutral-400',
                     )}
                     onClick={submit}
@@ -604,7 +605,10 @@ const TeamBadge = ({ team, checked = false }: { team: TeamOption; checked?: bool
             'inline-flex min-w-0 items-center gap-1.5 rounded-full py-2 pr-4 text-[16px] font-bold text-white',
             checked ? 'pl-3' : 'pl-4',
         )}
-        style={{ backgroundColor: team.color }}
+        style={{
+            backgroundColor: team.color,
+            ...(team.isEvent && { backgroundImage: EVENT_STRIPES }),
+        }}
     >
         {checked && <Check className="size-4 shrink-0" aria-hidden />}
         <span className="truncate">{team.name}</span>
@@ -638,7 +642,7 @@ function Segmented<T extends boolean>({
                     className={cn(
                         'flex h-11 items-center justify-center gap-1.5 rounded-xl text-[15px] font-medium transition-[background-color,color,box-shadow] duration-150',
                         value === option
-                            ? 'bg-white font-bold text-ink shadow-[0_1px_3px_rgb(0_0_0/0.12)]'
+                            ? 'bg-surface font-bold text-ink shadow-[0_1px_3px_rgb(0_0_0/0.12)]'
                             : 'text-neutral-600 hover:text-ink',
                     )}
                     onClick={() => onChange(option)}
@@ -669,7 +673,7 @@ const DateToggle = ({
         className={cn(
             pressable,
             boxShape,
-            'flex h-14 w-full items-center justify-between gap-3 border border-neutral-200 bg-white px-4 text-left hover:bg-neutral-50',
+            'flex h-14 w-full items-center justify-between gap-3 border border-neutral-200 bg-surface px-4 text-left hover:bg-neutral-50',
         )}
         onClick={onClick}
     >
@@ -735,8 +739,8 @@ const Chip = ({
             pressable,
             'h-10 rounded-full border px-4 text-[15px] font-medium',
             checked
-                ? 'border-ink bg-ink text-white'
-                : 'border-neutral-200 bg-white text-ink hover:bg-neutral-50 disabled:border-neutral-100 disabled:text-neutral-300 disabled:hover:bg-white',
+                ? 'border-ink bg-ink text-on-ink'
+                : 'border-neutral-200 bg-surface text-ink hover:bg-neutral-50 disabled:border-neutral-100 disabled:text-neutral-300 disabled:hover:bg-surface',
         )}
         onClick={onClick}
     >
@@ -795,7 +799,11 @@ const TeamPicker = ({
                 )}
                 style={{
                     backgroundColor: option.color,
-                    ...(selected && { boxShadow: `0 0 0 2px white, 0 0 0 4px ${option.color}` }),
+                    // 팀 아닌 일정은 합주판·팀 목록과 같은 줄무늬 (V-3 1차)
+                    ...(option.isEvent && { backgroundImage: EVENT_STRIPES }),
+                    ...(selected && {
+                        boxShadow: `0 0 0 2px var(--color-surface), 0 0 0 4px ${option.color}`,
+                    }),
                 }}
                 onClick={() => onSelect(option.id)}
             >
@@ -809,7 +817,7 @@ const TeamPicker = ({
         <div
             role="radiogroup"
             aria-label="팀"
-            className={`${boxShape} max-h-[264px] overflow-y-auto overscroll-contain border border-neutral-200 bg-white p-3`}
+            className={`${boxShape} max-h-[264px] overflow-y-auto overscroll-contain border border-neutral-200 bg-surface p-3`}
         >
             <div className="flex flex-wrap gap-1.5">{teams.map(chip)}</div>
             {events.length > 0 && (
@@ -836,7 +844,7 @@ const DatePicker = ({
 }) => {
     const first = min.startOf('day');
     return (
-        <div className={`${boxShape} mt-2 border border-neutral-200 bg-white p-2`}>
+        <div className={`${boxShape} mt-2 border border-neutral-200 bg-surface p-2`}>
             {/* 넓은 화면(PC 520px)에서 너무 퍼지지 않게 폭을 제한 */}
             <div className="mx-auto max-w-[360px]">
                 <Calendar
@@ -1002,7 +1010,7 @@ const DayBar = ({
                                 : {
                                       backgroundColor: event.color,
                                       opacity: 0.55,
-                                      boxShadow: 'inset 0 0 0 1px white',
+                                      boxShadow: 'inset 0 0 0 1px var(--color-surface)',
                                   }),
                         }}
                     />
@@ -1018,8 +1026,9 @@ const DayBar = ({
                         left: percent(range.startTime),
                         width: percent(range.endTime + 1 - range.startTime),
                         borderColor: color,
-                        // 본래 색인 합주 위에서도 보이게 테두리 안쪽에 흰 선
-                        boxShadow: 'inset 0 0 0 2px rgb(255 255 255 / 0.9)',
+                        // 본래 색인 합주 위에서도 보이게 테두리 안쪽에 바탕색 선 (밝은 화면은 흰 선)
+                        boxShadow:
+                            'inset 0 0 0 2px color-mix(in srgb, var(--color-surface) 90%, transparent)',
                         backgroundColor: `color-mix(in srgb, ${color} 30%, transparent)`,
                     }}
                 >

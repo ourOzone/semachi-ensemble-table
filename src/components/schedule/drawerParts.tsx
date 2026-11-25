@@ -53,7 +53,7 @@ export const boxShape = 'squircle rounded-2xl supports-[corner-shape:squircle]:r
  * 사파리 아래 도구 막대 쪽 여백도 흰색이 된다 (overflow-hidden이면 이 ::after가 잘린다). PC는 가운데 520px
  */
 export const sheetClassName =
-    'ui mx-auto w-full max-w-[520px] bg-white data-[vaul-drawer-direction=bottom]:border-t-0 data-[vaul-drawer-direction=bottom]:max-h-[92dvh] data-[vaul-drawer-direction=bottom]:rounded-t-[24px] squircle supports-[corner-shape:squircle]:data-[vaul-drawer-direction=bottom]:rounded-t-[36px]';
+    'ui mx-auto w-full max-w-[520px] bg-surface data-[vaul-drawer-direction=bottom]:border-t-0 data-[vaul-drawer-direction=bottom]:max-h-[92dvh] data-[vaul-drawer-direction=bottom]:rounded-t-[24px] squircle supports-[corner-shape:squircle]:data-[vaul-drawer-direction=bottom]:rounded-t-[36px]';
 
 export const overlayClassName = 'ui bg-black/40 supports-backdrop-filter:backdrop-blur-none';
 
@@ -78,11 +78,11 @@ export const BookFooter = ({
     /** 그 시간에 이미 MAX_OVERLAP개가 겹쳐 있으면 누를 수 없고 이유를 보여 준다 (24차) */
     full?: boolean;
 }) => (
-    <div className="border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)]">
+    <div className="border-t border-neutral-200 bg-surface pb-[env(safe-area-inset-bottom)]">
         <button
             type="button"
             disabled={full}
-            className="flex w-full items-center justify-center gap-1.5 py-4 text-[15px] font-medium text-[#1d5fb4] transition-colors duration-150 hover:bg-neutral-50 active:bg-neutral-100 disabled:text-neutral-400 disabled:hover:bg-white disabled:active:bg-white"
+            className="flex w-full items-center justify-center gap-1.5 py-4 text-[15px] font-medium text-link transition-colors duration-150 hover:bg-neutral-50 active:bg-neutral-100 disabled:text-neutral-400 disabled:hover:bg-surface disabled:active:bg-surface"
             onClick={onClick}
         >
             {full ? (

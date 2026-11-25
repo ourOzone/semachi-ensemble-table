@@ -5,6 +5,7 @@ import Footer from '@/components/layout/Footer';
 import Notice from '@/components/notice';
 import Schedule from '@/components/schedule';
 import Note from '@/components/note';
+import SettingsDrawer from '@/components/settings/SettingsDrawer';
 import { media } from '@/styles/media';
 import type { DrawerId } from '@/types';
 
@@ -22,6 +23,7 @@ function App() {
                 <Note />
                 <Footer />
             </Container>
+            <SettingsDrawer />
         </>
     );
 }

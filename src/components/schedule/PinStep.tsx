@@ -122,7 +122,7 @@ const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepPro
                                 aria-invalid={invalid}
                                 className={cn(
                                     'size-14 rounded-2xl border border-neutral-200 bg-neutral-50 text-ink first:rounded-2xl last:rounded-2xl md:size-16',
-                                    'data-[active=true]:border-ink data-[active=true]:bg-white data-[active=true]:ring-4 data-[active=true]:ring-neutral-900/8',
+                                    'data-[active=true]:border-ink data-[active=true]:bg-surface data-[active=true]:ring-4 data-[active=true]:ring-neutral-900/8',
                                     'aria-invalid:border-red-400 aria-invalid:bg-red-50 aria-invalid:text-red-600 data-[active=true]:aria-invalid:border-red-400 data-[active=true]:aria-invalid:ring-red-500/15',
                                 )}
                             />
@@ -167,8 +167,10 @@ const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepPro
                     disabled={status !== 'valid'}
                     className={cn(
                         pressable,
-                        'mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-[16px] font-bold text-white disabled:active:scale-100',
-                        danger ? 'bg-red-600 hover:bg-red-700' : 'bg-ink hover:bg-neutral-800',
+                        'mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-[16px] font-bold disabled:active:scale-100',
+                        danger
+                            ? 'bg-red-600 text-white hover:bg-red-700'
+                            : 'bg-ink text-on-ink hover:bg-neutral-800',
                         !ready && 'bg-neutral-100 text-neutral-400 hover:bg-neutral-100',
                     )}
                 >

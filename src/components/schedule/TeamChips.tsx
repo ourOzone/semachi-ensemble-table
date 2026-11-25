@@ -49,7 +49,7 @@ const TeamChips = ({ teams, eventGroups, onAddTeam }: TeamChipsProps) => {
                 setScrolled(false);
             }}
             className={cn(
-                'inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-300 bg-neutral-100 px-2.5 text-sm font-medium text-black hover:bg-neutral-200 md:hidden',
+                'inline-flex h-8 shrink-0 items-center rounded-full border border-neutral-300 bg-neutral-100 px-2.5 text-sm font-medium text-ink hover:bg-neutral-200 md:hidden',
                 pressable,
             )}
         >

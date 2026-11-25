@@ -14,6 +14,7 @@ export const BOTTOM_DRAWERS: readonly DrawerId[] = [
     'slotInfo',
     'addEnsemble',
     'updateEnsemble',
+    'settings',
 ];
 
 /** 스택에서 옛 Drawer(오른쪽에서 열림)만 */

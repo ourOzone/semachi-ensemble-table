@@ -240,6 +240,24 @@ describe('합주판 (주 단위 캘린더)', () => {
         expect(block().className).toContain('[--notch:3px]');
     });
 
+    it('팀 추가는 목록 밖 머리 줄에, 팀 아닌 일정은 줄무늬 (V-3 1차)', async () => {
+        renderApp();
+        const list = await screen.findByRole('group', { name: '팀 목록' });
+        await within(list).findByRole('button', { name: '테스트밴드' });
+
+        // 이전: 목록 맨 끝이라 펼치거나 끝까지 밀어야 보였다
+        expect(list).not.toContainElement(screen.getByRole('button', { name: '팀 추가' }));
+        expect(within(list).getByRole('button', { name: '보소' }).style.backgroundImage).toContain(
+            'repeating-linear-gradient',
+        );
+        expect(
+            within(list).getByRole('button', { name: '메인 회의' }).style.backgroundImage,
+        ).toContain('repeating-linear-gradient');
+        expect(within(list).getByRole('button', { name: '테스트밴드' }).style.backgroundImage).toBe(
+            '',
+        );
+    });
+
     it('팀 목록은 "전체"로 펼치고, 펼친 동안은 "닫기"로 접는다', async () => {
         const user = userEvent.setup();
         renderApp();

@@ -82,9 +82,9 @@ async function openTeamInfo() {
     renderApp();
     // '테스트밴드'는 팀 버튼과 합주표 블록 두 곳에 있다. 문서 순서상 첫 번째를 고르면 가끔 합주 블록이 잡혀
     // (합주 존재 확인 요청 → 모킹 없음 → 이미 삭제된 합주로 처리되어 Drawer를 모두 닫음) 실패했다.
-    // → "팀 추가" 버튼과 같은 목록 안에서 찾는다
-    const addTeamButton = await screen.findByText('팀 추가');
-    const teamButton = await within(addTeamButton.parentElement!).findByText('테스트밴드');
+    // → "팀 목록" 묶음 안에서 찾는다
+    const teamList = await screen.findByRole('group', { name: '팀 목록' });
+    const teamButton = await within(teamList).findByText('테스트밴드');
     await user.click(teamButton);
     await screen.findByText('보컬A');
     return user;

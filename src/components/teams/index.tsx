@@ -204,7 +204,13 @@ const Teams = () => {
         name,
         color: theme.eventColors[idx] ?? theme.blueGray,
         onClick: () => handleClickEvent(eventIds[idx]!, name), // eventIds와 같은 순서
+        striped: true, // 합주판 블록과 같은 줄무늬 (V-3 1차)
     }));
+    // 소모임(보소~키소)과 회의 등(메인 회의~)은 줄을 나눈다 (V-3 1차)
+    const eventGroups = [
+        eventChips.slice(0, eventNames1.length),
+        eventChips.slice(eventNames1.length),
+    ];
 
     // 합주 잡기 Drawer의 팀 고르기 (팀 목록과 같은 색)
     const teamOptions: TeamOption[] = teams.map((team, idx) => ({
@@ -222,7 +228,7 @@ const Teams = () => {
 
     return (
         <>
-            <TeamChips teams={teamChips} events={eventChips} onAddTeam={handleClickAddTeam} />
+            <TeamChips teams={teamChips} eventGroups={eventGroups} onAddTeam={handleClickAddTeam} />
 
             {/* DRAWERS */}
             <TeamInfoDrawer drawerId="teamInfo" checkTeamExists={checkTeamExists} />

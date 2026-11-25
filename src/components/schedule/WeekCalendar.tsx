@@ -8,6 +8,7 @@ import {
     type CalendarEvent,
     type WithLane,
 } from '@/lib/calendar';
+import { EVENT_STRIPES } from '@/styles/patterns';
 import { cn } from '@/lib/utils';
 import { getTodayIdx } from '@/lib/week';
 import type { TimeSlot } from '@/types';
@@ -36,10 +37,6 @@ const MAX_NAME_LINES = 3;
 
 /** 시간 표시는 1시간(2칸) 이상인 블록에만, PC에서만 (30분 블록은 이름 한 줄 높이뿐, 모바일은 폭이 좁다) */
 const TIME_MIN_SLOTS = 2;
-
-/** 줄무늬: 팀 아닌 일정(소모임·회의 등) */
-const EVENT_STRIPES =
-    'repeating-linear-gradient(135deg, rgb(255 255 255 / 0.22) 0 3px, transparent 3px 7px)';
 
 /**
  * 마지막 합주 표시: 블록 맨 아래 가운데에 입장권처럼 반원 구멍 (25차 일회성, 32차부터 반복 합주의 반복 종료 전 마지막 날도).

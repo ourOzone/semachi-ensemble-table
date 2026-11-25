@@ -1,23 +1,28 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { LayoutGrid, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EVENT_STRIPES } from '@/styles/patterns';
 
 // 팀 목록 (View 개편 V-2).
 // - PC(md 이상): 모두 펼쳐 보여준다 ("전체" 버튼 없음)
 // - 모바일: 한 줄을 좌우로 밀어 본다. 밀기 시작하면 "전체" 버튼이 아이콘만 남고, 맨 왼쪽까지 돌아오면 글자가 다시 나온다.
 //   "전체"를 누르면 화면 폭 전체로 펼치고, 펼친 동안 버튼은 "닫기"가 된다. (높이만 부드럽게 바뀜. 투명도 애니메이션은 흰색으로 깜빡여 뺐다)
+// - V-3 1차: "팀 추가"는 목록 맨 끝(펼치거나 끝까지 밀어야 보였다) → 머리 줄 오른쪽. 팀 아닌 일정은 묶음(소모임 / 회의 등)마다
+//   새 줄에서 시작하고(펼쳤을 때·PC), 합주판 블록과 같은 줄무늬
 
 export interface Chip {
     key: string;
     name: string;
     color: string;
     onClick: () => void;
+    /** 팀 아닌 일정: 합주판 블록과 같은 줄무늬 */
+    striped?: boolean;
 }
 
 interface TeamChipsProps {
     teams: Chip[];
-    /** 팀 아닌 일정 (소모임·회의 등). 팀 뒤에 이어서 보여준다 */
-    events: Chip[];
+    /** 팀 아닌 일정 묶음 (소모임, 회의 등). 팀 뒤에 이어서, 펼쳤을 때(PC는 항상)는 묶음마다 새 줄에서 시작 */
+    eventGroups: Chip[][];
     onAddTeam: () => void;
 }
 
@@ -29,7 +34,7 @@ const chipBase = cn(
     pressable,
 );
 
-const TeamChips = ({ teams, events, onAddTeam }: TeamChipsProps) => {
+const TeamChips = ({ teams, eventGroups, onAddTeam }: TeamChipsProps) => {
     const [expanded, setExpanded] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const { innerRef, style: heightStyle } = useAnimatedHeight();
@@ -74,30 +79,41 @@ const TeamChips = ({ teams, events, onAddTeam }: TeamChipsProps) => {
             {teams.map((chip) => (
                 <ChipButton key={chip.key} chip={chip} />
             ))}
-            <button
-                type="button"
-                onClick={onAddTeam}
-                className={cn(
-                    chipBase,
-                    'gap-1 border border-dashed border-neutral-500 bg-white text-neutral-800 hover:bg-neutral-100',
-                )}
-            >
-                <Plus className="size-3.5" aria-hidden />팀 추가
-            </button>
-            {/* 펼쳤을 때(PC는 항상)는 팀 아닌 일정을 새 줄에서 시작 */}
-            <div aria-hidden className={cn('hidden basis-full md:block', expanded && 'block')} />
-            {events.map((chip) => (
-                <ChipButton key={chip.key} chip={chip} />
+            {eventGroups.map((group, idx) => (
+                <div key={idx} className="contents">
+                    {/* 펼쳤을 때(PC는 항상)는 묶음마다 새 줄에서 시작 */}
+                    <div
+                        aria-hidden
+                        className={cn('hidden basis-full md:block', expanded && 'block')}
+                    />
+                    {group.map((chip) => (
+                        <ChipButton key={chip.key} chip={chip} />
+                    ))}
+                </div>
             ))}
         </>
     );
 
     return (
-        <div
-            className="overflow-hidden transition-[height] duration-300 ease-out"
-            style={heightStyle}
-        >
-            <div ref={innerRef}>
+        <>
+            {/* 머리 줄: "팀" + 팀 추가 (V-3 1차, 이전: 목록 맨 끝의 점선 칩) */}
+            <div className="mb-2.5 flex items-center justify-between gap-3 md:mb-3">
+                <h2 className="text-[17px] font-bold text-ink md:text-[20px]">팀</h2>
+                <button
+                    type="button"
+                    onClick={onAddTeam}
+                    className={cn(
+                        'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-neutral-100 pr-3 pl-1 text-[13px] font-bold text-ink hover:bg-neutral-200 md:h-9 md:pr-3.5 md:text-[14px]',
+                        pressable,
+                    )}
+                >
+                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-ink text-on-ink md:size-7">
+                        <Plus className="size-3.5 md:size-4" strokeWidth={2.75} aria-hidden />
+                    </span>
+                    팀 추가
+                </button>
+            </div>
+            <TeamList heightStyle={heightStyle} innerRef={innerRef}>
                 {expanded ? (
                     // 펼침: "전체" 버튼도 같은 줄에 두어 버튼 아래까지 화면 폭 전체로 줄바꿈
                     <div className="flex flex-wrap gap-1.5">
@@ -119,10 +135,32 @@ const TeamChips = ({ teams, events, onAddTeam }: TeamChipsProps) => {
                         </div>
                     </div>
                 )}
+            </TeamList>
+        </>
+    );
+};
+
+/** 펼침·접힘에 높이가 부드럽게 바뀌는 바깥 틀. 안쪽이 "팀 목록" 묶음 (테스트·읽기 프로그램용 이름) */
+function TeamList({
+    heightStyle,
+    innerRef,
+    children,
+}: {
+    heightStyle: { height: number } | undefined;
+    innerRef: RefObject<HTMLDivElement | null>;
+    children: ReactNode;
+}) {
+    return (
+        <div
+            className="overflow-hidden transition-[height] duration-300 ease-out"
+            style={heightStyle}
+        >
+            <div ref={innerRef} role="group" aria-label="팀 목록">
+                {children}
             </div>
         </div>
     );
-};
+}
 
 function ChipButton({ chip }: { chip: Chip }) {
     return (
@@ -130,7 +168,10 @@ function ChipButton({ chip }: { chip: Chip }) {
             type="button"
             onClick={chip.onClick}
             className={cn(chipBase, 'text-white hover:brightness-90')}
-            style={{ backgroundColor: chip.color }}
+            style={{
+                backgroundColor: chip.color,
+                ...(chip.striped && { backgroundImage: EVENT_STRIPES }),
+            }}
         >
             {chip.name}
         </button>

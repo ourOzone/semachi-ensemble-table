@@ -513,8 +513,8 @@ describe('합주 잡기 Drawer: 스크롤·막대 끌기', () => {
     it('팀 정보에서 열면 처음부터 "반복"이 맨 위', async () => {
         const user = userEvent.setup();
         renderApp();
-        const addTeam = await screen.findByText('팀 추가');
-        await user.click(await within(addTeam.parentElement!).findByText('테스트밴드'));
+        const teamList = await screen.findByRole('group', { name: '팀 목록' });
+        await user.click(await within(teamList).findByText('테스트밴드'));
         await user.click(await screen.findByRole('button', { name: /합주 추가/ }));
         await findDialog('합주 잡기');
 

@@ -42,10 +42,11 @@ const EVENT_STRIPES =
     'repeating-linear-gradient(135deg, rgb(255 255 255 / 0.22) 0 3px, transparent 3px 7px)';
 
 /**
- * 일회성 합주 표시: 블록 맨 아래 가운데에 입장권처럼 반원 구멍 (25차). 반지름은 --notch (모바일 3px·PC 3.5px, 27차에 작은 쪽으로 통일).
+ * 마지막 합주 표시: 블록 맨 아래 가운데에 입장권처럼 반원 구멍 (25차 일회성, 32차부터 반복 합주의 반복 종료 전 마지막 날도).
+ * 어느 블록이 마지막인지는 lib/calendar의 isLastOccurrence. 반지름은 --notch (모바일 3px·PC 3.5px, 27차에 작은 쪽으로 통일).
  * 마스크로 블록(바탕·테두리)을 그 모양만큼 비운다. 점선 블록은 비운 자리에 반원 점선 테두리를 따로 그린다 (NotchOutline)
  */
-const ONE_TIME_NOTCH =
+const LAST_NOTCH =
     'radial-gradient(circle at 50% 100%, transparent var(--notch), #000 calc(var(--notch) + 0.5px))';
 
 interface WeekCalendarProps {
@@ -291,9 +292,9 @@ function EventBlock({ event, onClick }: EventBlockProps) {
         style.backgroundColor = color;
         if (isEvent) style.backgroundImage = EVENT_STRIPES;
     }
-    if (!event.repeat) {
-        style.maskImage = ONE_TIME_NOTCH;
-        style.WebkitMaskImage = ONE_TIME_NOTCH;
+    if (event.last) {
+        style.maskImage = LAST_NOTCH;
+        style.WebkitMaskImage = LAST_NOTCH;
     }
 
     return (
@@ -301,11 +302,11 @@ function EventBlock({ event, onClick }: EventBlockProps) {
             type="button"
             onClick={onClick}
             aria-label={`${name} ${time}${skipped ? ' 이번 주 쉼' : ''}`}
-            data-one-time={event.repeat ? undefined : ''}
+            data-last={event.last ? '' : undefined}
             className={cn(
-                // 일회성 구멍 반지름 (모든 길이 같음). 점선 블록은 둘레에 반원 테두리를 그려 같은 크기여도 더 커 보여
+                // 구멍 반지름 (모든 길이 같음). 점선 블록은 둘레에 반원 테두리를 그려 같은 크기여도 더 커 보여
                 // 구멍을 0.5px 줄인다 (28차: 테두리 바깥 반지름이 실선 블록의 구멍보다 1px 남짓 컸다)
-                !event.repeat &&
+                event.last &&
                     (skipped
                         ? '[--notch:2.5px] md:[--notch:3px]'
                         : '[--notch:3px] md:[--notch:3.5px]'),
@@ -322,8 +323,8 @@ function EventBlock({ event, onClick }: EventBlockProps) {
             )}
             style={style}
         >
-            {/* 점선 일회성 블록: 구멍 둘레에 반원 점선 (마스크가 아래 테두리를 끊은 자리를 잇는다) */}
-            {!event.repeat && skipped && <NotchOutline />}
+            {/* 점선 블록의 구멍: 둘레에 반원 테두리 (마스크가 아래 테두리를 끊은 자리를 잇는다) */}
+            {event.last && skipped && <NotchOutline />}
             {/* 이름: 블록 높이만큼의 줄까지만 (말줄임표 없이 잘림) */}
             <span
                 className={cn(

@@ -235,7 +235,9 @@
   - 서버에 보내는 날짜: 옛 antd 달력의 고른 때 시각 → 합주 잡기와 같이 시작 시각 (`lib/ensemble`의 `withStartTime`)
   - 옛 `UpdateEnsembleDrawer2~4`, `HandleUpdateEnsemble` 삭제. ensemble context의 `org*` 값·`setEnsembleOrgStates`는 쓰는 곳이 없어짐 (V-2 정리 때 context와 함께)
   - 번들 1,301kB → 1,112kB (gzip 414 → 354kB): 옛 수정 달력이 마지막 antd DatePicker·Calendar 사용처였다
-- [ ] 32차 이후: 사용자 상세 수정, 팀 Drawer (V-2 본 작업·V-3)
+- [x] **32차 (2026-11-25)** — 반복 합주도 마지막 날(반복 종료 날짜 전 마지막 그 요일)에는 일회성처럼 반원 구멍. 종료 날짜가 합주 요일과 달라도 계산 (예: 수요일 합주·12/20(일) 종료 → 12/16(수)). `lib/calendar`의 `isLastOccurrence`, 블록의 `last`·`data-last`(이전 `data-one-time`). 계속 반복·지난 종료 날짜(옛 데이터)는 구멍 없음
+  - 발견: 종료 날짜가 지난 주에도 반복 합주가 합주판에 보이고 겹침 계산에 들어간다 (ISSUES V13, 제안 단계)
+- [ ] 33차 이후: 사용자 상세 수정 (V-3 진행 중에도 생각나면)
 - [ ] V-2 끝에 정리: 옛 합주표용 `toBoard`·`useBoard`·`isSkipped`·`EnsembleBoard`·`EnsembleBlock` (새 캘린더로 대체되어 테스트에서만 쓰임)
 
 #### PIN·변경 흐름 추가 제안 (15차, 사용자 판단 대기 — 적용하지 않음)

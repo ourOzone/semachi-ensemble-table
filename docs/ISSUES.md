@@ -43,7 +43,7 @@
 | F7 | 🟡 | 반복 합주의 "다음 날짜"가 오늘·다른 요일로 재계산되면 자정이 아니라 **현재 시각**이 붙는다. 이 값으로 미루기를 하면 시각이 붙은 날짜가 서버에 저장된다 | `context/fetch.tsx` → `lib/board` | 재현 (characterization test로 고정) | ✅ 3-3 (2026-11-20). 다시 계산한 날짜는 그날 0시 |
 | F8 | 🟡 | 팀 목록에 없는 팀의 합주는 `teamColor`가 `-1`이 되어 그대로 CSS 배경색 값이 된다 (팀 삭제는 합주도 지우므로 드묾) | `context/fetch.tsx` → `lib/board`, `board/index.tsx` | 재현 (characterization test) | ✅ 3-3 (2026-11-20). `theme.blueGray`로 표시, 타입도 `string`으로 |
 | F9 | 🟡 | `useCallback` 의존성 누락 31건(`exhaustive-deps`). 예: 공지·한마디의 `handleClickDelete`는 deps가 `[]`라 첫 렌더링의 함수를 계속 참조한다. 지금은 참조하는 값들이 대부분 고정이라 눈에 띄는 오동작은 확인하지 못함 | 여러 곳 | 린트 | 컨테이너·App: 3-5~3-9 ✅ 3단계에서 해소 (App 2건 3-5, 컨테이너 4개 3-7·3-8, deps `[]`였던 `handleClickDelete` 포함). 31건 → 16건, **남은 16건은 모두 Drawer** → View |
-| F10 | 🟡 | 합주 정보 Drawer가 `handleSkip`으로 prop을 받지만 부모는 `handleSkipEnsemble`로 넘겨 항상 `undefined`. 실제로 쓰이지 않아 동작 영향 없음 | `EnsembleInfoDrawer.tsx` | 코드 | View |
+| F10 | 🟡 | 합주 정보 Drawer가 `handleSkip`으로 prop을 받지만 부모는 `handleSkipEnsemble`로 넘겨 항상 `undefined`. 실제로 쓰이지 않아 동작 영향 없음 | `EnsembleInfoDrawer.tsx` | 코드 | ✅ V-2 8차: 옛 합주 정보 Drawer 삭제 (새 Drawer는 `handleSkipEnsemble`을 그대로 받음) |
 | F11 | ⚪ | 쓰이지 않는 prop·인자: `NoticeDrawer`의 `setId`, 공지 추가의 `pin` 인자(부모가 버림), `Header`의 `scrollPosition`, Input에 없는 `controls={false}`(8곳) | 여러 곳 | 코드 (타입 주석으로 표시) | View |
 
 ## 3. 구조 · 성능 (3단계 리팩터링 대상)
@@ -75,6 +75,7 @@
 | V10 | ⚪ | **스쿼클(곡률이 이어지는 모서리)은 `corner-shape` 지원 브라우저(Chrome 계열 139+)에서만 보인다.** 사파리(아이폰은 모든 브라우저)·파이어폭스는 일반 둥근 모서리. 6차에 사파리용 SVG 마스크 대체 방식을 넣었다가 크기가 바뀌는 요소에서 깨져 7차에 제거하고, 모양이 고정된 큰 카드·합주 블록·한마디에만 남김 (사용자 결정, 2026-11-24). 사파리가 지원하면 그대로 스쿼클이 된다 |
 | V11 | ⚪ | **"합주 잡기" 버튼은 아직 동작하지 않는다 (V-2 8차·11차).** 합주 정보 Drawer의 "같은 시간에 다른 팀 합주 잡기", 합주 잡기 Drawer의 "이 시간에 합주 잡기"·"같은 시간에 다른 팀 합주 잡기". 합주를 잡을 팀을 고르는 화면이 없어, 누르면 "준비 중인 기능이에요" 알림만 뜬다. 합주 등록 Drawer를 새로 만들 때(V-2 본 작업·V-3) 연결. ✅ V-2 21차 (2026-11-24): 세 버튼 모두 누른 날짜·시작 시간을 채운 합주 잡기 Drawer(`schedule/AddEnsembleDrawer`)로 바뀐다 |
 | V12 | ⚪ | **아이폰 사파리 26: 키보드 위 막대(^ v 완료) 쪽에는 고정(position: fixed) 요소가 그려지지 않고 페이지 내용이 비친다 (V-2 18차).** 아래에서 올라오는 Drawer·어둡게 하는 덮개 모두 그 띠를 덮지 못한다. 키보드를 여는 단계(PIN)에서는 페이지 문서 안에 흰 판을 깔아 덮는다 (`EnsembleInfoDrawer`의 `KeyboardCover`). 앞으로 입력칸이 있는 Drawer(합주 추가 등)도 같은 처리가 필요하다 (흰 판 + 뒤 페이지 고정 `lib/pageScrollLock`: 20차. 흰 판만 깔면 사파리의 입력칸 스크롤에 공간이 생겨 뒤 페이지가 계속 내려가고, 스크롤된 뒤 되돌리면 깜빡인다). 근거: 한 개발자의 실험 글(https://1ar.io/updates/safari-26-liquid-glass-web/), Apple 공식 문서 없음 |
+| V13 | 🟡 | **반복 종료 날짜(`due`)가 지난 주에도 합주판에 반복 합주가 그대로 보이고, 겹침(최대 4개) 계산에도 들어간다 (V-2 32차에 발견, 제안 단계).** 23차에 반복 종료 날짜를 만들 때 실제 데이터의 지난 `due` 1건(옛 데이터)이 있어 숨기지 않았다. 그런데 앞으로 잡는 합주(예: 12/20 종료)도 12/23·12/30… 주에 계속 보인다. 서버가 지난 `due`를 걸러도(백엔드 전달) 미래 주는 프론트가 거를 일이다. 제안: `getRepeatEnd`가 있는 반복 합주는 종료 날짜 뒤 날짜에서 숨기고(`getOccurrence`), `findOverlapLimit`도 세지 않음. 옛 데이터(지난 `due`)는 지금처럼 계속 반복으로 봄 |
 | V8 | ⚪ | **새 코드·옛 코드 공존 기간의 전역 스타일 (V-1, 2026-11-23).** ① 옛 전역 스타일(`src/styles/legacy.css`, 이전 `GlobalStyle`)의 `* { font-size: 16px(모바일 12·10px); font-family: Regular }`가 새 요소에도 적용된다 → ✅ V-2: legacy 요소 규칙을 `.ui` 밖에만 적용. 단 html 글자 크기는 그대로라 새 코드의 간격·글자 크기를 px로 정의 (VIEW_REDESIGN_PLAN "공존 기간 규칙"). ② shadcn 기본 스타일 `* { outline-color: ring }`으로 antd Drawer의 포커스 외곽선 색이 검정 → 연회색으로 바뀜 (PC 폭에서 Drawer 왼쪽 가장자리 1px, 화면 비교에서 확인). V-6에서 legacy 레이어·antd 제거 시 해소 |
 
 ## 5. 환경 · 테스트

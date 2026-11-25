@@ -21,6 +21,7 @@ import {
     overlapping,
     resolveSlotTap,
     toWeekSchedule,
+    isLastOccurrence,
 } from './calendar';
 
 const fmt = (d: dayjs.Dayjs) => d.format('YYYY-MM-DD HH:mm');
@@ -219,6 +220,70 @@ describe('assignLanes', () => {
     it('4개가 동시에 겹치면 4줄', () => {
         const result = assignLanes([r(0, 7, 'a'), r(1, 4, 'b'), r(2, 9, 'c'), r(3, 5, 'd')]);
         expect(lanesOf(result)).toEqual({ a: [0, 4], b: [1, 4], c: [2, 4], d: [3, 4] });
+    });
+});
+
+describe('isLastOccurrence (32차)', () => {
+    const now = dayjs('2026-11-20T10:00');
+    // 수요일 반복 합주
+    const wed = { repeat: true, due: '2026-12-20T00:00:00.000Z' };
+
+    it('일회성은 늘 마지막', () => {
+        expect(
+            isLastOccurrence({ repeat: false, due: '2026-11-25' }, dayjs('2026-11-25'), now),
+        ).toBe(true);
+    });
+
+    it('반복: 종료 날짜가 합주 요일과 달라도 그 전 마지막 그 요일이 마지막', () => {
+        // 12/20(일) 종료 → 12/16(수)가 마지막, 12/9(수)는 아님, 12/23(수)는 종료 뒤
+        expect(isLastOccurrence(wed, dayjs('2026-12-16'), now)).toBe(true);
+        expect(isLastOccurrence(wed, dayjs('2026-12-09'), now)).toBe(false);
+        expect(isLastOccurrence(wed, dayjs('2026-12-23'), now)).toBe(false);
+    });
+
+    it('반복: 종료 날짜가 그 요일이면 그날이 마지막 (경계)', () => {
+        const end = { repeat: true, due: '2026-12-16T00:00:00.000Z' };
+        expect(isLastOccurrence(end, dayjs('2026-12-16'), now)).toBe(true);
+        expect(isLastOccurrence(end, dayjs('2026-12-09'), now)).toBe(false);
+        // 종료 다음 날이 그 요일인 경우: 7일 전이 마지막
+        const dayBefore = { repeat: true, due: '2026-12-15T00:00:00.000Z' };
+        expect(isLastOccurrence(dayBefore, dayjs('2026-12-09'), now)).toBe(true);
+        expect(isLastOccurrence(dayBefore, dayjs('2026-12-16'), now)).toBe(false);
+    });
+
+    it('반복: 계속 반복(2099)이거나 지난 종료 날짜(옛 데이터)면 마지막 날이 없다', () => {
+        expect(
+            isLastOccurrence(
+                { repeat: true, due: '2099-12-31T00:00:00.000Z' },
+                dayjs('2099-12-30'),
+                now,
+            ),
+        ).toBe(false);
+        expect(
+            isLastOccurrence(
+                { repeat: true, due: '2026-01-01T00:00:00.000Z' },
+                dayjs('2025-12-31'),
+                now,
+            ),
+        ).toBe(false);
+    });
+
+    it('toWeekSchedule이 블록에 붙인다', () => {
+        const ensemble: EnsembleResponse = {
+            _id: 'e1',
+            teamId: 'team-1',
+            teamName: '테스트밴드',
+            day: 2,
+            startTime: 2,
+            endTime: 3,
+            repeat: true,
+            nextDate: '2026-11-25T00:00:00.000Z',
+            due: '2026-12-20T00:00:00.000Z',
+        };
+        const at = (monday: string) =>
+            toWeekSchedule([ensemble], {}, dayjs(monday), now)[2]?.[0]?.last;
+        expect(at('2026-12-07')).toBe(false);
+        expect(at('2026-12-14')).toBe(true);
     });
 });
 

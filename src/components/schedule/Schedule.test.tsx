@@ -182,8 +182,8 @@ describe('합주판 (주 단위 캘린더)', () => {
 
         const repeat = await screen.findByRole('button', { name: '테스트밴드 10:00–11:00' });
         const oneTime = screen.getByRole('button', { name: '일회성 12:00–12:30' });
-        expect(repeat).not.toHaveAttribute('data-one-time');
-        expect(oneTime).toHaveAttribute('data-one-time');
+        expect(repeat).not.toHaveAttribute('data-last');
+        expect(oneTime).toHaveAttribute('data-last');
         // 구멍은 길이와 관계없이 같은 크기 (27차)
         expect(oneTime.className).toContain('[--notch:3px]');
         const long = screen.getByRole('button', { name: '긴일회성 14:00–16:00' });
@@ -214,8 +214,30 @@ describe('합주판 (주 단위 캘린더)', () => {
         const dashed = await screen.findByRole('button', {
             name: '미래일회성 10:00–11:00 이번 주 쉼',
         });
-        expect(dashed).toHaveAttribute('data-one-time');
+        expect(dashed).toHaveAttribute('data-last');
         expect(dashed.querySelector('[data-notch-outline]')).not.toBeNull();
+    });
+
+    it('반복 합주도 반복 종료 날짜 전 마지막 날에는 반원 구멍 (32차)', async () => {
+        // 월요일 반복, 12/2(수) 종료 → 11/30(월)이 마지막 (종료 날짜가 합주 요일과 다름)
+        server.use(
+            http.get(`${url}/ensembles`, () =>
+                HttpResponse.json([{ ...ensembles[0]!, due: '2026-12-02T00:00:00.000Z' }]),
+            ),
+        );
+        const user = userEvent.setup();
+        renderApp();
+
+        const block = () => screen.getByRole('button', { name: '테스트밴드 10:00–11:00' });
+        // 첫 화면·다음 주의 월요일은 11/23: 마지막이 아니다
+        await screen.findByRole('button', { name: '테스트밴드 10:00–11:00' });
+        expect(block()).not.toHaveAttribute('data-last');
+        await user.click(screen.getByRole('button', { name: '다음 주' }));
+        expect(block()).not.toHaveAttribute('data-last');
+        // 11/29~ 주의 월요일 11/30이 마지막
+        await user.click(screen.getByRole('button', { name: '다음 주' }));
+        expect(block()).toHaveAttribute('data-last');
+        expect(block().className).toContain('[--notch:3px]');
     });
 
     it('팀 목록은 "전체"로 펼치고, 펼친 동안은 "닫기"로 접는다', async () => {

@@ -3,6 +3,7 @@ import { eventIds, idx2hour } from '@/constants';
 import theme from '@/styles/theme';
 import type { DayIndex, EnsembleResponse, TimeSlot } from '@/types';
 import { resolveNextDate, slotEndTime } from './board';
+import { getRepeatEnd } from './ensemble';
 import { getTodayIdx } from './week';
 
 // 주 단위 캘린더(View 개편 V-2)용 순수 함수. 서버 데이터(합주 = 요일 + 시간칸 + 반복 여부 + 다음 날짜)는 그대로 두고,
@@ -227,6 +228,25 @@ export interface CalendarEvent {
     repeat: boolean;
     /** 다음 합주 날짜 (옛 합주 정보 Drawer용, resolveNextDate 결과) */
     nextDate: Dayjs;
+    /** 이 날이 마지막 합주: 일회성, 또는 반복 종료 날짜 전 마지막 그 요일 (isLastOccurrence) */
+    last: boolean;
+}
+
+/**
+ * 그 날짜가 합주의 마지막 날인지 (32차, 합주판에서 일회성과 같은 반원 구멍).
+ * 일회성은 늘 마지막. 반복은 반복 종료 날짜(due)가 있을 때, 그날이 종료 날짜 이전이고 7일 뒤가 종료 날짜 뒤인 경우.
+ * 종료 날짜가 합주 요일과 달라도 된다 (예: 수요일 합주, 12/20(일) 종료 → 12/16(수)가 마지막).
+ * 계속 반복(2099)이거나 이미 지난 종료 날짜(옛 데이터, getRepeatEnd가 null)는 마지막 날이 없다
+ */
+export function isLastOccurrence(
+    { repeat, due }: Pick<EnsembleResponse, 'repeat' | 'due'>,
+    date: Dayjs,
+    now: Dayjs,
+): boolean {
+    if (!repeat) return true;
+    const repeatEnd = getRepeatEnd(due, now);
+    if (!repeatEnd) return false;
+    return !date.isAfter(repeatEnd, 'day') && date.add(7, 'day').isAfter(repeatEnd, 'day');
 }
 
 /**
@@ -247,7 +267,8 @@ export function toWeekSchedule(
     const thisWeek = getWeekStart(now, 0);
     for (const ensemble of ensembles) {
         const { _id: id, teamId, teamName, day, startTime, endTime, repeat } = ensemble;
-        const status = getOccurrence(ensemble, weekStart.add(day, 'day'), thisWeek);
+        const date = weekStart.add(day, 'day');
+        const status = getOccurrence(ensemble, date, thisWeek);
         if (!status) continue;
         // day(0~6) 범위는 응답 스키마(ensembleResponseSchema)에서 검증된다
         days[day]!.push({
@@ -262,6 +283,7 @@ export function toWeekSchedule(
             endTime,
             repeat,
             nextDate: resolveNextDate(ensemble, now),
+            last: isLastOccurrence(ensemble, date, now),
         });
     }
 

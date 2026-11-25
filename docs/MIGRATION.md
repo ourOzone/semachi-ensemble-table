@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~20차 PIN 단계·21~24차 합주 잡기 Drawer·25~30차·31차 합주 수정 Drawer 완료 (2026-11-25, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~20차 PIN 단계·21~24차 합주 잡기 Drawer·25~30차·31차 합주 수정 Drawer·32차 완료 (2026-11-25, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -971,6 +971,15 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 번들: 1,301kB → 1,112kB (gzip 414 → 354kB). 옛 수정 달력이 마지막 antd DatePicker·Calendar 사용처였다
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 199/199 / `pnpm build` ✅ / `pnpm lint` → 에러 4·경고 24 (옛 수정 Drawer 삭제로 1건 감소, 새 코드 0건) / `pnpm format:check` ✅
+
+### 2026-11-25 — View 개편 V-2 (32차): 반복 합주의 마지막 날 반원 구멍
+
+- 지금 → 바꾼 후: 반원 구멍은 일회성 합주만 → 반복 합주의 마지막 날(반복 종료 날짜 전 마지막 그 요일)에도. 종료 날짜가 합주 요일과 달라도 계산한다 (수요일 합주·12/20(일) 종료 → 12/16(수))
+- 구조: `lib/calendar`의 `isLastOccurrence`, `CalendarEvent.last`, `WeekCalendar`는 `last`로 구멍을 그림 (`data-one-time` → `data-last`)
+- 테스트: `lib/calendar.test.ts` 5개(일회성, 다른 요일 종료, 같은 요일 종료·전날 종료 경계, 계속 반복·지난 종료, `toWeekSchedule`), `Schedule.test.tsx` 1개(주를 넘기며 마지막 주에만 구멍)
+- 발견 (ISSUES V13, 제안 단계): 종료 날짜가 지난 주에도 반복 합주가 합주판에 보이고 겹침 계산에 들어간다
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 205/205 / `pnpm lint` → 에러 4·경고 24 (새 코드 0건) / `pnpm format:check` ✅
 
 ## 남은 일
 

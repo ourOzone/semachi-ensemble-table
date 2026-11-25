@@ -96,6 +96,22 @@ describe('합주판 (주 단위 캘린더)', () => {
         expect(localStorage.getItem('semachi.boardView')).toBe('weekday');
     });
 
+    it('헤더에 건의사항(스프레드시트)·문서(드라이브) 링크', async () => {
+        renderApp();
+        await screen.findByRole('heading', { name: '이번 주' });
+
+        expect(screen.getByRole('link', { name: /건의사항/ })).toHaveAttribute(
+            'href',
+            expect.stringContaining(
+                'docs.google.com/spreadsheets/d/12aTPjfPIgbE3pxtfLGwW1ArbScX6UpfWr2iJN_r9UkY',
+            ),
+        );
+        expect(screen.getByRole('link', { name: /구글 드라이브/ })).toHaveAttribute(
+            'href',
+            expect.stringContaining('drive.google.com'),
+        );
+    });
+
     it('요일 머리: 토요일 파랑·일요일 빨강, 오늘이 주말이면 오늘 표시도 그 색', async () => {
         vi.setSystemTime(new Date(2026, 10, 21, 10, 0)); // 토요일
         renderApp();

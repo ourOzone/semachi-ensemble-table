@@ -1,4 +1,4 @@
-import { BookMarked, CalendarClock, CalendarDays } from 'lucide-react';
+import { BookMarked, CalendarClock, CalendarDays, MessageSquarePlus } from 'lucide-react';
 import { useBoardViewStore } from '@/components/schedule/boardViewStore';
 import { useHideOnScroll } from '@/hooks/useHideOnScroll';
 import type { BoardView } from '@/lib/calendar';
@@ -9,6 +9,12 @@ import { cn } from '@/lib/utils';
 
 const DRIVE_URL =
     'https://drive.google.com/drive/folders/1FneJEkXY-hSqpM_XOBic7ep8lJZ3tdFn?usp=sharing';
+/** 건의사항 (구글 스프레드시트, 30차) */
+const SUGGESTION_URL =
+    'https://docs.google.com/spreadsheets/d/12aTPjfPIgbE3pxtfLGwW1ArbScX6UpfWr2iJN_r9UkY/edit?usp=drivesdk';
+
+const linkClassName =
+    'inline-flex size-10 items-center justify-center rounded-full text-ink transition-[background-color,scale] duration-150 hover:bg-black/5 active:scale-[0.95]';
 
 /** 합주판 보기 방식 스위치의 두 칸 (27차: 왼쪽이 기본인 요일 고정) */
 const VIEW_OPTIONS = [
@@ -71,10 +77,18 @@ const Header = () => {
                         ))}
                     </button>
                     <a
+                        href={SUGGESTION_URL}
+                        aria-label="건의사항 (구글 스프레드시트)"
+                        title="건의사항"
+                        className={linkClassName}
+                    >
+                        <MessageSquarePlus className="size-6" aria-hidden />
+                    </a>
+                    <a
                         href={DRIVE_URL}
                         aria-label="회칙 등 문서 (구글 드라이브)"
                         title="회칙 등 문서 구글 드라이브"
-                        className="inline-flex size-10 items-center justify-center rounded-full text-ink transition-[background-color,scale] duration-150 hover:bg-black/5 active:scale-[0.95]"
+                        className={linkClassName}
                     >
                         <BookMarked className="size-6" aria-hidden />
                     </a>

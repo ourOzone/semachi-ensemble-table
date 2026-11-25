@@ -3,6 +3,10 @@ import { LayoutGrid, X } from 'lucide-react';
 import { AddPill } from '@/components/ui/add-pill';
 import { cn } from '@/lib/utils';
 import { EVENT_STRIPES } from '@/styles/patterns';
+import { Skeleton } from '@/components/ui/skeleton';
+
+/** 불러오는 동안의 회색 알약 폭 (팀 이름 길이처럼 들쭉날쭉하게) */
+const SKELETON_WIDTHS = [64, 92, 58, 84, 70, 100, 60, 78];
 
 // 팀 목록 (View 개편 V-2).
 // - PC(md 이상): 모두 펼쳐 보여준다 ("전체" 버튼 없음)
@@ -25,6 +29,8 @@ interface TeamChipsProps {
     /** 팀 아닌 일정 묶음 (소모임, 회의 등). 팀 뒤에 이어서, 펼쳤을 때(PC는 항상)는 묶음마다 새 줄에서 시작 */
     eventGroups: Chip[][];
     onAddTeam: () => void;
+    /** 처음 불러오는 중: 칩 대신 회색 알약 (V-3 1차) */
+    loading?: boolean;
 }
 
 // 누르는 느낌: 마우스를 올리면(마우스가 있는 기기만) 색이 살짝 진해지고, 누르면 살짝 작아진다
@@ -35,7 +41,7 @@ const chipBase = cn(
     pressable,
 );
 
-const TeamChips = ({ teams, eventGroups, onAddTeam }: TeamChipsProps) => {
+const TeamChips = ({ teams, eventGroups, onAddTeam, loading = false }: TeamChipsProps) => {
     const [expanded, setExpanded] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const { innerRef, style: heightStyle } = useAnimatedHeight();
@@ -103,7 +109,17 @@ const TeamChips = ({ teams, eventGroups, onAddTeam }: TeamChipsProps) => {
                 <AddPill label="팀 추가" onClick={onAddTeam} />
             </div>
             <TeamList heightStyle={heightStyle} innerRef={innerRef}>
-                {expanded ? (
+                {loading ? (
+                    <div aria-busy className="flex gap-1.5 overflow-hidden md:flex-wrap">
+                        {SKELETON_WIDTHS.map((width, idx) => (
+                            <Skeleton
+                                key={idx}
+                                className="h-8 shrink-0 rounded-full md:h-9"
+                                style={{ width }}
+                            />
+                        ))}
+                    </div>
+                ) : expanded ? (
                     // 펼침: "전체" 버튼도 같은 줄에 두어 버튼 아래까지 화면 폭 전체로 줄바꿈
                     <div className="flex flex-wrap gap-1.5">
                         {allButton}

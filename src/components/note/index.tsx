@@ -1,6 +1,14 @@
 import { useState, useCallback } from 'react';
 import { useDrawerContext } from '@/context';
-import { useAddNote, useDeleteNote, useNotes, useRefreshNotes } from '@/queries/notes';
+import { useQuery } from '@tanstack/react-query';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+    notesQueryOptions,
+    useAddNote,
+    useDeleteNote,
+    useNotes,
+    useRefreshNotes,
+} from '@/queries/notes';
 import { noteExists } from '@/api/note';
 import { X } from 'lucide-react';
 import { AddPill } from '@/components/ui/add-pill';
@@ -9,6 +17,8 @@ import DeleteNoteDrawer from './DeleteNoteDrawer';
 
 const Note = () => {
     const notes = useNotes();
+    // 처음 불러오는 동안은 목록 자리에 회색 상자 (V-3 1차)
+    const { isPending } = useQuery(notesQueryOptions);
     const refreshNotes = useRefreshNotes();
     const { mutateAsync: addNoteAsync } = useAddNote();
     const { mutateAsync: deleteNoteAsync } = useDeleteNote();
@@ -87,7 +97,16 @@ const Note = () => {
                 </div>
                 <AddPill label="한마디 남기기" onClick={() => openDrawer('addNote')} />
             </div>
-            {notes.length === 0 ? (
+            {isPending ? (
+                <div aria-busy className="grid gap-2 md:grid-cols-2 md:gap-3">
+                    {[0, 1, 2].map((idx) => (
+                        <Skeleton
+                            key={idx}
+                            className="squircle h-[52px] rounded-2xl supports-[corner-shape:squircle]:rounded-[24px] md:h-[60px]"
+                        />
+                    ))}
+                </div>
+            ) : notes.length === 0 ? (
                 <p className="squircle rounded-2xl bg-neutral-50 py-8 text-center text-[14px] text-neutral-500 supports-[corner-shape:squircle]:rounded-[24px] md:text-[15px]">
                     아직 한마디가 없어요. 첫 한마디를 남겨 보세요
                 </p>

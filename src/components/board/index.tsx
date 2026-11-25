@@ -10,7 +10,7 @@ import {
     useBoardSchedule,
     useUpdateEnsemble,
 } from '@/queries/ensembles';
-import { useRefreshTeamsAndEnsembles, useTeams } from '@/queries/teams';
+import { teamsQueryOptions, useRefreshTeamsAndEnsembles, useTeams } from '@/queries/teams';
 import WeekCalendar from '@/components/schedule/WeekCalendar';
 import SlotDrawer, { type SlotView } from '@/components/schedule/SlotDrawer';
 import EnsembleInfoDrawer from '@/components/schedule/EnsembleInfoDrawer';
@@ -49,7 +49,9 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
     const teams = useTeams();
     const columns = useBoardSchedule(days.map((day) => day.date));
     // 수정·미루기 때 반복 종료 날짜(due)를 그대로 두기 위해 서버 응답 원본을 본다
-    const { data: ensembleList } = useQuery(ensemblesQueryOptions);
+    const { data: ensembleList, isPending: ensemblesPending } = useQuery(ensemblesQueryOptions);
+    // 처음 불러오는 동안은 캘린더에 회색 상자 (V-3 1차). 팀 색이 팀 순서로 정해져 팀 목록도 기다린다
+    const { isPending: teamsPending } = useQuery(teamsQueryOptions);
     const refreshEnsembles = useRefreshEnsembles();
     const refreshTeamsAndEnsembles = useRefreshTeamsAndEnsembles();
     const { mutateAsync: updateEnsembleAsync } = useUpdateEnsemble();
@@ -347,6 +349,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
                 direction={direction}
                 onClickEvent={handleEnsembleClick}
                 onClickSlot={handleSlotClick}
+                loading={ensemblesPending || teamsPending}
             />
 
             {/* DRAWERS */}

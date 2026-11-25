@@ -9,6 +9,7 @@ import {
     type WithLane,
 } from '@/lib/calendar';
 import { EVENT_STRIPES } from '@/styles/patterns';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { getTodayIdx } from '@/lib/week';
 import type { TimeSlot } from '@/types';
@@ -46,6 +47,29 @@ const TIME_MIN_SLOTS = 2;
 const LAST_NOTCH =
     'radial-gradient(circle at 50% 100%, transparent var(--notch), #000 calc(var(--notch) + 0.5px))';
 
+/** 불러오는 동안 열마다 보여줄 회색 상자 자리 [시작 칸, 끝 칸] (실제 합주처럼 보이게 흩어 둠) */
+const SKELETON_BLOCKS: readonly (readonly [number, number])[][] = [
+    [
+        [2, 5],
+        [12, 15],
+    ],
+    [[4, 7]],
+    [
+        [1, 3],
+        [9, 12],
+    ],
+    [[6, 9]],
+    [
+        [3, 6],
+        [14, 17],
+    ],
+    [[8, 11]],
+    [
+        [2, 4],
+        [10, 12],
+    ],
+];
+
 interface WeekCalendarProps {
     /** 열마다 날짜 (왼쪽부터) */
     days: BoardDay[];
@@ -60,6 +84,8 @@ interface WeekCalendarProps {
     onClickEvent: (event: CalendarEvent, date: Dayjs) => void;
     /** 시간칸을 누름 (column: 열 번호): 빈 칸, 또는 이름이 안 보이는 곳(3개 이상 겹침, 1024px 미만)의 블록 (Board가 resolveSlotTap으로 처리) */
     onClickSlot: (column: number, slot: TimeSlot) => void;
+    /** 처음 불러오는 중: 합주 대신 회색 상자, 시간칸은 누를 수 없다 (V-3 1차) */
+    loading?: boolean;
 }
 
 /** 요일 색 (27차): 토요일 파랑, 일요일 빨강 (합주 잡기 달력과 같음). 오늘 표시의 원·날짜도 이 색 */
@@ -98,6 +124,7 @@ const WeekCalendar = ({
     direction,
     onClickEvent,
     onClickSlot,
+    loading = false,
 }: WeekCalendarProps) => {
     // 이름이 안 보이는 좁은 화면에서 3개 이상 겹친 블록을 누르면, 누른 시간에 겹친 합주를 보여준다 (마우스·터치로 누른 경우만)
     const handleBlockClick = (
@@ -113,7 +140,10 @@ const WeekCalendar = ({
     };
 
     return (
-        <div className="mt-3 overflow-hidden [--hour-col:28px] [--slot:22px] md:mt-4 md:[--hour-col:44px] md:[--slot:30px]">
+        <div
+            aria-busy={loading}
+            className="mt-3 overflow-hidden [--hour-col:28px] [--slot:22px] md:mt-4 md:[--hour-col:44px] md:[--slot:30px]"
+        >
             {/* 주가 바뀌면 새로 그려지며(key) 옆에서 살짝 밀려 들어온다. 투명도는 바꾸지 않는다 (흰색으로 깜빡임) */}
             <div
                 key={`${view}-${boardDays[0]!.date.valueOf()}`}
@@ -211,21 +241,34 @@ const WeekCalendar = ({
                                         : isAltColumn(column) && 'bg-day-alt',
                                 )}
                             >
+                                {/* 불러오는 중: 열마다 정해 둔 자리에 회색 상자 */}
+                                {loading &&
+                                    (SKELETON_BLOCKS[column] ?? []).map(([start, end]) => (
+                                        <Skeleton
+                                            key={start}
+                                            className="absolute inset-x-[3px] rounded-md md:rounded-lg"
+                                            style={{
+                                                top: `calc(var(--slot) * ${start} + 1px)`,
+                                                height: `calc(var(--slot) * ${end - start + 1} - 2px)`,
+                                            }}
+                                        />
+                                    ))}
                                 {/* 시간칸(30분): 마우스를 올리면 옅은 회색, 누르면 합주 잡기 Drawer. 블록 아래에 깔린다 */}
-                                {Array.from({ length: SLOT_COUNT }, (_, slot) => (
-                                    <button
-                                        key={slot}
-                                        type="button"
-                                        tabIndex={-1}
-                                        aria-label={`${date.month() + 1}월 ${date.date()}일 ${days[getTodayIdx(date)]} ${idx2hour[slot]}`}
-                                        className="absolute inset-x-0 transition-colors duration-100 hover:bg-neutral-900/[0.05]"
-                                        style={{
-                                            top: `calc(var(--slot) * ${slot})`,
-                                            height: 'var(--slot)',
-                                        }}
-                                        onClick={() => onClickSlot(column, slot)}
-                                    />
-                                ))}
+                                {!loading &&
+                                    Array.from({ length: SLOT_COUNT }, (_, slot) => (
+                                        <button
+                                            key={slot}
+                                            type="button"
+                                            tabIndex={-1}
+                                            aria-label={`${date.month() + 1}월 ${date.date()}일 ${days[getTodayIdx(date)]} ${idx2hour[slot]}`}
+                                            className="absolute inset-x-0 transition-colors duration-100 hover:bg-neutral-900/[0.05]"
+                                            style={{
+                                                top: `calc(var(--slot) * ${slot})`,
+                                                height: 'var(--slot)',
+                                            }}
+                                            onClick={() => onClickSlot(column, slot)}
+                                        />
+                                    ))}
                                 {events.map((event) => (
                                     <EventBlock
                                         key={event.id}

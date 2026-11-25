@@ -5,12 +5,13 @@ import type { Team } from '@/types';
 import { isNotFound } from '@/api';
 import { teamExists } from '@/api/team';
 import { useTeamContext, useDrawerContext } from '@/context';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ensemblesQueryOptions, useAddEnsemble } from '@/queries/ensembles';
 import { findOverlapLimit } from '@/lib/calendar';
 import {
     useAddTeam,
     useDeleteTeam,
+    teamsQueryOptions,
     useRefreshTeamsAndEnsembles,
     useTeams,
     useUpdateTeam,
@@ -45,6 +46,8 @@ const eventNames2 = ['메인 회의', '재학생 회의', '회의', '오디션',
 
 const Teams = () => {
     const teams = useTeams();
+    // 처음 불러오는 동안은 회색 알약 (V-3 1차)
+    const { isPending: teamsPending } = useQuery(teamsQueryOptions);
     const refreshTeamsAndEnsembles = useRefreshTeamsAndEnsembles();
     const { mutateAsync: addTeamAsync } = useAddTeam();
     const { mutateAsync: updateTeamAsync } = useUpdateTeam();
@@ -228,7 +231,12 @@ const Teams = () => {
 
     return (
         <>
-            <TeamChips teams={teamChips} eventGroups={eventGroups} onAddTeam={handleClickAddTeam} />
+            <TeamChips
+                teams={teamChips}
+                eventGroups={eventGroups}
+                onAddTeam={handleClickAddTeam}
+                loading={teamsPending}
+            />
 
             {/* DRAWERS */}
             <TeamInfoDrawer drawerId="teamInfo" checkTeamExists={checkTeamExists} />

@@ -1,6 +1,14 @@
 import { useState, useCallback } from 'react';
 import { useDrawerContext } from '@/context';
-import { useAddNotice, useDeleteNotice, useNotices, useRefreshNotices } from '@/queries/notes';
+import { useQuery } from '@tanstack/react-query';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+    noticesQueryOptions,
+    useAddNotice,
+    useDeleteNotice,
+    useNotices,
+    useRefreshNotices,
+} from '@/queries/notes';
 import { noticeExists } from '@/api/notice';
 import { Bell, ChevronRight } from 'lucide-react';
 import NoticeDrawer from './NoticeDrawer';
@@ -9,6 +17,8 @@ import DeleteNoticeDrawer from './DeleteNoticeDrawer';
 
 const Notice = () => {
     const notices = useNotices();
+    // 처음 불러오는 동안은 글씨 자리에 회색 상자 (V-3 1차)
+    const { isPending } = useQuery(noticesQueryOptions);
     const refreshNotices = useRefreshNotices();
     const { mutateAsync: addNoticeAsync } = useAddNotice();
     const { mutateAsync: deleteNoticeAsync } = useDeleteNotice();
@@ -86,6 +96,7 @@ const Notice = () => {
             <section className="ui w-full max-w-[1080px]">
                 <button
                     type="button"
+                    aria-busy={isPending}
                     onClick={() => openDrawer('notice')}
                     className="flex w-full items-center gap-3 rounded-card bg-surface px-4 py-4 text-left shadow-card transition-[background-color,scale] duration-150 hover:bg-neutral-50 active:scale-[0.99] md:gap-4 md:px-7 md:py-5"
                 >
@@ -96,15 +107,19 @@ const Notice = () => {
                         <span className="block text-[12px] font-bold text-neutral-500 md:text-[13px]">
                             공지
                         </span>
-                        <span
-                            className={
-                                first
-                                    ? 'block truncate text-[16px] font-bold text-ink md:text-[19px]'
-                                    : 'block truncate text-[16px] text-neutral-500 md:text-[19px]'
-                            }
-                        >
-                            {first || '공지가 딱히 없네요'}
-                        </span>
+                        {isPending ? (
+                            <Skeleton className="mt-1.5 h-5 w-48 max-w-full md:h-6 md:w-64" />
+                        ) : (
+                            <span
+                                className={
+                                    first
+                                        ? 'block truncate text-[16px] font-bold text-ink md:text-[19px]'
+                                        : 'block truncate text-[16px] text-neutral-500 md:text-[19px]'
+                                }
+                            >
+                                {first || '공지가 딱히 없네요'}
+                            </span>
+                        )}
                     </span>
                     {notices.length > 1 && (
                         <span className="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[12px] font-bold text-neutral-600 md:text-[13px]">

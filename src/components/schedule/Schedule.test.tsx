@@ -1,9 +1,9 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { url } from '@/constants';
-import { ensembles } from '@/test/fixtures';
+import { ensembles, notes, notices, teams } from '@/test/fixtures';
 import { server } from '@/test/server';
 import { mockInitialData } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
@@ -267,6 +267,39 @@ describe('합주판 (주 단위 캘린더)', () => {
         await user.click(screen.getByRole('button', { name: '다음 주' }));
         expect(block()).toHaveAttribute('data-last');
         expect(block().className).toContain('[--notch:3px]');
+    });
+
+    it('처음 불러오는 동안 공지·팀·캘린더·한마디에 회색 상자, 다 불러오면 사라진다 (V-3 1차)', async () => {
+        let release!: () => void;
+        const gate = new Promise<void>((resolve) => (release = resolve));
+        const gated = (name: string, body: unknown) =>
+            http.get(`${url}/${name}`, async () => {
+                await gate;
+                return HttpResponse.json(body as never);
+            });
+        server.use(
+            gated('teams', teams),
+            gated('ensembles', ensembles),
+            gated('notes', notes),
+            gated('notices', notices),
+        );
+        renderApp();
+
+        const skeletons = () => document.querySelectorAll('[data-slot="skeleton"]').length;
+        // 공지 1 + 팀 8 + 캘린더 11 + 한마디 3
+        expect(skeletons()).toBe(23);
+        // 불러오는 동안 캘린더의 빈 시간은 누를 수 없다 (빈 시간으로 잘못 보이지 않게)
+        expect(
+            screen.queryByRole('button', { name: '11월 21일 토 12:00' }),
+        ).not.toBeInTheDocument();
+
+        release();
+        expect(
+            await screen.findByRole('button', { name: '테스트밴드 10:00–11:00' }),
+        ).toBeInTheDocument();
+        await waitFor(() => expect(skeletons()).toBe(0));
+        expect(screen.getByText('첫 공지')).toBeInTheDocument();
+        expect(screen.getByText('메모입니다')).toBeInTheDocument();
     });
 
     it('팀 추가는 목록 밖 머리 줄에, 팀 아닌 일정은 줄무늬 (V-3 1차)', async () => {

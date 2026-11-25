@@ -349,3 +349,52 @@ export function isSlotFull(
         null
     );
 }
+
+// ---------------- 합주판 보기 방식 (View 개편 V-2 26차) ----------------
+// 지난 날짜는 볼 필요가 없어, 첫 화면(offset 0)은 늘 오늘부터 7일을 보여준다. 다음 주부터는 일~토 한 주씩.
+
+/** 합주판 보기 방식. rolling: 오늘을 맨 왼쪽에 두고 7일 / weekday: 일~토 요일 고정, 지난 요일은 다음 주 날짜로 */
+export type BoardView = 'rolling' | 'weekday';
+
+/** offset주 뒤 주의 일요일 0시 (offset 0 = 오늘이 속한 일~토 주) */
+export function getSundayWeekStart(now: Dayjs, offset: number): Dayjs {
+    const today = now.startOf('day');
+    return today.subtract(today.day(), 'day').add(offset * 7, 'day');
+}
+
+/** 합주판의 한 열 */
+export interface BoardDay {
+    date: Dayjs;
+    /** 요일 고정 보기에서 지난 요일 대신 들어간 다음 주 날짜 ("다음주"라고 작게 표시) */
+    nextWeek: boolean;
+}
+
+/**
+ * 합주판에 보여줄 7일 (왼쪽부터 열 순서).
+ * - offset 0, rolling: 오늘 ~ 6일 뒤 (오늘이 수요일이면 수 ~ 다음 주 화)
+ * - offset 0, weekday: 이번 주 일 ~ 토, 오늘보다 앞선 요일은 다음 주 날짜 (수요일이면 다음 주 일·월·화 + 이번 주 수~토)
+ * - offset 1 이상: 두 방식 모두 offset주 뒤의 일 ~ 토 (토요일에 다음 주를 누르면 바로 다음 날 일요일부터)
+ * offset 0의 7일은 두 방식이 같고 열 순서만 다르다
+ */
+export function getBoardDays(now: Dayjs, offset: number, view: BoardView): BoardDay[] {
+    const today = now.startOf('day');
+    const sunday = getSundayWeekStart(now, offset);
+    return Array.from({ length: 7 }, (_, i) => {
+        if (offset > 0) return { date: sunday.add(i, 'day'), nextWeek: false };
+        if (view === 'rolling') return { date: today.add(i, 'day'), nextWeek: false };
+        const date = sunday.add(i, 'day');
+        return date.isBefore(today)
+            ? { date: date.add(7, 'day'), nextWeek: true }
+            : { date, nextWeek: false };
+    });
+}
+
+/** 날짜마다 그날 보이는 합주 (레인 배치 포함, 열 순서 그대로) */
+export function toDaysSchedule(
+    ensembles: readonly EnsembleResponse[],
+    colorMap: Partial<Record<string, string>>,
+    dates: readonly Dayjs[],
+    now: Dayjs,
+): WithLane<CalendarEvent>[][] {
+    return dates.map((date) => eventsOnDate(ensembles, colorMap, date, now));
+}

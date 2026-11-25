@@ -3,11 +3,12 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Board from '@/components/board';
 import Teams from '@/components/teams';
 import { useToday } from '@/hooks/useToday';
-import { formatWeekRange, getWeekStart, MAX_WEEK_OFFSET } from '@/lib/calendar';
-import { getTodayIdx } from '@/lib/week';
+import { formatWeekRange, getBoardDays, MAX_WEEK_OFFSET } from '@/lib/calendar';
+import { useBoardViewStore } from './boardViewStore';
 
 // 합주판 카드 (View 개편 V-2): 팀 목록 → 주 제목·이동 → 주 단위 캘린더 (날짜 행은 캘린더에 붙여 둔다).
-// 이번 주부터 MAX_WEEK_OFFSET주 뒤까지 볼 수 있다 (지난 주는 보여주지 않는다).
+// 첫 화면("이번 주")은 오늘부터 7일 (보기 방식은 헤더의 스위치: 오늘이 맨 왼쪽 / 일~토 요일 고정, 26차).
+// 다음 주부터는 일~토 한 주씩 MAX_WEEK_OFFSET주 뒤까지. 지난 날짜는 보여주지 않는다.
 // `ui` 클래스: 옛 전역 스타일이 적용되지 않는 새 코드 영역 (src/styles/index.css)
 
 // 누를 수 있는 버튼: 마우스를 올리면 옅은 회색 바탕, 누르면 살짝 작아짐 (비활성이면 없음)
@@ -23,7 +24,8 @@ const Schedule = () => {
         offset: 0,
         direction: null,
     });
-    const weekStart = getWeekStart(today, week.offset);
+    const view = useBoardViewStore((state) => state.view);
+    const days = getBoardDays(today, week.offset, view);
 
     const moveTo = (offset: number) =>
         setWeek((prev) =>
@@ -38,7 +40,7 @@ const Schedule = () => {
 
             <div className="mt-4 flex items-center justify-between gap-2 md:mt-6">
                 <h2 className="text-xl font-bold text-ink md:text-[28px]">
-                    {formatWeekRange(weekStart)}
+                    {week.offset === 0 ? '이번 주' : formatWeekRange(days[0]!.date)}
                 </h2>
                 <div className="flex shrink-0 items-center gap-1">
                     <button
@@ -70,11 +72,7 @@ const Schedule = () => {
                 </div>
             </div>
 
-            <Board
-                weekStart={weekStart}
-                todayIdx={week.offset === 0 ? getTodayIdx(today) : null}
-                direction={week.direction}
-            />
+            <Board days={days} today={today} view={view} direction={week.direction} />
         </section>
     );
 };

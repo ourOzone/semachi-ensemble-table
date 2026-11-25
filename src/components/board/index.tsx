@@ -7,8 +7,8 @@ import {
     ensemblesQueryOptions,
     useDeleteEnsemble,
     useRefreshEnsembles,
+    useBoardSchedule,
     useUpdateEnsemble,
-    useWeekSchedule,
 } from '@/queries/ensembles';
 import { useRefreshTeamsAndEnsembles, useTeams } from '@/queries/teams';
 import WeekCalendar from '@/components/schedule/WeekCalendar';
@@ -20,26 +20,33 @@ import UpdateEnsembleDrawer4 from './updateEnsembleDrawers/UpdateEnsembleDrawer4
 import dayjs, { type Dayjs } from 'dayjs';
 import { toast } from 'sonner';
 import { getRepeatEnd, toEnsembleRequest } from '@/lib/ensemble';
-import { getRegularNextDate, resolveSlotTap, type CalendarEvent } from '@/lib/calendar';
-import type { DayIndex, TimeSlot } from '@/types';
+import {
+    getRegularNextDate,
+    resolveSlotTap,
+    type BoardDay,
+    type BoardView,
+    type CalendarEvent,
+} from '@/lib/calendar';
+import { getTodayIdx } from '@/lib/week';
+import type { TimeSlot } from '@/types';
 import 'dayjs/locale/ko';
 
 dayjs.locale('ko');
 
 interface BoardProps {
-    /** 보여줄 주의 월요일 0시 (lib/calendar의 getWeekStart) */
-    weekStart: Dayjs;
-    /** 오늘이 이 주에 있으면 요일 인덱스(월 0 ~ 일 6), 없으면 null */
-    todayIdx: number | null;
+    /** 보여줄 7일 (왼쪽부터 열 순서, lib/calendar의 getBoardDays) */
+    days: BoardDay[];
+    today: Dayjs;
+    view: BoardView;
     /** 주를 바꿀 때 들어오는 방향 (애니메이션). 처음 그릴 때는 null */
     direction: 'prev' | 'next' | null;
 }
 
 // 합주표 (View 개편 V-2: 주 단위 캘린더 + 아래에서 올라오는 합주 정보·합주 잡기 Drawer).
 // PIN 단계는 합주 정보 Drawer 안에 있고, 수정의 입력 단계(반복 여부·날짜·시간)는 아직 옛 Drawer다
-const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
+const Board = ({ days, today, view, direction }: BoardProps) => {
     const teams = useTeams();
-    const week = useWeekSchedule(weekStart);
+    const columns = useBoardSchedule(days.map((day) => day.date));
     // 수정·미루기 때 반복 종료 날짜(due)를 그대로 두기 위해 서버 응답 원본을 본다
     const { data: ensembleList } = useQuery(ensemblesQueryOptions);
     const refreshEnsembles = useRefreshEnsembles();
@@ -74,30 +81,35 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
 
     // 합주 블록 클릭: 바로 정보 Drawer를 연다 (이전에는 여기서 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5).
     // 합주 잡기 Drawer의 목록에서 고른 경우에도 쓰므로, 열린 Drawer를 정보 Drawer로 바꾼다
-    // 누른 블록의 캘린더 날짜 (보던 주의 그 요일): "같은 시간에 다른 팀 합주 잡기"의 날짜 (24차)
+    // 누른 블록의 캘린더 날짜 (그 블록이 있던 열의 날짜): "같은 시간에 다른 팀 합주 잡기"의 날짜 (24차)
     const [calendarDate, setCalendarDate] = useState<Dayjs | null>(null);
     const handleEnsembleClick = useCallback(
-        ({ id, teamId, name, repeat, nextDate, startTime, endTime, day }: CalendarEvent) => {
+        (
+            { id, teamId, name, repeat, nextDate, startTime, endTime }: CalendarEvent,
+            date: Dayjs,
+        ) => {
             setTeamStates(teamId, '', name);
             setEnsembleStates(id, repeat, nextDate, startTime, endTime);
-            setCalendarDate(weekStart.add(day, 'day'));
+            setCalendarDate(date);
             setOpenedDrawers(['ensembleInfo']);
         },
-        [setOpenedDrawers, setTeamStates, setEnsembleStates, weekStart],
+        [setOpenedDrawers, setTeamStates, setEnsembleStates],
     );
 
     // 시간칸 클릭 (빈 칸, 또는 이름이 안 보이는 겹친 곳): 그 시간에 합주가 하나면 그 합주의 정보,
     // 없으면 빈 시간, 둘 이상이면 겹친 합주 목록을 합주 잡기 Drawer로 보여준다
     const [slotView, setSlotView] = useState<SlotView | null>(null);
-    const handleSlotClick = (day: DayIndex, slot: TimeSlot) => {
-        const tap = resolveSlotTap(week[day] ?? [], slot);
+    const handleSlotClick = (column: number, slot: TimeSlot) => {
+        const date = days[column]?.date;
+        if (!date) return;
+        const tap = resolveSlotTap(columns[column] ?? [], slot);
         if (tap.kind === 'single') {
-            handleEnsembleClick(tap.event);
+            handleEnsembleClick(tap.event, date);
             return;
         }
         setSlotView({
-            date: weekStart.add(day, 'day'),
-            day,
+            date,
+            day: getTodayIdx(date),
             tap: tap.kind === 'empty' ? { kind: 'empty', slot, range: tap.range } : tap,
         });
         openDrawer('slotInfo');
@@ -274,16 +286,20 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
     return (
         <>
             <WeekCalendar
-                week={week}
-                weekStart={weekStart}
-                todayIdx={todayIdx}
+                days={days}
+                columns={columns}
+                today={today}
+                view={view}
                 direction={direction}
                 onClickEvent={handleEnsembleClick}
                 onClickSlot={handleSlotClick}
             />
 
             {/* DRAWERS */}
-            <SlotDrawer view={slotView} onSelect={handleEnsembleClick} />
+            <SlotDrawer
+                view={slotView}
+                onSelect={(event) => slotView && handleEnsembleClick(event, slotView.date)}
+            />
             <EnsembleInfoDrawer
                 checkEnsembleExists={checkEnsembleExists}
                 handleClickTeamInfo={handleClickTeamInfo}

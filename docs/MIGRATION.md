@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~20차 PIN 단계·21~24차 합주 잡기 Drawer·25차 완료 (2026-11-25, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~20차 PIN 단계·21~24차 합주 잡기 Drawer·25차·26차 보기 방식 완료 (2026-11-25, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -908,6 +908,19 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 확인: Playwright Chrome 390·1280px, WebKit 390px — 일회성 블록(30분·2시간·점선·줄무늬)의 구멍, 달력 일요일 시작, 막대 합주 연한 색
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 187/187 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 4·경고 25 (새 코드 0건) / `pnpm format:check` ✅
+
+### 2026-11-25 — View 개편 V-2 (26차): 합주판 보기 방식 두 가지
+
+- 지금 → 바꾼 후
+  - 첫 화면: 이번 주 월~일 (지난 요일 포함), 제목 "11월 23일 – 29일" → 제목 "이번 주", 지난 날짜 없이 오늘부터 7일
+  - 보기 방식 (새 기능, 헤더 스위치): 오늘부터 보기(기본, 오늘이 맨 왼쪽) / 요일 고정으로 보기(일~토, 지난 요일은 다음 주 날짜 + "다음주"). 고른 방식 기억
+  - 다음 주(→): 월~일 한 주씩 → 일~토 한 주씩 (토요일에 누르면 다음 날 일요일부터)
+  - 날짜 머리: 달의 첫날은 "12/1"
+- 구조: `lib/calendar`에 `BoardView`·`BoardDay`·`getSundayWeekStart`·`getBoardDays`·`toDaysSchedule`, `queries/ensembles`의 `useWeekSchedule` → `useBoardSchedule`(날짜들). `WeekCalendar`·`Board`는 열 번호 + 열 날짜로 (합주 정보의 "캘린더 날짜"도 열 날짜). 헤더 스위치(`layout/Header`), `schedule/boardViewStore`. 테스트 setup에서 보기 방식 초기화
+- 확인: Playwright Chrome 390·1280px, WebKit 390px (수 11/25): 오늘부터 "수25 … 화12/1", 요일 고정 "일29다음주 월30다음주 화12/1다음주 수25 목26 금27 토28", 다음 주 "11월 29일 – 12월 5일". 가로 넘침 없음
+- 테스트: `Schedule.test.tsx` 이번 주·다음 주(일~토)·12주·달 첫날 표시, 헤더 스위치·요일 고정·기억, 미룬 주 테스트를 새 첫 화면에 맞게 / `lib/calendar.test.ts` 4개(일요일 시작, 두 방식의 날짜, 토요일에 다음 주, 날짜별 합주). 변형 검사 9/9 (그 밖에 1개는 테스트를 모으지 못한 잘못된 변형, 헤더 스위치 1개는 검사를 중간에 멈춰 돌리지 못함). 진행 중 문제: 작업 폴더에서 변형 검사를 돌려, 사용자가 켜 둔 dev 서버가 일부러 바꾼 코드를 HMR로 계속 불러왔다(화면이 저절로 월~일로 바뀌는 등) → 검사를 멈추고 파일을 모두 원래대로 확인. 앞으로 변형 검사는 별도 복사본에서
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 192/192 / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 4·경고 25 (새 코드 0건) / `pnpm format:check` ✅
 
 ## 남은 일
 

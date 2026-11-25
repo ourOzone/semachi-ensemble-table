@@ -9,7 +9,7 @@ import { mockInitialData } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
 
 // fixtures의 합주: 매주 반복, 다음 날짜 2026-11-23(월), 시간칸 2~3 (10:00 - 11:00)
-// 오늘은 2026-11-20(금) → 이번 주(11/16~22) 월요일은 nextDate 직전 주라 "쉼"
+// 오늘은 2026-11-20(금) → 첫 화면("이번 주")은 오늘부터 7일 11/20(금) ~ 11/26(목), 다음 주부터는 일~토 (26차)
 
 describe('합주판 (주 단위 캘린더)', () => {
     beforeEach(() => {
@@ -21,13 +21,17 @@ describe('합주판 (주 단위 캘린더)', () => {
         vi.useRealTimers();
     });
 
-    it('이번 주부터 12주 뒤까지 넘겨 볼 수 있고, "오늘"로 돌아온다', async () => {
+    /** 요일 머리글: [요일, 날짜, ("다음주")] 열마다 */
+    const header = () =>
+        [...document.querySelectorAll('[data-board-day]')].map((el) => el.textContent);
+
+    it('첫 화면은 "이번 주"(오늘부터 7일), 다음 주부터 일~토로 12주 뒤까지, "오늘"로 돌아온다', async () => {
         const user = userEvent.setup();
         renderApp();
 
-        expect(
-            await screen.findByRole('heading', { name: '11월 16일 – 22일' }),
-        ).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: '이번 주' })).toBeInTheDocument();
+        // 오늘(금)이 맨 왼쪽, 날마다 한 칸씩 밀린다 (이전: 월~일)
+        expect(header()).toEqual(['금20', '토21', '일22', '월23', '화24', '수25', '목26']);
         const prev = screen.getByRole('button', { name: '이전 주' });
         const next = screen.getByRole('button', { name: '다음 주' });
         const today = screen.getByRole('button', { name: '오늘' });
@@ -37,20 +41,61 @@ describe('합주판 (주 단위 캘린더)', () => {
         expect(document.querySelector('[aria-current="date"]')).toHaveTextContent(/^금\s*20$/);
 
         await user.click(next);
-        expect(screen.getByRole('heading', { name: '11월 23일 – 29일' })).toBeInTheDocument();
+        // 다음 주는 일~토 (오늘부터 7일과 겹쳐도 그대로)
+        expect(screen.getByRole('heading', { name: '11월 22일 – 28일' })).toBeInTheDocument();
+        expect(header()).toEqual(['일22', '월23', '화24', '수25', '목26', '금27', '토28']);
         expect(prev).toBeEnabled();
+        // 달의 첫날은 "12/1"
+        await user.click(next);
+        expect(header()).toEqual(['일29', '월30', '화12/1', '수2', '목3', '금4', '토5']);
+        await user.click(screen.getByRole('button', { name: '이전 주' }));
         // 다른 주에는 오늘 표시가 없다
         expect(document.querySelector('[aria-current="date"]')).toBeNull();
 
         for (let i = 1; i < 12; i++) await user.click(next);
-        expect(screen.getByRole('heading', { name: '2월 8일 – 14일' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: '2월 7일 – 13일' })).toBeInTheDocument();
         expect(next).toBeDisabled();
 
         await user.click(today);
-        expect(screen.getByRole('heading', { name: '11월 16일 – 22일' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: '이번 주' })).toBeInTheDocument();
     });
 
-    it('미룬 주는 "쉼", 다음 주부터는 합주로 보인다', async () => {
+    it('헤더 스위치로 요일 고정 보기: 일~토, 지난 요일은 다음 주 날짜에 "다음주"', async () => {
+        const user = userEvent.setup();
+        renderApp();
+        await screen.findByRole('heading', { name: '이번 주' });
+
+        const views = screen.getByRole('radiogroup', { name: '합주판 보기 방식' });
+        expect(within(views).getByRole('radio', { name: '오늘부터 보기' })).toBeChecked();
+        await user.click(within(views).getByRole('radio', { name: '요일 고정으로 보기' }));
+
+        expect(screen.getByRole('heading', { name: '이번 주' })).toBeInTheDocument();
+        // 금요일: 일~목은 지났으니 다음 주 날짜
+        expect(header()).toEqual([
+            '일22다음주',
+            '월23다음주',
+            '화24다음주',
+            '수25다음주',
+            '목26다음주',
+            '금20',
+            '토21',
+        ]);
+        expect(document.querySelector('[aria-current="date"]')).toHaveTextContent(/^금\s*20/);
+        // 고른 방식은 기억한다
+        expect(localStorage.getItem('semachi.boardView')).toBe('weekday');
+
+        // 다음 주는 보기 방식과 관계없이 일~토
+        await user.click(screen.getByRole('button', { name: '다음 주' }));
+        expect(header()).toEqual(['일22', '월23', '화24', '수25', '목26', '금27', '토28']);
+    });
+
+    it('미룬 주는 "쉼", 그 뒤 주부터는 합주로 보인다', async () => {
+        // 다음 합주 11/30(월) → 이번 주(11/23)는 쉼
+        server.use(
+            http.get(`${url}/ensembles`, () =>
+                HttpResponse.json([{ ...ensembles[0]!, nextDate: '2026-11-30T00:00:00' }]),
+            ),
+        );
         const user = userEvent.setup();
         renderApp();
 
@@ -58,9 +103,10 @@ describe('합주판 (주 단위 캘린더)', () => {
             name: '테스트밴드 10:00–11:00 이번 주 쉼',
         });
         // 점선 블록은 시간 대신 다음 합주 날짜 (반복이면 "~")
-        expect(within(skipped).getByText('11/23~')).toBeInTheDocument();
+        expect(within(skipped).getByText('11/30~')).toBeInTheDocument();
         expect(within(skipped).queryByText('10:00–11:00')).not.toBeInTheDocument();
 
+        await user.click(screen.getByRole('button', { name: '다음 주' }));
         await user.click(screen.getByRole('button', { name: '다음 주' }));
         const normal = screen.getByRole('button', { name: '테스트밴드 10:00–11:00' });
         // 넓을 때의 한 줄·아주 좁을 때의 두 줄 표시가 함께 들어 있다 (CSS로 하나만 보임)

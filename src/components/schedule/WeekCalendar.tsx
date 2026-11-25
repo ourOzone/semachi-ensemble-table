@@ -1,17 +1,25 @@
 import type { CSSProperties, MouseEvent } from 'react';
 import type { Dayjs } from 'dayjs';
 import { days, hours, idx2hour } from '@/constants';
-import { formatSlotRange, type CalendarEvent, type WithLane } from '@/lib/calendar';
+import {
+    formatSlotRange,
+    type BoardDay,
+    type BoardView,
+    type CalendarEvent,
+    type WithLane,
+} from '@/lib/calendar';
 import { cn } from '@/lib/utils';
-import type { DayIndex, TimeSlot } from '@/types';
+import { getTodayIdx } from '@/lib/week';
+import type { TimeSlot } from '@/types';
 
 // 주 단위 캘린더 (View 개편 V-2). 가로선만 있는 흰 바탕 표에 합주를 시간 길이만큼의 블록으로 그린다.
+// 열은 날짜 7개 (26차부터: 오늘부터 7일 / 요일 고정 / 일~토 한 주. lib/calendar의 getBoardDays). 지난 날짜는 없다.
 // 시간칸(30분) 하나의 높이는 --slot (모바일 22px, PC 30px). 블록 위치·높이는 --slot의 배수다.
 
 const SLOT_COUNT = 30; // 09:00 ~ 24:00, 30분 단위
 
-/** 아주 옅은 회색 바탕을 까는 요일 (화·목·토: 월 0 기준) */
-const ALT_DAYS: readonly number[] = [1, 3, 5];
+/** 아주 옅은 회색 바탕을 까는 요일 (화·목·토: dayjs의 day(), 일 0) */
+const ALT_DAYS: readonly number[] = [2, 4, 6];
 
 // 블록 글씨 크기 (px). 줄 수 계산에 쓰므로 아래 클래스와 맞춘다
 const SIZE = {
@@ -38,18 +46,24 @@ const ONE_TIME_NOTCH =
     'radial-gradient(circle at 50% 100%, transparent var(--notch), #000 calc(var(--notch) + 0.5px))';
 
 interface WeekCalendarProps {
-    /** [요일 0~6][그날 보이는 합주] */
-    week: WithLane<CalendarEvent>[][];
-    /** 그 주 월요일 */
-    weekStart: Dayjs;
-    /** 오늘이 이 주에 있으면 요일 인덱스(월 0 ~ 일 6), 없으면 null */
-    todayIdx: number | null;
+    /** 열마다 날짜 (왼쪽부터) */
+    days: BoardDay[];
+    /** [열][그날 보이는 합주] */
+    columns: WithLane<CalendarEvent>[][];
+    today: Dayjs;
+    /** 보기 방식이 바뀌면 새로 그린다 */
+    view: BoardView;
     /** 주를 바꿀 때 들어오는 방향 (애니메이션). 처음 그릴 때는 null */
     direction: 'prev' | 'next' | null;
-    onClickEvent: (event: CalendarEvent) => void;
-    /** 시간칸을 누름: 빈 칸, 또는 이름이 안 보이는 곳(3개 이상 겹침, 1024px 미만)의 블록 (Board가 resolveSlotTap으로 처리) */
-    onClickSlot: (day: DayIndex, slot: TimeSlot) => void;
+    /** 블록을 누름 (date: 그 블록이 있는 열의 날짜) */
+    onClickEvent: (event: CalendarEvent, date: Dayjs) => void;
+    /** 시간칸을 누름 (column: 열 번호): 빈 칸, 또는 이름이 안 보이는 곳(3개 이상 겹침, 1024px 미만)의 블록 (Board가 resolveSlotTap으로 처리) */
+    onClickSlot: (column: number, slot: TimeSlot) => void;
 }
+
+/** 날짜 표시: 보통 "25", 달의 첫날은 "12/1" (달이 바뀌는 곳을 알 수 있게) */
+const dayLabel = (date: Dayjs) =>
+    date.date() === 1 ? `${date.month() + 1}/${date.date()}` : String(date.date());
 
 /** 3개 이상 겹친 블록에 이름이 보이는 폭 (EventBlock의 max-lg:hidden과 같은 기준, Tailwind lg) */
 const NAMES_VISIBLE_QUERY = '(min-width: 64rem)';
@@ -67,9 +81,10 @@ function slotAtPointer(
 }
 
 const WeekCalendar = ({
-    week,
-    weekStart,
-    todayIdx,
+    days: boardDays,
+    columns,
+    today,
+    view,
     direction,
     onClickEvent,
     onClickSlot,
@@ -77,21 +92,23 @@ const WeekCalendar = ({
     // 이름이 안 보이는 좁은 화면에서 3개 이상 겹친 블록을 누르면, 누른 시간에 겹친 합주를 보여준다 (마우스·터치로 누른 경우만)
     const handleBlockClick = (
         e: MouseEvent<HTMLElement>,
-        day: DayIndex,
+        column: number,
         event: WithLane<CalendarEvent>,
     ) => {
         if (event.lanes >= 3 && e.detail > 0 && !window.matchMedia(NAMES_VISIBLE_QUERY).matches) {
-            onClickSlot(day, slotAtPointer(e, event));
+            onClickSlot(column, slotAtPointer(e, event));
             return;
         }
-        onClickEvent(event);
+        onClickEvent(event, boardDays[column]!.date);
     };
+    // 요일 고정 보기의 첫 화면에서만 "다음주" 줄이 생긴다 (그 줄이 있는 열과 없는 열의 높이를 맞춘다)
+    const hasNextWeek = boardDays.some((day) => day.nextWeek);
 
     return (
         <div className="mt-3 overflow-hidden [--hour-col:28px] [--slot:22px] md:mt-4 md:[--hour-col:44px] md:[--slot:30px]">
             {/* 주가 바뀌면 새로 그려지며(key) 옆에서 살짝 밀려 들어온다. 투명도는 바꾸지 않는다 (흰색으로 깜빡임) */}
             <div
-                key={weekStart.valueOf()}
+                key={`${view}-${boardDays[0]!.date.valueOf()}`}
                 className={cn(
                     direction && 'duration-200 ease-out motion-safe:animate-in',
                     direction === 'next' && 'motion-safe:slide-in-from-right-4',
@@ -101,13 +118,14 @@ const WeekCalendar = ({
                 {/* 요일 머리글 */}
                 <div className="grid grid-cols-[var(--hour-col)_repeat(7,minmax(0,1fr))] pb-2 md:pb-3">
                     <div />
-                    {days.map((label, idx) => {
-                        const isToday = idx === todayIdx;
+                    {boardDays.map(({ date, nextWeek }) => {
+                        const isToday = date.isSame(today, 'day');
                         return (
                             // 요일을 크게, 날짜는 작게 (24차, 이전: 날짜를 크게). 오늘은 요일을 원으로
                             <div
-                                key={label}
+                                key={date.valueOf()}
                                 className="flex flex-col items-center gap-0.5"
+                                data-board-day
                                 aria-current={isToday ? 'date' : undefined}
                             >
                                 <span
@@ -116,16 +134,22 @@ const WeekCalendar = ({
                                         isToday && 'bg-today text-white',
                                     )}
                                 >
-                                    {label}
+                                    {days[getTodayIdx(date)]}
                                 </span>
                                 <span
                                     className={cn(
-                                        'text-xs text-neutral-500 tabular-nums md:text-sm',
+                                        'text-xs whitespace-nowrap text-neutral-500 tabular-nums md:text-sm',
                                         isToday && 'font-bold text-today',
                                     )}
                                 >
-                                    {weekStart.add(idx, 'day').date()}
+                                    {dayLabel(date)}
                                 </span>
+                                {/* 요일 고정 보기: 지난 요일 대신 들어간 다음 주 날짜 */}
+                                {hasNextWeek && (
+                                    <span className="h-3.5 text-[10px] leading-3.5 whitespace-nowrap text-neutral-400 md:h-4 md:text-[11px] md:leading-4">
+                                        {nextWeek && '다음주'}
+                                    </span>
+                                )}
                             </div>
                         );
                     })}
@@ -161,42 +185,39 @@ const WeekCalendar = ({
                         ))}
                     </div>
 
-                    {week.map((events, idx) => {
-                        const date = weekStart.add(idx, 'day');
-                        // 지난 요일은 합주를 잡을 수 없으므로 빈 칸을 누를 수 없다
-                        const isPast = todayIdx !== null && idx < todayIdx;
+                    {columns.map((events, column) => {
+                        const date = boardDays[column]!.date;
                         return (
                             <div
-                                key={idx}
+                                key={date.valueOf()}
                                 className={cn(
                                     'relative h-[calc(var(--slot)*30)]',
                                     // 오늘 열이 화·목·토여도 오늘 표시가 우선
-                                    idx === todayIdx
+                                    date.isSame(today, 'day')
                                         ? 'bg-today-tint'
-                                        : ALT_DAYS.includes(idx) && 'bg-day-alt',
+                                        : ALT_DAYS.includes(date.day()) && 'bg-day-alt',
                                 )}
                             >
                                 {/* 시간칸(30분): 마우스를 올리면 옅은 회색, 누르면 합주 잡기 Drawer. 블록 아래에 깔린다 */}
-                                {!isPast &&
-                                    Array.from({ length: SLOT_COUNT }, (_, slot) => (
-                                        <button
-                                            key={slot}
-                                            type="button"
-                                            tabIndex={-1}
-                                            aria-label={`${date.month() + 1}월 ${date.date()}일 ${days[idx]} ${idx2hour[slot]}`}
-                                            className="absolute inset-x-0 transition-colors duration-100 hover:bg-neutral-900/[0.05]"
-                                            style={{
-                                                top: `calc(var(--slot) * ${slot})`,
-                                                height: 'var(--slot)',
-                                            }}
-                                            onClick={() => onClickSlot(idx, slot)}
-                                        />
-                                    ))}
+                                {Array.from({ length: SLOT_COUNT }, (_, slot) => (
+                                    <button
+                                        key={slot}
+                                        type="button"
+                                        tabIndex={-1}
+                                        aria-label={`${date.month() + 1}월 ${date.date()}일 ${days[getTodayIdx(date)]} ${idx2hour[slot]}`}
+                                        className="absolute inset-x-0 transition-colors duration-100 hover:bg-neutral-900/[0.05]"
+                                        style={{
+                                            top: `calc(var(--slot) * ${slot})`,
+                                            height: 'var(--slot)',
+                                        }}
+                                        onClick={() => onClickSlot(column, slot)}
+                                    />
+                                ))}
                                 {events.map((event) => (
                                     <EventBlock
                                         key={event.id}
                                         event={event}
-                                        onClick={(e) => handleBlockClick(e, idx, event)}
+                                        onClick={(e) => handleBlockClick(e, column, event)}
                                     />
                                 ))}
                             </div>

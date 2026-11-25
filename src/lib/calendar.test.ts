@@ -11,6 +11,9 @@ import {
     freeRangeAt,
     formatSlotRange,
     formatWeekRange,
+    getBoardDays,
+    getSundayWeekStart,
+    toDaysSchedule,
     getEnsembleSchedule,
     getOccurrence,
     getRegularNextDate,
@@ -450,5 +453,91 @@ describe('합주 잡기: 그날 합주와 겹침', () => {
                 '2026-12-10',
             );
         });
+    });
+});
+
+describe('합주판 보기 방식 (26차)', () => {
+    const wed = dayjs('2026-11-25T15:00'); // 수요일
+    const labels = (days: { date: dayjs.Dayjs; nextWeek: boolean }[]) =>
+        days.map(({ date, nextWeek }) => `${date.format('M/D')}${nextWeek ? '*' : ''}`);
+
+    it('getSundayWeekStart: 그 주 일요일 0시부터 offset주 뒤', () => {
+        expect(fmt(getSundayWeekStart(wed, 0))).toBe('2026-11-22 00:00');
+        expect(fmt(getSundayWeekStart(wed, 1))).toBe('2026-11-29 00:00');
+        // 토요일에도 그 주 일요일, 일요일이면 그날
+        expect(fmt(getSundayWeekStart(dayjs('2026-11-28T23:00'), 1))).toBe('2026-11-29 00:00');
+        expect(fmt(getSundayWeekStart(dayjs('2026-11-29T09:00'), 0))).toBe('2026-11-29 00:00');
+    });
+
+    it('오늘부터 보기: 오늘 ~ 6일 뒤, 다음 주부터는 일~토', () => {
+        expect(labels(getBoardDays(wed, 0, 'rolling'))).toEqual([
+            '11/25',
+            '11/26',
+            '11/27',
+            '11/28',
+            '11/29',
+            '11/30',
+            '12/1',
+        ]);
+        expect(labels(getBoardDays(wed, 1, 'rolling'))).toEqual([
+            '11/29',
+            '11/30',
+            '12/1',
+            '12/2',
+            '12/3',
+            '12/4',
+            '12/5',
+        ]);
+        // 토요일에 다음 주를 누르면 바로 다음 날(일요일)부터
+        expect(labels(getBoardDays(dayjs('2026-11-28T10:00'), 1, 'rolling'))[0]).toBe('11/29');
+    });
+
+    it('요일 고정 보기: 일~토, 지난 요일은 다음 주 날짜(*)', () => {
+        expect(labels(getBoardDays(wed, 0, 'weekday'))).toEqual([
+            '11/29*',
+            '11/30*',
+            '12/1*',
+            '11/25',
+            '11/26',
+            '11/27',
+            '11/28',
+        ]);
+        expect(labels(getBoardDays(wed, 1, 'weekday'))).toEqual([
+            '11/29',
+            '11/30',
+            '12/1',
+            '12/2',
+            '12/3',
+            '12/4',
+            '12/5',
+        ]);
+        // 일요일이면 지난 요일이 없다
+        expect(labels(getBoardDays(dayjs('2026-11-29T10:00'), 0, 'weekday'))[0]).toBe('11/29');
+    });
+
+    it('toDaysSchedule: 날짜마다 그날 보이는 합주 (열 순서 그대로)', () => {
+        const monday: EnsembleResponse = {
+            _id: 'm',
+            teamId: 't',
+            teamName: '월요팀',
+            day: 0,
+            startTime: 2,
+            endTime: 3,
+            repeat: true,
+            nextDate: '2026-11-23T00:00:00',
+            due: '2099-12-31T00:00:00.000Z',
+        };
+        const days = getBoardDays(wed, 0, 'weekday').map(({ date }) => date);
+        const columns = toDaysSchedule([monday], {}, days, wed);
+        // 두 번째 열이 다음 주 월요일(11/30)
+        expect(columns.map((events) => events.map((e) => e.name))).toEqual([
+            [],
+            ['월요팀'],
+            [],
+            [],
+            [],
+            [],
+            [],
+        ]);
     });
 });

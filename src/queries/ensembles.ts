@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
 import { addEnsemble, deleteEnsemble, getEnsembles, updateEnsemble } from '@/api/ensemble';
 import { buildColorMap, toBoard, toTeams } from '@/lib/board';
-import { toWeekSchedule, type CalendarEvent, type WithLane } from '@/lib/calendar';
+import { toDaysSchedule, type CalendarEvent, type WithLane } from '@/lib/calendar';
 import type { EnsembleBoard, EnsembleUpdateRequest } from '@/types';
 import { ENSEMBLES, ensemblesQueryKey, useRefresh } from './keys';
 import { teamsQueryOptions } from './teams';
@@ -33,24 +33,21 @@ export function useBoard(): EnsembleBoard {
     );
 }
 
-const NO_WEEK: WithLane<CalendarEvent>[][] = Array.from({ length: 7 }, () => []);
-
 /**
- * 한 주의 캘린더 (View 개편 V-2). weekStart는 그 주 월요일 0시 (lib/calendar의 getWeekStart).
- * 팀 색이 팀 목록 순서로 정해지므로 팀·합주를 모두 불러온 뒤에 만든다. 불러오기 전에는 빈 주
+ * 합주판의 날짜들(열 순서)마다 그날 보이는 합주 (View 개편 V-2, 26차부터 날짜 단위: lib/calendar의 getBoardDays).
+ * 팀 색이 팀 목록 순서로 정해지므로 팀·합주를 모두 불러온 뒤에 만든다. 불러오기 전에는 빈 날짜들
  */
-export function useWeekSchedule(weekStart: Dayjs): WithLane<CalendarEvent>[][] {
+export function useBoardSchedule(dates: readonly Dayjs[]): WithLane<CalendarEvent>[][] {
     const { data: teams } = useQuery({ ...teamsQueryOptions, select: toTeams });
     const { data: ensembles } = useQuery(ensemblesQueryOptions);
-    const weekKey = weekStart.valueOf();
+    const datesKey = dates.map((date) => date.valueOf()).join(',');
 
-    return useMemo(
-        () =>
-            teams && ensembles
-                ? toWeekSchedule(ensembles, buildColorMap(teams), dayjs(weekKey), dayjs())
-                : NO_WEEK,
-        [teams, ensembles, weekKey],
-    );
+    return useMemo(() => {
+        const days = datesKey.split(',').map((ms) => dayjs(Number(ms)));
+        return teams && ensembles
+            ? toDaysSchedule(ensembles, buildColorMap(teams), days, dayjs())
+            : days.map(() => []);
+    }, [teams, ensembles, datesKey]);
 }
 
 // ---------------- 변경 (mutation) ----------------

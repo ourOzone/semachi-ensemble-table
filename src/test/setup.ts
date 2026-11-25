@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { toast } from 'sonner';
 import { afterAll, afterEach, beforeAll } from 'vitest';
+import { useBoardViewStore } from '@/components/schedule/boardViewStore';
 import { useDrawerStore } from '@/stores/drawer';
 import { server } from '@/test/server';
 
@@ -43,6 +44,9 @@ afterEach(() => {
     server.events.removeAllListeners(); // test/requests.ts의 recordRequests 리스너 정리
     // Zustand store는 모듈 전역이라 테스트끼리 상태가 이어진다 (이전 Context는 렌더링마다 새로 만들어졌다) → 초기 상태로
     useDrawerStore.setState(useDrawerStore.getInitialState(), true);
+    // 합주판 보기 방식도 모듈 전역 상태 + localStorage (26차)
+    localStorage.clear();
+    useBoardViewStore.setState({ view: 'rolling' });
     // Sonner 알림도 모듈 전역 상태다. 새 <Toaster />는 구독할 때 아직 닫히지 않은 알림을 받아 그리므로 모두 닫는다
     toast.dismiss();
 });

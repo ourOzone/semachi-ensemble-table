@@ -125,8 +125,8 @@ const WeekCalendar = ({
                     direction === 'prev' && 'motion-safe:slide-in-from-left-4',
                 )}
             >
-                {/* 요일 머리글 */}
-                <div className="grid grid-cols-[var(--hour-col)_repeat(7,minmax(0,1fr))] pb-2 md:pb-3">
+                {/* 요일 머리글. 아래 여백은 늘 자리를 잡는 "다음주" 줄이 대신한다 (29차, 이전: pb-2·PC pb-3) */}
+                <div className="grid grid-cols-[var(--hour-col)_repeat(7,minmax(0,1fr))] md:pb-0.5">
                     <div />
                     {boardDays.map(({ date, nextWeek }) => {
                         const isToday = date.isSame(today, 'day');

@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, 다음은 V-3 팀 (브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, V-3 팀 진행 중 (1차: 팀 목록·설정·다크 모드·스켈레톤, 공지·한마디 메인 화면 미리) (브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -993,6 +993,23 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 200/200 (옛 toBoard·isSkipped 테스트 삭제로 205 → 200) / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 4·경고 24 (새 코드 0건) / `pnpm format:check` ✅
 
+### 2026-11-25 — View 개편 V-3 (1차): 팀 목록, 공지·한마디 메인 화면, 설정·다크 모드, 스켈레톤
+
+커밋 넷 (기능별): `3c215fe` 팀 목록 · `b4f54c4` 공지·한마디·푸터 · `be370ac` 설정·다크 모드 · `1cf237a` 스켈레톤
+
+- 지금 → 바꾼 후
+  - 팀 추가: 팀 목록 맨 끝의 점선 칩 → 카드 맨 위 "팀" 머리 줄 오른쪽 버튼
+  - 팀 아닌 일정 칩: 팀 뒤에 이어짐·팀 색만 → 소모임 / 회의 등 줄을 나눔(펼쳤을 때·PC), 합주판과 같은 줄무늬 (합주 잡기 Drawer의 팀 고르기도)
+  - 공지: 파란 바탕 antd 버튼 → 흰 카드 (첫 줄, 나머지 +N). 한마디: 점선 추가 버튼 + 테두리 카드 → 흰 카드 안 머리 줄·목록(PC 두 줄)·비었을 때 안내. 푸터 새 코드 (V-4·V-5를 미리. 추가·삭제 Drawer는 옛 그대로)
+  - 처음 불러오는 동안: 빈 화면 → 스켈레톤(공지·팀·캘린더·한마디), 캘린더 빈 시간은 누를 수 없음
+  - 헤더: 보기 방식 스위치 → 설정 버튼. 설정 Drawer에 "합주판 오늘부터 보기"(기본 꺼짐)·"다크 모드"(새 기능, 기본 기기 설정) 스위치, 기기에 기억
+  - 다크 모드: 새 코드 전체(헤더·카드·캘린더·새 Drawer·알림). 팀 색 그대로. 옛 Drawer(팀 정보·추가·수정, 공지·한마디 추가/삭제)는 밝은 그대로
+- 구조: `ui/add-pill`·`ui/icon-switch`·`ui/skeleton`, `settings/SettingsDrawer`·`settings/themeStore`, `styles/patterns`(줄무늬 공유), 토큰 `surface`·`on-ink`·`link`·`shadow-card`와 `.dark`. `DrawerId`에 `settings`. `common/Container`·`styles/cardRadius` 삭제
+- 테스트: 팀 목록 머리 줄·줄무늬, 설정의 보기 방식 스위치(이전 헤더 스위치 테스트 대신)·다크 모드 스위치, 스켈레톤(응답을 막아 23개 → 0개). 팀 버튼 찾기를 "팀 목록" 묶음으로, 한마디 버튼 이름
+- 확인: Playwright Chrome 390·1280px, 밝은·어두운 기기 설정 각각 — 메인·펼친 팀 목록·설정·합주 정보·합주 잡기 Drawer, 응답 2.5초 지연으로 스켈레톤. 가로 넘침 없음, 콘솔 오류 없음
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 203/203 / `pnpm build` ✅ / `pnpm lint` → 에러 4·경고 24 (새 코드 0건) / `pnpm format:check` ✅
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -1037,4 +1054,4 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 1. ~~2단계 TS 전환~~ ✅ 완료
 2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)
 3. ~~3단계 내부 로직 개선~~ ✅ 완료 (2026-11-23)
-4. View 개편: 계획 `docs/VIEW_REDESIGN_PLAN.md` (V-0·V-1·V-2 ✅, 다음은 V-3 팀)
+4. View 개편: 계획 `docs/VIEW_REDESIGN_PLAN.md` (V-0·V-1·V-2 ✅, V-3 팀 진행 중)

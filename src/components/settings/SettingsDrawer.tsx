@@ -47,7 +47,8 @@ const SettingsDrawer = () => {
                                 <DrawerTitle className="text-[26px] leading-tight font-bold text-ink md:text-[28px]">
                                     설정
                                 </DrawerTitle>
-                                <DrawerDescription className="mt-1.5 text-[15px] text-neutral-500">
+                                {/* 화면에는 보이지 않는 설명 (V-3 3차: 회색 안내 문구 삭제, 읽기 프로그램용으로만) */}
+                                <DrawerDescription className="sr-only">
                                     이 기기에만 저장돼요
                                 </DrawerDescription>
                             </div>
@@ -65,14 +66,7 @@ const SettingsDrawer = () => {
                         <div
                             className={`${boxShape} mt-6 divide-y divide-neutral-100 border border-neutral-200`}
                         >
-                            <SettingRow
-                                title="합주판 오늘부터 보기"
-                                description={
-                                    view === 'rolling'
-                                        ? '오늘이 맨 왼쪽에 와요'
-                                        : '일~토 요일 고정, 지난 요일은 다음 주 날짜로'
-                                }
-                            >
+                            <SettingRow title="합주판 오늘부터 보기">
                                 <IconSwitch
                                     label="합주판 오늘부터 보기"
                                     icon={CalendarDays}
@@ -80,7 +74,7 @@ const SettingsDrawer = () => {
                                     onChange={(on) => setView(on ? 'rolling' : 'weekday')}
                                 />
                             </SettingRow>
-                            <SettingRow title="다크 모드" description="처음엔 기기 설정을 따라요">
+                            <SettingRow title="다크 모드">
                                 <IconSwitch
                                     label="다크 모드"
                                     icon={Moon}
@@ -96,20 +90,9 @@ const SettingsDrawer = () => {
     );
 };
 
-const SettingRow = ({
-    title,
-    description,
-    children,
-}: {
-    title: string;
-    description: string;
-    children: ReactNode;
-}) => (
+const SettingRow = ({ title, children }: { title: string; children: ReactNode }) => (
     <div className="flex items-center justify-between gap-4 px-4 py-3.5 md:px-5 md:py-4">
-        <div className="min-w-0">
-            <p className="text-[16px] font-bold text-ink">{title}</p>
-            <p className="mt-0.5 text-[13px] text-neutral-500">{description}</p>
-        </div>
+        <p className="min-w-0 text-[16px] font-bold text-ink">{title}</p>
         {children}
     </div>
 );

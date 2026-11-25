@@ -1,11 +1,8 @@
 import { useState, useCallback } from 'react';
-import styled from 'styled-components';
-import { cardRadius } from '@/styles/cardRadius';
 import { useDrawerContext } from '@/context';
 import { useAddNotice, useDeleteNotice, useNotices, useRefreshNotices } from '@/queries/notes';
 import { noticeExists } from '@/api/notice';
-import { Button } from 'antd';
-import { BellOutlined } from '@ant-design/icons';
+import { Bell, ChevronRight } from 'lucide-react';
 import NoticeDrawer from './NoticeDrawer';
 import AddNoticeDrawer from './AddNoticeDrawer';
 import DeleteNoticeDrawer from './DeleteNoticeDrawer';
@@ -77,12 +74,46 @@ const Notice = () => {
         [closeAllDrawers, deleteNoticeAsync],
     );
 
+    // 맨 위 공지의 첫 줄. 누르면 공지 목록(아직 옛 Drawer)
+    const first = notices[0]?.text.split('\n')[0];
+
     return (
         <>
-            <NoticeButton onClick={() => openDrawer('notice')}>
-                <BellOutlined />
-                <Text>{notices?.[0]?.text.split('\n')[0] || '공지가 딱히 없네요'}</Text>
-            </NoticeButton>
+            {/*
+              공지 카드 (V-3 1차에 미리 만듦, V-5 범위): 파란 바탕 antd 버튼 → 흰 카드 (합주판과 같은 모양).
+              공지가 여러 개면 오른쪽에 나머지 개수
+            */}
+            <section className="ui w-full max-w-[1080px]">
+                <button
+                    type="button"
+                    onClick={() => openDrawer('notice')}
+                    className="flex w-full items-center gap-3 rounded-card bg-surface px-4 py-4 text-left shadow-card transition-[background-color,scale] duration-150 hover:bg-neutral-50 active:scale-[0.99] md:gap-4 md:px-7 md:py-5"
+                >
+                    <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-ink md:size-12">
+                        <Bell className="size-5 md:size-6" aria-hidden />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block text-[12px] font-bold text-neutral-500 md:text-[13px]">
+                            공지
+                        </span>
+                        <span
+                            className={
+                                first
+                                    ? 'block truncate text-[16px] font-bold text-ink md:text-[19px]'
+                                    : 'block truncate text-[16px] text-neutral-500 md:text-[19px]'
+                            }
+                        >
+                            {first || '공지가 딱히 없네요'}
+                        </span>
+                    </span>
+                    {notices.length > 1 && (
+                        <span className="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-[12px] font-bold text-neutral-600 md:text-[13px]">
+                            +{notices.length - 1}
+                        </span>
+                    )}
+                    <ChevronRight className="size-5 shrink-0 text-neutral-400" aria-hidden />
+                </button>
+            </section>
             <NoticeDrawer
                 drawerId="notice"
                 notices={notices}
@@ -108,36 +139,5 @@ const Notice = () => {
         </>
     );
 };
-
-const NoticeButton = styled(Button)`
-    width: 100%;
-    max-width: 1080px;
-    padding: 2rem 1.25rem;
-    background-color: ${({ theme }) => theme.lightBlue};
-    ${cardRadius}
-    box-shadow: 0 2px 10px 2px rgba(0, 0, 0, 0.1);
-    border: none;
-    outline: none;
-    display: flex;
-    justify-content: flex-start;
-
-    & svg {
-        font-size: 1.75rem;
-        color: ${({ theme }) => theme.deepDarkGray};
-    }
-    &:hover {
-        background-color: ${({ theme }) => theme.semiLightBlue} !important;
-    }
-`;
-
-const Text = styled.span`
-    font-size: 1.25rem;
-    padding-left: 0.5rem;
-    color: ${({ theme }) => theme.deepDarkGray};
-    transition: color 0.3s ease;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-`;
 
 export default Notice;

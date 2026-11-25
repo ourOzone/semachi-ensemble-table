@@ -1,12 +1,9 @@
 import { useState, useCallback } from 'react';
-import styled from 'styled-components';
-import { squircle } from '@/styles/cardRadius';
 import { useDrawerContext } from '@/context';
 import { useAddNote, useDeleteNote, useNotes, useRefreshNotes } from '@/queries/notes';
 import { noteExists } from '@/api/note';
-import { Button } from 'antd';
-import { PlusCircleOutlined, CloseOutlined } from '@ant-design/icons';
-import { Container } from '@/components/common/Container';
+import { X } from 'lucide-react';
+import { AddPill } from '@/components/ui/add-pill';
 import AddNoteDrawer from './AddNoteDrawer';
 import DeleteNoteDrawer from './DeleteNoteDrawer';
 
@@ -78,20 +75,44 @@ const Note = () => {
     );
 
     return (
-        <Container>
-            <AddButton onClick={() => openDrawer('addNote')}>
-                <PlusCircleOutlined />
-                멋진 한마디 남겨요 (일주일 후 자동 삭제돼요)
-            </AddButton>
-            {notes &&
-                notes.map((note) => (
-                    <NoteCard key={note.id}>
-                        <NoteText>{note.text}</NoteText>
-                        <NoteDeleteButton onClick={() => handleClickDelete(note.id)}>
-                            <CloseOutlined />
-                        </NoteDeleteButton>
-                    </NoteCard>
-                ))}
+        // 한마디 카드 (V-3 1차에 미리 만듦, V-4 범위): 점선 추가 버튼 + 테두리 카드 목록 → 흰 카드 안에 머리 줄(제목·추가) + 목록.
+        // PC는 두 줄로 나란히
+        <section className="ui w-full max-w-[1080px] rounded-card bg-surface p-4 shadow-card md:p-7">
+            <div className="mb-3 flex items-center justify-between gap-3 md:mb-4">
+                <div className="min-w-0">
+                    <h2 className="text-[17px] font-bold text-ink md:text-[20px]">한마디</h2>
+                    <p className="text-[12px] text-neutral-500 md:text-[13px]">
+                        일주일 후 자동으로 삭제돼요
+                    </p>
+                </div>
+                <AddPill label="한마디 남기기" onClick={() => openDrawer('addNote')} />
+            </div>
+            {notes.length === 0 ? (
+                <p className="squircle rounded-2xl bg-neutral-50 py-8 text-center text-[14px] text-neutral-500 supports-[corner-shape:squircle]:rounded-[24px] md:text-[15px]">
+                    아직 한마디가 없어요. 첫 한마디를 남겨 보세요
+                </p>
+            ) : (
+                <ul className="grid gap-2 md:grid-cols-2 md:gap-3">
+                    {notes.map((note) => (
+                        <li
+                            key={note.id}
+                            className="squircle flex items-start gap-1 rounded-2xl bg-neutral-50 py-3 pr-1.5 pl-4 supports-[corner-shape:squircle]:rounded-[24px] md:py-4 md:pr-2 md:pl-5"
+                        >
+                            <p className="min-w-0 flex-1 py-1 text-[15px] leading-relaxed break-all whitespace-pre-line text-ink md:text-[16px]">
+                                {note.text}
+                            </p>
+                            <button
+                                type="button"
+                                aria-label="한마디 삭제"
+                                onClick={() => handleClickDelete(note.id)}
+                                className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-neutral-400 transition-[background-color,color,scale] duration-150 hover:bg-neutral-200 hover:text-ink active:scale-[0.95]"
+                            >
+                                <X className="size-4" aria-hidden />
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
             <AddNoteDrawer
                 drawerId="addNote"
                 text={text}
@@ -108,61 +129,8 @@ const Note = () => {
                 checkNoteExists={checkNoteExists}
                 handleDeleteNote={handleDeleteNote}
             />
-        </Container>
+        </section>
     );
 };
-
-const AddButton = styled(Button)`
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    ${squircle('1rem', '1.5rem')}
-    border: 0.125rem dashed ${({ theme }) => theme.darkGray};
-    height: 5.5rem;
-    box-shadow: none;
-
-    & * {
-        font-size: 1.25rem;
-        color: ${({ theme }) => theme.darkGray};
-        transition: color 0.3s ease;
-    }
-    & svg {
-        font-size: 2.5rem;
-    }
-
-    &:hover {
-        & *,
-        svg {
-            color: ${({ theme }) => theme.primary};
-        }
-    }
-`;
-
-const NoteCard = styled.div`
-    display: flex;
-    justify-content: space-between;
-    margin-top: 0.5rem;
-    min-height: 5rem;
-    ${squircle('1rem', '1.5rem')}
-    border: 1px solid ${({ theme }) => theme.border};
-    box-shadow: 0 0.125rem 0 rgba(0, 0, 0, 0.02);
-`;
-
-const NoteText = styled.div`
-    padding: 0.75rem 1rem;
-    font-size: 1.25rem;
-    line-height: 2rem;
-    white-space: pre-line;
-    word-break: break-all;
-`;
-
-const NoteDeleteButton = styled.div`
-    margin: 1rem;
-    user-select: none;
-    cursor: pointer;
-    & svg {
-        font-size: 1.25rem !important;
-    }
-`;
 
 export default Note;

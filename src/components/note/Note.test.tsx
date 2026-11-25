@@ -27,7 +27,7 @@ describe('한마디', () => {
         const user = userEvent.setup();
         renderApp();
 
-        await user.click(await screen.findByRole('button', { name: /멋진 한마디 남겨요/ }));
+        await user.click(await screen.findByRole('button', { name: '한마디 남기기' }));
         // Drawer는 열림 애니메이션 뒤 내용 칸으로 포커스를 옮긴다. 그 전에 입력을 시작하면 PIN 입력 도중 포커스가
         // 내용 칸으로 되돌아갈 수 있어(ISSUES V7, 팀 추가 PIN 단계와 같은 구조), 포커스가 옮겨진 뒤 입력한다
         const contentInput = await screen.findByPlaceholderText('내용 여따 써요');
@@ -60,7 +60,7 @@ describe('한마디', () => {
         renderApp();
 
         const card = (await screen.findByText('메모입니다')).parentElement!;
-        await user.click(within(card).getByRole('img', { name: 'close' }));
+        await user.click(within(card).getByRole('button', { name: '한마디 삭제' }));
         await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
         await user.click(await findEnabledButton('진짜 삭제해요'));
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { LayoutGrid, Plus, X } from 'lucide-react';
+import { LayoutGrid, X } from 'lucide-react';
+import { AddPill } from '@/components/ui/add-pill';
 import { cn } from '@/lib/utils';
 import { EVENT_STRIPES } from '@/styles/patterns';
 
@@ -99,19 +100,7 @@ const TeamChips = ({ teams, eventGroups, onAddTeam }: TeamChipsProps) => {
             {/* 머리 줄: "팀" + 팀 추가 (V-3 1차, 이전: 목록 맨 끝의 점선 칩) */}
             <div className="mb-2.5 flex items-center justify-between gap-3 md:mb-3">
                 <h2 className="text-[17px] font-bold text-ink md:text-[20px]">팀</h2>
-                <button
-                    type="button"
-                    onClick={onAddTeam}
-                    className={cn(
-                        'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-neutral-100 pr-3 pl-1 text-[13px] font-bold text-ink hover:bg-neutral-200 md:h-9 md:pr-3.5 md:text-[14px]',
-                        pressable,
-                    )}
-                >
-                    <span className="inline-flex size-6 items-center justify-center rounded-full bg-ink text-on-ink md:size-7">
-                        <Plus className="size-3.5 md:size-4" strokeWidth={2.75} aria-hidden />
-                    </span>
-                    팀 추가
-                </button>
+                <AddPill label="팀 추가" onClick={onAddTeam} />
             </div>
             <TeamList heightStyle={heightStyle} innerRef={innerRef}>
                 {expanded ? (

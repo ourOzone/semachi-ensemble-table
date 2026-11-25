@@ -30,6 +30,13 @@ const TIME_MIN_SLOTS = 2;
 const EVENT_STRIPES =
     'repeating-linear-gradient(135deg, rgb(255 255 255 / 0.22) 0 3px, transparent 3px 7px)';
 
+/**
+ * 일회성 합주 표시: 블록 맨 아래 가운데에 입장권처럼 반원 구멍 (25차). 반지름은 --notch.
+ * 마스크로 블록(바탕·테두리)을 그 모양만큼 비운다
+ */
+const ONE_TIME_NOTCH =
+    'radial-gradient(circle at 50% 100%, transparent var(--notch), #000 calc(var(--notch) + 0.5px))';
+
 interface WeekCalendarProps {
     /** [요일 0~6][그날 보이는 합주] */
     week: WithLane<CalendarEvent>[][];
@@ -248,13 +255,23 @@ function EventBlock({ event, onClick }: EventBlockProps) {
         style.backgroundColor = color;
         if (isEvent) style.backgroundImage = EVENT_STRIPES;
     }
+    if (!event.repeat) {
+        style.maskImage = ONE_TIME_NOTCH;
+        style.WebkitMaskImage = ONE_TIME_NOTCH;
+    }
 
     return (
         <button
             type="button"
             onClick={onClick}
             aria-label={`${name} ${time}${skipped ? ' 이번 주 쉼' : ''}`}
+            data-one-time={event.repeat ? undefined : ''}
             className={cn(
+                // 일회성 구멍 반지름: 30분 블록은 글자를 덜 가리게 작게 (살짝 걸치는 정도)
+                !event.repeat &&
+                    (slots === 1
+                        ? '[--notch:3px] md:[--notch:3.5px]'
+                        : '[--notch:5px] md:[--notch:6px]'),
                 '@container squircle absolute flex flex-col overflow-hidden rounded-md px-0.5 py-0.5 text-left transition-[filter,background-color] duration-150 md:rounded-lg md:py-1',
                 // 스쿼클이면 반지름을 키워 일반 둥근 모서리와 비슷한 크기로 보이게
                 'supports-[corner-shape:squircle]:rounded-[11px] md:supports-[corner-shape:squircle]:rounded-[15px]',

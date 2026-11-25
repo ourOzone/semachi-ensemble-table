@@ -1,6 +1,10 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { url } from '@/constants';
+import { ensembles } from '@/test/fixtures';
+import { server } from '@/test/server';
 import { mockInitialData } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
 
@@ -61,6 +65,33 @@ describe('합주판 (주 단위 캘린더)', () => {
         const normal = screen.getByRole('button', { name: '테스트밴드 10:00–11:00' });
         // 넓을 때의 한 줄·아주 좁을 때의 두 줄 표시가 함께 들어 있다 (CSS로 하나만 보임)
         expect(within(normal).getAllByText('10:00–11:00').length).toBeGreaterThan(0);
+    });
+
+    it('일회성 합주 블록에만 입장권 같은 반원 구멍 표시 (30분은 작게)', async () => {
+        server.use(
+            http.get(`${url}/ensembles`, () =>
+                HttpResponse.json([
+                    { ...ensembles[0]!, _id: 'r', day: 4, nextDate: '2026-11-20T00:00:00' },
+                    {
+                        ...ensembles[0]!,
+                        _id: 'o',
+                        teamName: '일회성',
+                        day: 5,
+                        startTime: 6,
+                        endTime: 6,
+                        repeat: false,
+                        nextDate: '2026-11-21T00:00:00',
+                    },
+                ]),
+            ),
+        );
+        renderApp();
+
+        const repeat = await screen.findByRole('button', { name: '테스트밴드 10:00–11:00' });
+        const oneTime = screen.getByRole('button', { name: '일회성 12:00–12:30' });
+        expect(repeat).not.toHaveAttribute('data-one-time');
+        expect(oneTime).toHaveAttribute('data-one-time');
+        expect(oneTime.className).toContain('[--notch:3px]');
     });
 
     it('팀 목록은 "전체"로 펼치고, 펼친 동안은 "닫기"로 접는다', async () => {

@@ -773,8 +773,8 @@ const DatePicker = ({
                     mode="single"
                     required
                     locale={ko}
-                    // 합주판과 같이 월요일부터
-                    weekStartsOn={1}
+                    // 일요일부터 (25차, 이전: 합주판과 같이 월요일부터)
+                    weekStartsOn={0}
                     selected={selected?.toDate()}
                     defaultMonth={(selected ?? first).toDate()}
                     startMonth={first.toDate()}
@@ -797,9 +797,9 @@ const DatePicker = ({
                         root: 'w-full',
                         month: 'flex w-full flex-col gap-2',
                         caption_label: 'text-[16px] font-bold select-none',
-                        // 요일 머리도 토(6번째)·일(7번째) 색
+                        // 요일 머리도 일(1번째)·토(7번째) 색
                         weekdays:
-                            'flex [&>*:nth-child(6)]:text-blue-600 [&>*:nth-child(7)]:text-red-500',
+                            'flex [&>*:nth-child(1)]:text-red-500 [&>*:nth-child(7)]:text-blue-600',
                         weekday: 'flex-1 text-[13px] font-normal text-neutral-400 select-none',
                         week: 'mt-0.5 flex w-full',
                         day: 'group/day relative flex h-[38px] flex-1 items-center justify-center p-0 text-center select-none',
@@ -926,11 +926,12 @@ const DayBar = ({
                             width: percent(event.endTime + 1 - event.startTime),
                             top: `${(event.lane / event.lanes) * 100}%`,
                             height: `${100 / event.lanes}%`,
-                            // 본래 색 그대로 (23차, 이전: 연하게). 이웃한 합주와는 안쪽 흰 선으로 구분
+                            // 연하게 (25차에 되돌림: 23차의 본래 색보다 고른 시간 창이 잘 보인다). 이웃한 합주와는 안쪽 흰 선으로 구분
                             ...(event.status === 'skipped'
                                 ? { borderColor: event.color }
                                 : {
                                       backgroundColor: event.color,
+                                      opacity: 0.55,
                                       boxShadow: 'inset 0 0 0 1px white',
                                   }),
                         }}

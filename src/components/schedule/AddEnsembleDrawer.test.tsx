@@ -374,6 +374,12 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
         );
         expect(drawer.getByText('이 날짜 이후에 자동으로 삭제돼요')).toBeInTheDocument();
         expect(drawer.getByRole('button', { name: '종료 날짜를 골라 주세요' })).toBeDisabled();
+        // 달력은 일요일부터 (25차)
+        expect(
+            drawer
+                .getAllByRole('columnheader', { hidden: true })
+                .map((header) => header.textContent),
+        ).toEqual(['일', '월', '화', '수', '목', '금', '토']);
         // 시작 날짜(11/21)보다 앞은 고를 수 없다
         expect(drawer.getByRole('button', { name: /11월 20일/ })).toBeDisabled();
         await user.click(drawer.getByRole('button', { name: /11월 28일/ }));

@@ -31,7 +31,10 @@ import { days, eventIds } from '@/constants';
 import { buildColorMap } from '@/lib/board';
 import { getEnsembleSchedule } from '@/lib/calendar';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
+import { getRepeatEnd } from '@/lib/ensemble';
+import { ensemblesQueryOptions } from '@/queries/ensembles';
 import { LOCKED_SCROLL_VAR, lockPageScroll } from '@/lib/pageScrollLock';
 import { useTeams } from '@/queries/teams';
 import { useDrawerStore } from '@/stores/drawer';
@@ -122,6 +125,7 @@ const EnsembleInfoDrawer = ({
     handleDeleteEnsemble,
 }: EnsembleInfoDrawerProps) => {
     const teams = useTeams();
+    const { data: ensembleList } = useQuery(ensemblesQueryOptions);
     const { id: teamId, name, setTeamStates } = useTeamContext();
     const {
         id,
@@ -234,6 +238,10 @@ const EnsembleInfoDrawer = ({
         const noun = isEvent ? '일정' : '합주';
         const skipped = skippedDates.length > 0;
         const timeRange = formatTimeRange(ensemble.startTime, ensemble.endTime);
+        // 반복 종료 날짜 (23차, 합주 잡기에서 지정). 계속 반복이면 null
+        // 서버 기록도 반복일 때만 (일회성을 반복으로 바꾼 직후에는 다시 불러오기 전까지 기록의 due가 일회성 날짜다)
+        const record = ensembleList?.find(({ _id: ensembleId }) => ensembleId === ensemble.id);
+        const repeatEnd = ensemble.repeat && record?.repeat ? getRepeatEnd(record.due, now) : null;
 
         if (step !== 'info') {
             const object = `${noun}${isEvent ? '을' : '를'}`;
@@ -347,7 +355,9 @@ const EnsembleInfoDrawer = ({
                         ) : (
                             <CalendarCheck className="size-4" aria-hidden />
                         )}
-                        {ensemble.repeat ? '매주 반복' : '이번 한 번'}
+                        {ensemble.repeat
+                            ? `매주 반복${repeatEnd ? ` · ${formatDate(repeatEnd)}까지` : ''}`
+                            : '이번 한 번'}
                     </DrawerDescription>
                 </div>
 

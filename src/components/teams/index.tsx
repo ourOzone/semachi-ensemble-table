@@ -141,7 +141,7 @@ const Teams = () => {
 
     // 합주 잡기 Drawer의 저장 (View 개편 V-2 21차). 성공하면 Drawer를 모두 닫고 알림 (이전: 완료 화면 Drawer "락앤롤!")
     const handleAddEnsemble = useCallback(
-        async ({ team, repeat, date, startTime, endTime }: AddEnsembleInput) => {
+        async ({ team, repeat, date, startTime, endTime, repeatEnd }: AddEnsembleInput) => {
             try {
                 // 서버가 팀 존재를 검사하지 않으므로(ISSUES B4) 사전 확인을 유지한다.
                 // 소모임·일정은 팀 목록에 없는 고정 id라 확인하지 않는다 (옛 흐름은 확인 요청을 보냈다)
@@ -155,12 +155,12 @@ const Teams = () => {
                 const nextDate = date.hour(hour).minute(minute);
                 await addEnsembleAsync({
                     teamName: team.name,
-                    ...toEnsembleRequest(team.id, repeat, nextDate, startTime, endTime),
+                    ...toEnsembleRequest(team.id, repeat, nextDate, startTime, endTime, repeatEnd),
                 });
                 setTeamStates(); // 초기화
                 closeAllDrawers();
                 toast.success(team.isEvent ? '일정을 잡았어요.' : '합주를 잡았어요.', {
-                    description: `${team.name} · ${formatDate(date)}${repeat ? '부터 매주' : ''} ${formatTimeRange(startTime, endTime)}`,
+                    description: `${team.name} · ${formatDate(date)}${repeat ? '부터 매주' : ''} ${formatTimeRange(startTime, endTime)}${repeatEnd ? ` (${formatDate(repeatEnd)}까지)` : ''}`,
                 });
                 return true;
             } catch {

@@ -294,13 +294,15 @@ export interface NewEnsemble extends SlotRange {
     /** 합주 날짜 (반복이면 시작 날짜) */
     date: Dayjs;
     repeat: boolean;
+    /** 반복 종료 날짜 (이 날짜까지만). 없으면 계속 */
+    until?: Dayjs | null;
 }
 
 /**
  * 새 합주를 넣으면 같은 시간에 MAX_OVERLAP개를 넘게 겹치는 첫 날짜. 없으면 null.
  * 그날 실제로 하는 합주(getOccurrence가 normal)만 센다 (미뤄서 쉬는 주는 세지 않음).
  * - 일회성: 그날만
- * - 반복: 시작 날짜부터 매주. 반복 합주는 nextDate부터 매주 하고 일회성 합주는 그날만 하므로,
+ * - 반복: 시작 날짜부터 매주(until이 있으면 그날까지). 반복 합주는 nextDate부터 매주 하고 일회성 합주는 그날만 하므로,
  *   겹침 수가 바뀌는 날짜(시작 날짜, 같은 요일 합주들의 nextDate 이후 처음 오는 그 요일)만 보면 된다
  */
 export function findOverlapLimit(
@@ -323,6 +325,7 @@ export function findOverlapLimit(
     }
 
     for (const date of dates) {
+        if (ensemble.until && date.isAfter(ensemble.until, 'day')) break;
         const held = sameDay.filter((e) => getOccurrence(e, date) === 'normal');
         for (let slot = ensemble.startTime; slot <= ensemble.endTime; slot++) {
             const count = held.filter((e) => e.startTime <= slot && slot <= e.endTime).length;

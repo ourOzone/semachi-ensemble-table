@@ -418,6 +418,17 @@ describe('합주 잡기: 그날 합주와 겹침', () => {
             ).toBeNull();
         });
 
+        it('반복 종료 날짜(until) 뒤의 주는 세지 않는다', () => {
+            const later = [...three, at('D', { repeat: false, nextDate: '2026-12-10T00:00:00' })];
+            const repeat = { ...new1, repeat: true };
+            expect(findOverlapLimit(later, { ...repeat, until: dayjs('2026-12-03') })).toBeNull();
+            expect(
+                findOverlapLimit(later, { ...repeat, until: dayjs('2026-12-10') })?.format(
+                    'YYYY-MM-DD',
+                ),
+            ).toBe('2026-12-10');
+        });
+
         it('반복 합주의 nextDate가 요일과 어긋나도 그 뒤 처음 오는 그 요일부터 센다', () => {
             // D는 12/5(토)부터 매주 목요일 (요일 3)
             const later = [...three, at('D', { nextDate: '2026-12-05T00:00:00' })];

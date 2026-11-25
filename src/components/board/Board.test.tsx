@@ -207,6 +207,26 @@ describe('합주표', () => {
         expect(countOf(requests, 'GET /ensemble/ensemble-1')).toBe(1);
     });
 
+    it('반복 종료 날짜가 있으면 머리에 "…까지"를 보여주고, 미뤄도 그대로 둔다', async () => {
+        mockEnsemble({ due: '2026-12-21T00:00:00.000Z' });
+        const { user, dialog } = await openEnsembleInfo();
+        expect(within(dialog).getByText('매주 반복 · 12/21(월)까지')).toBeInTheDocument();
+
+        await user.click(within(dialog).getByRole('button', { name: '11/30(월)로 미루기' }));
+        await findDialog('11/30(월)로 미룰까요?');
+        await enterPin(user);
+
+        await waitFor(() => expect(putBody).toBeDefined());
+        // 이전: 수정·미루기 때마다 2099-12-31로 덮어썼다
+        expect(putBody).toMatchObject({ repeat: true, type: '무기한', due: '2026-12-21' });
+    });
+
+    it('반복 종료 날짜가 이미 지났거나(옛 데이터) 계속 반복이면 "…까지"가 없다', async () => {
+        mockEnsemble({ due: '2026-01-01T00:00:00.000Z' });
+        const { dialog } = await openEnsembleInfo();
+        expect(within(dialog).getByText('매주 반복')).toBeInTheDocument();
+    });
+
     // F4: 이전에는 저장을 기다리지 않고 화면의 날짜를 먼저 바꿔, 저장이 실패해도 바뀐 날짜가 보였다
     it('미루기: 저장에 실패하면 알림을 띄우고 PIN 단계에 머물러 다시 넣게 한다. 뒤로 가면 날짜는 그대로', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});

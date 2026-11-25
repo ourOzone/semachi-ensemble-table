@@ -1,13 +1,24 @@
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import {
+    useEffect,
+    useRef,
+    useState,
+    type ComponentType,
+    type KeyboardEvent,
+    type PointerEvent,
+    type ReactNode,
+} from 'react';
 import { useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { ko } from 'react-day-picker/locale';
 import {
     CalendarCheck,
     CalendarDays,
+    CalendarX2,
     Check,
     ChevronDown,
     GripVertical,
+    Infinity as InfinityIcon,
+    Info,
     Minus,
     OctagonAlert,
     Plus,
@@ -53,8 +64,9 @@ import {
 } from './drawerParts';
 
 // 합주 잡기 Drawer (View 개편 V-2 21차). 옛 합주 추가 4단계(반복 여부 → 달력 → 시간 → 완료 화면)를 Drawer 하나로 합쳤다.
-// 입력: 팀 → 반복 여부 → 날짜 → 시작 시간·소요 시간. PIN은 받지 않는다 (옛 흐름도 받지 않았다).
-// - 팀 정보·소모임 정보에서 열면 팀이 골라져 있고 날짜·시간을 고른다
+// 입력: 팀 → 반복 여부 → 날짜 → 시간(그날 동방 막대에서 끌어 고름)·소요 시간 → 반복 종료(매주 반복일 때, 고르지 않아도 됨).
+// PIN은 받지 않는다 (옛 흐름도 받지 않았다).
+// - 팀 정보·소모임 정보에서 열면 팀이 골라져 있고 날짜를 고른다 (시간은 12:00부터 2시간으로 시작)
 // - 합주판(빈 시간·겹친 합주 목록·합주 정보)에서 열면 날짜·시작 시간이 채워져 있고 팀을 고른다
 // - 소요 시간은 2시간으로 시작한다 (30분·1시간·2시간·직접 입력)
 // - 그날 동방에 잡힌 합주를 가로 막대로 보여주고, 겹치면 알린다. 한 시간에 MAX_OVERLAP개가 넘게 겹치면 잡을 수 없다
@@ -77,6 +89,8 @@ export interface AddEnsembleInput {
     date: Dayjs;
     startTime: TimeSlot;
     endTime: TimeSlot;
+    /** 반복 종료 날짜 (이 날짜 이후에 자동 삭제). 일회성이거나 고르지 않으면 null (계속 반복) */
+    repeatEnd: Dayjs | null;
 }
 
 interface AddEnsembleDrawerProps {
@@ -91,12 +105,11 @@ const SLOT_COUNT = 30;
 /** 소요 시간 기본값: 2시간 */
 const DEFAULT_DURATION = 4;
 const DURATION_CHIPS = [1, 2, 4] as const;
+/** 시작 시간을 미리 채우지 않고 열 때(팀 정보에서)의 시작: 12:00 */
+const DEFAULT_START = 6;
 /** 소제목을 맨 위로 스크롤할 때 위에 남기는 여백 (손잡이가 겹치는 자리) */
 const SCROLL_TOP_GAP = 24;
-/** 시작 시간 칩을 스크롤할 때 고른 칩의 가운데가 오는 위치 (왼쪽에서 폭의 30%) */
-const START_CHIP_ANCHOR = 0.3;
-
-type SectionKey = 'team' | 'repeat' | 'date' | 'time';
+type SectionKey = 'team' | 'repeat' | 'date' | 'time' | 'end';
 
 /** "11월 26일 목요일" */
 const formatLongDate = (date: Dayjs) =>
@@ -149,12 +162,17 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
     const [repeat, setRepeat] = useState<boolean | null>(null);
     const [date, setDate] = useState<Dayjs | null>(preset.date ?? null);
     const [dateOpen, setDateOpen] = useState(date === null);
-    const [startTime, setStartTime] = useState<TimeSlot | null>(preset.startTime ?? null);
-    // 소요 시간(시간칸 수). 24:00을 넘지 않게 시작 시간을 바꿀 때마다 줄인다
+    // 시작 시간: 합주판에서 열면 누른 시간, 팀 정보에서 열면 12:00 (그날 동방 막대의 창이 처음부터 보이게, 23차)
+    const [startTime, setStartTime] = useState<TimeSlot>(preset.startTime ?? DEFAULT_START);
+    // 소요 시간(시간칸 수). 24:00을 넘지 않게
     const [duration, setDuration] = useState(
-        Math.min(DEFAULT_DURATION, SLOT_COUNT - (preset.startTime ?? 0)),
+        Math.min(DEFAULT_DURATION, SLOT_COUNT - (preset.startTime ?? DEFAULT_START)),
     );
     const [customDuration, setCustomDuration] = useState(false);
+    // 반복 종료 날짜 (매주 반복일 때만, 고르지 않아도 됨 = 계속 반복). 이 날짜 이후에 자동으로 삭제된다 (서버 due)
+    const [hasRepeatEnd, setHasRepeatEnd] = useState(false);
+    const [repeatEnd, setRepeatEnd] = useState<Dayjs | null>(null);
+    const [repeatEndOpen, setRepeatEndOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
     // 고른 항목의 소제목을 맨 위로 (bottom: 맨 아래까지). 그려진 뒤(접힘·펼침이 반영된 뒤)에 스크롤한다.
@@ -185,36 +203,36 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
         sectionRefs.current[key] = el;
     };
 
-    const maxDuration = SLOT_COUNT - (startTime ?? 0);
-    const range: SlotRange | null =
-        startTime === null ? null : { startTime, endTime: startTime + duration - 1 };
+    const maxDuration = SLOT_COUNT - startTime;
+    const range: SlotRange = { startTime, endTime: startTime + duration - 1 };
 
-    const pickStart = (slot: TimeSlot) => {
-        setStartTime(slot);
-        setDuration((prev) => Math.min(prev, SLOT_COUNT - slot));
-    };
     const pickDuration = (slots: number, custom: boolean) => {
         setCustomDuration(custom);
         setDuration(slots);
         // 직접 입력은 맨 아래의 −/+ 가 보이게
         scrollToSection(custom ? 'bottom' : 'time');
     };
+    const pickDate = (picked: Dayjs) => {
+        setDate(picked);
+        setDateOpen(false);
+        // 시작 날짜보다 앞선 종료 날짜는 다시 고르게 한다
+        if (repeatEnd && repeatEnd.isBefore(picked, 'day')) setRepeatEnd(null);
+        scrollToSection('date');
+    };
 
     // 그날 동방: 합주판과 같은 기준으로 그날 보이는 합주 (색은 팀의 지금 색)
     const allTeams = useTeams();
     const { data: ensembles = [] } = useQuery(ensemblesQueryOptions);
     const dayEvents = date ? eventsOnDate(ensembles, buildColorMap(allTeams), date, dayjs()) : [];
-    const conflicts = range
-        ? overlapping(
-              dayEvents.filter((event) => event.status === 'normal'),
-              range,
-          )
-        : [];
-    // 반복 여부를 고르기 전에는 그날만 본다
-    const limitDate =
-        date && range
-            ? findOverlapLimit(ensembles, { date, repeat: repeat ?? false, ...range })
-            : null;
+    const conflicts = overlapping(
+        dayEvents.filter((event) => event.status === 'normal'),
+        range,
+    );
+    // 반복 여부를 고르기 전에는 그날만 본다. 반복 종료 날짜가 있으면 그날까지만
+    const endDate = repeat && hasRepeatEnd ? repeatEnd : null;
+    const limitDate = date
+        ? findOverlapLimit(ensembles, { date, repeat: repeat ?? false, until: endDate, ...range })
+        : null;
 
     const noun = team?.isEvent ? '일정' : '합주';
     const color = team?.color ?? '#18181b';
@@ -224,21 +242,30 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
           ? '반복 여부를 골라 주세요'
           : !date
             ? '날짜를 골라 주세요'
-            : startTime === null
-              ? '시작 시간을 골라 주세요'
+            : repeat && hasRepeatEnd && !repeatEnd
+              ? '종료 날짜를 골라 주세요'
               : null;
     const ready = missing === null && limitDate === null && !submitting;
 
     const submit = async () => {
-        if (!ready || !team || repeat === null || !date || !range) return;
+        if (!ready || !team || repeat === null || !date) return;
         setSubmitting(true);
         // 실패하면 입력을 그대로 두고 다시 누를 수 있게 한다 (성공하면 Drawer가 닫힌다)
-        if (!(await onSubmit({ team, repeat, date, ...range }))) setSubmitting(false);
+        const saved = await onSubmit({ team, repeat, date, ...range, repeatEnd: endDate });
+        if (!saved) setSubmitting(false);
     };
 
     return (
         <>
-            <div ref={scrollAreaRef} className={cn(scrollAreaClassName, 'flex-1')}>
+            <div
+                ref={scrollAreaRef}
+                // 스크롤 막대는 숨긴다: PC에서 내용이 조금만 길어도 막대가 생기며 안쪽 폭이 줄어 보기 싫었다 (23차).
+                // 아래로 더 있으면 맨 아래의 흰 그러데이션으로 알 수 있다
+                className={cn(
+                    scrollAreaClassName,
+                    'flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+                )}
+            >
                 {/* 머리 */}
                 <div className="flex items-start justify-between gap-3 px-5 pt-[26px] md:px-7">
                     <div className="min-w-0">
@@ -247,7 +274,7 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
                         </DrawerTitle>
                         <DrawerDescription className="mt-1.5 truncate text-[15px] text-neutral-500">
                             {date
-                                ? `${formatLongDate(date)}${repeat === true ? '부터 매주' : repeat === false ? ' 한 번만' : ''}${range ? ` · ${formatTimeRange(range.startTime, range.endTime)}` : ''}`
+                                ? `${formatLongDate(date)}${repeat === true ? '부터 매주' : repeat === false ? ' 한 번만' : ''} · ${formatTimeRange(range.startTime, range.endTime)}`
                                 : '팀과 날짜, 시간을 골라 주세요'}
                         </DrawerDescription>
                     </div>
@@ -262,7 +289,7 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
                     </DrawerClose>
                 </div>
 
-                <div className="flex flex-col gap-6 px-5 pt-6 pb-6 md:px-7">
+                <div className="flex flex-col gap-5 px-5 pt-5 pb-6 md:px-7">
                     {/* 팀 */}
                     <Section label="팀" sectionRef={sectionRef('team')}>
                         {team && !teamOpen ? (
@@ -300,130 +327,87 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
 
                     {/* 반복 여부 (옛 흐름: "매주 같은 타임에 할래요" / "하루만 할래요") */}
                     <Section label="반복" sectionRef={sectionRef('repeat')}>
-                        <div
-                            role="radiogroup"
-                            aria-label="반복"
-                            className="grid grid-cols-2 gap-1 rounded-2xl bg-neutral-100 p-1"
-                        >
-                            {(
-                                [
-                                    [true, '매주 반복', Repeat],
-                                    [false, '한 번만', CalendarCheck],
-                                ] as const
-                            ).map(([value, label, Icon]) => (
-                                <button
-                                    key={label}
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={repeat === value}
-                                    className={cn(
-                                        'flex h-11 items-center justify-center gap-1.5 rounded-xl text-[15px] font-medium transition-[background-color,color,box-shadow] duration-150',
-                                        repeat === value
-                                            ? 'bg-white font-bold text-ink shadow-[0_1px_3px_rgb(0_0_0/0.12)]'
-                                            : 'text-neutral-600 hover:text-ink',
-                                    )}
-                                    onClick={() => {
-                                        setRepeat(value);
-                                        scrollToSection('repeat');
-                                    }}
-                                >
-                                    <Icon className="size-4" aria-hidden />
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
+                        <Segmented
+                            label="반복"
+                            value={repeat}
+                            options={[
+                                [true, '매주 반복', Repeat],
+                                [false, '한 번만', CalendarCheck],
+                            ]}
+                            onChange={(value) => {
+                                setRepeat(value);
+                                scrollToSection('repeat');
+                            }}
+                        />
                     </Section>
 
                     {/* 날짜 */}
                     <Section label={repeat ? '시작 날짜' : '날짜'} sectionRef={sectionRef('date')}>
-                        <button
-                            type="button"
-                            aria-expanded={dateOpen}
-                            className={cn(
-                                pressable,
-                                boxShape,
-                                'flex h-14 w-full items-center justify-between gap-3 border border-neutral-200 bg-white px-4 text-left hover:bg-neutral-50',
-                            )}
+                        <DateToggle
+                            open={dateOpen}
+                            text={date ? formatLongDate(date) : null}
+                            placeholder="날짜 선택"
                             onClick={() => {
                                 // 달력을 열면 소제목이 맨 위로 (달력 전체가 보이게)
                                 if (!dateOpen) scrollToSection('date');
                                 setDateOpen(!dateOpen);
                             }}
-                        >
-                            <span className="flex min-w-0 items-center gap-2.5">
-                                <CalendarDays
-                                    className="size-5 shrink-0 text-neutral-500"
-                                    aria-hidden
-                                />
-                                <span
-                                    className={cn(
-                                        'truncate text-[16px]',
-                                        date ? 'font-bold text-ink' : 'text-neutral-500',
-                                    )}
-                                >
-                                    {date ? formatLongDate(date) : '날짜 선택'}
-                                </span>
-                            </span>
-                            <ChevronDown
-                                className={cn(
-                                    'size-5 shrink-0 text-neutral-400 transition-transform duration-200',
-                                    dateOpen && 'rotate-180',
-                                )}
-                                aria-hidden
-                            />
-                        </button>
+                        />
                         {dateOpen && (
-                            <DatePicker
-                                date={date}
-                                onSelect={(picked) => {
-                                    setDate(picked);
-                                    setDateOpen(false);
-                                    scrollToSection('date');
-                                }}
-                            />
+                            <DatePicker selected={date} min={dayjs()} onSelect={pickDate} />
                         )}
                     </Section>
 
-                    {/* 시간 */}
+                    {/* 시간: 그날 동방 막대에서 창을 끌어 시작 시간을 고르고, 아래에서 소요 시간 */}
                     <Section
                         label="시간"
                         sectionRef={sectionRef('time')}
                         aside={
-                            range && (
-                                <span className="text-[15px] font-bold text-ink">
-                                    {formatTimeRange(range.startTime, range.endTime)}
-                                    <span className="font-normal text-neutral-500">
-                                        {' '}
-                                        · {formatSlots(duration)}
-                                    </span>
+                            <span className="text-[15px] font-bold text-ink">
+                                {formatTimeRange(range.startTime, range.endTime)}
+                                <span className="font-normal text-neutral-500">
+                                    {' '}
+                                    · {formatSlots(duration)}
                                 </span>
-                            )
+                            </span>
                         }
                     >
-                        {date && (
-                            <DayBar
-                                date={date}
-                                events={dayEvents}
-                                range={range}
-                                duration={duration}
-                                color={color}
-                                // 막대를 끄는 동안에는 스크롤하지 않는다
-                                onMove={setStartTime}
-                            />
-                        )}
-
-                        <p className="mt-4 mb-2 text-[13px] font-medium text-neutral-500">시작</p>
-                        <StartTimePicker
-                            startTime={startTime}
+                        <DayBar
+                            date={date}
+                            events={dayEvents}
                             range={range}
+                            duration={duration}
                             color={color}
-                            onPick={(slot) => {
-                                pickStart(slot);
-                                scrollToSection('time');
-                            }}
+                            // 막대를 끄는 동안에는 스크롤하지 않는다
+                            onMove={setStartTime}
+                            notice={
+                                // 겹침: 최대 개수를 넘으면 막고, 아니면 알리기만 한다. 막대 바로 아래 고정된 한 줄 (있든 없든 배치가 바뀌지 않게)
+                                limitDate && date ? (
+                                    <span className="flex min-w-0 items-center gap-1.5 text-red-700">
+                                        <OctagonAlert className="size-4 shrink-0" aria-hidden />
+                                        <span className="truncate">
+                                            {limitDate.isSame(date, 'day')
+                                                ? `이 시간엔 이미 ${MAX_OVERLAP}개가 겹쳐 있어요`
+                                                : `${formatDate(limitDate)}엔 이 시간에 ${MAX_OVERLAP}개가 겹쳐 있어요`}
+                                        </span>
+                                    </span>
+                                ) : conflicts.length > 0 ? (
+                                    <span className="flex min-w-0 items-center gap-1.5 text-amber-700">
+                                        <TriangleAlert className="size-4 shrink-0" aria-hidden />
+                                        <span className="truncate">{conflicts[0]!.name}</span>{' '}
+                                        <span className="shrink-0">
+                                            일정
+                                            {conflicts.length > 1
+                                                ? ` 외 ${conflicts.length - 1}개와`
+                                                : '과'}{' '}
+                                            겹쳐요
+                                        </span>
+                                    </span>
+                                ) : null
+                            }
                         />
 
-                        <p className="mt-4 mb-2 text-[13px] font-medium text-neutral-500">
+                        <p className="mt-3 mb-2 text-[13px] font-medium text-neutral-500">
                             소요 시간
                         </p>
                         <div
@@ -463,11 +447,9 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
                                     <p className="text-[18px] font-bold text-ink">
                                         {formatSlots(duration)}
                                     </p>
-                                    {range && (
-                                        <p className="text-[13px] text-neutral-500">
-                                            {formatTimeRange(range.startTime, range.endTime)}
-                                        </p>
-                                    )}
+                                    <p className="text-[13px] text-neutral-500">
+                                        {formatTimeRange(range.startTime, range.endTime)}
+                                    </p>
                                 </div>
                                 <StepButton
                                     label="30분 늘리기"
@@ -478,32 +460,61 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
                                 </StepButton>
                             </div>
                         )}
-
-                        {/* 겹침: 최대 개수를 넘으면 막고, 아니면 알리기만 한다 */}
-                        {limitDate && date ? (
-                            <Notice tone="danger">
-                                <p className="font-bold">최대 {MAX_OVERLAP}개까지만 가능해요</p>
-                                <p className="mt-0.5 text-[14px]">
-                                    {limitDate.isSame(date, 'day')
-                                        ? `이 시간엔 이미 ${MAX_OVERLAP}개가 겹쳐 있어요`
-                                        : `${formatDate(limitDate)}엔 이 시간에 ${MAX_OVERLAP}개가 겹쳐 있어요`}
-                                </p>
-                            </Notice>
-                        ) : (
-                            conflicts.length > 0 && (
-                                <Notice tone="warn">
-                                    <p>
-                                        {conflicts[0]!.name} 일정
-                                        {conflicts.length > 1
-                                            ? ` 외 ${conflicts.length - 1}개와`
-                                            : '과'}{' '}
-                                        겹쳐요
-                                    </p>
-                                </Notice>
-                            )
-                        )}
                     </Section>
+
+                    {/* 반복 종료 (매주 반복일 때만). 고르지 않아도 된다: "계속 반복"이 처음부터 골라져 있다 */}
+                    {repeat && (
+                        <Section label="반복 종료" sectionRef={sectionRef('end')}>
+                            <Segmented
+                                label="반복 종료"
+                                value={hasRepeatEnd}
+                                options={[
+                                    [false, '계속 반복', InfinityIcon],
+                                    [true, '종료 날짜 지정', CalendarX2],
+                                ]}
+                                onChange={(value) => {
+                                    setHasRepeatEnd(value);
+                                    // 날짜를 지정하면 바로 달력을 연다
+                                    setRepeatEndOpen(value && !repeatEnd);
+                                    scrollToSection(value ? 'end' : 'bottom');
+                                }}
+                            />
+                            {hasRepeatEnd && (
+                                <div className="mt-2.5">
+                                    <DateToggle
+                                        open={repeatEndOpen}
+                                        text={repeatEnd ? `${formatLongDate(repeatEnd)}까지` : null}
+                                        placeholder="종료 날짜 선택"
+                                        onClick={() => {
+                                            if (!repeatEndOpen) scrollToSection('end');
+                                            setRepeatEndOpen(!repeatEndOpen);
+                                        }}
+                                    />
+                                    {repeatEndOpen && (
+                                        <DatePicker
+                                            selected={repeatEnd}
+                                            min={date ?? dayjs()}
+                                            onSelect={(picked) => {
+                                                setRepeatEnd(picked);
+                                                setRepeatEndOpen(false);
+                                                scrollToSection('end');
+                                            }}
+                                        />
+                                    )}
+                                    <p className="mt-2 flex items-center gap-1.5 text-[13px] text-neutral-500">
+                                        <Info className="size-3.5 shrink-0" aria-hidden />이 날짜
+                                        이후에 자동으로 삭제돼요
+                                    </p>
+                                </div>
+                            )}
+                        </Section>
+                    )}
                 </div>
+                {/* 아래로 더 있으면 흐리게 (스크롤 막대 대신) */}
+                <div
+                    aria-hidden
+                    className="pointer-events-none sticky bottom-0 -mt-6 h-6 bg-linear-to-t from-white to-transparent"
+                />
             </div>
 
             {/* 저장 버튼은 스크롤과 관계없이 맨 아래 */}
@@ -530,6 +541,89 @@ const AddEnsembleForm = ({ preset, teams, events, onSubmit }: AddEnsembleFormPro
     );
 };
 
+/** 둘 중 하나를 고르는 칸 (반복 여부, 반복 종료). 아무것도 고르지 않은 상태(null)도 있다 */
+function Segmented<T extends boolean>({
+    label,
+    value,
+    options,
+    onChange,
+}: {
+    label: string;
+    value: T | null;
+    options: readonly (readonly [T, string, ComponentType<{ className?: string }>])[];
+    onChange: (value: T) => void;
+}) {
+    return (
+        <div
+            role="radiogroup"
+            aria-label={label}
+            className="grid grid-cols-2 gap-1 rounded-2xl bg-neutral-100 p-1"
+        >
+            {options.map(([option, text, Icon]) => (
+                <button
+                    key={text}
+                    type="button"
+                    role="radio"
+                    aria-checked={value === option}
+                    className={cn(
+                        'flex h-11 items-center justify-center gap-1.5 rounded-xl text-[15px] font-medium transition-[background-color,color,box-shadow] duration-150',
+                        value === option
+                            ? 'bg-white font-bold text-ink shadow-[0_1px_3px_rgb(0_0_0/0.12)]'
+                            : 'text-neutral-600 hover:text-ink',
+                    )}
+                    onClick={() => onChange(option)}
+                >
+                    <Icon className="size-4" aria-hidden />
+                    {text}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+/** 달력을 펼치고 접는 줄 (고른 날짜, 없으면 안내 문구) */
+const DateToggle = ({
+    open,
+    text,
+    placeholder,
+    onClick,
+}: {
+    open: boolean;
+    text: string | null;
+    placeholder: string;
+    onClick: () => void;
+}) => (
+    <button
+        type="button"
+        aria-expanded={open}
+        className={cn(
+            pressable,
+            boxShape,
+            'flex h-14 w-full items-center justify-between gap-3 border border-neutral-200 bg-white px-4 text-left hover:bg-neutral-50',
+        )}
+        onClick={onClick}
+    >
+        <span className="flex min-w-0 items-center gap-2.5">
+            <CalendarDays className="size-5 shrink-0 text-neutral-500" aria-hidden />
+            <span
+                className={cn(
+                    'truncate text-[16px]',
+                    text ? 'font-bold text-ink' : 'text-neutral-500',
+                )}
+            >
+                {text ?? placeholder}
+            </span>
+        </span>
+        <ChevronDown
+            className={cn(
+                'size-5 shrink-0 text-neutral-400 transition-transform duration-200',
+                open && 'rotate-180',
+            )}
+            aria-hidden
+        />
+    </button>
+);
+
 const Section = ({
     label,
     aside,
@@ -550,7 +644,7 @@ const Section = ({
     </section>
 );
 
-/** 고르는 칩 (반복·소요 시간·시작 시간). 고르면 검정 */
+/** 고르는 칩 (소요 시간). 고르면 검정 */
 const Chip = ({
     checked,
     disabled = false,
@@ -660,15 +754,17 @@ const TeamPicker = ({
     );
 };
 
-/** 달력: 오늘부터 고를 수 있다 (옛 달력과 같음) */
+/** 달력: min(오늘, 반복 종료는 시작 날짜)부터 고를 수 있다. 토요일은 파랑, 일요일은 빨강 (23차) */
 const DatePicker = ({
-    date,
+    selected,
+    min,
     onSelect,
 }: {
-    date: Dayjs | null;
+    selected: Dayjs | null;
+    min: Dayjs;
     onSelect: (date: Dayjs) => void;
 }) => {
-    const today = dayjs().startOf('day');
+    const first = min.startOf('day');
     return (
         <div className={`${boxShape} mt-2 border border-neutral-200 bg-white p-2`}>
             {/* 넓은 화면(PC 520px)에서 너무 퍼지지 않게 폭을 제한 */}
@@ -679,12 +775,21 @@ const DatePicker = ({
                     locale={ko}
                     // 합주판과 같이 월요일부터
                     weekStartsOn={1}
-                    selected={date?.toDate()}
-                    defaultMonth={(date ?? today).toDate()}
-                    startMonth={today.toDate()}
-                    disabled={{ before: today.toDate() }}
+                    selected={selected?.toDate()}
+                    defaultMonth={(selected ?? first).toDate()}
+                    startMonth={first.toDate()}
+                    disabled={{ before: first.toDate() }}
                     showOutsideDays={false}
                     onSelect={(picked) => onSelect(dayjs(picked).startOf('day'))}
+                    modifiers={{
+                        saturday: (day) => day.getDay() === 6,
+                        sunday: (day) => day.getDay() === 0,
+                    }}
+                    // 고른 날짜(검정 원)의 흰 글자가 이 색보다 우선한다 (data-selected 선택자가 더 구체적)
+                    modifiersClassNames={{
+                        saturday: '[&>button]:text-blue-600',
+                        sunday: '[&>button]:text-red-500',
+                    }}
                     className="w-full bg-transparent p-0 [--cell-radius:9999px] [--cell-size:--spacing(9)] [&_button]:rounded-full"
                     // 글자 크기는 px로 (공존 기간에는 html 글자 크기가 바뀌어 rem이 작아진다: 계획 문서 "공존 기간 규칙").
                     // 날짜 칸은 정사각형(폭에 따라 커짐) 대신 높이 38px 줄, 날짜 버튼은 36px 원 (22차: 달력이 크고 줄 간격이 넓었다)
@@ -692,7 +797,9 @@ const DatePicker = ({
                         root: 'w-full',
                         month: 'flex w-full flex-col gap-2',
                         caption_label: 'text-[16px] font-bold select-none',
-                        weekdays: 'flex',
+                        // 요일 머리도 토(6번째)·일(7번째) 색
+                        weekdays:
+                            'flex [&>*:nth-child(6)]:text-blue-600 [&>*:nth-child(7)]:text-red-500',
                         weekday: 'flex-1 text-[13px] font-normal text-neutral-400 select-none',
                         week: 'mt-0.5 flex w-full',
                         day: 'group/day relative flex h-[38px] flex-1 items-center justify-center p-0 text-center select-none',
@@ -705,11 +812,14 @@ const DatePicker = ({
     );
 };
 
+/** 막대·창·합주의 모서리 (모두 같은 값이라 양 끝에서 창과 합주가 막대 모서리에 딱 맞는다, 23차) */
+const BAR_RADIUS = 'rounded-[10px]';
+
 /**
- * 그날 동방: 09~24시 가로 막대에 그날 합주(겹치면 줄을 나눔)와 고른 시간(창).
- * 창을 좌우로 끌어 옮긴다 (22차, 이전: 누른 칸이 시작 시간 → 30분 칸이 좁아 잘못 누르기 쉬웠다).
+ * 그날 동방: 09~24시 가로 막대에 그날 합주(겹치면 줄을 나눔, 쉬는 주는 점선)와 고른 시간(창).
+ * 창을 좌우로 끌어 시작 시간을 고른다 (22차, 23차부터 시작 시간 칩 없이 이것만).
  * 창 밖을 누르면 그 자리를 가운데로 창이 옮겨 오고, 손을 떼지 않으면 이어서 끈다. 길이는 그대로, 막대 안에서만.
- * 마우스·터치용이다 (키보드는 아래 시작 시간 칩). 세로로 밀면 Drawer가 스크롤된다 (touch-action: pan-y)
+ * 세로로 밀면 Drawer가 스크롤된다 (touch-action: pan-y). 키보드는 슬라이더처럼 ←/→(30분)·PageUp/PageDown(1시간)·Home/End
  */
 const DayBar = ({
     date,
@@ -718,21 +828,29 @@ const DayBar = ({
     duration,
     color,
     onMove,
+    notice,
 }: {
-    date: Dayjs;
+    /** 날짜를 고르기 전에는 null (합주 없이 창만) */
+    date: Dayjs | null;
     events: WithLane<CalendarEvent>[];
-    range: SlotRange | null;
+    range: SlotRange;
     /** 창의 길이 (시간칸 수) */
     duration: number;
     color: string;
     /** 창의 시작 시간칸이 바뀜 (길이가 막대 안에 들어가게 이미 맞춘 값) */
     onMove: (slot: TimeSlot) => void;
+    /** 막대 아래 고정된 한 줄 (겹침 알림). 없으면 빈 줄 */
+    notice: ReactNode;
 }) => {
     const percent = (slots: number) => `${(slots / SLOT_COUNT) * 100}%`;
     const drag = useRef<{ pointerId: number; originX: number; originSlot: number } | null>(null);
     const [dragging, setDragging] = useState(false);
     const lastStart = SLOT_COUNT - duration;
     const clampStart = (slot: number) => Math.min(lastStart, Math.max(0, slot));
+    const moveTo = (slot: number) => {
+        const next = clampStart(slot);
+        if (next !== range.startTime) onMove(next);
+    };
 
     const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -740,11 +858,11 @@ const DayBar = ({
         const slotWidth = rect.width / SLOT_COUNT;
         const slot = Math.floor((e.clientX - rect.left) / slotWidth);
         let originSlot: number;
-        if (range && range.startTime <= slot && slot <= range.endTime) {
+        if (range.startTime <= slot && slot <= range.endTime) {
             originSlot = range.startTime; // 창을 잡음
         } else {
             originSlot = clampStart(slot - Math.floor(duration / 2)); // 누른 자리를 가운데로
-            onMove(originSlot);
+            moveTo(originSlot);
         }
         drag.current = { pointerId: e.pointerId, originX: e.clientX, originSlot };
         e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -754,72 +872,94 @@ const DayBar = ({
         const current = drag.current;
         if (!current || current.pointerId !== e.pointerId) return;
         const slotWidth = e.currentTarget.getBoundingClientRect().width / SLOT_COUNT;
-        const next = clampStart(
-            current.originSlot + Math.round((e.clientX - current.originX) / slotWidth),
-        );
-        if (next !== range?.startTime) onMove(next);
+        moveTo(current.originSlot + Math.round((e.clientX - current.originX) / slotWidth));
     };
     const endDrag = () => {
         drag.current = null;
         setDragging(false);
     };
+    const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+        const step = { ArrowLeft: -1, ArrowRight: 1, PageDown: -2, PageUp: 2 }[e.key];
+        if (step !== undefined) moveTo(range.startTime + step);
+        else if (e.key === 'Home') moveTo(0);
+        else if (e.key === 'End') moveTo(lastStart);
+        else return;
+        e.preventDefault();
+    };
 
     return (
         <div>
-            <p className="mb-1.5 text-[13px] text-neutral-500">
-                이날 동방 · {formatDate(date)}
-                <span className="text-neutral-400"> · 끌어서 옮길 수 있어요</span>
+            <p className="mb-1.5 truncate text-[13px] text-neutral-500">
+                {date ? `이날 동방 · ${formatDate(date)}` : '이날 동방'}
+                <span className="text-neutral-400"> · 끌어서 시간을 선택하세요</span>
             </p>
             <div
-                aria-hidden
+                role="slider"
+                tabIndex={0}
+                aria-label="시작 시간"
+                aria-valuemin={0}
+                aria-valuemax={lastStart}
+                aria-valuenow={range.startTime}
+                aria-valuetext={formatTimeRange(range.startTime, range.endTime)}
                 data-vaul-no-drag
                 data-day-bar
-                className="relative h-11 touch-pan-y overflow-hidden rounded-xl bg-neutral-100 select-none"
+                className={cn(
+                    BAR_RADIUS,
+                    'relative h-11 touch-pan-y overflow-hidden bg-neutral-100 outline-none select-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2',
+                )}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={endDrag}
                 onPointerCancel={endDrag}
+                onKeyDown={handleKeyDown}
             >
                 {events.map((event) => (
                     <span
                         key={event.id}
                         className={cn(
-                            'pointer-events-none absolute rounded-[5px] border-white',
-                            event.status === 'skipped' && 'border border-dashed opacity-70',
+                            BAR_RADIUS,
+                            'pointer-events-none absolute',
+                            event.status === 'skipped' && 'border-[1.5px] border-dashed',
                         )}
                         style={{
                             left: percent(event.startTime),
                             width: percent(event.endTime + 1 - event.startTime),
-                            top: `calc(${(event.lane / event.lanes) * 100}% + 1px)`,
-                            height: `calc(${100 / event.lanes}% - 2px)`,
+                            top: `${(event.lane / event.lanes) * 100}%`,
+                            height: `${100 / event.lanes}%`,
+                            // 본래 색 그대로 (23차, 이전: 연하게). 이웃한 합주와는 안쪽 흰 선으로 구분
                             ...(event.status === 'skipped'
                                 ? { borderColor: event.color }
-                                : { backgroundColor: event.color, opacity: 0.55 }),
+                                : {
+                                      backgroundColor: event.color,
+                                      boxShadow: 'inset 0 0 0 1px white',
+                                  }),
                         }}
                     />
                 ))}
-                {range && (
-                    <span
-                        data-selected-range
-                        className={cn(
-                            'absolute inset-y-0 flex items-center justify-center rounded-[6px] border-2',
-                            dragging
-                                ? 'cursor-grabbing'
-                                : 'cursor-grab transition-[left,width] duration-150',
-                        )}
-                        style={{
-                            left: percent(range.startTime),
-                            width: percent(range.endTime + 1 - range.startTime),
-                            borderColor: color,
-                            backgroundColor: `color-mix(in srgb, ${color} 30%, transparent)`,
-                        }}
-                    >
-                        {/* 끌 수 있다는 표시 (1시간 이상일 때만, 30분 창은 너무 좁음) */}
-                        {duration >= 2 && (
-                            <GripVertical className="size-4 shrink-0" style={{ color }} />
-                        )}
-                    </span>
-                )}
+                <span
+                    data-selected-range
+                    className={cn(
+                        BAR_RADIUS,
+                        'pointer-events-none absolute inset-y-0 flex items-center justify-center border-2',
+                        !dragging && 'transition-[left,width] duration-150',
+                    )}
+                    style={{
+                        left: percent(range.startTime),
+                        width: percent(range.endTime + 1 - range.startTime),
+                        borderColor: color,
+                        // 본래 색인 합주 위에서도 보이게 테두리 안쪽에 흰 선
+                        boxShadow: 'inset 0 0 0 2px rgb(255 255 255 / 0.9)',
+                        backgroundColor: `color-mix(in srgb, ${color} 30%, transparent)`,
+                    }}
+                >
+                    {/* 끌 수 있다는 표시 (1시간 이상일 때만, 30분 창은 너무 좁음) */}
+                    {duration >= 2 && (
+                        <GripVertical
+                            className="size-4 shrink-0 drop-shadow-[0_0_1px_white]"
+                            style={{ color }}
+                        />
+                    )}
+                </span>
             </div>
             <div
                 aria-hidden
@@ -842,94 +982,10 @@ const DayBar = ({
                     </span>
                 ))}
             </div>
-        </div>
-    );
-};
-
-/**
- * 시작 시간: 09:00 ~ 23:30 칩을 좌우로 밀어 고른다. 고른 칩이 왼쪽에서 30%쯤에 오게 스크롤한다
- * (22차, 이전: 가운데. 뒤쪽 시간이 더 많이 보이게. 양 끝은 갈 수 있는 데까지)
- */
-const StartTimePicker = ({
-    startTime,
-    range,
-    color,
-    onPick,
-}: {
-    startTime: TimeSlot | null;
-    range: SlotRange | null;
-    color: string;
-    onPick: (slot: TimeSlot) => void;
-}) => {
-    const scrollerRef = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        const scroller = scrollerRef.current;
-        if (!scroller || startTime === null) return;
-        const chip = scroller.children[startTime] as HTMLElement | undefined;
-        if (!chip) return;
-        scroller.scrollLeft =
-            chip.offsetLeft + chip.offsetWidth / 2 - scroller.clientWidth * START_CHIP_ANCHOR;
-    }, [startTime]);
-
-    return (
-        <div
-            ref={scrollerRef}
-            role="radiogroup"
-            aria-label="시작 시간"
-            data-vaul-no-drag
-            className="relative -mx-5 flex gap-1.5 overflow-x-auto scroll-smooth px-5 py-0.5 [scrollbar-width:none] md:-mx-7 md:px-7 [&::-webkit-scrollbar]:hidden"
-        >
-            {idx2hour.slice(0, SLOT_COUNT).map((label, slot) => {
-                const checked = slot === startTime;
-                const inRange =
-                    !checked && range && range.startTime < slot && slot <= range.endTime;
-                return (
-                    <button
-                        key={label}
-                        type="button"
-                        role="radio"
-                        aria-checked={checked}
-                        className={cn(
-                            pressable,
-                            'h-10 min-w-[68px] shrink-0 rounded-full border text-[15px] font-medium tabular-nums',
-                            checked
-                                ? 'border-transparent font-bold text-white'
-                                : inRange
-                                  ? 'border-transparent text-ink'
-                                  : 'border-neutral-200 bg-white text-ink hover:bg-neutral-50',
-                        )}
-                        style={
-                            checked
-                                ? { backgroundColor: color }
-                                : inRange
-                                  ? { backgroundColor: `color-mix(in srgb, ${color} 16%, white)` }
-                                  : undefined
-                        }
-                        onClick={() => onPick(slot)}
-                    >
-                        {label}
-                    </button>
-                );
-            })}
-        </div>
-    );
-};
-
-const Notice = ({ tone, children }: { tone: 'warn' | 'danger'; children: ReactNode }) => {
-    const Icon = tone === 'danger' ? OctagonAlert : TriangleAlert;
-    return (
-        <div
-            role="status"
-            className={cn(
-                boxShape,
-                'mt-4 flex items-start gap-2.5 border px-4 py-3 text-[15px]',
-                tone === 'danger'
-                    ? 'border-red-200 bg-red-50 text-red-800'
-                    : 'border-amber-200 bg-amber-50 text-amber-900',
-            )}
-        >
-            <Icon className="mt-0.5 size-[18px] shrink-0" aria-hidden />
-            <div className="min-w-0">{children}</div>
+            {/* 겹침 알림 자리: 있든 없든 높이가 같아 아래 배치가 움직이지 않는다 */}
+            <div role="status" className="mt-1.5 flex h-5 items-center text-[13px] font-medium">
+                {notice}
+            </div>
         </div>
     );
 };

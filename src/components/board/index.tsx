@@ -2,7 +2,9 @@ import { useCallback, useState } from 'react';
 import { isNotFound } from '@/api';
 import { ensembleExists } from '@/api/ensemble';
 import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
+import { useQuery } from '@tanstack/react-query';
 import {
+    ensemblesQueryOptions,
     useDeleteEnsemble,
     useRefreshEnsembles,
     useUpdateEnsemble,
@@ -17,7 +19,7 @@ import UpdateEnsembleDrawer3 from './updateEnsembleDrawers/UpdateEnsembleDrawer3
 import UpdateEnsembleDrawer4 from './updateEnsembleDrawers/UpdateEnsembleDrawer4';
 import dayjs, { type Dayjs } from 'dayjs';
 import { toast } from 'sonner';
-import { toEnsembleRequest } from '@/lib/ensemble';
+import { getRepeatEnd, toEnsembleRequest } from '@/lib/ensemble';
 import { getRegularNextDate, resolveSlotTap, type CalendarEvent } from '@/lib/calendar';
 import type { DayIndex, TimeSlot } from '@/types';
 import 'dayjs/locale/ko';
@@ -38,6 +40,8 @@ interface BoardProps {
 const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
     const teams = useTeams();
     const week = useWeekSchedule(weekStart);
+    // 수정·미루기 때 반복 종료 날짜(due)를 그대로 두기 위해 서버 응답 원본을 본다
+    const { data: ensembleList } = useQuery(ensemblesQueryOptions);
     const refreshEnsembles = useRefreshEnsembles();
     const refreshTeamsAndEnsembles = useRefreshTeamsAndEnsembles();
     const { mutateAsync: updateEnsembleAsync } = useUpdateEnsemble();
@@ -134,10 +138,22 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
             endTime: TimeSlot | null,
         ) => {
             try {
+                // 반복 종료 날짜는 그대로 둔다 (반복 → 반복일 때만. 일회성을 반복으로 바꾸면 계속 반복, 23차).
+                // 이전에는 수정·미루기 때마다 반복 합주의 due를 2099-12-31로 덮어썼다
+                const current = ensembleList?.find(({ _id: ensembleId }) => ensembleId === id);
+                const repeatEnd =
+                    repeat && current?.repeat ? getRepeatEnd(current.due, dayjs()) : null;
                 // 선택을 마친 뒤에만 호출되어 null이 아님 (null이면 nextDate.day()에서 TypeError → catch, 기존 동작)
                 await updateEnsembleAsync({
                     id,
-                    ...toEnsembleRequest(teamId, repeat, nextDate!, startTime!, endTime!),
+                    ...toEnsembleRequest(
+                        teamId,
+                        repeat,
+                        nextDate!,
+                        startTime!,
+                        endTime!,
+                        repeatEnd,
+                    ),
                 });
                 setOpenedDrawers(['ensembleInfo']);
                 return true;
@@ -151,7 +167,7 @@ const Board = ({ weekStart, todayIdx, direction }: BoardProps) => {
                 return false;
             }
         },
-        [handleEnsembleGone, setOpenedDrawers, updateEnsembleAsync],
+        [ensembleList, handleEnsembleGone, setOpenedDrawers, updateEnsembleAsync],
     );
 
     const handleDeleteEnsemble = useCallback(

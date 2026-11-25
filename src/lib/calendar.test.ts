@@ -229,41 +229,33 @@ describe('isLastOccurrence (32차)', () => {
     const wed = { repeat: true, due: '2026-12-20T00:00:00.000Z' };
 
     it('일회성은 늘 마지막', () => {
-        expect(
-            isLastOccurrence({ repeat: false, due: '2026-11-25' }, dayjs('2026-11-25'), now),
-        ).toBe(true);
+        expect(isLastOccurrence({ repeat: false, due: '2026-11-25' }, dayjs('2026-11-25'))).toBe(
+            true,
+        );
     });
 
     it('반복: 종료 날짜가 합주 요일과 달라도 그 전 마지막 그 요일이 마지막', () => {
         // 12/20(일) 종료 → 12/16(수)가 마지막, 12/9(수)는 아님, 12/23(수)는 종료 뒤
-        expect(isLastOccurrence(wed, dayjs('2026-12-16'), now)).toBe(true);
-        expect(isLastOccurrence(wed, dayjs('2026-12-09'), now)).toBe(false);
-        expect(isLastOccurrence(wed, dayjs('2026-12-23'), now)).toBe(false);
+        expect(isLastOccurrence(wed, dayjs('2026-12-16'))).toBe(true);
+        expect(isLastOccurrence(wed, dayjs('2026-12-09'))).toBe(false);
+        expect(isLastOccurrence(wed, dayjs('2026-12-23'))).toBe(false);
     });
 
     it('반복: 종료 날짜가 그 요일이면 그날이 마지막 (경계)', () => {
         const end = { repeat: true, due: '2026-12-16T00:00:00.000Z' };
-        expect(isLastOccurrence(end, dayjs('2026-12-16'), now)).toBe(true);
-        expect(isLastOccurrence(end, dayjs('2026-12-09'), now)).toBe(false);
+        expect(isLastOccurrence(end, dayjs('2026-12-16'))).toBe(true);
+        expect(isLastOccurrence(end, dayjs('2026-12-09'))).toBe(false);
         // 종료 다음 날이 그 요일인 경우: 7일 전이 마지막
         const dayBefore = { repeat: true, due: '2026-12-15T00:00:00.000Z' };
-        expect(isLastOccurrence(dayBefore, dayjs('2026-12-09'), now)).toBe(true);
-        expect(isLastOccurrence(dayBefore, dayjs('2026-12-16'), now)).toBe(false);
+        expect(isLastOccurrence(dayBefore, dayjs('2026-12-09'))).toBe(true);
+        expect(isLastOccurrence(dayBefore, dayjs('2026-12-16'))).toBe(false);
     });
 
-    it('반복: 계속 반복(2099)이거나 지난 종료 날짜(옛 데이터)면 마지막 날이 없다', () => {
+    it('반복: 계속 반복(2099)이면 마지막 날이 없다', () => {
         expect(
             isLastOccurrence(
                 { repeat: true, due: '2099-12-31T00:00:00.000Z' },
                 dayjs('2099-12-30'),
-                now,
-            ),
-        ).toBe(false);
-        expect(
-            isLastOccurrence(
-                { repeat: true, due: '2026-01-01T00:00:00.000Z' },
-                dayjs('2025-12-31'),
-                now,
             ),
         ).toBe(false);
     });
@@ -284,6 +276,62 @@ describe('isLastOccurrence (32차)', () => {
             toWeekSchedule([ensemble], {}, dayjs(monday), now)[2]?.[0]?.last;
         expect(at('2026-12-07')).toBe(false);
         expect(at('2026-12-14')).toBe(true);
+    });
+});
+
+describe('반복 종료 날짜 뒤에는 보이지 않는다 (32차 V13)', () => {
+    const now = dayjs('2026-11-20T10:00');
+    // 수요일 반복, 12/20(일) 종료
+    const wed: EnsembleResponse = {
+        _id: 'e1',
+        teamId: 'team-1',
+        teamName: '테스트밴드',
+        day: 2,
+        startTime: 2,
+        endTime: 3,
+        repeat: true,
+        nextDate: '2026-11-25T00:00:00.000Z',
+        due: '2026-12-20T00:00:00.000Z',
+    };
+
+    it('getOccurrence: 종료 날짜까지는 합주, 그 뒤는 null', () => {
+        expect(getOccurrence(wed, dayjs('2026-12-16'))).toBe('normal');
+        expect(getOccurrence(wed, dayjs('2026-12-23'))).toBeNull();
+        // 종료 날짜 당일이 그 요일이면 그날까지
+        const sameDay = { ...wed, due: '2026-12-16T00:00:00.000Z' };
+        expect(getOccurrence(sameDay, dayjs('2026-12-16'))).toBe('normal');
+        expect(getOccurrence(sameDay, dayjs('2026-12-23'))).toBeNull();
+        // 계속 반복은 그대로
+        expect(
+            getOccurrence({ ...wed, due: '2099-12-31T00:00:00.000Z' }, dayjs('2027-06-02')),
+        ).toBe('normal');
+    });
+
+    it('이미 지난 종료 날짜(옛 데이터)면 합주판 어디에도 보이지 않는다', () => {
+        const old = {
+            ...wed,
+            nextDate: '2025-01-01T00:00:00.000Z',
+            due: '2025-06-01T00:00:00.000Z',
+        };
+        expect(toWeekSchedule([old], {}, dayjs('2026-11-23'), now)[2]).toEqual([]);
+    });
+
+    it('겹침 계산(findOverlapLimit)에도 종료 날짜 뒤는 세지 않는다', () => {
+        // 같은 시간에 12/20 종료 반복 3개 + 계속 반복 1개 → 12/16까지는 4개, 12/23부터는 1개
+        const ending = ['a', 'b', 'c'].map((id) => ({ ...wed, _id: id }));
+        const forever = { ...wed, _id: 'd', due: '2099-12-31T00:00:00.000Z' };
+        const list = [...ending, forever];
+        const range = { startTime: 2, endTime: 3 };
+        expect(
+            findOverlapLimit(list, { date: dayjs('2026-12-16'), repeat: false, ...range }),
+        ).not.toBeNull();
+        expect(
+            findOverlapLimit(list, { date: dayjs('2026-12-23'), repeat: false, ...range }),
+        ).toBeNull();
+        // 반복으로 12/23부터 잡으면 막히지 않는다
+        expect(
+            findOverlapLimit(list, { date: dayjs('2026-12-23'), repeat: true, ...range }),
+        ).toBeNull();
     });
 });
 

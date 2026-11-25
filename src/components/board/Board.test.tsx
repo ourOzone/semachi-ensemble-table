@@ -304,13 +304,25 @@ describe('합주표', () => {
         expect(putBody).toMatchObject({ repeat: true, type: '무기한', due: '2026-12-21' });
     });
 
-    it('반복 종료 날짜가 이미 지났거나(옛 데이터) 계속 반복이면 "…까지"가 없다', async () => {
-        mockEnsemble({ due: '2026-01-01T00:00:00.000Z' });
-        const { dialog } = await openEnsembleInfo();
-        expect(within(dialog).getByText('매주 반복')).toBeInTheDocument();
+    it('반복 종료 날짜가 이미 지난 합주(옛 데이터)는 합주판에 보이지 않는다 (32차 V13)', async () => {
+        // 비교용: 같은 시간의 계속 반복 합주 (이것이 보이면 목록을 다 불러온 것)
+        server.use(
+            http.get(`${url}/ensembles`, () =>
+                HttpResponse.json([
+                    { ...ensembles[0]!, due: '2026-01-01T00:00:00.000Z' },
+                    { ...ensembles[0]!, _id: 'other', teamName: '다른밴드' },
+                ]),
+            ),
+        );
+        renderApp();
+
+        expect(
+            await screen.findByRole('button', { name: '다른밴드 10:00–11:00' }),
+        ).toBeInTheDocument();
+        // 이전: 지난 종료 날짜는 계속 반복으로 보고 매주 보였다
+        expect(screen.queryByRole('button', { name: /^테스트밴드 10:00/ })).not.toBeInTheDocument();
     });
 
-    // F4: 이전에는 저장을 기다리지 않고 화면의 날짜를 먼저 바꿔, 저장이 실패해도 바뀐 날짜가 보였다
     it('미루기: 저장에 실패하면 알림을 띄우고 PIN 단계에 머물러 다시 넣게 한다. 뒤로 가면 날짜는 그대로', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         server.use(http.put(`${url}/ensemble`, () => new HttpResponse(null, { status: 500 })));

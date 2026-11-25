@@ -45,12 +45,22 @@ export function withStartTime(date: Dayjs, startTime: TimeSlot): Dayjs {
 export const NO_REPEAT_END = '2099-12-31';
 
 /**
- * 반복 합주의 종료 날짜 (서버 due). 계속 반복(2099년 이후)이거나 이미 지난 날짜면 null.
- * 지난 날짜도 null인 이유: 옛 데이터에 반복인데 지난 due가 남은 합주가 있다 (반복 종료 기능 전에 만들어짐)
+ * 반복 합주의 종료 날짜 (서버 due, 0시). 없거나 계속 반복(2099년 이후)이면 null. 지난 날짜도 그대로 돌려준다.
+ * 합주판은 이 날짜 뒤에 반복 합주를 보여주지 않는다 (lib/calendar의 getOccurrence, V-2 V13)
  */
-export function getRepeatEnd(due: string | undefined, now: Dayjs): Dayjs | null {
+export function parseRepeatEnd(due: string | undefined): Dayjs | null {
     if (!due) return null;
     const end = dayjs(due).startOf('day');
-    if (!end.isValid() || end.year() >= 2099 || end.isBefore(now, 'day')) return null;
+    if (!end.isValid() || end.year() >= 2099) return null;
     return end;
+}
+
+/**
+ * 화면에 보여주고 수정 때 그대로 둘 반복 종료 날짜. parseRepeatEnd에서 이미 지난 날짜는 null.
+ * 지난 날짜도 null인 이유: 옛 데이터에 반복인데 지난 due가 남은 합주가 있다 (반복 종료 기능 전에 만들어짐).
+ * 그런 합주는 합주판에 보이지 않는다 (V13)
+ */
+export function getRepeatEnd(due: string | undefined, now: Dayjs): Dayjs | null {
+    const end = parseRepeatEnd(due);
+    return end && !end.isBefore(now, 'day') ? end : null;
 }

@@ -2,9 +2,9 @@ import { queryOptions, useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
 import { addEnsemble, deleteEnsemble, getEnsembles, updateEnsemble } from '@/api/ensemble';
-import { buildColorMap, toBoard, toTeams } from '@/lib/board';
+import { buildColorMap, toTeams } from '@/lib/board';
 import { toDaysSchedule, type CalendarEvent, type WithLane } from '@/lib/calendar';
-import type { EnsembleBoard, EnsembleUpdateRequest } from '@/types';
+import type { EnsembleUpdateRequest } from '@/types';
 import { ENSEMBLES, ensemblesQueryKey, useRefresh } from './keys';
 import { teamsQueryOptions } from './teams';
 
@@ -15,23 +15,6 @@ export const ensemblesQueryOptions = queryOptions({
     queryKey: ensemblesQueryKey,
     queryFn: getEnsembles,
 });
-
-const NO_BOARD: EnsembleBoard = [];
-
-/**
- * 합주표 (7 x 30). 팀 색상이 팀 목록 순서에 따라 정해지므로 팀·합주를 모두 불러온 뒤에 만든다.
- * 불러오기 전에는 빈 배열 (이전 FetchContext의 초기값과 같음).
- * 다음 합주 날짜는 데이터가 바뀔 때(불러올 때) 현재 시각으로 다시 계산한다 (이전 fetchData와 같은 시점)
- */
-export function useBoard(): EnsembleBoard {
-    const { data: teams } = useQuery({ ...teamsQueryOptions, select: toTeams });
-    const { data: ensembles } = useQuery(ensemblesQueryOptions);
-
-    return useMemo(
-        () => (teams && ensembles ? toBoard(teams, ensembles, dayjs()) : NO_BOARD),
-        [teams, ensembles],
-    );
-}
 
 /**
  * 합주판의 날짜들(열 순서)마다 그날 보이는 합주 (View 개편 V-2, 26차부터 날짜 단위: lib/calendar의 getBoardDays).

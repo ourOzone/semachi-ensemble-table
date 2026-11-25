@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { eventIds } from '@/constants';
 import theme from '@/styles/theme';
 import type { EnsembleResponse, TeamResponse } from '@/types';
-import { buildColorMap, isSkipped, resolveNextDate, slotEndTime, toBoard, toTeams } from './board';
+import { buildColorMap, resolveNextDate, slotEndTime, toTeams } from './board';
 
 const now = dayjs('2026-11-20T10:00');
 /** 로컬(Asia/Seoul) 날짜·시각을 서버가 보내는 ISO(UTC) 문자열로 바꾼다 */
@@ -136,100 +136,5 @@ describe('resolveNextDate', () => {
             // 오늘(금)보다 뒤 요일: 7 + 6 - 5 = 8 → % 7 = 1일 뒤
             expect(next({ day: 5, nextDate: iso('2026-11-14') })).toBe('2026-11-21 00:00'); // 토 → 내일
         });
-    });
-});
-
-describe('toBoard', () => {
-    const teams = toTeams([teamRaw('team-a', '팀A'), teamRaw('team-b', '팀B')]);
-
-    it('7(요일) x 30(시간칸) 크기의 2차원 배열을 만든다', () => {
-        const board = toBoard(teams, [], now);
-
-        expect(board).toHaveLength(7);
-        expect(board.every((day) => day.length === 30)).toBe(true);
-    });
-
-    it('합주를 day와 startTime~endTime(양 끝 포함) 칸마다 넣고, 첫 칸에만 팀 이름을 표시한다', () => {
-        const board = toBoard(
-            teams,
-            [ensemble({ _id: 'e1', day: 4, startTime: 2, endTime: 4 })],
-            now,
-        );
-        const day = board[4]!;
-
-        expect(day[1]).toEqual([]);
-        expect(day[2]!.map((b) => b.displayName)).toEqual(['팀A']);
-        expect(day[3]!.map((b) => b.displayName)).toEqual(['']);
-        expect(day[4]!.map((b) => b.displayName)).toEqual(['']);
-        expect(day[5]).toEqual([]);
-        expect(day[2]![0]).toMatchObject({
-            id: 'e1',
-            day: 4,
-            startTime: 2,
-            endTime: 4,
-            teamId: 'team-a',
-            name: '팀A',
-            repeat: true,
-            due: iso('2099-12-31'),
-            teamColor: theme.teamColors[0],
-        });
-        expect(fmt(day[2]![0]!.nextDate)).toBe('2026-11-23 00:00');
-    });
-
-    it('같은 칸에 겹치는 합주는 서버 순서대로 함께 들어간다', () => {
-        const board = toBoard(
-            teams,
-            [
-                ensemble({ _id: 'e1', teamId: 'team-a', teamName: '팀A' }),
-                ensemble({ _id: 'e2', teamId: 'team-b', teamName: '팀B' }),
-            ],
-            now,
-        );
-
-        expect(board[4]![2]!.map((b) => [b.id, b.teamColor])).toEqual([
-            ['e1', theme.teamColors[0]],
-            ['e2', theme.teamColors[1]],
-        ]);
-    });
-
-    it('소모임·회의 합주는 eventColors, 팀 목록에 없는 팀(예: 삭제된 팀)의 합주는 회청색(blueGray)', () => {
-        const board = toBoard(
-            teams,
-            [
-                ensemble({ _id: 'e1', teamId: eventIds[1]!, startTime: 0, endTime: 0 }),
-                ensemble({ _id: 'e2', teamId: 'deleted-team', startTime: 1, endTime: 1 }),
-            ],
-            now,
-        );
-
-        expect(board[4]![0]![0]!.teamColor).toBe(theme.eventColors[1]);
-        expect(board[4]![1]![0]!.teamColor).toBe(theme.blueGray);
-    });
-
-    it('nextDate는 now 기준으로 다시 계산된다 (resolveNextDate)', () => {
-        const board = toBoard(teams, [ensemble({ _id: 'e1', nextDate: iso('2026-11-13') })], now);
-
-        expect(fmt(board[4]![2]![0]!.nextDate)).toBe('2026-11-20 00:00');
-    });
-});
-
-describe('isSkipped (회색 표시)', () => {
-    const skipped = (nextDate: string, endTime: number) =>
-        isSkipped({ nextDate: dayjs(nextDate), endTime }, now);
-
-    it('다음 합주가 끝나는 시각이 지금부터 7일 이상 뒤면 true', () => {
-        // 11-27 11:00 - 11-20 10:00 = 7일 1시간
-        expect(skipped('2026-11-27', 3)).toBe(true);
-        expect(skipped('2026-12-04', 3)).toBe(true);
-    });
-
-    it('7일 미만이면 false (일 단위 내림)', () => {
-        // 11-27 09:30 - 11-20 10:00 = 6일 23시간 30분
-        expect(skipped('2026-11-27', 0)).toBe(false);
-        expect(skipped('2026-11-20', 3)).toBe(false);
-    });
-
-    it('nextDate의 시각은 무시하고 끝나는 시각으로 맞춰 비교한다 (초 단위는 nextDate 값 그대로)', () => {
-        expect(skipped('2026-11-27T23:00', 0)).toBe(false);
     });
 });

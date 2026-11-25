@@ -1,16 +1,10 @@
 import dayjs, { type Dayjs } from 'dayjs';
 import { eventIds, idx2hour } from '@/constants';
 import theme from '@/styles/theme';
-import type {
-    EnsembleBlock,
-    EnsembleBoard,
-    EnsembleResponse,
-    Team,
-    TeamResponse,
-    TimeSlot,
-} from '@/types';
+import type { EnsembleResponse, Team, TeamResponse, TimeSlot } from '@/types';
 
-// 서버 응답 → 화면용 데이터(팀 목록·합주표)로 바꾸는 순수 함수.
+// 서버 응답 → 화면용 데이터(팀 목록·팀 색·다음 합주 날짜)로 바꾸는 순수 함수.
+// 옛 합주표(7 x 30 칸)용 toBoard·isSkipped는 V-2 정리 때 지웠다 (새 캘린더는 lib/calendar).
 // 현재 시각은 now 인자로 받는다 (호출부에서 dayjs()를 넘긴다).
 
 /** 시간칸 endTime이 끝나는 시각 [시, 분]. idx2hour[endTime + 1] 기준 (endTime 29 → 24:00) */
@@ -63,54 +57,4 @@ export function resolveNextDate(
         return now.hour(hour).minute(minute).isAfter(now) ? today : today.add(7, 'day');
     }
     return today.add((7 + next.day() - now.day()) % 7, 'day');
-}
-
-/**
- * 합주표: [요일 0~6][시간칸 0~29][그 칸에 겹치는 합주들].
- * 합주는 startTime~endTime(양 끝 포함) 칸마다 하나씩 들어가고, 첫 칸에만 팀 이름을 표시한다.
- * teams는 toTeams 결과(소모임·회의 제외)여야 색상 순서가 맞다.
- */
-export function toBoard(
-    teams: Team[],
-    ensemblesRaw: EnsembleResponse[],
-    now: Dayjs,
-): EnsembleBoard {
-    const colorMap = buildColorMap(teams);
-    const blocks: EnsembleBoard = Array.from({ length: 7 }, () =>
-        Array.from({ length: 30 }, () => []),
-    );
-
-    ensemblesRaw.forEach((ensemble) => {
-        const { _id, day, startTime, endTime, teamId, teamName, repeat, due } = ensemble;
-        const nextDate = resolveNextDate(ensemble, now);
-
-        for (let hour = startTime; hour <= endTime; hour++) {
-            // day(0~6)·시간칸(0~29) 범위는 응답 스키마(ensembleResponseSchema)에서 검증된다
-            blocks[day]![hour]!.push({
-                id: _id,
-                day,
-                startTime,
-                endTime,
-                teamId,
-                name: teamName,
-                repeat,
-                nextDate,
-                due,
-                displayName: hour === startTime ? teamName : '', // 맨 처음 블록에만 팀명 표시
-                // 목록에 없는 팀(삭제된 팀 등)은 회청색 (이전에는 -1이 그대로 CSS 배경색 값이 됐다: ISSUES F8)
-                teamColor: colorMap[teamId] ?? theme.blueGray,
-            });
-        }
-    });
-
-    return blocks;
-}
-
-/** "다음 번에 안 해요"로 미뤄진 합주인지(회색 표시): 다음 합주가 끝나는 시각이 지금부터 7일 이상 뒤 */
-export function isSkipped(
-    { nextDate, endTime }: Pick<EnsembleBlock, 'nextDate' | 'endTime'>,
-    now: Dayjs,
-): boolean {
-    const [hour, minute] = slotEndTime(endTime);
-    return dayjs(nextDate).hour(hour).minute(minute).diff(now, 'day') >= 7;
 }

@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-2 합주표 진행 중: 합주판 카드 1~7차(사용자 수정 반영), 8차 합주 정보 Drawer·9~10차 수정·11차 합주 잡기 Drawer·12~14차·15~20차 PIN 단계·21~24차 합주 잡기 Drawer·25~30차·31차 합주 수정 Drawer·32차 완료 (2026-11-25, 브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, 다음은 V-3 팀 (브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -981,6 +981,18 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 205/205 / `pnpm lint` → 에러 4·경고 24 (새 코드 0건) / `pnpm format:check` ✅
 
+### 2026-11-25 — View 개편 V-2 마무리: 반복 종료 날짜 뒤 숨김(V13), 옛 합주표 코드 정리
+
+- 지금 → 바꾼 후
+  - 반복 합주: 반복 종료 날짜(`due`)가 지나도 합주판에 매주 보이고 겹침(최대 4개) 계산에 들어감 → 종료 날짜 뒤 날짜에서는 보이지 않고 세지 않음 (ISSUES V13, 사용자 승인)
+  - 이미 지난 종료 날짜의 옛 데이터 1건: 계속 반복으로 봄 → 같은 규칙으로 숨김 (사용자 판단: 실제 합주판에도 보이지 않았다)
+- 구조: `lib/ensemble`의 `parseRepeatEnd`(지난 날짜도 돌려줌, `getRepeatEnd`는 이것 + 지난 날짜 제외), `lib/calendar`의 `getOccurrence`가 `due`를 봄, `isLastOccurrence`는 `now` 인자 없이
+- 정리 (화면 변화 없음): 옛 합주표용 `toBoard`·`isSkipped`(`lib/board`), `useBoard`(`queries/ensembles`), `EnsembleBlock`·`EnsembleBoard`(`types/domain`)와 그 테스트 삭제. 조회 훅 테스트(`queries.test`·`mutations.test`)는 `useBoardSchedule`로. ensemble context에서 옛 Drawer 단계용 `org*`·`setEnsembleOrgStates`·`currentMonth`와 쓰지 않는 setter(`setId`·`setStartTime`·`setEndTime`) 삭제
+- 계획 문서: PIN·변경 흐름 추가 제안 3~5 삭제 (사용자 반려), V-2 완료 표시
+- 테스트: `lib/calendar.test.ts` 3개(종료 뒤 null·지난 종료 날짜 숨김·겹침 계산), `Board.test.tsx`의 "지난 종료 날짜면 '…까지' 없음"을 "합주판에 보이지 않음"으로. 옛 `toBoard`·`isSkipped` 테스트 삭제. 변형 검사 2/2 (별도 복사본: 종료 뒤 숨김 제거, 마지막 날 판단의 종료 전 조건 제거)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 200/200 (옛 toBoard·isSkipped 테스트 삭제로 205 → 200) / `--maxWorkers=4` ✅ / `pnpm build` ✅ / `pnpm lint` → 에러 4·경고 24 (새 코드 0건) / `pnpm format:check` ✅
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -1025,4 +1037,4 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 1. ~~2단계 TS 전환~~ ✅ 완료
 2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)
 3. ~~3단계 내부 로직 개선~~ ✅ 완료 (2026-11-23)
-4. View 개편: 계획 `docs/VIEW_REDESIGN_PLAN.md` (V-0·V-1 ✅, 다음은 V-2 합주표)
+4. View 개편: 계획 `docs/VIEW_REDESIGN_PLAN.md` (V-0·V-1·V-2 ✅, 다음은 V-3 팀)

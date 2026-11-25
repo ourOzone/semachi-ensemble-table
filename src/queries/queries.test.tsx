@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import dayjs from 'dayjs';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse, type JsonBodyType } from 'msw';
@@ -9,7 +10,7 @@ import theme from '@/styles/theme';
 import { ensembles, mockInitialData, notes, notices, teams } from '@/test/fixtures';
 import { createTestQueryClient } from '@/test/render';
 import { server } from '@/test/server';
-import { useBoard } from './ensembles';
+import { useBoardSchedule } from './ensembles';
 import { useNotes, useNotices } from './notes';
 import { useTeams } from './teams';
 
@@ -19,11 +20,17 @@ function wrapperWith(queryClient: QueryClient) {
     };
 }
 
+/**
+ * 합주판 한 날짜: fixtures의 매주 월요일 반복 합주(11/23부터, 시간칸 2~3)가 보이는 먼 월요일.
+ * 실제 오늘과 관계없이 그 합주가 보인다 (다음 날짜 이후의 그 요일은 언제나 "합주")
+ */
+const MONDAY = [dayjs('2027-03-01')];
+
 /** 화면이 쓰는 조회 훅 전체 */
 function useAll() {
     return {
         teams: useTeams(),
-        board: useBoard(),
+        schedule: useBoardSchedule(MONDAY),
         notes: useNotes(),
         notices: useNotices(),
     };
@@ -56,14 +63,15 @@ describe('조회 훅 (TanStack Query)', () => {
         const { result } = renderHook(useAll, { wrapper: wrapperWith(createTestQueryClient()) });
 
         expect(result.current.teams).toEqual([]);
-        expect(result.current.board).toEqual([]);
+        expect(result.current.schedule).toEqual([[]]);
 
         await waitFor(() => expect(result.current.notices).toHaveLength(1));
-        await waitFor(() => expect(result.current.board).toHaveLength(7));
+        await waitFor(() => expect(result.current.schedule[0]).toHaveLength(1));
         expect(result.current.teams.map((t) => t.id)).toEqual(['team-1']);
-        expect(result.current.board[0]![2]![0]).toMatchObject({
+        expect(result.current.schedule[0]![0]).toMatchObject({
             id: 'ensemble-1',
-            teamColor: theme.teamColors[0],
+            color: theme.teamColors[0],
+            startTime: 2,
         });
         expect(result.current.notes).toEqual([{ id: 'note-1', text: '메모입니다' }]);
         expect(result.current.notices).toEqual([{ id: 'notice-1', text: '첫 공지\n둘째 줄' }]);
@@ -90,7 +98,7 @@ describe('조회 훅 (TanStack Query)', () => {
         );
         const { result } = renderHook(useAll, { wrapper: wrapperWith(createTestQueryClient()) });
 
-        await waitFor(() => expect(result.current.board).toHaveLength(7), { timeout: 3000 });
+        await waitFor(() => expect(result.current.schedule[0]).toHaveLength(1), { timeout: 3000 });
         expect(started.sort()).toEqual(['ensembles', 'notes', 'notices', 'teams']);
     });
 
@@ -107,11 +115,11 @@ describe('조회 훅 (TanStack Query)', () => {
         const { result } = renderHook(useAll, { wrapper: wrapperWith(createTestQueryClient()) });
 
         await waitFor(() => expect(result.current.notes).toHaveLength(1)); // 다른 목록은 이미 도착
-        expect(result.current.board).toEqual([]);
+        expect(result.current.schedule).toEqual([[]]);
 
         releaseTeams();
-        await waitFor(() => expect(result.current.board).toHaveLength(7));
-        expect(result.current.board[0]![2]![0]!.teamColor).toBe(theme.teamColors[0]);
+        await waitFor(() => expect(result.current.schedule[0]).toHaveLength(1));
+        expect(result.current.schedule[0]![0]!.color).toBe(theme.teamColors[0]);
     });
 
     describe('앱 기본값 (createQueryClient, 사전 결정 3)', () => {

@@ -10,15 +10,23 @@ import { createTestQueryClient } from '@/test/render';
 import { countOf, recordRequests } from '@/test/requests';
 import { server } from '@/test/server';
 import type { EnsembleUpdateRequest } from '@/types';
-import { useAddEnsemble, useBoard, useDeleteEnsemble, useUpdateEnsemble } from './ensembles';
+import {
+    useAddEnsemble,
+    useBoardSchedule,
+    useDeleteEnsemble,
+    useUpdateEnsemble,
+} from './ensembles';
 import { useNotes } from './notes';
 import { useAddTeam, useDeleteTeam, useTeams, useUpdateTeam } from './teams';
+
+/** 합주판 한 날짜 (fixtures의 월요일 반복 합주가 보이는 먼 월요일) */
+const MONDAY = [dayjs('2027-03-01')];
 
 // 화면처럼 목록 조회 훅이 마운트된 상태에서 mutation을 실행한다 (다시 불러오기는 활성 query만 대상)
 function useScreen() {
     return {
         teams: useTeams(),
-        board: useBoard(),
+        schedule: useBoardSchedule(MONDAY),
         notes: useNotes(),
         addTeam: useAddTeam(),
         updateTeam: useUpdateTeam(),
@@ -37,7 +45,7 @@ async function renderScreen() {
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
     const { result } = renderHook(useScreen, { wrapper });
-    await waitFor(() => expect(result.current.board).toHaveLength(7));
+    await waitFor(() => expect(result.current.schedule[0]).toHaveLength(1));
     await waitFor(() => expect(result.current.notes).toHaveLength(1));
     return { result, requests };
 }

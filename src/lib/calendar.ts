@@ -353,7 +353,7 @@ export function isSlotFull(
 // ---------------- 합주판 보기 방식 (View 개편 V-2 26차) ----------------
 // 지난 날짜는 볼 필요가 없어, 첫 화면(offset 0)은 늘 오늘부터 7일을 보여준다. 다음 주부터는 일~토 한 주씩.
 
-/** 합주판 보기 방식. rolling: 오늘을 맨 왼쪽에 두고 7일 / weekday: 일~토 요일 고정, 지난 요일은 다음 주 날짜로 */
+/** 합주판 보기 방식. weekday(기본): 일~토 요일 고정, 지난 요일은 다음 주 날짜로 / rolling: 오늘을 맨 왼쪽에 두고 7일 */
 export type BoardView = 'rolling' | 'weekday';
 
 /** offset주 뒤 주의 일요일 0시 (offset 0 = 오늘이 속한 일~토 주) */

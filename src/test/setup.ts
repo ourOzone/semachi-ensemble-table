@@ -46,7 +46,7 @@ afterEach(() => {
     useDrawerStore.setState(useDrawerStore.getInitialState(), true);
     // 합주판 보기 방식도 모듈 전역 상태 + localStorage (26차)
     localStorage.clear();
-    useBoardViewStore.setState({ view: 'rolling' });
+    useBoardViewStore.setState(useBoardViewStore.getInitialState(), true);
     // Sonner 알림도 모듈 전역 상태다. 새 <Toaster />는 구독할 때 아직 닫히지 않은 알림을 받아 그리므로 모두 닫는다
     toast.dismiss();
 });

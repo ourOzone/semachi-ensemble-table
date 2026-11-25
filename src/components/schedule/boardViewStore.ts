@@ -5,7 +5,8 @@ import type { BoardView } from '@/lib/calendar';
 // 고른 방식은 이 브라우저에 기억한다 (저장소를 쓸 수 없으면 기본값)
 
 const STORAGE_KEY = 'semachi.boardView';
-const DEFAULT_VIEW: BoardView = 'rolling';
+/** 기본은 요일 고정 (27차, 이전: 오늘부터) */
+const DEFAULT_VIEW: BoardView = 'weekday';
 
 function readSaved(): BoardView {
     try {

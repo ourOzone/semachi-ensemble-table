@@ -39,8 +39,8 @@ const EVENT_STRIPES =
     'repeating-linear-gradient(135deg, rgb(255 255 255 / 0.22) 0 3px, transparent 3px 7px)';
 
 /**
- * 일회성 합주 표시: 블록 맨 아래 가운데에 입장권처럼 반원 구멍 (25차). 반지름은 --notch.
- * 마스크로 블록(바탕·테두리)을 그 모양만큼 비운다
+ * 일회성 합주 표시: 블록 맨 아래 가운데에 입장권처럼 반원 구멍 (25차). 반지름은 --notch (모바일 3px·PC 3.5px, 27차에 작은 쪽으로 통일).
+ * 마스크로 블록(바탕·테두리)을 그 모양만큼 비운다. 점선 블록은 비운 자리에 반원 점선 테두리를 따로 그린다 (NotchOutline)
  */
 const ONE_TIME_NOTCH =
     'radial-gradient(circle at 50% 100%, transparent var(--notch), #000 calc(var(--notch) + 0.5px))';
@@ -59,6 +59,15 @@ interface WeekCalendarProps {
     onClickEvent: (event: CalendarEvent, date: Dayjs) => void;
     /** 시간칸을 누름 (column: 열 번호): 빈 칸, 또는 이름이 안 보이는 곳(3개 이상 겹침, 1024px 미만)의 블록 (Board가 resolveSlotTap으로 처리) */
     onClickSlot: (column: number, slot: TimeSlot) => void;
+}
+
+/** 요일 색 (27차): 토요일 파랑, 일요일 빨강 (합주 잡기 달력과 같음). 오늘 표시의 원·날짜도 이 색 */
+function weekendColor(date: Dayjs): { text: string; today: string; todayText: string } | null {
+    if (date.day() === 6)
+        return { text: 'text-blue-600', today: 'bg-blue-600', todayText: 'text-blue-600' };
+    if (date.day() === 0)
+        return { text: 'text-red-500', today: 'bg-red-500', todayText: 'text-red-500' };
+    return null;
 }
 
 /** 날짜 표시: 보통 "25", 달의 첫날은 "12/1" (달이 바뀌는 곳을 알 수 있게) */
@@ -120,6 +129,7 @@ const WeekCalendar = ({
                     <div />
                     {boardDays.map(({ date, nextWeek }) => {
                         const isToday = date.isSame(today, 'day');
+                        const weekend = weekendColor(date);
                         return (
                             // 요일을 크게, 날짜는 작게 (24차, 이전: 날짜를 크게). 오늘은 요일을 원으로
                             <div
@@ -130,8 +140,10 @@ const WeekCalendar = ({
                             >
                                 <span
                                     className={cn(
-                                        'flex size-7 items-center justify-center rounded-full text-[15px] font-bold text-neutral-900 md:size-9 md:text-xl',
-                                        isToday && 'bg-today text-white',
+                                        'flex size-7 items-center justify-center rounded-full text-[15px] font-bold md:size-9 md:text-xl',
+                                        isToday
+                                            ? cn(weekend?.today ?? 'bg-today', 'text-white')
+                                            : (weekend?.text ?? 'text-neutral-900'),
                                     )}
                                 >
                                     {days[getTodayIdx(date)]}
@@ -139,7 +151,8 @@ const WeekCalendar = ({
                                 <span
                                     className={cn(
                                         'text-xs whitespace-nowrap text-neutral-500 tabular-nums md:text-sm',
-                                        isToday && 'font-bold text-today',
+                                        isToday &&
+                                            cn('font-bold', weekend?.todayText ?? 'text-today'),
                                     )}
                                 >
                                     {dayLabel(date)}
@@ -288,11 +301,8 @@ function EventBlock({ event, onClick }: EventBlockProps) {
             aria-label={`${name} ${time}${skipped ? ' 이번 주 쉼' : ''}`}
             data-one-time={event.repeat ? undefined : ''}
             className={cn(
-                // 일회성 구멍 반지름: 30분 블록은 글자를 덜 가리게 작게 (살짝 걸치는 정도)
-                !event.repeat &&
-                    (slots === 1
-                        ? '[--notch:3px] md:[--notch:3.5px]'
-                        : '[--notch:5px] md:[--notch:6px]'),
+                // 일회성 구멍 반지름 (모든 길이 같음)
+                !event.repeat && '[--notch:3px] md:[--notch:3.5px]',
                 '@container squircle absolute flex flex-col overflow-hidden rounded-md px-0.5 py-0.5 text-left transition-[filter,background-color] duration-150 md:rounded-lg md:py-1',
                 // 스쿼클이면 반지름을 키워 일반 둥근 모서리와 비슷한 크기로 보이게
                 'supports-[corner-shape:squircle]:rounded-[11px] md:supports-[corner-shape:squircle]:rounded-[15px]',
@@ -306,6 +316,8 @@ function EventBlock({ event, onClick }: EventBlockProps) {
             )}
             style={style}
         >
+            {/* 점선 일회성 블록: 구멍 둘레에 반원 점선 (마스크가 아래 테두리를 끊은 자리를 잇는다) */}
+            {!event.repeat && skipped && <NotchOutline />}
             {/* 이름: 블록 높이만큼의 줄까지만 (말줄임표 없이 잘림) */}
             <span
                 className={cn(
@@ -353,6 +365,22 @@ function EventBlock({ event, onClick }: EventBlockProps) {
                 </span>
             )}
         </button>
+    );
+}
+
+/**
+ * 점선 블록의 구멍 테두리: 블록 아래 끝에 중심을 둔 원(바깥 반지름 = 구멍 + 테두리 두께)의 점선 테두리.
+ * 원의 안쪽은 마스크로 비워진 구멍과 같고, 테두리 고리는 구멍 바로 바깥이라 보인다.
+ * 아래 절반은 블록 밖이라 잘려(overflow-hidden) 위쪽 반원만 남는다. 색은 블록 테두리 색(currentColor).
+ * 점선이 아니라 실선: 둘레가 10px 남짓이라 점선 무늬가 한두 조각으로 끊겨 보이고(Chrome), 사파리(WebKit)는 거의 다 빈칸으로 그렸다
+ */
+function NotchOutline() {
+    return (
+        <span
+            aria-hidden
+            data-notch-outline
+            className="pointer-events-none absolute bottom-0 left-1/2 size-[calc(var(--notch)*2+3px)] -translate-x-1/2 translate-y-1/2 rounded-full border-[1.5px] border-solid border-current"
+        />
     );
 }
 

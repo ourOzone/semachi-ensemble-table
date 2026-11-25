@@ -10,10 +10,10 @@ import { cn } from '@/lib/utils';
 const DRIVE_URL =
     'https://drive.google.com/drive/folders/1FneJEkXY-hSqpM_XOBic7ep8lJZ3tdFn?usp=sharing';
 
-/** 합주판 보기 방식 (26차): 오늘부터 7일 / 요일 고정(일~토) */
+/** 합주판 보기 방식 스위치의 두 칸 (27차: 왼쪽이 기본인 요일 고정) */
 const VIEW_OPTIONS = [
-    { view: 'rolling', label: '오늘부터 보기', Icon: CalendarClock },
     { view: 'weekday', label: '요일 고정으로 보기', Icon: CalendarDays },
+    { view: 'rolling', label: '오늘부터 보기', Icon: CalendarClock },
 ] as const satisfies readonly { view: BoardView; label: string; Icon: unknown }[];
 
 const Header = () => {
@@ -33,31 +33,43 @@ const Header = () => {
                     세마치 합주판
                 </span>
                 <div className="ml-auto flex items-center gap-1.5">
-                    <div
-                        role="radiogroup"
-                        aria-label="합주판 보기 방식"
-                        className="flex items-center gap-0.5 rounded-full bg-black/5 p-1"
+                    {/*
+                      보기 방식 스위치 (27차): 어디를 눌러도 다른 쪽으로 바뀐다 (이전: 아이콘을 골라 누름).
+                      흰 원(손잡이)이 지금 방식의 아이콘 아래로 미끄러진다. 켜짐(checked) = 오늘부터 보기
+                    */}
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-checked={view === 'rolling'}
+                        aria-label="오늘부터 보기"
+                        title={
+                            view === 'rolling'
+                                ? '오늘부터 보기 (누르면 요일 고정)'
+                                : '요일 고정으로 보기 (누르면 오늘부터)'
+                        }
+                        className="relative flex items-center gap-0.5 rounded-full bg-black/5 p-1 transition-[background-color,scale] duration-150 hover:bg-black/8 active:scale-[0.97]"
+                        onClick={() => setView(view === 'rolling' ? 'weekday' : 'rolling')}
                     >
-                        {VIEW_OPTIONS.map(({ view: option, label, Icon }) => (
-                            <button
+                        <span
+                            aria-hidden
+                            className={cn(
+                                'absolute top-1 left-1 size-8 rounded-full bg-white shadow-[0_1px_3px_rgb(0_0_0/0.15)] transition-transform duration-200 ease-out md:size-9',
+                                view === 'rolling' && 'translate-x-[calc(100%+2px)]',
+                            )}
+                        />
+                        {VIEW_OPTIONS.map(({ view: option, Icon }) => (
+                            <span
                                 key={option}
-                                type="button"
-                                role="radio"
-                                aria-checked={view === option}
-                                aria-label={label}
-                                title={label}
+                                aria-hidden
                                 className={cn(
-                                    'inline-flex size-8 items-center justify-center rounded-full transition-[background-color,color,box-shadow] duration-150 md:size-9',
-                                    view === option
-                                        ? 'bg-white text-ink shadow-[0_1px_3px_rgb(0_0_0/0.15)]'
-                                        : 'text-neutral-500 hover:text-ink',
+                                    'relative inline-flex size-8 items-center justify-center rounded-full transition-colors duration-200 md:size-9',
+                                    view === option ? 'text-ink' : 'text-neutral-500',
                                 )}
-                                onClick={() => setView(option)}
                             >
-                                <Icon className="size-[18px] md:size-5" aria-hidden />
-                            </button>
+                                <Icon className="size-[18px] md:size-5" />
+                            </span>
                         ))}
-                    </div>
+                    </button>
                     <a
                         href={DRIVE_URL}
                         aria-label="회칙 등 문서 (구글 드라이브)"

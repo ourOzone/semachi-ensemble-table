@@ -25,13 +25,23 @@ describe('합주판 (주 단위 캘린더)', () => {
     const header = () =>
         [...document.querySelectorAll('[data-board-day]')].map((el) => el.textContent);
 
-    it('첫 화면은 "이번 주"(오늘부터 7일), 다음 주부터 일~토로 12주 뒤까지, "오늘"로 돌아온다', async () => {
+    const WEEKDAY_VIEW = [
+        '일22다음주',
+        '월23다음주',
+        '화24다음주',
+        '수25다음주',
+        '목26다음주',
+        '금20',
+        '토21',
+    ];
+
+    it('첫 화면은 "이번 주"(요일 고정, 기본), 다음 주부터 일~토로 12주 뒤까지, "오늘"로 돌아온다', async () => {
         const user = userEvent.setup();
         renderApp();
 
         expect(await screen.findByRole('heading', { name: '이번 주' })).toBeInTheDocument();
-        // 오늘(금)이 맨 왼쪽, 날마다 한 칸씩 밀린다 (이전: 월~일)
-        expect(header()).toEqual(['금20', '토21', '일22', '월23', '화24', '수25', '목26']);
+        // 기본은 요일 고정(27차): 일~토, 금요일이라 일~목은 지났으니 다음 주 날짜에 "다음주"
+        expect(header()).toEqual(WEEKDAY_VIEW);
         const prev = screen.getByRole('button', { name: '이전 주' });
         const next = screen.getByRole('button', { name: '다음 주' });
         const today = screen.getByRole('button', { name: '오늘' });
@@ -41,7 +51,7 @@ describe('합주판 (주 단위 캘린더)', () => {
         expect(document.querySelector('[aria-current="date"]')).toHaveTextContent(/^금\s*20$/);
 
         await user.click(next);
-        // 다음 주는 일~토 (오늘부터 7일과 겹쳐도 그대로)
+        // 다음 주는 일~토 (첫 화면과 겹쳐도 그대로)
         expect(screen.getByRole('heading', { name: '11월 22일 – 28일' })).toBeInTheDocument();
         expect(header()).toEqual(['일22', '월23', '화24', '수25', '목26', '금27', '토28']);
         expect(prev).toBeEnabled();
@@ -60,33 +70,44 @@ describe('합주판 (주 단위 캘린더)', () => {
         expect(screen.getByRole('heading', { name: '이번 주' })).toBeInTheDocument();
     });
 
-    it('헤더 스위치로 요일 고정 보기: 일~토, 지난 요일은 다음 주 날짜에 "다음주"', async () => {
+    it('헤더 스위치는 어디를 눌러도 바뀐다: 오늘부터 보기(오늘이 맨 왼쪽) ↔ 요일 고정', async () => {
         const user = userEvent.setup();
         renderApp();
         await screen.findByRole('heading', { name: '이번 주' });
 
-        const views = screen.getByRole('radiogroup', { name: '합주판 보기 방식' });
-        expect(within(views).getByRole('radio', { name: '오늘부터 보기' })).toBeChecked();
-        await user.click(within(views).getByRole('radio', { name: '요일 고정으로 보기' }));
+        const toggle = screen.getByRole('switch', { name: '오늘부터 보기' });
+        expect(toggle).not.toBeChecked();
+        await user.click(toggle);
 
+        expect(toggle).toBeChecked();
         expect(screen.getByRole('heading', { name: '이번 주' })).toBeInTheDocument();
-        // 금요일: 일~목은 지났으니 다음 주 날짜
-        expect(header()).toEqual([
-            '일22다음주',
-            '월23다음주',
-            '화24다음주',
-            '수25다음주',
-            '목26다음주',
-            '금20',
-            '토21',
-        ]);
-        expect(document.querySelector('[aria-current="date"]')).toHaveTextContent(/^금\s*20/);
+        // 오늘(금)이 맨 왼쪽, 날마다 한 칸씩 밀린다
+        expect(header()).toEqual(['금20', '토21', '일22', '월23', '화24', '수25', '목26']);
         // 고른 방식은 기억한다
-        expect(localStorage.getItem('semachi.boardView')).toBe('weekday');
-
+        expect(localStorage.getItem('semachi.boardView')).toBe('rolling');
         // 다음 주는 보기 방식과 관계없이 일~토
         await user.click(screen.getByRole('button', { name: '다음 주' }));
         expect(header()).toEqual(['일22', '월23', '화24', '수25', '목26', '금27', '토28']);
+
+        await user.click(toggle);
+        await user.click(screen.getByRole('button', { name: '오늘' }));
+        expect(toggle).not.toBeChecked();
+        expect(header()).toEqual(WEEKDAY_VIEW);
+        expect(localStorage.getItem('semachi.boardView')).toBe('weekday');
+    });
+
+    it('요일 머리: 토요일 파랑·일요일 빨강, 오늘이 주말이면 오늘 표시도 그 색', async () => {
+        vi.setSystemTime(new Date(2026, 10, 21, 10, 0)); // 토요일
+        renderApp();
+        await screen.findByRole('heading', { name: '이번 주' });
+
+        const weekday = (label: string) =>
+            screen.getByText(label, { selector: '[data-board-day] > span' });
+        expect(weekday('일').className).toContain('text-red-500');
+        expect(weekday('월').className).toContain('text-neutral-900');
+        // 오늘(토): 파란 원
+        expect(weekday('토').className).toContain('bg-blue-600');
+        expect(weekday('토').className).not.toContain('bg-today');
     });
 
     it('미룬 주는 "쉼", 그 뒤 주부터는 합주로 보인다', async () => {
@@ -113,7 +134,7 @@ describe('합주판 (주 단위 캘린더)', () => {
         expect(within(normal).getAllByText('10:00–11:00').length).toBeGreaterThan(0);
     });
 
-    it('일회성 합주 블록에만 입장권 같은 반원 구멍 표시 (30분은 작게)', async () => {
+    it('일회성 합주 블록에만 입장권 같은 반원 구멍 표시 (길이와 관계없이 같은 크기)', async () => {
         server.use(
             http.get(`${url}/ensembles`, () =>
                 HttpResponse.json([
@@ -128,6 +149,16 @@ describe('합주판 (주 단위 캘린더)', () => {
                         repeat: false,
                         nextDate: '2026-11-21T00:00:00',
                     },
+                    {
+                        ...ensembles[0]!,
+                        _id: 'o2',
+                        teamName: '긴일회성',
+                        day: 5,
+                        startTime: 10,
+                        endTime: 13,
+                        repeat: false,
+                        nextDate: '2026-11-21T00:00:00',
+                    },
                 ]),
             ),
         );
@@ -137,7 +168,38 @@ describe('합주판 (주 단위 캘린더)', () => {
         const oneTime = screen.getByRole('button', { name: '일회성 12:00–12:30' });
         expect(repeat).not.toHaveAttribute('data-one-time');
         expect(oneTime).toHaveAttribute('data-one-time');
+        // 구멍은 길이와 관계없이 같은 크기 (27차)
         expect(oneTime.className).toContain('[--notch:3px]');
+        const long = screen.getByRole('button', { name: '긴일회성 14:00–16:00' });
+        expect(long.className).toContain('[--notch:3px]');
+        // 실선 블록은 반원 테두리가 필요 없다
+        expect(oneTime.querySelector('[data-notch-outline]')).toBeNull();
+    });
+
+    it('점선(쉼) 일회성 블록에는 구멍 둘레에 반원 점선 테두리', async () => {
+        // 11/28(토) 하루만 하는 일회성 합주. 오늘은 11/20(금)
+        server.use(
+            http.get(`${url}/ensembles`, () =>
+                HttpResponse.json([
+                    {
+                        ...ensembles[0]!,
+                        _id: 'o',
+                        teamName: '미래일회성',
+                        day: 5,
+                        repeat: false,
+                        nextDate: '2026-11-28T00:00:00',
+                    },
+                ]),
+            ),
+        );
+        renderApp();
+
+        // 토 11/21은 11/28 일회성의 전 주라 점선
+        const dashed = await screen.findByRole('button', {
+            name: '미래일회성 10:00–11:00 이번 주 쉼',
+        });
+        expect(dashed).toHaveAttribute('data-one-time');
+        expect(dashed.querySelector('[data-notch-outline]')).not.toBeNull();
     });
 
     it('팀 목록은 "전체"로 펼치고, 펼친 동안은 "닫기"로 접는다', async () => {

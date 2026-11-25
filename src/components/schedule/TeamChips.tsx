@@ -108,39 +108,45 @@ const TeamChips = ({ teams, eventGroups, onAddTeam, loading = false }: TeamChips
                 <h2 className="text-[17px] font-bold text-ink md:text-[20px]">팀</h2>
                 <AddPill label="팀 추가" onClick={onAddTeam} />
             </div>
-            <TeamList heightStyle={heightStyle} innerRef={innerRef}>
-                {loading ? (
-                    <div aria-busy className="flex gap-1.5 overflow-hidden md:flex-wrap">
-                        {SKELETON_WIDTHS.map((width, idx) => (
-                            <Skeleton
-                                key={idx}
-                                className="h-8 shrink-0 rounded-full md:h-9"
-                                style={{ width }}
-                            />
-                        ))}
-                    </div>
-                ) : expanded ? (
-                    // 펼침: "전체" 버튼도 같은 줄에 두어 버튼 아래까지 화면 폭 전체로 줄바꿈
-                    <div className="flex flex-wrap gap-1.5">
-                        {allButton}
-                        {chips}
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-1.5">
-                        {allButton}
-                        <div
-                            onScroll={(e) => setScrolled(e.currentTarget.scrollLeft > 0)}
-                            className={cn(
-                                'flex min-w-0 flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none] mask-r-from-88% mask-r-to-100% md:flex-wrap md:overflow-visible md:mask-none [&::-webkit-scrollbar]:hidden',
-                                // 밀어서 왼쪽이 "전체" 버튼 밑으로 들어가는 동안은 왼쪽도 같은 폭으로 흐리게
-                                scrolled && 'mask-l-from-88% mask-l-to-100%',
-                            )}
-                        >
+            {/*
+              팀 목록 판 (V-3 2차): 다크 모드에서 쨍한 팀 색이 아주 어두운 카드 바로 위에 있으면 강해 보여, 한 단계 밝은 바탕을 깐다.
+              밝은 모드는 투명(--color-chip-panel). 음수 여백 = 안쪽 여백이라 두 모드의 배치가 같다
+            */}
+            <div className="-mx-2 rounded-[20px] bg-chip-panel p-2 md:-mx-3 md:p-3">
+                <TeamList heightStyle={heightStyle} innerRef={innerRef}>
+                    {loading ? (
+                        <div aria-busy className="flex gap-1.5 overflow-hidden md:flex-wrap">
+                            {SKELETON_WIDTHS.map((width, idx) => (
+                                <Skeleton
+                                    key={idx}
+                                    className="h-8 shrink-0 rounded-full md:h-9"
+                                    style={{ width }}
+                                />
+                            ))}
+                        </div>
+                    ) : expanded ? (
+                        // 펼침: "전체" 버튼도 같은 줄에 두어 버튼 아래까지 화면 폭 전체로 줄바꿈
+                        <div className="flex flex-wrap gap-1.5">
+                            {allButton}
                             {chips}
                         </div>
-                    </div>
-                )}
-            </TeamList>
+                    ) : (
+                        <div className="flex items-center gap-1.5">
+                            {allButton}
+                            <div
+                                onScroll={(e) => setScrolled(e.currentTarget.scrollLeft > 0)}
+                                className={cn(
+                                    'flex min-w-0 flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none] mask-r-from-88% mask-r-to-100% md:flex-wrap md:overflow-visible md:mask-none [&::-webkit-scrollbar]:hidden',
+                                    // 밀어서 왼쪽이 "전체" 버튼 밑으로 들어가는 동안은 왼쪽도 같은 폭으로 흐리게
+                                    scrolled && 'mask-l-from-88% mask-l-to-100%',
+                                )}
+                            >
+                                {chips}
+                            </div>
+                        </div>
+                    )}
+                </TeamList>
+            </div>
         </>
     );
 };

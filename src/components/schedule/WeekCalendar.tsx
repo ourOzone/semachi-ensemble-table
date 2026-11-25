@@ -326,8 +326,8 @@ function EventBlock({ event, onClick }: EventBlockProps) {
         '--name-lines-md': String(nameLines(slots, SIZE.pc, timeHeight)),
     };
     if (skipped) {
-        style.borderColor = color;
-        style.color = color;
+        // 테두리·글씨(반원 테두리도 글씨 색)는 클래스에서 이 색으로. 다크 모드는 밝게 섞는다 (V-3 2차)
+        style['--block'] = color;
     } else {
         style.backgroundColor = color;
         if (isEvent) style.backgroundImage = EVENT_STRIPES;
@@ -358,7 +358,12 @@ function EventBlock({ event, onClick }: EventBlockProps) {
                 // 쉼: 바탕을 비워 뒤의 가로선이 보이게
                 // 마우스를 올리면: 색 블록은 살짝 진하게, 쉼(바탕 없음)은 옅은 회색 바탕
                 skipped
-                    ? 'border-[1.5px] border-dashed bg-transparent hover:bg-neutral-500/5'
+                    ? cn(
+                          'border-[1.5px] border-dashed border-(color:--block) bg-transparent text-(color:--block) hover:bg-neutral-500/5',
+                          // 다크 모드 (V-3 2차): 어두운 바탕에서 짙은 팀 색(남색·보라·회청 등)의 점선·글씨가 잘 안 보였다.
+                          // 테두리·글씨는 흰색을 섞어 밝게, 바탕에 팀 색을 옅게 깔아 블록 모양이 보이게 (팀 색 자체는 그대로)
+                          'dark:border-[color:color-mix(in_srgb,var(--block)_55%,white)] dark:bg-[color:color-mix(in_srgb,var(--block)_18%,transparent)] dark:text-[color:color-mix(in_srgb,var(--block)_55%,white)] dark:hover:bg-[color:color-mix(in_srgb,var(--block)_26%,transparent)]',
+                      )
                     : 'text-white hover:brightness-90',
             )}
             style={style}

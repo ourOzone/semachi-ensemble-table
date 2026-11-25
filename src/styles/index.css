@@ -58,6 +58,8 @@
     --color-page: #f2f3f5;
     /* 카드·Drawer 바탕 (V-3 1차, 다크 모드에서 바뀐다) */
     --color-surface: #ffffff;
+    /* 팀 목록 판 (V-3 2차): 밝은 모드는 없음, 다크 모드에서만 카드보다 한 단계 밝게 */
+    --color-chip-panel: transparent;
     --color-ink: #18181b;
     /* ink 바탕 위의 글씨·아이콘 (다크 모드에서는 ink가 밝아져 이것이 어두워진다) */
     --color-on-ink: #ffffff;
@@ -284,6 +286,7 @@
     color-scheme: dark;
     --color-page: #111113;
     --color-surface: #1c1c1f;
+    --color-chip-panel: #2c2c31;
     --color-ink: #f2f2f4;
     --color-on-ink: #18181b;
     --color-link: #7fb0f0;

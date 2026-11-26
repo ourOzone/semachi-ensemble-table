@@ -438,13 +438,6 @@ app.put('/ensemble', async (req, res) => {
 // 비고 목록
 app.get('/notes', async (req, res) => {
   try {
-    // 오늘 기준 8일 전 시간
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 8);
-
-    // cutoff보다 오래된 note 삭제
-    await Note.deleteMany({ _id: { $lt: mongoose.Types.ObjectId.createFromTime(cutoff.getTime() / 1000) } });
-
     // 최신 노트 가져오기
     const notes = await Note.find();
     res.json(notes.reverse());
@@ -485,11 +478,11 @@ app.post('/note', async (req, res) => {
         const data = req.body;
         append_log(`${req.visitorId}_${getTime()}_addnote_${data.text}`);
 
-        const noteCount = await Note.countDocuments();
+        // const noteCount = await Note.countDocuments();
 
-        if (noteCount >= 100) {
-            return res.status(400).send('Note limit exceeded');
-        }
+        // if (noteCount >= 100) {
+        //     return res.status(400).send('Note limit exceeded');
+        // }
 
         const newNote = new Note({
             text: data.text,

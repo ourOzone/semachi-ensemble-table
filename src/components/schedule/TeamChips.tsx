@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { LayoutGrid, X } from 'lucide-react';
+import { LayoutGrid, Pin, X } from 'lucide-react';
 import { AddPill } from '@/components/ui/add-pill';
 import { cn } from '@/lib/utils';
 import { EVENT_STRIPES } from '@/styles/patterns';
@@ -22,6 +22,8 @@ export interface Chip {
     onClick: () => void;
     /** 팀 아닌 일정: 합주판 블록과 같은 줄무늬 */
     striped?: boolean;
+    /** 맨 앞에 고정한 팀 (V-3 11차): 이름 앞에 작은 핀 */
+    pinned?: boolean;
 }
 
 interface TeamChipsProps {
@@ -37,7 +39,7 @@ interface TeamChipsProps {
 const pressable = 'transition-[filter,background-color,scale] duration-150 active:scale-[0.97]';
 
 const chipBase = cn(
-    'inline-flex h-8 shrink-0 items-center rounded-full px-3 text-sm font-medium whitespace-nowrap md:h-9 md:px-4 md:text-[15px]',
+    'inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-sm font-medium whitespace-nowrap md:h-9 md:px-4 md:text-[15px]',
     pressable,
 );
 
@@ -45,6 +47,17 @@ const TeamChips = ({ teams, eventGroups, onAddTeam, loading = false }: TeamChips
     const [expanded, setExpanded] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const { innerRef, style: heightStyle } = useAnimatedHeight();
+    // 팀을 고정하거나 풀면(V-3 11차) 맨 앞으로 옮겨 간 팀이 보이게 한 줄 목록을 처음부터 보여준다
+    // (목록을 key로 새로 그려 밀어 둔 위치를 버린다. 왼쪽 흐림도 함께 끈다)
+    const pinnedKey = teams
+        .filter((chip) => chip.pinned)
+        .map((chip) => chip.key)
+        .join(',');
+    const [prevPinnedKey, setPrevPinnedKey] = useState(pinnedKey);
+    if (pinnedKey !== prevPinnedKey) {
+        setPrevPinnedKey(pinnedKey);
+        setScrolled(false);
+    }
 
     const allButton = (
         <button
@@ -134,6 +147,7 @@ const TeamChips = ({ teams, eventGroups, onAddTeam, loading = false }: TeamChips
                         <div className="flex items-center gap-1.5">
                             {allButton}
                             <div
+                                key={pinnedKey}
                                 onScroll={(e) => setScrolled(e.currentTarget.scrollLeft > 0)}
                                 className={cn(
                                     'flex min-w-0 flex-1 gap-1.5 overflow-x-auto [scrollbar-width:none] mask-r-from-88% mask-r-to-100% md:flex-wrap md:overflow-visible md:mask-none [&::-webkit-scrollbar]:hidden',
@@ -184,6 +198,9 @@ function ChipButton({ chip }: { chip: Chip }) {
                 ...(chip.striped && { backgroundImage: EVENT_STRIPES }),
             }}
         >
+            {chip.pinned && (
+                <Pin className="-ml-0.5 size-3.5 shrink-0 fill-current" aria-label="고정" />
+            )}
             {chip.name}
         </button>
     );

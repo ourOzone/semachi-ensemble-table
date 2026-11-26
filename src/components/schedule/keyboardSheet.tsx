@@ -12,7 +12,12 @@ import { LOCKED_SCROLL_VAR, lockPageScroll } from '@/lib/pageScrollLock';
  * @param inputsOpen 입력칸이 있는 화면이 열려 있는지 (Drawer가 열려 있고 PIN 단계일 때 등)
  * @returns style: DrawerContent의 아래 여백·최대 높이, cover: 키보드 쪽 흰 판 (없으면 null)
  */
-export function useKeyboardSheet(inputsOpen: boolean): { style: CSSProperties; cover: ReactNode } {
+export function useKeyboardSheet(inputsOpen: boolean): {
+    style: CSSProperties;
+    cover: ReactNode;
+    /** 화면 키보드가 열려 있는지 (보이는 영역이 줄었는지). 키보드를 쓰는 동안 아래 버튼을 숨길 때 (팀 추가, V-3 11차) */
+    keyboardOpen: boolean;
+} {
     // 화면 키보드가 열리면 내용을 보이는 영역의 아래 끝(키보드 바로 위)까지 올리고, 그 안에 들어가게 한다 (hooks/useKeyboardInset).
     // Drawer 자체는 화면 맨 아래에 둔 채 키보드 높이만큼 아래 여백을 준다: Drawer의 흰 바탕이 키보드 뒤까지 덮어,
     // 키보드 위 막대(완료 버튼)와 반투명 키보드 사이로 뒤 화면이 비치지 않는다
@@ -38,7 +43,7 @@ export function useKeyboardSheet(inputsOpen: boolean): { style: CSSProperties; c
         inputsOpen && visibleBottom !== null ? (
             <KeyboardCover visibleBottom={visibleBottom} />
         ) : null;
-    return { style, cover };
+    return { style, cover, keyboardOpen: inset > 0 };
 }
 
 /** KeyboardCover가 보이는 영역 아래 끝보다 얼마나 위에서 시작하는지 (Drawer 아래에 숨는 부분, 줄바꿈 오차 여유) */

@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { useBoardViewStore } from '@/components/schedule/boardViewStore';
 import { useThemeStore } from '@/components/settings/themeStore';
+import { usePinnedTeamsStore } from '@/components/teams/pinnedTeamsStore';
 import { useDrawerStore } from '@/stores/drawer';
 import { server } from '@/test/server';
 
@@ -50,6 +51,8 @@ afterEach(() => {
     useBoardViewStore.setState(useBoardViewStore.getInitialState(), true);
     // 다크 모드도 모듈 전역 상태 + localStorage (V-3 1차). html의 dark 클래스는 store 구독이 함께 되돌린다
     useThemeStore.setState(useThemeStore.getInitialState(), true);
+    // 팀 고정도 모듈 전역 상태 + localStorage (V-3 11차)
+    usePinnedTeamsStore.setState(usePinnedTeamsStore.getInitialState(), true);
     // Sonner 알림도 모듈 전역 상태다. 새 <Toaster />는 구독할 때 아직 닫히지 않은 알림을 받아 그리므로 모두 닫는다
     toast.dismiss();
 });

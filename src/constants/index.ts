@@ -84,7 +84,6 @@ export const demoNames: readonly string[] = [
     '아이언메이든',
     '마룬5',
     '뮤즈',
-    // V-3 10차: 세계적인 록 밴드를 더해 2배로
     'U2',
     '본조비',
     '에어로스미스',
@@ -93,7 +92,6 @@ export const demoNames: readonly string[] = [
     '블랙사바스',
     '딥퍼플',
     '이글스',
-    '키스',
     '펄잼',
     '사운드가든',
     '앨리스인체인스',

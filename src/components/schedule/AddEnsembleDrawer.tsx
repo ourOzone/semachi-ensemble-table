@@ -330,7 +330,13 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
                         <DrawerTitle className="text-[26px] leading-tight font-bold text-ink md:text-[28px]">
                             {noun} {edit ? '수정' : '잡기'}
                         </DrawerTitle>
-                        <DrawerDescription className="mt-1.5 truncate text-[15px] text-neutral-500">
+                        {/* 날짜를 고르기 전의 안내("팀과 날짜, 시간을 골라 주세요")는 화면에서 뺐다 (V-3 11차). 읽기 프로그램용으로만 */}
+                        <DrawerDescription
+                            className={cn(
+                                'mt-1.5 truncate text-[15px] text-neutral-500',
+                                !date && 'sr-only',
+                            )}
+                        >
                             {date
                                 ? `${formatLongDate(date)}${repeat === true ? '부터 매주' : repeat === false ? ' 한 번만' : ''} · ${formatTimeRange(range.startTime, range.endTime)}`
                                 : '팀과 날짜, 시간을 골라 주세요'}

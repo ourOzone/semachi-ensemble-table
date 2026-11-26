@@ -22,12 +22,14 @@ import { server } from '@/test/server';
 async function fillAddTeam(user: ReturnType<typeof userEvent.setup>, confirmPin = '1234') {
     await user.click(await screen.findByRole('button', { name: '팀 추가' }));
     const drawer = within(await findDialog('팀 추가'));
-    expect(drawer.getByRole('button', { name: '팀 종류를 골라 주세요' })).toBeDisabled();
-
-    await user.click(drawer.getByRole('radio', { name: '교내 공연' }));
+    // 팀 종류는 교내 공연이 골라져 있다 (V-3 11차)
+    expect(drawer.getByRole('radio', { name: '교내 공연' })).toHaveAttribute(
+        'aria-checked',
+        'true',
+    );
     expect(drawer.getByText('정기공연, 연말공연, 축제, 버스킹 등')).toBeInTheDocument();
-    expect(drawer.getByRole('button', { name: '팀 이름을 써 주세요' })).toBeDisabled();
-    await user.type(drawer.getByRole('textbox', { name: '팀 이름' }), '새밴드');
+    expect(drawer.getByRole('button', { name: '팀명을 써 주세요' })).toBeDisabled();
+    await user.type(drawer.getByRole('textbox', { name: '팀명' }), '새밴드');
     await user.type(drawer.getByRole('textbox', { name: '보컬' }), '홍길동');
     await user.type(drawer.getByRole('textbox', { name: '셋리스트 및 팀 정보' }), '곡1');
     await user.click(drawer.getByRole('button', { name: '다음' }));
@@ -123,6 +125,79 @@ describe('팀', () => {
         // 팀 자동 삭제는 적용 예정 (TEAM_DUE_ENABLED): 아직 보내지 않는다
         expect(posted).not.toHaveProperty('due');
         expect(useDrawerStore.getState().openedDrawers).toEqual([]);
+    });
+
+    it('팀 추가: 팀원·셋리스트는 안 써도 되지만, 비어 있으면 "권장"과 "다음 (… 나중에 적기)"로 알린다', async () => {
+        const user = userEvent.setup();
+        renderApp();
+        await user.click(await screen.findByRole('button', { name: '팀 추가' }));
+        const drawer = within(await findDialog('팀 추가'));
+        await user.type(drawer.getByRole('textbox', { name: '팀명' }), '새밴드');
+
+        expect(drawer.getAllByText('권장')).toHaveLength(2);
+        expect(
+            drawer.getByRole('button', { name: '다음 (팀원 및 셋리스트 나중에 적기)' }),
+        ).toBeEnabled();
+
+        await user.type(drawer.getByRole('textbox', { name: '보컬' }), '홍길동');
+        expect(drawer.getByRole('button', { name: '다음 (셋리스트 나중에 적기)' })).toBeEnabled();
+        expect(drawer.getAllByText('권장')).toHaveLength(1);
+        expect(drawer.getByText('작성함')).toBeInTheDocument();
+
+        await user.clear(drawer.getByRole('textbox', { name: '보컬' }));
+        await user.type(drawer.getByRole('textbox', { name: '셋리스트 및 팀 정보' }), '곡1');
+        expect(drawer.getByRole('button', { name: '다음 (팀원 나중에 적기)' })).toBeEnabled();
+    });
+
+    it('팀 고정: 팀 정보의 핀을 켜면 팀 목록 맨 앞(먼저 고정한 팀이 앞), 이 브라우저에 기억, 다시 누르면 풀림', async () => {
+        server.use(
+            http.get(`${url}/teams`, () =>
+                HttpResponse.json([
+                    teams[0]!,
+                    { ...teams[0]!, _id: 'team-2', name: '둘째밴드' },
+                    { ...teams[0]!, _id: 'team-3', name: '셋째밴드' },
+                ]),
+            ),
+        );
+        const user = userEvent.setup();
+        renderApp();
+        const teamList = await screen.findByRole('group', { name: '팀 목록' });
+        const order = () =>
+            within(teamList)
+                .getAllByRole('button', { hidden: true }) // Drawer가 닫히는 동안 바깥이 aria-hidden
+                .map((button) => button.textContent)
+                .filter((text) => text?.includes('밴드'));
+        await within(teamList).findByText('셋째밴드');
+        expect(order()).toEqual(['테스트밴드', '둘째밴드', '셋째밴드']);
+
+        const pin = async (name: string) => {
+            await user.click(within(teamList).getByText(name));
+            const info = within(await findDialog(name));
+            await user.click(info.getByRole('button', { name: '팀 목록 맨 앞에 고정' }));
+            expect(info.getByRole('button', { name: '팀 목록 맨 앞에 고정' })).toHaveAttribute(
+                'aria-pressed',
+                'true',
+            );
+            await user.click(info.getByRole('button', { name: '닫기' }));
+            await waitFor(() => expect(useDrawerStore.getState().openedDrawers).toEqual([]));
+        };
+        await pin('셋째밴드');
+        await pin('둘째밴드');
+        expect(order()).toEqual(['셋째밴드', '둘째밴드', '테스트밴드']);
+        expect(JSON.parse(localStorage.getItem('semachi.pinnedTeams')!)).toEqual([
+            'team-3',
+            'team-2',
+        ]);
+
+        // 다시 누르면 풀린다
+        await user.click(within(teamList).getByText('셋째밴드'));
+        const info = within(await findDialog('셋째밴드'));
+        await user.click(info.getByRole('button', { name: '팀 목록 맨 앞에 고정' }));
+        expect(info.getByRole('button', { name: '팀 목록 맨 앞에 고정' })).toHaveAttribute(
+            'aria-pressed',
+            'false',
+        );
+        expect(order()).toEqual(['둘째밴드', '테스트밴드', '셋째밴드']);
     });
 
     it('팀 추가: 확인 PIN이 다르면 흔든 뒤 처음부터, 저장하지 않는다', async () => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import dayjs from 'dayjs';
-import { CalendarPlus, ChevronLeft, Pencil, Trash2, X } from 'lucide-react';
+import { CalendarPlus, ChevronLeft, Pencil, Pin, Trash2, X } from 'lucide-react';
+import { toast } from 'sonner';
 import {
     Drawer,
     DrawerClose,
@@ -27,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { useTeams } from '@/queries/teams';
 import { useDrawerStore } from '@/stores/drawer';
 import theme from '@/styles/theme';
+import { usePinnedTeamsStore } from './pinnedTeamsStore';
 import type { CheckTeamExists, HandleDeleteTeam } from './types';
 
 // 팀 정보 Drawer (View 개편 V-3). 아래에서 올라오고, 아래로 끌어내리면 닫힌다 (vaul).
@@ -64,6 +66,9 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
     const { id, type, name, desc, setTeamStates, setTeamOrgStates } = useTeamContext();
     const openedDrawers = useDrawerStore((state) => state.openedDrawers);
     const openDrawer = useDrawerStore((state) => state.openDrawer);
+    // 팀 고정 (V-3 11차): 메인 화면 팀 목록 맨 앞, 이 브라우저에 기억
+    const pinnedIds = usePinnedTeamsStore((state) => state.ids);
+    const togglePinned = usePinnedTeamsStore((state) => state.toggle);
     const closeDrawer = useDrawerStore((state) => state.closeDrawer);
 
     // 스택의 맨 위일 때만 열린다
@@ -114,6 +119,7 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
         if (!shown) return null;
         const { team } = shown;
         const setlist = team.desc[6]?.trim() ?? '';
+        const pinned = pinnedIds.includes(team.id);
         // 팀 자동 삭제 날짜 (V-3 10차, 서버 팀 due). 없거나 계속 유지면 null이고 따로 적지 않는다
         const due = getRepeatEnd(teams.find((one) => one.id === team.id)?.due, dayjs());
         const summary = [team.type && formatTeamType(team.type), due && `${formatDate(due)}까지`]
@@ -198,15 +204,40 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
                                 {summary || '팀 정보'}
                             </DrawerDescription>
                         </div>
-                        <DrawerClose asChild>
+                        <div className="-mr-2 flex shrink-0 items-center gap-1">
+                            {/* 고정: 켜면 핀이 채워지고 바탕이 진해진다 */}
                             <button
                                 type="button"
-                                aria-label="닫기"
-                                className={`${pressable} -mr-2 inline-flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-white/20`}
+                                aria-label="팀 목록 맨 앞에 고정"
+                                aria-pressed={pinned}
+                                className={cn(
+                                    pressable,
+                                    'inline-flex size-10 items-center justify-center rounded-full',
+                                    pinned ? 'bg-white/30 hover:bg-white/40' : 'hover:bg-white/20',
+                                )}
+                                onClick={() => {
+                                    togglePinned(team.id);
+                                    toast.success(
+                                        pinned ? '고정을 풀었어요.' : '팀 목록 맨 앞에 고정했어요.',
+                                        { description: team.name },
+                                    );
+                                }}
                             >
-                                <X className="size-6" aria-hidden />
+                                <Pin
+                                    className={cn('size-[22px]', pinned && 'fill-current')}
+                                    aria-hidden
+                                />
                             </button>
-                        </DrawerClose>
+                            <DrawerClose asChild>
+                                <button
+                                    type="button"
+                                    aria-label="닫기"
+                                    className={`${pressable} inline-flex size-10 items-center justify-center rounded-full hover:bg-white/20`}
+                                >
+                                    <X className="size-6" aria-hidden />
+                                </button>
+                            </DrawerClose>
+                        </div>
                     </div>
 
                     {/*

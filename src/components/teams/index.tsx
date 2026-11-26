@@ -29,6 +29,7 @@ import theme from '@/styles/theme';
 import TeamInfoDrawer from './TeamInfoDrawer';
 import EventInfoDrawer from './EventInfoDrawer';
 import AddTeamDrawer from './AddTeamDrawer';
+import { pinnedFirst, usePinnedTeamsStore } from './pinnedTeamsStore';
 import type { AddTeamInput } from './types';
 import UpdateTeamDrawer1 from './updateTeamDrawers/UpdateTeamDrawer1';
 import UpdateTeamDrawer2 from './updateTeamDrawers/UpdateTeamDrawer2';
@@ -51,6 +52,7 @@ const Teams = () => {
     const queryClient = useQueryClient();
     const { setTeamStates } = useTeamContext();
     const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
+    const pinnedIds = usePinnedTeamsStore((state) => state.ids);
 
     // 이미 삭제된 팀을 만났을 때: 상태·Drawer 초기화 후 팀·합주 목록을 다시 불러온다
     const handleTeamGone = useCallback(() => {
@@ -211,6 +213,7 @@ const Teams = () => {
         name: team.name,
         color: colorMap[team.id] ?? theme.blueGray,
         onClick: () => handleClickTeam(team),
+        pinned: pinnedIds.includes(team.id),
     }));
     const eventChips: Chip[] = [...eventNames1, ...eventNames2].map((name, idx) => ({
         key: name,
@@ -242,7 +245,8 @@ const Teams = () => {
     return (
         <>
             <TeamChips
-                teams={teamChips}
+                // 고정한 팀을 고정한 순서대로 맨 앞에 (V-3 11차). 색은 위에서 원래 순서로 정했다
+                teams={pinnedFirst(teamChips, (chip) => chip.key, pinnedIds)}
                 eventGroups={eventGroups}
                 onAddTeam={handleClickAddTeam}
                 loading={teamsPending}

@@ -2,11 +2,13 @@ import { useState } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
     CalendarX2,
+    Check,
     ChevronLeft,
     Globe,
     Infinity as InfinityIcon,
     LoaderCircle,
     School,
+    Sparkles,
     Users,
     X,
 } from 'lucide-react';
@@ -58,7 +60,7 @@ const TYPE_HINTS: Record<TeamType, string> = {
 /** desc의 앞 6칸 (7번째는 셋리스트). 팀 정보 Drawer와 같은 순서·색 */
 const MEMBER_LABELS = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
-/** 글자 수 제한 (옛 Drawer와 같음): 팀 이름 20, 팀원 칸마다 12, 셋리스트 200 */
+/** 글자 수 제한 (옛 Drawer와 같음): 팀명 20, 팀원 칸마다 12, 셋리스트 200 */
 const NAME_MAX = 20;
 const MEMBER_MAX = 12;
 const SETLIST_MAX = 200;
@@ -106,18 +108,41 @@ const AddTeamDrawer = ({ onSubmit }: AddTeamDrawerProps) => {
                 overlayClassName={overlayClassName}
                 handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-neutral-300"
             >
-                {session > 0 && <AddTeamForm key={session} onSubmit={onSubmit} />}
+                {session > 0 && (
+                    <AddTeamForm
+                        key={session}
+                        onSubmit={onSubmit}
+                        keyboardOpen={sheet.keyboardOpen}
+                    />
+                )}
             </DrawerContent>
             {sheet.cover}
         </Drawer>
     );
 };
 
-const AddTeamForm = ({ onSubmit }: AddTeamDrawerProps) => {
+/** 터치 화면(휴대폰·태블릿): 글자를 쓰는 동안 "다음" 버튼을 숨긴다 */
+const isTouch = () =>
+    typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true;
+
+/** 글자 입력칸 (팀명·팀원·셋리스트) */
+const isTextField = (el: EventTarget | null) =>
+    el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
+
+const AddTeamForm = ({
+    onSubmit,
+    keyboardOpen,
+}: AddTeamDrawerProps & {
+    /** 화면 키보드가 열려 있는지 (keyboardSheet) */
+    keyboardOpen: boolean;
+}) => {
     const [step, setStep] = useState<'form' | 'pin'>('form');
-    const [type, setType] = useState<TeamType | null>(null);
+    // 기본은 교내 공연 (V-3 11차)
+    const [type, setType] = useState<TeamType | null>('교내 공연');
+    // 글자를 쓰는 중 (입력칸에 포커스). 입력칸 사이를 옮겨 다니는 동안은 계속 쓰는 중
+    const [editing, setEditing] = useState(false);
     const [name, setName] = useState('');
-    // 팀 이름 칸의 예시: 세계적인 록 밴드 중 하나 (열 때마다 바뀜, 옛 Drawer와 같음)
+    // 팀명 칸의 예시: 세계적인 록 밴드 중 하나 (열 때마다 바뀜, 옛 Drawer와 같음)
     const [demoName] = useState(
         () => demoNames[Math.floor(Math.random() * demoNames.length)] ?? '',
     );
@@ -131,7 +156,7 @@ const AddTeamForm = ({ onSubmit }: AddTeamDrawerProps) => {
     const missing = !type
         ? '팀 종류를 골라 주세요'
         : !name.trim()
-          ? '팀 이름을 써 주세요'
+          ? '팀명을 써 주세요'
           : TEAM_DUE_ENABLED && hasDue && !due
             ? '삭제 날짜를 골라 주세요'
             : null;
@@ -153,6 +178,21 @@ const AddTeamForm = ({ onSubmit }: AddTeamDrawerProps) => {
         );
     }
 
+    // 안 써도 되지만 되도록 쓰면 좋은 칸 (V-3 11차): 비어 있으면 "다음 (… 나중에 적기)"와 소제목 옆 "권장"
+    const membersEmpty = members.every((member) => !member.trim());
+    const setlistEmpty = !setlist.trim();
+    const later =
+        membersEmpty && setlistEmpty
+            ? '팀원 및 셋리스트'
+            : membersEmpty
+              ? '팀원'
+              : setlistEmpty
+                ? '셋리스트'
+                : null;
+    // 휴대폰에서 글자를 쓰는 동안(키보드가 열려 있으면)은 "다음" 버튼을 숨긴다 (V-3 11차): 키보드 위에 딸려 올라와
+    // 팀명만 쓰고 눌러야 할 것처럼 보였다 (팀원·셋리스트를 건너뛰고 PIN으로 넘어감)
+    const hideFooter = keyboardOpen || (editing && isTouch());
+
     const setlistRows = Math.min(
         Math.max(setlist.split('\n').length, SETLIST_MIN_ROWS),
         SETLIST_MAX_ROWS,
@@ -160,14 +200,20 @@ const AddTeamForm = ({ onSubmit }: AddTeamDrawerProps) => {
 
     return (
         <>
-            <div ref={scrollFadeRef} className={cn(scrollAreaClassName, 'flex-1')}>
+            <div
+                ref={scrollFadeRef}
+                className={cn(scrollAreaClassName, 'flex-1')}
+                onFocus={(e) => isTextField(e.target) && setEditing(true)}
+                onBlur={(e) => !isTextField(e.relatedTarget) && setEditing(false)}
+            >
                 {/* 머리 */}
                 <div className="flex items-start justify-between gap-3 px-5 pt-[26px] md:px-7">
                     <div className="min-w-0">
                         <DrawerTitle className="text-[26px] leading-tight font-bold text-ink md:text-[28px]">
                             팀 추가
                         </DrawerTitle>
-                        <DrawerDescription className="mt-1.5 text-[15px] text-neutral-500">
+                        {/* 설명 문구는 화면에서 뺐다 (V-3 11차). 읽기 프로그램용으로만 */}
+                        <DrawerDescription className="sr-only">
                             팀 정보를 쓰고, 다음에 PIN을 만들어요
                         </DrawerDescription>
                     </div>
@@ -194,14 +240,11 @@ const AddTeamForm = ({ onSubmit }: AddTeamDrawerProps) => {
                         {type && <Hint>{TYPE_HINTS[type]}</Hint>}
                     </Section>
 
-                    {/* 팀 이름 */}
-                    <Section
-                        label="팀 이름"
-                        aside={<Counter length={name.length} max={NAME_MAX} />}
-                    >
+                    {/* 팀명 */}
+                    <Section label="팀명" aside={<Counter length={name.length} max={NAME_MAX} />}>
                         <input
                             type="text"
-                            aria-label="팀 이름"
+                            aria-label="팀명"
                             value={name}
                             maxLength={NAME_MAX}
                             placeholder={demoName}
@@ -216,7 +259,7 @@ const AddTeamForm = ({ onSubmit }: AddTeamDrawerProps) => {
                     </Section>
 
                     {/* 팀원 (안 써도 된다) */}
-                    <Section label="팀원">
+                    <Section label="팀원" aside={<SuggestBadge done={!membersEmpty} />}>
                         <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                             {MEMBER_LABELS.map((label, idx) => (
                                 <label
@@ -261,7 +304,12 @@ const AddTeamForm = ({ onSubmit }: AddTeamDrawerProps) => {
                     {/* 셋리스트 및 팀 정보 (안 써도 된다) */}
                     <Section
                         label="셋리스트 및 팀 정보"
-                        aside={<Counter length={setlist.length} max={SETLIST_MAX} />}
+                        aside={
+                            <span className="flex items-center gap-2">
+                                <Counter length={setlist.length} max={SETLIST_MAX} />
+                                <SuggestBadge done={!setlistEmpty} />
+                            </span>
+                        }
                     >
                         <textarea
                             aria-label="셋리스트 및 팀 정보"
@@ -272,7 +320,7 @@ const AddTeamForm = ({ onSubmit }: AddTeamDrawerProps) => {
                                 boxShape,
                                 'block w-full resize-none border border-neutral-200 bg-surface px-4 py-3 text-[16px] leading-[1.6] text-ink outline-none placeholder:text-neutral-400 focus:border-ink',
                             )}
-                            placeholder={'1. 곡 제목 - 아티스트\n2. …'}
+                            placeholder={'아티스트 - 제목\n...'}
                             onChange={(e) => setSetlist(e.target.value)}
                         />
                         <Hint>가능한 한 작성해주세요.</Hint>
@@ -320,8 +368,13 @@ const AddTeamForm = ({ onSubmit }: AddTeamDrawerProps) => {
                 </div>
             </div>
 
-            {/* 다음 버튼은 스크롤과 관계없이 맨 아래 (합주 잡기 Drawer와 같음) */}
-            <div className="border-t border-neutral-100 bg-surface px-5 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] md:px-7">
+            {/* 다음 버튼은 스크롤과 관계없이 맨 아래 (합주 잡기 Drawer와 같음). 휴대폰에서 글자를 쓰는 동안은 숨긴다 */}
+            <div
+                className={cn(
+                    'border-t border-neutral-100 bg-surface px-5 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] md:px-7',
+                    hideFooter && 'hidden',
+                )}
+            >
                 <button
                     type="button"
                     disabled={missing !== null}
@@ -334,12 +387,39 @@ const AddTeamForm = ({ onSubmit }: AddTeamDrawerProps) => {
                     )}
                     onClick={() => setStep('pin')}
                 >
-                    {missing ?? '다음'}
+                    {missing ?? (
+                        <>
+                            다음
+                            {later && ' '}
+                            {later && (
+                                <span className="text-[14px] font-medium opacity-70">
+                                    ({later} 나중에 적기)
+                                </span>
+                            )}
+                        </>
+                    )}
                 </button>
             </div>
         </>
     );
 };
+
+/**
+ * 안 써도 되지만 되도록 쓰면 좋은 칸의 표시 (팀원·셋리스트, V-3 11차).
+ * 비어 있으면 노란 "권장"(반짝이), 쓰면 "작성함"(체크)으로 바뀐다
+ */
+const SuggestBadge = ({ done }: { done: boolean }) =>
+    done ? (
+        <span className="inline-flex items-center gap-0.5 rounded-full bg-neutral-100 px-2 py-0.5 text-[12px] font-medium text-neutral-600">
+            <Check className="size-3" aria-hidden />
+            작성함
+        </span>
+    ) : (
+        <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/12 px-2 py-0.5 text-[12px] font-bold text-amber-700">
+            <Sparkles className="size-3" aria-hidden />
+            권장
+        </span>
+    );
 
 /** 글자 수 "3/20" (꽉 차면 진하게) */
 const Counter = ({ length, max }: { length: number; max: number }) => (
@@ -431,26 +511,15 @@ const PinCreateStep = ({
                         </button>
                     </DrawerClose>
                 </div>
-                {/* 어떤 팀인지 + 두 단계 중 어디인지 */}
-                <div className="mt-3 flex items-center justify-between gap-3">
-                    <p className="truncate text-[14px] text-neutral-500">{teamName}</p>
-                    <div className="flex shrink-0 gap-1" aria-hidden>
-                        <span className="h-1.5 w-5 rounded-full bg-ink" />
-                        <span
-                            className={cn(
-                                'h-1.5 w-5 rounded-full transition-colors duration-200',
-                                confirming ? 'bg-ink' : 'bg-neutral-200',
-                            )}
-                        />
-                    </div>
-                </div>
+                {/* 어떤 팀인지 */}
+                <p className="mt-3 truncate text-[14px] text-neutral-500">{teamName}</p>
                 <DrawerTitle className="mt-1.5 text-[24px] leading-tight font-bold text-ink md:text-[26px]">
                     {confirming ? '한 번 더 입력해 주세요' : 'PIN을 만들어 주세요'}
                 </DrawerTitle>
                 <DrawerDescription className="mt-1.5 text-[15px] break-keep text-neutral-500">
                     {confirming
                         ? '확인을 위해 같은 PIN을 다시 입력해 주세요'
-                        : '숫자 4자리. 팀을 고치거나 지우고, 합주를 바꿀 때 써요. 잊지 않게 팀원과 나눠 두세요'}
+                        : '숫자 4자리. 잊지 않게 팀원과 공유해 두세요'}
                 </DrawerDescription>
                 <div className="mt-7 flex flex-col items-center">
                     <PinSlots

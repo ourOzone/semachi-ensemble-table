@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { url } from '@/constants';
 import { mockInitialData, teams } from '@/test/fixtures';
 import { useDrawerStore } from '@/stores/drawer';
-import { findDialog, findDrawer, findEnabledButton } from '@/test/queries';
+import { findDialog } from '@/test/queries';
 import { renderApp } from '@/test/render';
 import { countOf, recordRequests } from '@/test/requests';
 import { server } from '@/test/server';

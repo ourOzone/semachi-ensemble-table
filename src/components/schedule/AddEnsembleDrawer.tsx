@@ -2,7 +2,6 @@ import {
     useEffect,
     useRef,
     useState,
-    type ComponentType,
     type KeyboardEvent,
     type PointerEvent,
     type ReactNode,
@@ -11,13 +10,11 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
     CalendarCheck,
-    CalendarDays,
     CalendarX2,
     Check,
     ChevronDown,
     GripVertical,
     Infinity as InfinityIcon,
-    Info,
     Minus,
     OctagonAlert,
     Plus,

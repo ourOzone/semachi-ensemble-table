@@ -46,7 +46,6 @@ import {
     formatDate,
     formatSlots,
     formatTimeRange,
-    headerBackdrop,
     overlayClassName,
     pressable,
     scrollAreaClassName,
@@ -326,9 +325,10 @@ const EnsembleInfoDrawer = ({
         }
 
         return (
-            <div ref={scrollFadeRef} className={scrollAreaClassName} style={headerBackdrop(color)}>
+            <div ref={scrollFadeRef} className={scrollAreaClassName}>
                 {/* 머리: 팀 색 (손잡이는 이 위에 겹쳐 그린다) */}
                 <div
+                    data-fade-skip // 머리가 다 지나간 뒤부터 위쪽을 흐린다 (팀 색이 흰색·검은색으로 흐려지지 않게)
                     className="px-5 pt-[26px] pb-6 text-white md:px-7"
                     style={{ backgroundColor: color }}
                 >

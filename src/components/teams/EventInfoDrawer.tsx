@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/drawer';
 import {
     boxShape,
-    headerBackdrop,
     overlayClassName,
     pressable,
     scrollAreaClassName,
@@ -61,14 +60,11 @@ const EventInfoDrawer = () => {
                 handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-white/60"
             >
                 {shown && (
-                    <div
-                        ref={scrollFadeRef}
-                        className={scrollAreaClassName}
-                        style={headerBackdrop(color)}
-                    >
+                    <div ref={scrollFadeRef} className={scrollAreaClassName}>
                         {/* 합주판 블록·팀 목록 칩과 같은 줄무늬 */}
                         <div
-                            className="px-5 pt-[26px] pb-[calc(24px+env(safe-area-inset-bottom))] text-white md:px-7"
+                            data-fade-skip
+                            className="px-5 pt-[26px] pb-6 text-white md:px-7"
                             style={{ backgroundColor: color, backgroundImage: EVENT_STRIPES }}
                         >
                             <div className="flex items-start justify-between gap-3">
@@ -90,9 +86,16 @@ const EventInfoDrawer = () => {
                                     </button>
                                 </DrawerClose>
                             </div>
+                        </div>
+                        {/*
+                          버튼은 머리 아래 바탕(흰색·검은색)에 둔다 (V-3 6차): Drawer 아래 끝이 팀 색이면 아이폰 사파리 26의
+                          아래 도구 막대가 팀 색으로 물든다. 팀 정보·합주 정보처럼 아래 끝은 늘 Drawer 바탕
+                        */}
+                        <div className="px-5 pt-5 pb-[calc(20px+env(safe-area-inset-bottom))] md:px-7">
                             <button
                                 type="button"
-                                className={`${pressable} ${boxShape} mt-5 flex h-12 w-full items-center justify-center gap-1.5 bg-white px-3 text-[16px] font-bold text-black/85 hover:bg-white/90 md:h-13`}
+                                className={`${pressable} ${boxShape} flex h-13 w-full items-center justify-center gap-1.5 px-3 text-[16px] font-bold text-white hover:brightness-95 md:h-14`}
+                                style={{ backgroundColor: color }}
                                 // 일정을 골라 둔 합주 잡기 Drawer로 바뀐다 (닫으면 이 Drawer로 돌아온다)
                                 onClick={() =>
                                     openAddEnsemble({ teamId: shown.id, returnTo: 'eventInfo' })

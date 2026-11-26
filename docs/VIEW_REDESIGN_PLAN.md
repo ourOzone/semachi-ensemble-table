@@ -74,7 +74,8 @@
 - **새 코드에 styled-components·antd를 쓰지 않는다.** 스타일은 Tailwind, 컴포넌트는 `src/components/ui/`
 - shadcn 컴포넌트 추가: `pnpm dlx shadcn@4.23.0 add <이름>` 후 `pnpm format`. 생성된 파일을 읽고 필요 없는 의존성(예: `next-themes`)이 들어오면 정리한다
 - 알림 문구·함수는 `src/lib/notify.ts`에 모은다
-- **스크롤 막대를 보이지 않게 한다 (V-3 5차, 사용자 결정).** 세로 스크롤 영역은 `scroll-fade` 클래스(`index.css`) + `ref={scrollFadeRef}`(`components/ui/scroll-fade.ts`): 막대 없이, 위·아래로 더 있으면 그쪽 끝을 마스크로 흐리게. Drawer 스크롤 영역은 `scrollAreaClassName`에 클래스가 들어 있고(끝에서 튕기지 않는 `overscroll-y-none`도), 쓰는 곳에서 ref만 붙인다. ref를 다른 용도로도 써야 하면 effect에서 `attachScrollFade(el)`. 색 머리가 있는 Drawer는 스크롤 영역 바탕에 `headerBackdrop(color)`
+- **스크롤 막대를 보이지 않게 한다 (V-3 5차, 사용자 결정).** 세로 스크롤 영역은 `scroll-fade` 클래스(`index.css`) + `ref={scrollFadeRef}`(`components/ui/scroll-fade.ts`): 막대 없이, 위·아래로 더 있으면 그쪽 끝을 마스크로 흐리게. Drawer 스크롤 영역은 `scrollAreaClassName`에 클래스가 들어 있고(끝에서 튕기지 않는 `overscroll-y-none`도), 쓰는 곳에서 ref만 붙인다. ref를 다른 용도로도 써야 하면 effect에서 `attachScrollFade(el)`. 맨 위 색 머리(팀 색 등)에는 `data-fade-skip`을 붙여, 머리가 다 지나간 뒤부터 위쪽을 흐린다 (팀 색이 흰색·검은색으로 흐려지는 배합 방지, V-3 6차)
+- **Drawer 아래 끝과 스크롤 영역 바탕에는 팀 색을 쓰지 않는다 (V-2 9차·V-3 6차).** 아이폰 사파리 26은 아래 도구 막대 색을 화면 아래 끝의 고정 요소(Drawer)에서 가져와, 그 바탕(배경 이미지 포함)이나 아래 끝이 팀 색이면 막대가 팀 색으로 물든다. 팀 색은 안쪽 머리 요소에만, Drawer 아래 끝은 늘 Drawer 바탕(`bg-surface`)
 - **색은 토큰으로 쓴다 (V-3 1차, 다크 모드).** 카드·Drawer 바탕 `bg-surface`(`bg-white` 금지), 페이지 `bg-page`, 글씨 `text-ink`, ink 바탕 위 글씨 `text-on-ink`, 글자 버튼 `text-link`, 회색은 `neutral-*` 단계(다크 모드에서 뒤집힘), 큰 카드 그림자 `shadow-card`. 팀 색·소모임 색 위의 흰 글씨(`text-white`)·반투명 흰색(`bg-white/20`)은 그대로 쓴다. 인라인 스타일의 색도 `var(--color-surface)` 등으로. 다크 모드 값은 `index.css`의 `.dark`
 
 #### 옛 화면 확인 결과 (V-1 전후 픽셀 비교)
@@ -277,7 +278,11 @@
   - 스크롤: PC에서 내용이 길면 스크롤 막대가 생김(합주 잡기 Drawer만 막대를 숨기고 아래 흰 그러데이션) → 새 코드의 모든 세로 스크롤 영역(Drawer 6개·합주 잡기의 팀 고르기)에서 막대 없이 위·아래 끝 흐림 (`scroll-fade`, 위 "공존 기간 규칙")
   - 모바일: 맨 위에서 아래로 당기면 내용만 튕겨 내려가 머리 위가 Drawer 바탕색으로 빔 → Drawer 스크롤 영역은 튕기지 않음(`overscroll-y-none`, 그다음 당김은 vaul이 Drawer를 끌어내림). 혹시 튕겨도 머리 위는 머리 색(`headerBackdrop`)
   - 팀 정보: "셋리스트" → "셋리스트 및 팀 정보"
-- [ ] 6차 이후: 팀 추가·수정·삭제 Drawer (사용자 시안)
+- [x] **6차 (2026-11-26): 색 머리 위 흐림, 아이폰 아래 도구 막대 색**
+  - 흐림: 팀 색 머리가 위로 지나갈 때 흰색·검은색으로 흐려짐(노랑/흰색 등 배합이 보기 싫음) → 머리가 다 지나간 뒤부터 흐림(`data-fade-skip`). 흐림 폭은 끝까지 남은 거리만큼(최대 28px) 늘어 갑자기 생기지 않음
+  - 아이폰 아래 도구 막대: 팀 정보는 늘, 합주 정보는 가끔 팀 색 → Drawer 바탕(흰색·검은색). 원인은 5차의 스크롤 영역 팀 색 그러데이션 바탕(`headerBackdrop`, 4차 스크린샷에서는 막대가 팀 색이 아니었다) → 삭제, 스크롤 영역 바탕은 `bg-surface`
+  - 소모임·일정 정보: 줄무늬 머리가 Drawer 아래 끝까지(아래 끝이 팀 색) → 머리 아래 바탕에 "일정 잡기"(소모임 색 버튼)
+- [ ] 7차 이후: 팀 추가·수정·삭제 Drawer (사용자 시안)
 
 ### 기능 단계(V-2 ~ V-5)에서 할 일
 1. **화면 구성안을 먼저 제안하고 승인을 받는다** (Drawer 하나에 무엇을 넣는지, 입력 순서, 완료·실패 표시, **화면 폭별 배치**). 동작이 바뀌는 부분은 목록으로 밝힌다. V-2부터 사용자 시안이 있으면 그것으로 대신한다

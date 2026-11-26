@@ -149,8 +149,8 @@
 /*
  * 스크롤 영역 (V-3 5차, 규칙): 스크롤 막대를 보이지 않게 하고, 더 내릴(올릴) 내용이 있는 쪽 끝을 흐리게 한다.
  * PC에서 막대가 생기면 안쪽 폭이 줄고 보기 싫었다. 흐림은 components/ui/scroll-fade.ts의 scrollFadeRef가
- * 스크롤 위치에 따라 data-fade-top·data-fade-bottom을 붙일 때만 (끝에 닿아 있으면 그쪽은 흐리지 않음).
- * 마스크라 어떤 바탕 위에서도 같다
+ * 스크롤 위치에 따라 --fade-top·--fade-bottom(끝까지 남은 거리, 최대 28px)과 data-fade-top·data-fade-bottom을
+ * 붙일 때만 (끝에 닿아 있으면 그쪽은 흐리지 않음). 마스크라 뒤의 Drawer 바탕이 비친다
  */
 @utility scroll-fade {
     scrollbar-width: none;
@@ -158,12 +158,6 @@
     --fade-bottom: 0px;
     &::-webkit-scrollbar {
         display: none;
-    }
-    &[data-fade-top] {
-        --fade-top: 28px;
-    }
-    &[data-fade-bottom] {
-        --fade-bottom: 28px;
     }
     &[data-fade-top],
     &[data-fade-bottom] {

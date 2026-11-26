@@ -62,20 +62,13 @@ export const overlayClassName = 'ui bg-black/40 supports-backdrop-filter:backdro
  * 가로는 숨긴다: 단계가 바뀔 때 옆에서 밀려 들어오는 애니메이션이 잠깐 오른쪽으로 넘쳐 가로 스크롤 막대가 생겼다 사라졌다 (PC)
  * 세로 스크롤 막대도 숨기고 위·아래 끝을 흐리게 한다 (V-3 5차, scroll-fade: 쓰는 곳에서 ref={scrollFadeRef}).
  * 끝에서 더 당겨도 튕기지 않는다 (overscroll-y-none, V-3 5차): 아이폰에서 맨 위에서 아래로 당기면 내용만 내려가 머리 위가
- * 비었다. 튕기지 않으면 그다음 당김은 vaul이 Drawer를 끌어내린다
+ * 비었다. 튕기지 않으면 그다음 당김은 vaul이 Drawer를 끌어내린다.
+ * 바탕은 Drawer와 같은 단색(bg-surface)으로 둔다 (V-3 6차): 아이폰 사파리 26은 아래 도구 막대 색을 화면 아래 끝의
+ * 고정 요소에서 가져오는데, 5차에 이 영역 바탕을 팀 색 그러데이션(headerBackdrop)으로 바꾸자 막대가 팀 색이 됐다.
+ * 이 영역에는 팀 색 바탕(배경 이미지 포함)을 넣지 않는다. 팀 색은 안쪽 머리 요소에만
  */
 export const scrollAreaClassName =
-    'squircle scroll-fade min-h-0 overflow-x-hidden overflow-y-auto overscroll-y-none rounded-t-[24px] supports-[corner-shape:squircle]:rounded-t-[36px]';
-
-/**
- * 색 머리가 있는 Drawer(합주 정보·팀 정보·소모임 정보)의 스크롤 영역 바탕: 위 절반은 머리 색, 아래 절반은 Drawer 바탕.
- * 혹시 튕겨서(overscroll을 무시하는 브라우저) 내용이 내려가도 머리 위가 머리 색으로 이어진다 (V-3 5차)
- */
-export function headerBackdrop(color: string) {
-    return {
-        backgroundImage: `linear-gradient(to bottom, ${color} 50%, var(--color-surface) 50%)`,
-    };
-}
+    'squircle scroll-fade min-h-0 bg-surface overflow-x-hidden overflow-y-auto overscroll-y-none rounded-t-[24px] supports-[corner-shape:squircle]:rounded-t-[36px]';
 
 /**
  * 맨 아래 "합주 잡기" 줄 (합주 정보: "같은 시간에 다른 팀 합주 잡기", 빈 시간: "이 시간에 합주 잡기").

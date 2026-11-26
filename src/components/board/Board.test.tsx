@@ -10,6 +10,7 @@ import { findDialog } from '@/test/queries';
 import { renderApp } from '@/test/render';
 import { countOf, recordRequests } from '@/test/requests';
 import { server } from '@/test/server';
+import { teamsQueryOptions } from '@/queries/teams';
 
 // 합주표 흐름 테스트: 합주 블록 → 합주 정보 Drawer(아래에서 올라옴) → 수정 / 미루기 / 바로 하기(미루기 취소) / 반복으로 바꾸기 / 삭제.
 // fixtures의 합주: 매주 반복, 다음 날짜 2026-11-23(월), 시간칸 2~3 (10:00 - 11:00)
@@ -27,7 +28,7 @@ function mockEnsemble(patch: Partial<(typeof ensembles)[number]>) {
 /** 합주 블록을 눌러 합주 정보 Drawer를 연다. nextWeek면 다음 주로 넘긴 뒤 누른다 */
 async function openEnsembleInfo({ nextWeek = false } = {}) {
     const user = userEvent.setup();
-    renderApp();
+    const { queryClient } = renderApp();
     if (nextWeek) {
         await user.click(await screen.findByRole('button', { name: '다음 주' }));
     }
@@ -38,7 +39,7 @@ async function openEnsembleInfo({ nextWeek = false } = {}) {
     const [, ensembleBlock] = screen.getAllByText('테스트밴드');
     await user.click(ensembleBlock!);
     const dialog = await findDialog(/10:00 – 11:00/);
-    return { user, dialog };
+    return { user, dialog, queryClient };
 }
 
 /** PIN 단계(합주 정보 Drawer 안)에 PIN을 넣는다 */
@@ -110,6 +111,45 @@ describe('합주표', () => {
         await waitFor(() =>
             expect(screen.queryByRole('dialog', { name: /10:00 – 11:00/ })).not.toBeInTheDocument(),
         );
+        expect(useDrawerStore.getState().openedDrawers).toEqual([]);
+    });
+
+    // V-3 17차: 존재 확인에서 404(이미 삭제됨)와 서버 오류를 나눠 알린다 (이전: 알림 없이 모두 닫음)
+    it('미루기를 누를 때 합주가 이미 삭제됐으면 알리고 모두 닫는다', async () => {
+        server.use(http.get(`${url}/ensemble/:id`, () => new HttpResponse(null, { status: 404 })));
+        const { user, dialog } = await openEnsembleInfo();
+
+        await user.click(within(dialog).getByRole('button', { name: '11/30(월)로 미루기' }));
+
+        expect(await screen.findByText('이미 삭제된 합주예요.')).toBeInTheDocument();
+        expect(useDrawerStore.getState().openedDrawers).toEqual([]);
+    });
+
+    it('미루기를 누를 때 확인 요청이 실패하면(서버 오류) 알리고 합주 정보에 머문다', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        server.use(http.get(`${url}/ensemble/:id`, () => new HttpResponse(null, { status: 500 })));
+        const { user, dialog } = await openEnsembleInfo();
+
+        await user.click(within(dialog).getByRole('button', { name: '11/30(월)로 미루기' }));
+
+        expect(
+            await screen.findByText('확인하지 못했어요. 잠시 후 다시 시도해 주세요.'),
+        ).toBeInTheDocument();
+        expect(useDrawerStore.getState().openedDrawers).toEqual(['ensembleInfo']);
+        expect(
+            within(dialog).getByRole('button', { name: '11/30(월)로 미루기' }),
+        ).toBeInTheDocument();
+    });
+
+    it('팀 이름을 눌렀는데 그 팀이 이미 삭제됐으면(목록에 없으면) 알리고 모두 닫는다', async () => {
+        const { user, dialog, queryClient } = await openEnsembleInfo();
+        // 합주 정보를 연 뒤 팀이 삭제되어 다시 불러온 팀 목록에 없다
+        server.use(http.get(`${url}/teams`, () => HttpResponse.json([])));
+        await queryClient.refetchQueries({ queryKey: teamsQueryOptions.queryKey });
+
+        await user.click(within(dialog).getByRole('button', { name: '테스트밴드 팀 정보' }));
+
+        expect(await screen.findByText('이미 삭제된 팀이에요.')).toBeInTheDocument();
         expect(useDrawerStore.getState().openedDrawers).toEqual([]);
     });
 

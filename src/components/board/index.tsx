@@ -70,13 +70,20 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
     }, [closeAllDrawers, refreshEnsembles, setEnsembleStates, setTeamStates]);
 
     // 이미 삭제된 합주인지 체크. 정보·PIN Drawer가 다음 단계로 가기 전에 사용한다 (true를 리턴하면 계속 진행)
+    // 이미 삭제됐으면(404) 알리고 Drawer를 모두 닫는다. 확인 요청 자체가 실패하면(서버 오류 등) 알리고 그대로 둔다
+    // (V-3 17차, 이전: 둘을 구분하지 않고 알림 없이 Drawer를 모두 닫았다)
     const checkEnsembleExists = useCallback(
         async (id: string) => {
             try {
                 await ensembleExists(id);
                 return true;
-            } catch {
-                handleEnsembleGone();
+            } catch (err) {
+                if (isNotFound(err)) {
+                    handleEnsembleGone();
+                    toast.error('이미 삭제된 합주예요.');
+                } else {
+                    toast.error('확인하지 못했어요. 잠시 후 다시 시도해 주세요.');
+                }
                 return false;
             }
         },
@@ -130,6 +137,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
                 setEnsembleStates();
                 closeAllDrawers();
                 refreshTeamsAndEnsembles();
+                toast.error('이미 삭제된 팀이에요.'); // V-3 17차 (이전: 알림 없이 닫았다)
                 return;
             }
             setTeamStates(id, team.type, team.name, team.desc);

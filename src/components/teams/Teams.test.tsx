@@ -338,6 +338,20 @@ describe('팀', () => {
         expect(await findDialog('새이름')).toBeInTheDocument();
     });
 
+    // V-3 17차: 존재 확인 요청 자체가 실패하면(서버 오류) 알리고 팀 정보에 머문다 (이전: 알림 없이 모두 닫음)
+    it('팀 수정: 누를 때 확인 요청이 실패하면(서버 오류) 알리고 팀 정보에 머문다', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        const user = await openTeamInfo();
+        server.use(http.get(`${url}/team/:id`, () => new HttpResponse(null, { status: 500 })));
+
+        await user.click(screen.getByRole('button', { name: /팀 수정/ }));
+
+        expect(
+            await screen.findByText('확인하지 못했어요. 잠시 후 다시 시도해 주세요.'),
+        ).toBeInTheDocument();
+        expect(useDrawerStore.getState().openedDrawers).toEqual(['teamInfo']);
+    });
+
     it('팀 수정: 저장하지 않고 닫으면 팀 정보(정보 단계)로 돌아온다', async () => {
         const { user, drawer } = await openTeamEdit();
 

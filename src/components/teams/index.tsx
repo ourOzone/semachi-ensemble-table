@@ -57,13 +57,20 @@ const Teams = () => {
 
     // 이미 삭제된 팀인지 체크. 팀 정보·PIN Drawer와 합주 추가(서버가 팀 존재를 검사하지 않음: ISSUES B4)가 사용한다
     // 해당 함수를 try -> if(else 없음) 에서 호출: false 리턴시 if문 넘긴채 그대로 try문 종료, 이후 try문 내에서 에러시 catch
+    // 이미 삭제됐으면(404) 알리고 Drawer를 모두 닫는다. 확인 요청 자체가 실패하면(서버 오류 등) 알리고 그대로 둔다
+    // (V-3 17차, 이전: 둘을 구분하지 않고 알림 없이 Drawer를 모두 닫았다)
     const checkTeamExists = useCallback(
         async (id: string) => {
             try {
                 await teamExists(id);
                 return true;
-            } catch {
-                handleTeamGone();
+            } catch (err) {
+                if (isNotFound(err)) {
+                    handleTeamGone();
+                    toast.error('이미 삭제된 팀이에요.');
+                } else {
+                    toast.error('확인하지 못했어요. 잠시 후 다시 시도해 주세요.');
+                }
                 return false;
             }
         },
@@ -167,8 +174,7 @@ const Teams = () => {
                 // 서버가 팀 존재를 검사하지 않으므로(ISSUES B4) 사전 확인을 유지한다.
                 // 소모임·일정은 팀 목록에 없는 고정 id라 확인하지 않는다 (옛 흐름은 확인 요청을 보냈다)
                 if (!team.isEvent && !(await checkTeamExists(team.id))) {
-                    toast.error('이미 삭제된 팀이에요.'); // checkTeamExists가 Drawer를 모두 닫았다
-                    return false;
+                    return false; // checkTeamExists가 알렸다 (이미 삭제됐으면 Drawer도 모두 닫았다)
                 }
                 // 저장 직전에 합주 목록을 다시 불러와 4개 겹침을 한 번 더 확인한다 (24차).
                 // 다른 사람이 그새 같은 시간에 잡았을 수 있다. 다시 불러온 목록으로 Drawer에도 알림이 뜬다

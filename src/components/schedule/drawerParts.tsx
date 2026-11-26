@@ -60,7 +60,7 @@ export const overlayClassName = 'ui bg-black/40 supports-backdrop-filter:backdro
 /**
  * Drawer 안의 스크롤 영역. 위 모서리를 바깥과 같은 모양으로 잘라 색 머리가 모서리 밖으로 나가지 않게.
  * 가로는 숨긴다: 단계가 바뀔 때 옆에서 밀려 들어오는 애니메이션이 잠깐 오른쪽으로 넘쳐 가로 스크롤 막대가 생겼다 사라졌다 (PC)
- * 세로 스크롤 막대도 숨기고 위·아래 끝을 흐리게 한다 (V-3 5차, scroll-fade: 쓰는 곳에서 ref={scrollFadeRef}).
+ * 세로 스크롤 막대도 숨기고 위·아래 끝을 흐리게 한다 (V-3 5차, edge-fade: 쓰는 곳에서 ref={scrollFadeRef}).
  * 끝에서 더 당겨도 튕기지 않는다 (overscroll-y-none, V-3 5차): 아이폰에서 맨 위에서 아래로 당기면 내용만 내려가 머리 위가
  * 비었다. 튕기지 않으면 그다음 당김은 vaul이 Drawer를 끌어내린다.
  * 바탕은 Drawer와 같은 단색(bg-surface)으로 둔다 (V-3 6차): 아이폰 사파리 26은 아래 도구 막대 색을 화면 아래 끝의
@@ -68,7 +68,7 @@ export const overlayClassName = 'ui bg-black/40 supports-backdrop-filter:backdro
  * 이 영역에는 팀 색 바탕(배경 이미지 포함)을 넣지 않는다. 팀 색은 안쪽 머리 요소에만
  */
 export const scrollAreaClassName =
-    'squircle scroll-fade min-h-0 bg-surface overflow-x-hidden overflow-y-auto overscroll-y-none rounded-t-[24px] supports-[corner-shape:squircle]:rounded-t-[36px]';
+    'squircle edge-fade min-h-0 bg-surface overflow-x-hidden overflow-y-auto overscroll-y-none rounded-t-[24px] supports-[corner-shape:squircle]:rounded-t-[36px]';
 
 /**
  * 맨 아래 "합주 잡기" 줄 (합주 정보: "같은 시간에 다른 팀 합주 잡기", 빈 시간: "이 시간에 합주 잡기").

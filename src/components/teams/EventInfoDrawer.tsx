@@ -19,7 +19,6 @@ import { scrollFadeRef } from '@/components/ui/scroll-fade';
 import { eventIds } from '@/constants';
 import { useTeamContext } from '@/context';
 import { useDrawerStore } from '@/stores/drawer';
-import { EVENT_STRIPES } from '@/styles/patterns';
 import theme from '@/styles/theme';
 
 // 소모임·회의 등 정보 Drawer (View 개편 V-3). 팀 정보 Drawer와 같은 모양의 머리만 있다 (전체 이름 + 일정 잡기).
@@ -61,11 +60,10 @@ const EventInfoDrawer = () => {
             >
                 {shown && (
                     <div ref={scrollFadeRef} className={scrollAreaClassName}>
-                        {/* 합주판 블록·팀 목록 칩과 같은 줄무늬 */}
                         <div
                             data-fade-skip
                             className="px-5 pt-[26px] pb-6 text-white md:px-7"
-                            style={{ backgroundColor: color, backgroundImage: EVENT_STRIPES }}
+                            style={{ backgroundColor: color }}
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0 pt-1.5">

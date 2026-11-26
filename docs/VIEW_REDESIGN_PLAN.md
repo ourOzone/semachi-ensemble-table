@@ -74,7 +74,7 @@
 - **새 코드에 styled-components·antd를 쓰지 않는다.** 스타일은 Tailwind, 컴포넌트는 `src/components/ui/`
 - shadcn 컴포넌트 추가: `pnpm dlx shadcn@4.23.0 add <이름>` 후 `pnpm format`. 생성된 파일을 읽고 필요 없는 의존성(예: `next-themes`)이 들어오면 정리한다
 - 알림 문구·함수는 `src/lib/notify.ts`에 모은다
-- **스크롤 막대를 보이지 않게 한다 (V-3 5차, 사용자 결정).** 세로 스크롤 영역은 `scroll-fade` 클래스(`index.css`) + `ref={scrollFadeRef}`(`components/ui/scroll-fade.ts`): 막대 없이, 위·아래로 더 있으면 그쪽 끝을 마스크로 흐리게. Drawer 스크롤 영역은 `scrollAreaClassName`에 클래스가 들어 있고(끝에서 튕기지 않는 `overscroll-y-none`도), 쓰는 곳에서 ref만 붙인다. ref를 다른 용도로도 써야 하면 effect에서 `attachScrollFade(el)`. 맨 위 색 머리(팀 색 등)에는 `data-fade-skip`을 붙여, 머리가 다 지나간 뒤부터 위쪽을 흐린다 (팀 색이 흰색·검은색으로 흐려지는 배합 방지, V-3 6차)
+- **스크롤 막대를 보이지 않게 한다 (V-3 5차, 사용자 결정).** 세로 스크롤 영역은 `edge-fade` 클래스(`index.css`, shadcn의 `scroll-fade`(마스크)와 다름: 쓰지 않는다) + `ref={scrollFadeRef}`(`components/ui/scroll-fade.ts`): 막대 없이, 위·아래로 더 있으면 그쪽 끝을 마스크로 흐리게. Drawer 스크롤 영역은 `scrollAreaClassName`에 클래스가 들어 있고(끝에서 튕기지 않는 `overscroll-y-none`도), 쓰는 곳에서 ref만 붙인다. ref를 다른 용도로도 써야 하면 effect에서 `attachScrollFade(el)`. 맨 위 색 머리(팀 색 등)가 있으면 그 머리에 `data-fade-skip`: 위쪽은 흐리지 않는다 (팀 색이 흰색·검은색으로 흐려지는 배합 방지, V-3 7차). 흐림은 마스크가 아니라 끝에 붙는 바탕색 그러데이션
 - **Drawer 아래 끝과 스크롤 영역 바탕에는 팀 색을 쓰지 않는다 (V-2 9차·V-3 6차).** 아이폰 사파리 26은 아래 도구 막대 색을 화면 아래 끝의 고정 요소(Drawer)에서 가져와, 그 바탕(배경 이미지 포함)이나 아래 끝이 팀 색이면 막대가 팀 색으로 물든다. 팀 색은 안쪽 머리 요소에만, Drawer 아래 끝은 늘 Drawer 바탕(`bg-surface`)
 - **색은 토큰으로 쓴다 (V-3 1차, 다크 모드).** 카드·Drawer 바탕 `bg-surface`(`bg-white` 금지), 페이지 `bg-page`, 글씨 `text-ink`, ink 바탕 위 글씨 `text-on-ink`, 글자 버튼 `text-link`, 회색은 `neutral-*` 단계(다크 모드에서 뒤집힘), 큰 카드 그림자 `shadow-card`. 팀 색·소모임 색 위의 흰 글씨(`text-white`)·반투명 흰색(`bg-white/20`)은 그대로 쓴다. 인라인 스타일의 색도 `var(--color-surface)` 등으로. 다크 모드 값은 `index.css`의 `.dark`
 
@@ -282,7 +282,12 @@
   - 흐림: 팀 색 머리가 위로 지나갈 때 흰색·검은색으로 흐려짐(노랑/흰색 등 배합이 보기 싫음) → 머리가 다 지나간 뒤부터 흐림(`data-fade-skip`). 흐림 폭은 끝까지 남은 거리만큼(최대 28px) 늘어 갑자기 생기지 않음
   - 아이폰 아래 도구 막대: 팀 정보는 늘, 합주 정보는 가끔 팀 색 → Drawer 바탕(흰색·검은색). 원인은 5차의 스크롤 영역 팀 색 그러데이션 바탕(`headerBackdrop`, 4차 스크린샷에서는 막대가 팀 색이 아니었다) → 삭제, 스크롤 영역 바탕은 `bg-surface`
   - 소모임·일정 정보: 줄무늬 머리가 Drawer 아래 끝까지(아래 끝이 팀 색) → 머리 아래 바탕에 "일정 잡기"(소모임 색 버튼)
-- [ ] 7차 이후: 팀 추가·수정·삭제 Drawer (사용자 시안)
+- [x] **7차 (2026-11-26): 흐림·도구 막대 진짜 원인, 빗금 정리**
+  - 원인: 5·6차의 흐림 유틸리티 이름 `scroll-fade`가 shadcn(`shadcn/tailwind.css`)의 같은 이름 유틸리티(마스크 + 스크롤 연동 애니메이션)와 합쳐져, 스크롤 영역에 마스크가 늘 걸려 있었다. → ① 끝까지 내려도 머리가 남는 길이에서 머리 위가 흐려짐 ② 아이폰 사파리 아래 도구 막대가 팀 색 (ISSUES V14)
+  - 흐림: 이름을 `edge-fade`로, 마스크 대신 끝에 붙는 바탕색 그러데이션(`::before`·`::after`, sticky). 색 머리가 있는 Drawer는 위쪽 흐림 없음(사용자 결정)
+  - 도구 막대: 아이폰에서 새 Drawer가 열려 있는 동안 화면 아래 끝에 Drawer 바탕색 띠(`layout/ToolbarTint`, 가장 높은 z-index, 4px만 화면 안)
+  - 빗금: 소모임 정보 Drawer 머리·합주 잡기의 팀 고르기에도 있었음 → 메인 화면 팀 목록과 합주판에만 (사용자 결정)
+- [ ] 8차 이후: 팀 추가·수정·삭제 Drawer (사용자 시안)
 
 ### 기능 단계(V-2 ~ V-5)에서 할 일
 1. **화면 구성안을 먼저 제안하고 승인을 받는다** (Drawer 하나에 무엇을 넣는지, 입력 순서, 완료·실패 표시, **화면 폭별 배치**). 동작이 바뀌는 부분은 목록으로 밝힌다. V-2부터 사용자 시안이 있으면 그것으로 대신한다

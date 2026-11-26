@@ -1069,6 +1069,19 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 206/206 / `pnpm lint` → 에러 4·경고 20 (새 코드 0건) / `pnpm format:check` ✅
 
+### 2026-11-26 — View 개편 V-3 (7차): 흐림·도구 막대의 진짜 원인, 빗금 정리
+
+- 원인 (진행 중 발견): 5차에 만든 흐림 유틸리티 이름 `scroll-fade`가 shadcn의 같은 이름 유틸리티(`shadcn/tailwind.css`: 마스크 + 스크롤 연동 애니메이션)와 합쳐졌다. 6차에 마스크를 빼도 shadcn 쪽 마스크가 늘 걸려 있었다 (계산된 `mask-image`로 확인). 6차의 그러데이션 바탕 가설은 틀렸다
+- 지금 → 바꾼 후
+  - 흐림: shadcn 마스크(스크롤 연동, 색 머리 위도 흐림) → 이름 `edge-fade`, 끝에 붙는 바탕색 그러데이션. 색 머리가 있는 Drawer는 위쪽 흐림 없음 (끝까지 내려도 머리가 남는 길이에서 머리가 흐려지던 것 해결)
+  - 아이폰 사파리 아래 도구 막대: 새 Drawer가 열려 있으면 팀 색이 되기도 함 → 마스크 제거 + 새 Drawer가 열려 있는 동안 화면 아래 끝에 Drawer 바탕색 띠(`layout/ToolbarTint`, 아이폰만, z-index 최대, 화면 밖으로 8px·안으로 4px). ISSUES V14
+  - 빗금: 소모임 정보 Drawer 머리·합주 잡기의 팀 고르기 → 없음 (메인 화면 팀 목록·합주판에만)
+  - 합주 잡기의 팀 고르기: 안쪽 여백을 안의 요소로 (흐림이 테두리 바로 안에 붙게)
+- 테스트: `scroll-fade.test.ts` 3개(진하기 0~1, 색 머리면 위쪽 없음), `layout/ToolbarTint.test.tsx` 2개
+- 확인: Playwright WebKit(아이폰 UA)·Chrome 390px 밝은·어두운 — 스크롤 영역 `mask-image: none`, 아래 흐림 진하기, 색 머리 Drawer의 위쪽 흐림 0, 띠(바탕색·z-index·위치 756~768px / 화면 760px), Drawer를 닫으면 띠 없음. 실제 아이폰 도구 막대는 사용자 확인 필요
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 208/208 / `pnpm lint` → 에러 4·경고 20 (새 코드 0건) / `pnpm format:check` ✅
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.

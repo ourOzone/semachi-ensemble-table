@@ -47,7 +47,6 @@ import {
     type WithLane,
 } from '@/lib/calendar';
 import { cn } from '@/lib/utils';
-import { EVENT_STRIPES } from '@/styles/patterns';
 import { getTodayIdx } from '@/lib/week';
 import { ensemblesQueryOptions } from '@/queries/ensembles';
 import { useTeams } from '@/queries/teams';
@@ -312,7 +311,7 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
         <>
             <div
                 ref={scrollAreaRef}
-                // 스크롤 막대는 숨기고 위·아래 끝을 흐리게 (23차, V-3 5차부터 공용 scroll-fade: 아래 effect)
+                // 스크롤 막대는 숨기고 위·아래 끝을 흐리게 (23차, V-3 5차부터 공용 edge-fade: 아래 effect)
                 className={cn(scrollAreaClassName, 'flex-1')}
             >
                 {/* 머리 */}
@@ -602,10 +601,7 @@ const TeamBadge = ({ team, checked = false }: { team: TeamOption; checked?: bool
             'inline-flex min-w-0 items-center gap-1.5 rounded-full py-2 pr-4 text-[16px] font-bold text-white',
             checked ? 'pl-3' : 'pl-4',
         )}
-        style={{
-            backgroundColor: team.color,
-            ...(team.isEvent && { backgroundImage: EVENT_STRIPES }),
-        }}
+        style={{ backgroundColor: team.color }}
     >
         {checked && <Check className="size-4 shrink-0" aria-hidden />}
         <span className="truncate">{team.name}</span>
@@ -796,8 +792,6 @@ const TeamPicker = ({
                 )}
                 style={{
                     backgroundColor: option.color,
-                    // 팀 아닌 일정은 합주판·팀 목록과 같은 줄무늬 (V-3 1차)
-                    ...(option.isEvent && { backgroundImage: EVENT_STRIPES }),
                     ...(selected && {
                         boxShadow: `0 0 0 2px var(--color-surface), 0 0 0 4px ${option.color}`,
                     }),
@@ -815,18 +809,21 @@ const TeamPicker = ({
             role="radiogroup"
             aria-label="팀"
             ref={scrollFadeRef}
-            // 팀이 많으면 이 안에서 스크롤: 막대 없이 위·아래 끝을 흐리게 (V-3 5차)
-            className={`${boxShape} scroll-fade max-h-[264px] overflow-y-auto overscroll-contain border border-neutral-200 bg-surface p-3`}
+            // 팀이 많으면 이 안에서 스크롤: 막대 없이 위·아래 끝을 흐리게 (V-3 5차).
+            // 안쪽 여백은 안의 div에: 흐림(끝에 붙는 그러데이션)이 여백 안쪽이 아니라 테두리 바로 안에 붙게
+            className={`${boxShape} edge-fade max-h-[264px] overflow-y-auto overscroll-contain border border-neutral-200 bg-surface`}
         >
-            <div className="flex flex-wrap gap-1.5">{teams.map(chip)}</div>
-            {events.length > 0 && (
-                <>
-                    <p className="mt-3.5 mb-2 text-[13px] font-medium text-neutral-500">
-                        소모임·일정
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">{events.map(chip)}</div>
-                </>
-            )}
+            <div className="p-3">
+                <div className="flex flex-wrap gap-1.5">{teams.map(chip)}</div>
+                {events.length > 0 && (
+                    <>
+                        <p className="mt-3.5 mb-2 text-[13px] font-medium text-neutral-500">
+                            소모임·일정
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">{events.map(chip)}</div>
+                    </>
+                )}
+            </div>
         </div>
     );
 };

@@ -148,26 +148,44 @@
 
 /*
  * 스크롤 영역 (V-3 5차, 규칙): 스크롤 막대를 보이지 않게 하고, 더 내릴(올릴) 내용이 있는 쪽 끝을 흐리게 한다.
- * PC에서 막대가 생기면 안쪽 폭이 줄고 보기 싫었다. 흐림은 components/ui/scroll-fade.ts의 scrollFadeRef가
- * 스크롤 위치에 따라 --fade-top·--fade-bottom(끝까지 남은 거리, 최대 28px)과 data-fade-top·data-fade-bottom을
- * 붙일 때만 (끝에 닿아 있으면 그쪽은 흐리지 않음). 마스크라 뒤의 Drawer 바탕이 비친다
+ * PC에서 막대가 생기면 안쪽 폭이 줄고 보기 싫었다.
+ * 흐림 = 위·아래 끝에 붙어 다니는(sticky) 바탕색 그러데이션 (::before 위, ::after 아래). 진하기는
+ * components/ui/scroll-fade.ts의 scrollFadeRef가 끝까지 남은 거리로 정한다(--fade-top·--fade-bottom, 0~1).
+ * 6차까지는 마스크(mask-image)였는데, 아이폰 사파리 26이 마스크가 걸린 Drawer에서 아래 도구 막대를 팀 색으로
+ * 물들여(스크롤이 생기는 팀 정보는 늘, 합주 정보는 가끔) 마스크를 쓰지 않는다 (V-3 7차).
+ * 바탕색은 --fade-color (기본 Drawer·카드 바탕 surface). 흐리는 곳은 그 바탕 위여야 한다 (색 머리 위는 흐리지 않음).
+ * 이름은 edge-fade: shadcn(shadcn/tailwind.css)에 같은 이름의 scroll-fade 유틸리티(마스크 + 스크롤 연동 애니메이션)가 있어,
+ * 5·6차에 scroll-fade로 만들었더니 두 정의가 합쳐져 마스크가 늘 걸려 있었다 (머리 위 흐림·아이폰 도구 막대 색의 원인, V-3 7차)
  */
-@utility scroll-fade {
+@utility edge-fade {
     scrollbar-width: none;
-    --fade-top: 0px;
-    --fade-bottom: 0px;
     &::-webkit-scrollbar {
         display: none;
     }
-    &[data-fade-top],
-    &[data-fade-bottom] {
-        mask-image: linear-gradient(
+    &::before,
+    &::after {
+        content: '';
+        position: sticky;
+        z-index: 1;
+        display: block;
+        height: 28px;
+        pointer-events: none;
+    }
+    &::before {
+        top: 0;
+        margin-bottom: -28px;
+        background: linear-gradient(
             to bottom,
-            transparent 0,
-            #000 var(--fade-top),
-            #000 calc(100% - var(--fade-bottom)),
-            transparent 100%
+            var(--fade-color, var(--color-surface)),
+            transparent
         );
+        opacity: var(--fade-top, 0);
+    }
+    &::after {
+        bottom: 0;
+        margin-top: -28px;
+        background: linear-gradient(to top, var(--fade-color, var(--color-surface)), transparent);
+        opacity: var(--fade-bottom, 0);
     }
 }
 

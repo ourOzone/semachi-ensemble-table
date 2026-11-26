@@ -6,6 +6,7 @@ import Notice from '@/components/notice';
 import Schedule from '@/components/schedule';
 import Note from '@/components/note';
 import SettingsDrawer from '@/components/settings/SettingsDrawer';
+import ToolbarTint from '@/components/layout/ToolbarTint';
 import { media } from '@/styles/media';
 import type { DrawerId } from '@/types';
 
@@ -24,6 +25,8 @@ function App() {
                 <Footer />
             </Container>
             <SettingsDrawer />
+            {/* 아이폰 사파리 아래 도구 막대를 Drawer 바탕색으로 (새 Drawer가 열려 있는 동안) */}
+            <ToolbarTint />
         </>
     );
 }

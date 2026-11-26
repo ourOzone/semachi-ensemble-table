@@ -19,6 +19,7 @@ import type { EditTarget } from '@/components/schedule/addEnsembleStore';
 import dayjs, { type Dayjs } from 'dayjs';
 import { toast } from 'sonner';
 import { getRepeatEnd, toEnsembleRequest, withStartTime } from '@/lib/ensemble';
+import { formatDate } from '@/components/schedule/drawerParts';
 import {
     findOverlapLimit,
     getRegularNextDate,
@@ -260,16 +261,18 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
             startTime: TimeSlot | null,
             endTime: TimeSlot | null,
         ) => {
+            const skipTo = dayjs(nextDate).add(7, 'day');
             const saved = await handleUpdateEnsemble(
                 id,
                 teamId,
                 repeat,
-                dayjs(nextDate).add(7, 'day'),
+                skipTo,
                 startTime,
                 endTime,
             );
             if (saved) {
                 setNextDate((prev) => dayjs(prev).add(7, 'day'));
+                toast.success(`${formatDate(skipTo)}로 미뤘어요.`); // V-3 16차
             }
             return saved;
         },
@@ -300,7 +303,10 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
                 startTime,
                 endTime,
             );
-            if (saved) setNextDate(regular);
+            if (saved) {
+                setNextDate(regular);
+                toast.success(`${formatDate(regular)}부터 다시 해요.`); // V-3 16차
+            }
             return saved;
         },
         [handleUpdateEnsemble, setNextDate],
@@ -324,7 +330,10 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
                 startTime,
                 endTime,
             );
-            if (saved) setRepeat(true);
+            if (saved) {
+                setRepeat(true);
+                toast.success('매주 반복으로 바꿨어요.'); // V-3 16차
+            }
             return saved;
         },
         [handleUpdateEnsemble, setRepeat],

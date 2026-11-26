@@ -16,7 +16,6 @@ import SlotDrawer, { type SlotView } from '@/components/schedule/SlotDrawer';
 import EnsembleInfoDrawer from '@/components/schedule/EnsembleInfoDrawer';
 import AddEnsembleDrawer, { type AddEnsembleInput } from '@/components/schedule/AddEnsembleDrawer';
 import type { EditTarget } from '@/components/schedule/addEnsembleStore';
-import { formatEnsembleSummary } from '@/components/schedule/drawerParts';
 import dayjs, { type Dayjs } from 'dayjs';
 import { toast } from 'sonner';
 import { getRepeatEnd, toEnsembleRequest, withStartTime } from '@/lib/ensemble';
@@ -219,16 +218,8 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
             // 요일이 바뀌었을 수 있어 캘린더 날짜는 버린다 ("같은 시간에 다른 팀 합주 잡기"는 다음 합주 날짜로)
             setCalendarDate(null);
             setOpenedDrawers(['ensembleInfo']);
-            toast.success(team.isEvent ? '일정을 수정했어요.' : '합주를 수정했어요.', {
-                description: formatEnsembleSummary({
-                    team,
-                    repeat,
-                    date,
-                    startTime,
-                    endTime,
-                    repeatEnd,
-                }),
-            });
+            // 알림은 한 문장만 (V-3 15차, 이전: 아래에 합주 요약)
+            toast.success(team.isEvent ? '일정을 수정했어요.' : '합주를 수정했어요.');
             return true;
         } catch (err) {
             if (isNotFound(err)) {

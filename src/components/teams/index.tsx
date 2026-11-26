@@ -24,7 +24,6 @@ import AddEnsembleDrawer, {
     type AddEnsembleInput,
     type TeamOption,
 } from '@/components/schedule/AddEnsembleDrawer';
-import { formatEnsembleSummary } from '@/components/schedule/drawerParts';
 import theme from '@/styles/theme';
 import TeamInfoDrawer from './TeamInfoDrawer';
 import EventInfoDrawer from './EventInfoDrawer';
@@ -110,7 +109,7 @@ const Teams = () => {
                 });
                 setTeamStates(); // 초기화
                 closeAllDrawers();
-                toast.success('팀을 만들었어요.', { description: name });
+                toast.success('팀을 만들었어요.');
                 return true;
             } catch {
                 toast.error('저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
@@ -128,7 +127,7 @@ const Teams = () => {
                 await updateTeamAsync({ id, type, name, desc, ...(due !== undefined && { due }) });
                 setTeamStates(id, type, name, desc); // 팀 정보 Drawer가 고친 값으로
                 setOpenedDrawers(['teamInfo']);
-                toast.success('팀을 수정했어요.', { description: name });
+                toast.success('팀을 수정했어요.');
                 return true;
             } catch (err) {
                 if (isNotFound(err)) {
@@ -191,16 +190,8 @@ const Teams = () => {
                 });
                 setTeamStates(); // 초기화
                 closeAllDrawers();
-                toast.success(team.isEvent ? '일정을 잡았어요.' : '합주를 잡았어요.', {
-                    description: formatEnsembleSummary({
-                        team,
-                        repeat,
-                        date,
-                        startTime,
-                        endTime,
-                        repeatEnd,
-                    }),
-                });
+                // 알림은 한 문장만 (V-3 15차, 이전: 아래에 합주 요약)
+                toast.success(team.isEvent ? '일정을 잡았어요.' : '합주를 잡았어요.');
                 return true;
             } catch {
                 toast.error('저장하지 못했어요. 잠시 후 다시 시도해 주세요.');

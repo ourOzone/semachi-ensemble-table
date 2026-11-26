@@ -386,7 +386,8 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
         expect(drawer.getByRole('button', { name: '11월 28일 토요일까지' })).toBeInTheDocument();
 
         await user.click(drawer.getByRole('button', { name: '합주 잡기' }));
-        expect(await screen.findByText(/\(11\/28\(토\)까지\)/)).toBeInTheDocument();
+        // 알림은 한 문장만 (V-3 15차, 이전: 아래에 "(11/28(토)까지)"가 든 합주 요약)
+        expect(await screen.findByText('합주를 잡았어요.')).toBeInTheDocument();
         expect(posted).toMatchObject({ repeat: true, type: '무기한', due: '2026-11-28' });
     });
 

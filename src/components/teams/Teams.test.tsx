@@ -390,7 +390,6 @@ describe('팀', () => {
 
             // 완료 화면 Drawer 대신 알림 (이전: "락앤롤!")
             expect(await screen.findByText('합주를 잡았어요.')).toBeInTheDocument();
-            expect(screen.getByText('테스트밴드 · 11/27(금) 12:00 – 14:00')).toBeInTheDocument();
             expect(useDrawerStore.getState().openedDrawers).toEqual([]);
             expect(posted).toMatchObject({
                 teamId: 'team-1',

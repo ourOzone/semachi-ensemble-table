@@ -226,7 +226,6 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
                                     togglePinned(team.id);
                                     toast.success(
                                         pinned ? '고정을 풀었어요.' : '팀 목록 맨 앞에 고정했어요.',
-                                        { description: team.name },
                                     );
                                 }}
                             >

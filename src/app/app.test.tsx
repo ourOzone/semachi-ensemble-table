@@ -9,9 +9,8 @@ import { server } from '@/test/server';
 
 // App 전체 스모크 테스트: 실제 진입점과 같은 Provider 구성으로 렌더링하고, API는 MSW로 모킹한다.
 
-// 기존 코드에서 이미 나던 경고 (React 18에서도 동일하게 발생함을 확인).
-// View 개편(styled-components·antd 교체) 때 사라질 예정이며, 그 외의 경고가 새로 생기면 테스트가 실패한다.
-// 허용하는 경고: 없음 (V-6: 옛 styled-components props·antd Drawer 경고가 옛 코드와 함께 사라짐, ISSUES V1·V4)
+// 허용하는 경고 목록. 여기 없는 경고가 생기면 테스트가 실패한다.
+// 지금은 없음 (V-6: 옛 styled-components props·antd Drawer 경고가 옛 코드와 함께 사라짐, ISSUES V1·V4)
 const KNOWN_WARNINGS: RegExp[] = [];
 
 describe('App', () => {

@@ -231,7 +231,7 @@ export const DatePicker = ({
                         sunday: '[&>button]:text-red-500',
                     }}
                     className="w-full bg-transparent p-0 [--cell-radius:9999px] [--cell-size:--spacing(9)] [&_button]:rounded-full"
-                    // 글자 크기는 px로 (공존 기간에는 html 글자 크기가 바뀌어 rem이 작아진다: 계획 문서 "공존 기간 규칙").
+                    // 글자 크기는 px로 (V-1~V-5 공존 기간에 html 글자 크기가 바뀌어 rem이 작아졌던 때부터)
                     // 날짜 칸은 정사각형(폭에 따라 커짐) 대신 높이 38px 줄, 날짜 버튼은 36px 원 (22차: 달력이 크고 줄 간격이 넓었다)
                     classNames={{
                         root: 'w-full',

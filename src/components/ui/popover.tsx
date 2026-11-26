@@ -3,7 +3,7 @@ import { Popover as PopoverPrimitive } from 'radix-ui';
 import { cn } from '@/lib/utils';
 
 // 작은 말풍선 (shadcn Popover와 같은 구성, V-4 2차: 날적이 설명).
-// 내용은 body로 옮겨 그려지므로 `ui` 클래스를 붙여 새 코드 스타일(공존 기간 규칙)을 받는다
+// 내용은 body로 옮겨 그려지므로 `ui` 클래스를 붙여 글꼴·글자 크기(index.css의 .ui)를 받는다
 
 const Popover = PopoverPrimitive.Root;
 const PopoverTrigger = PopoverPrimitive.Trigger;

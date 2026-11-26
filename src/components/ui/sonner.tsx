@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 //   왼쪽에 결과 색의 동그란 아이콘(성공 초록·실패 빨강·안내 파랑·주의 노랑), 굵은 한 문장.
 //   알림은 늘 한 문장만 쓴다 (V-3 15차, description 없음: 이전에는 팀 이름·합주 요약을 작게 덧붙였고 다크 모드에서 보이지 않았다)
 // - 위치: 위쪽 가운데 그대로 (아래에서 올라오는 Drawer와 겹치지 않게, 사전 결정 6). 아이폰 위 노치·상태 표시줄 아래로
-// - 다크 모드는 앱 설정(themeStore)을 따른다. ui 클래스: 옛 전역 스타일(legacy.css)이 알림 안에 적용되지 않게 (index.css의 .ui)
+// - 다크 모드는 앱 설정(themeStore)을 따른다. ui 클래스: body로 옮겨 그려지므로 글꼴·글자 크기를 받게 (index.css의 .ui)
 
 /** 결과 색의 동그란 아이콘 */
 const Badge = ({ className, children }: { className: string; children: ReactNode }) => (

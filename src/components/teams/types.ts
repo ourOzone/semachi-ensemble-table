@@ -20,11 +20,10 @@ export interface AddTeamInput {
 /** 저장에 성공하면 true (실패하면 Drawer에 머문다: ISSUES F3) */
 export type HandleAddTeam = (input: AddTeamInput) => Promise<boolean>;
 
-export type HandleUpdateTeam = (
-    id: string,
-    type: string,
-    name: string,
-    desc: string[],
-) => Promise<void>;
+/** 팀 수정 Drawer에서 고친 것 (V-3 13차, PIN 없음: 팀 정보에서 확인했다) */
+export type UpdateTeamInput = Omit<AddTeamInput, 'pin'>;
+
+/** 저장에 성공하면 true (실패하면 Drawer에 머문다) */
+export type HandleUpdateTeam = (id: string, input: UpdateTeamInput) => Promise<boolean>;
 
 export type HandleDeleteTeam = (id: string) => Promise<void>;

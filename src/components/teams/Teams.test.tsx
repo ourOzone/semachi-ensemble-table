@@ -11,7 +11,7 @@ import { renderApp } from '@/test/render';
 import { countOf, recordRequests } from '@/test/requests';
 import { server } from '@/test/server';
 
-// 팀 기능 흐름 테스트: 팀 추가(한 Drawer + PIN 만들기), 팀 정보, 팀 수정 5단계, 팀 삭제, 팀 정보에서 합주 잡기, 소모임 정보.
+// 팀 기능 흐름 테스트: 팀 추가(한 Drawer + PIN 만들기), 팀 정보, 팀 수정(PIN → 팀 수정 Drawer), 팀 삭제, 팀 정보에서 합주 잡기, 소모임 정보.
 // 합주 잡기 Drawer 자체(합주판에서 열기, 겹침 등)는 schedule/AddEnsembleDrawer.test.tsx
 // Drawer가 스택으로 쌓여 같은 문구의 버튼("확인")이 여러 개 있으므로 Drawer 범위로 찾는다.
 
@@ -286,119 +286,82 @@ describe('팀', () => {
         expect(useDrawerStore.getState().openedDrawers).toEqual([]);
     });
 
-    it('팀 수정: PIN → 종류 → 이름 → 멤버 → 셋리 순으로 바꾸고 서버에 보낸다', async () => {
+    /** 팀 정보 → "팀 수정" → 같은 Drawer 안의 PIN 단계 → (맞으면) 팀 수정 Drawer (V-3 13차) */
+    async function openTeamEdit() {
+        server.use(http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)));
+        const user = await openTeamInfo();
+        await user.click(screen.getByRole('button', { name: /팀 수정/ }));
+        const pinStep = within(await findDialog('팀을 수정할까요?'));
+        await user.type(pinStep.getByLabelText('PIN 4자리'), '1234');
+        const drawer = within(await findDialog('팀 수정'));
+        return { user, drawer };
+    }
+
+    it('팀 수정: PIN이 맞으면 지금 값을 채운 팀 수정 Drawer, 바꿔 저장하면 팀 정보로 돌아오며 알린다', async () => {
         let putBody: unknown;
         let putUrl = '';
         server.use(
-            http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)),
             http.put(`${url}/team`, async ({ request }) => {
                 putUrl = request.url;
                 putBody = await request.json();
                 return HttpResponse.json({ id: 'team-1' });
             }),
         );
-        const user = await openTeamInfo();
+        const { user, drawer } = await openTeamEdit();
 
-        await user.click(screen.getByRole('button', { name: /팀 수정/ }));
-        // PIN이 맞으면 다음 단계로 자동 이동
-        await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
-        await user.click(await screen.findByText('외부공연'));
+        // 지금 값 (옛 종류 "세마치공연(정기/연말)"는 새 종류 "교내 공연"으로 채운다)
+        expect(drawer.getByRole('radio', { name: '교내 공연' })).toHaveAttribute(
+            'aria-checked',
+            'true',
+        );
+        expect(drawer.getByRole('textbox', { name: '팀명' })).toHaveValue('테스트밴드');
+        expect(drawer.getByRole('textbox', { name: '보컬' })).toHaveValue('보컬A');
+        expect(drawer.getByRole('textbox', { name: '셋리스트 및 팀 정보' })).toHaveValue(
+            '셋리스트',
+        );
+        expect(drawer.getByRole('button', { name: '바뀐 내용이 없어요' })).toBeDisabled();
 
-        // 이름·멤버·셋리는 기존 값이 채워져 있다
-        const nameDrawer = await findDrawer(/팀 이름을 바꿔요/);
-        const nameInput = within(nameDrawer).getByRole('textbox');
-        expect(nameInput).toHaveValue('테스트밴드');
-        await user.clear(nameInput);
-        await user.type(nameInput, '바뀐밴드');
-        await user.click(await findEnabledButton('확인', nameDrawer));
+        await user.click(drawer.getByRole('radio', { name: '외부 공연' }));
+        await user.clear(drawer.getByRole('textbox', { name: '팀명' }));
+        await user.type(drawer.getByRole('textbox', { name: '팀명' }), '새이름');
+        await user.click(drawer.getByRole('button', { name: '수정하기' }));
 
-        const memberDrawer = await findDrawer(/누가 바뀌었나요/);
-        expect(within(memberDrawer).getAllByRole('textbox')[0]).toHaveValue('보컬A');
-        await user.click(await findEnabledButton('확인', memberDrawer));
-
-        const setlistDrawer = await findDrawer(/셋리가 바뀌었나요/);
-        expect(within(setlistDrawer).getByRole('textbox')).toHaveValue('셋리스트');
-        await user.click(await findEnabledButton('다 바꿨어요', setlistDrawer));
-
-        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
-        await waitFor(() => expect(putBody).toBeDefined());
+        expect(await screen.findByText('팀을 수정했어요.')).toBeInTheDocument();
         expect(new URL(putUrl).searchParams.get('id')).toBe('team-1');
         expect(putBody).toEqual({
-            type: '외부공연(연합/대외)',
-            name: '바뀐밴드',
+            type: '외부 공연',
+            name: '새이름',
             desc: ['보컬A', '기타B', '베이스C', '드럼D', '키보드E', '매니저F', '셋리스트'],
         });
-        // 존재 확인은 팀 정보 Drawer의 수정 버튼·PIN Drawer 2회 (이전: 팀 클릭·저장 직전까지 4회, 사전 결정 5)
-        expect(countOf(requests, 'GET /team/team-1')).toBe(2);
+        // 팀 정보로 돌아오고, 고친 값이 보인다
+        expect(useDrawerStore.getState().openedDrawers).toEqual(['teamInfo']);
+        expect(await findDialog('새이름')).toBeInTheDocument();
     });
 
-    it('팀 수정: 저장할 때 서버가 404(이미 삭제됨)를 주면 Drawer를 모두 닫고 팀·합주 목록을 다시 불러온다', async () => {
+    it('팀 수정: 저장하지 않고 닫으면 팀 정보(정보 단계)로 돌아온다', async () => {
+        const { user, drawer } = await openTeamEdit();
+
+        await user.click(drawer.getByRole('button', { name: '닫기' }));
+
+        await waitFor(() => expect(useDrawerStore.getState().openedDrawers).toEqual(['teamInfo']));
+        // PIN 단계가 아니라 정보 단계
+        expect(await findDialog('테스트밴드')).toBeInTheDocument();
+    });
+
+    it('팀 수정: 저장할 때 서버가 404(이미 삭제됨)를 주면 Drawer를 모두 닫고 팀·합주 목록을 다시 불러오며 알린다', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
-        server.use(
-            http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)),
-            http.put(`${url}/team`, () =>
-                HttpResponse.json({ error: 'Team not found' }, { status: 404 }),
-            ),
-        );
-        const user = await openTeamInfo();
+        server.use(http.put(`${url}/team`, () => new HttpResponse(null, { status: 404 })));
+        const { user, drawer } = await openTeamEdit();
+        await user.type(drawer.getByRole('textbox', { name: '팀명' }), '2');
+        requests.length = 0;
 
-        await user.click(screen.getByRole('button', { name: /팀 수정/ }));
-        await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
-        await user.click(await screen.findByText('외부공연'));
-        await user.click(await findEnabledButton('확인', await findDrawer(/팀 이름을 바꿔요/)));
-        await user.click(await findEnabledButton('확인', await findDrawer(/누가 바뀌었나요/)));
-        await user.click(
-            await findEnabledButton('다 바꿨어요', await findDrawer(/셋리가 바뀌었나요/)),
-        );
+        await user.click(drawer.getByRole('button', { name: '수정하기' }));
 
-        await waitFor(() => expect(document.querySelectorAll('.ant-drawer-open')).toHaveLength(0));
-        await waitFor(() => expect(countOf(requests, 'GET /teams')).toBe(2));
-        expect(countOf(requests, 'GET /ensembles')).toBe(2);
-        expect(countOf(requests, 'GET /notes')).toBe(1);
-    });
-
-    // F1 회귀 테스트: 멤버·셋리 단계에서 뒤로 가면 그 단계의 입력을 원래 값으로 되돌린다 (이전에는 빈 값이 되어 그대로 저장됐다)
-    it('팀 수정: 멤버·셋리 단계에서 뒤로 갔다가 다시 진행해 저장해도 기존 값이 유지된다', async () => {
-        let putBody: unknown;
-        server.use(
-            http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)),
-            http.put(`${url}/team`, async ({ request }) => {
-                putBody = await request.json();
-                return HttpResponse.json({ id: 'team-1' });
-            }),
-        );
-        const user = await openTeamInfo();
-
-        await user.click(screen.getByRole('button', { name: /팀 수정/ }));
-        await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
-        await user.click(await screen.findByText('외부공연'));
-        const nameDrawer = await findDrawer(/팀 이름을 바꿔요/);
-        await user.click(await findEnabledButton('확인', nameDrawer));
-
-        // 멤버를 고친 뒤 뒤로 가기 → 다시 진행하면 원래 값
-        let memberDrawer = await findDrawer(/누가 바뀌었나요/);
-        await user.type(within(memberDrawer).getAllByRole('textbox')[0]!, '바뀜');
-        await user.click(within(memberDrawer).getByRole('button', { name: 'Close' }));
-        await user.click(await findEnabledButton('확인', nameDrawer));
-        memberDrawer = await findDrawer(/누가 바뀌었나요/);
-        expect(within(memberDrawer).getAllByRole('textbox')[0]).toHaveValue('보컬A');
-        await user.click(await findEnabledButton('확인', memberDrawer));
-
-        // 셋리를 고친 뒤 뒤로 가기 → 다시 진행하면 원래 값
-        let setlistDrawer = await findDrawer(/셋리가 바뀌었나요/);
-        await user.type(within(setlistDrawer).getByRole('textbox'), '바뀜');
-        await user.click(within(setlistDrawer).getByRole('button', { name: 'Close' }));
-        await user.click(await findEnabledButton('확인', memberDrawer));
-        setlistDrawer = await findDrawer(/셋리가 바뀌었나요/);
-        expect(within(setlistDrawer).getByRole('textbox')).toHaveValue('셋리스트');
-        await user.click(await findEnabledButton('다 바꿨어요', setlistDrawer));
-
-        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
-        await waitFor(() => expect(putBody).toBeDefined());
-        expect(putBody).toEqual({
-            type: '외부공연(연합/대외)',
-            name: '테스트밴드',
-            desc: ['보컬A', '기타B', '베이스C', '드럼D', '키보드E', '매니저F', '셋리스트'],
+        expect(await screen.findByText('이미 삭제된 팀이에요.')).toBeInTheDocument();
+        expect(useDrawerStore.getState().openedDrawers).toEqual([]);
+        await waitFor(() => {
+            expect(countOf(requests, 'GET /teams')).toBe(1);
+            expect(countOf(requests, 'GET /ensembles')).toBe(1);
         });
     });
 

@@ -25,7 +25,7 @@ describe('ToolbarTint', () => {
         expect(tint()).toHaveClass('fixed', 'bg-surface');
 
         // 옛 Drawer가 위에 쌓이면 그리지 않는다
-        useDrawerStore.getState().setOpenedDrawers(['teamInfo', 'updateTeam1']);
+        useDrawerStore.getState().setOpenedDrawers(['teamInfo', 'addNotice']);
         rerender(<ToolbarTint />);
         expect(tint()).toBeNull();
     });

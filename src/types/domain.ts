@@ -10,7 +10,7 @@ export type TimeSlot = number;
 export type TeamType = '교내 공연' | '외부 공연' | '기타 팀';
 
 /**
- * 옛 팀 종류 (V-3 10차 전). 라이브 데이터에 남아 있고(DB에서 일괄 수정 예정), 옛 팀 수정 Drawer가 아직 쓴다.
+ * 옛 팀 종류 (V-3 10차 전). 라이브 데이터에 남아 있고(DB에서 일괄 수정 예정), 팀 수정 Drawer가 새 종류로 바꿔 채운다.
  * 새 종류와 함께 쓴다 (Team.type은 string)
  */
 export type LegacyTeamType =

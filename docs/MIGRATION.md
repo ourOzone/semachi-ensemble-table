@@ -1142,6 +1142,18 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
   - "다음"과 "(… 나중에 적기)"가 붙어 보임 → 한 칸 띄움 (flex 안의 공백 글자는 그려지지 않아 gap으로)
 - 사용자 요청으로 테스트·화면 확인은 하지 않음. 배지를 찾던 테스트 줄만 지움 (`pnpm typecheck` ✅, `pnpm format` 적용)
 
+### 2026-11-26 — View 개편 V-3 (13차): 팀 수정 Drawer, "나중에 적기" 버튼 스타일 되돌림
+
+- 지금 → 바꾼 후
+  - 팀 추가 "다음" 버튼의 점선 테두리(12차) → 되돌림, "(… 나중에 적기)" 문구만
+  - 팀 수정: 오른쪽에서 쌓이는 옛 Drawer 5단계(저장 알림 없음, 뒤로 가기마다 값 되돌리기) → 팀 정보 Drawer 안의 PIN 단계 → 팀 수정 Drawer 하나(팀 추가 Drawer의 수정 모드, 지금 값이 채워짐). 저장하면 고친 값으로 팀 정보로 돌아오며 알림, 닫으면 팀 정보로, 404면 모두 닫고 "이미 삭제된 팀이에요." (이전: 알림 없이 닫음)
+  - 옛 팀 종류는 새 종류로 바꿔 채움 (손대지 않으면 "바뀐 내용이 없어요", 다른 것을 고쳐 저장하면 새 종류로 바뀜)
+- 구조: `teams/editTeamStore`, `AddTeamDrawer`의 `mode`, `HandleUpdateTeam(id, input) → Promise<boolean>`, `TeamUpdateRequest`에 `due`(적용 예정). 옛 `updateTeamDrawers/` 삭제. team context를 `id·type·name·desc·setTeamStates`만으로 (옛 Drawer용 setter·PIN·org* 삭제)
+- 테스트: 옛 팀 수정 흐름 3개(5단계·404·F1 뒤로 가기 회귀) → 새 3개 (PIN → 지금 값 채움·옛 종류 바꿔 채움·바뀐 것 없으면 막힘·저장하면 PUT 본문·팀 정보로 돌아와 새 이름, 닫으면 팀 정보, 404). F1(뒤로 가면 값이 지워짐)은 단계가 없어져 대상이 사라짐. context 테스트에서 PIN 제거
+- 확인: Playwright Chrome 390px 밝은·어두운 — 옛 종류 팀의 수정 Drawer(교내 공연으로 채움), 값을 바꾸면 "수정하기"
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 213/213 / `pnpm lint` → 에러 1·경고 19 (옛 팀 수정 Drawer 삭제로 에러 1건 감소, 새 코드 0건) / `pnpm format:check` ✅
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.

@@ -18,8 +18,8 @@ describe('useDrawerContext (stores/drawer)', () => {
         const { result } = renderHook(() => useDrawerContext());
 
         act(() => result.current.openDrawer('teamInfo'));
-        act(() => result.current.openDrawer('updateTeam1'));
-        expect(result.current.openedDrawers).toEqual(['teamInfo', 'updateTeam1']);
+        act(() => result.current.openDrawer('addNotice'));
+        expect(result.current.openedDrawers).toEqual(['teamInfo', 'addNotice']);
 
         act(() => result.current.closeDrawer());
         expect(result.current.openedDrawers).toEqual(['teamInfo']);
@@ -38,7 +38,7 @@ describe('useDrawerContext (stores/drawer)', () => {
         const { result } = renderHook(() => useDrawerContext());
 
         act(() => result.current.openDrawer('teamInfo'));
-        act(() => result.current.openDrawer('updateTeam1'));
+        act(() => result.current.openDrawer('addNotice'));
         act(() => result.current.setOpenedDrawers(['teamInfo']));
         expect(result.current.openedDrawers).toEqual(['teamInfo']);
     });
@@ -60,8 +60,8 @@ describe('TeamContext', () => {
     it('setTeamStates를 인자 없이 호출하면 초기값으로 되돌린다', () => {
         const { result } = renderHook(() => useTeamContext(), { wrapper });
 
-        act(() => result.current.setTeamStates('id-1', '기타 등등', '비틀즈', ['a'], '1234'));
-        expect(result.current).toMatchObject({ id: 'id-1', name: '비틀즈', pin: '1234' });
+        act(() => result.current.setTeamStates('id-1', '기타 팀', '비틀즈', ['a']));
+        expect(result.current).toMatchObject({ id: 'id-1', name: '비틀즈', desc: ['a'] });
 
         act(() => result.current.setTeamStates());
         expect(result.current).toMatchObject({
@@ -69,7 +69,6 @@ describe('TeamContext', () => {
             type: '',
             name: '',
             desc: ['', '', '', '', '', '', ''],
-            pin: '',
         });
     });
 });

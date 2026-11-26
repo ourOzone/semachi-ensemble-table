@@ -32,9 +32,10 @@ import { days, demoNames } from '@/constants';
 import { cn } from '@/lib/utils';
 import { useDrawerStore } from '@/stores/drawer';
 import theme from '@/styles/theme';
-import type { TeamType } from '@/types';
+import type { LegacyTeamType, TeamType } from '@/types';
+import { useEditTeamStore, type EditTeamTarget } from './editTeamStore';
 import { TEAM_DUE_ENABLED } from './teamDue';
-import type { HandleAddTeam } from './types';
+import type { HandleAddTeam, HandleUpdateTeam } from './types';
 
 // 팀 추가 Drawer (View 개편 V-3 10차). 아래에서 올라오는 Drawer 하나에서 모두 입력한다
 // (이전: 오른쪽에서 쌓이는 옛 Drawer 6단계: 종류 → 이름 → 팀원 → 셋리 → PIN 두 번 → 완료 화면 "팀을 만들었어요").
@@ -48,6 +49,19 @@ const TEAM_TYPES = [
     ['외부 공연', '외부 공연', Globe],
     ['기타 팀', '기타 팀', Users],
 ] as const;
+
+/** 옛 팀 종류(V-3 10차 전) → 새 종류. 수정할 때 새 종류로 바꿔 채운다 (저장하면 새 종류로 바뀐다) */
+const FROM_LEGACY: Record<LegacyTeamType, TeamType> = {
+    '세마치공연(정기/연말)': '교내 공연',
+    '교내공연(축제/버스킹)': '교내 공연',
+    '외부공연(연합/대외)': '외부 공연',
+    '기타 등등': '기타 팀',
+};
+
+function toTeamType(type: string): TeamType | null {
+    if (TEAM_TYPES.some(([value]) => value === type)) return type as TeamType;
+    return FROM_LEGACY[type as LegacyTeamType] ?? null;
+}
 
 const TYPE_HINTS: Record<TeamType, string> = {
     '교내 공연': '정기공연, 연말공연, 축제, 버스킹 등',
@@ -74,13 +88,21 @@ const formatLongDate = (date: Dayjs) =>
     `${date.month() + 1}월 ${date.date()}일 ${days[(date.day() + 6) % 7]}요일`;
 
 interface AddTeamDrawerProps {
-    onSubmit: HandleAddTeam;
+    /** add: 팀 추가(입력 → PIN 만들기), update: 팀 수정(팀 정보에서 PIN이 맞은 뒤, V-3 13차) */
+    mode?: 'add' | 'update';
+    onSubmit?: HandleAddTeam;
+    onUpdate?: HandleUpdateTeam;
 }
 
-const AddTeamDrawer = ({ onSubmit }: AddTeamDrawerProps) => {
+const AddTeamDrawer = ({ mode = 'add', onSubmit, onUpdate }: AddTeamDrawerProps) => {
     const openedDrawers = useDrawerStore((state) => state.openedDrawers);
     const closeDrawer = useDrawerStore((state) => state.closeDrawer);
-    const open = openedDrawers[openedDrawers.length - 1] === 'addTeam';
+    const setOpenedDrawers = useDrawerStore((state) => state.setOpenedDrawers);
+    const target = useEditTeamStore((state) => state.target);
+    const open =
+        openedDrawers[openedDrawers.length - 1] === (mode === 'update' ? 'updateTeam' : 'addTeam');
+    // 수정은 저장하지 않고 닫아도 팀 정보로 돌아간다 (합주 수정과 같음)
+    const handleClose = () => (mode === 'update' ? setOpenedDrawers(['teamInfo']) : closeDrawer());
 
     // 열 때마다 입력을 새로 시작한다 (session). 닫히는 동안은 마지막 입력이 그대로 보인다
     const [session, setSession] = useState(0);
@@ -96,7 +118,7 @@ const AddTeamDrawer = ({ onSubmit }: AddTeamDrawerProps) => {
     return (
         <Drawer
             open={open}
-            onOpenChange={(next) => !next && closeDrawer()}
+            onOpenChange={(next) => !next && handleClose()}
             // 키보드 위치 맞추기는 직접 한다 (keyboardSheet)
             repositionInputs={false}
         >
@@ -106,10 +128,12 @@ const AddTeamDrawer = ({ onSubmit }: AddTeamDrawerProps) => {
                 overlayClassName={overlayClassName}
                 handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-neutral-300"
             >
-                {session > 0 && (
+                {session > 0 && (mode === 'add' || target) && (
                     <AddTeamForm
                         key={session}
+                        edit={mode === 'update' ? target : null}
                         onSubmit={onSubmit}
+                        onUpdate={onUpdate}
                         keyboardOpen={sheet.keyboardOpen}
                     />
                 )}
@@ -128,27 +152,35 @@ const isTextField = (el: EventTarget | null) =>
     el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
 
 const AddTeamForm = ({
+    edit,
     onSubmit,
+    onUpdate,
     keyboardOpen,
-}: AddTeamDrawerProps & {
+}: Omit<AddTeamDrawerProps, 'mode'> & {
+    /** 수정할 팀의 지금 값 (팀 추가면 null) */
+    edit: EditTeamTarget | null;
     /** 화면 키보드가 열려 있는지 (keyboardSheet) */
     keyboardOpen: boolean;
 }) => {
     const [step, setStep] = useState<'form' | 'pin'>('form');
-    // 기본은 교내 공연 (V-3 11차)
-    const [type, setType] = useState<TeamType | null>('교내 공연');
+    // 기본은 교내 공연 (V-3 11차). 수정이면 지금 값 (옛 종류는 새 종류로)
+    const initialType = edit ? toTeamType(edit.type) : '교내 공연';
+    const [type, setType] = useState<TeamType | null>(initialType);
+    const [submitting, setSubmitting] = useState(false);
     // 글자를 쓰는 중 (입력칸에 포커스). 입력칸 사이를 옮겨 다니는 동안은 계속 쓰는 중
     const [editing, setEditing] = useState(false);
-    const [name, setName] = useState('');
+    const [name, setName] = useState(edit?.name ?? '');
     // 팀명 칸의 예시: 세계적인 록 밴드 중 하나 (열 때마다 바뀜, 옛 Drawer와 같음)
     const [demoName] = useState(
         () => demoNames[Math.floor(Math.random() * demoNames.length)] ?? '',
     );
-    const [members, setMembers] = useState<string[]>(() => MEMBER_LABELS.map(() => ''));
-    const [setlist, setSetlist] = useState('');
+    const [members, setMembers] = useState<string[]>(() =>
+        MEMBER_LABELS.map((_, idx) => edit?.desc[idx] ?? ''),
+    );
+    const [setlist, setSetlist] = useState(edit?.desc[6] ?? '');
     // 팀 자동 삭제 (적용 예정: TEAM_DUE_ENABLED). 기본은 계속 유지
-    const [hasDue, setHasDue] = useState(false);
-    const [due, setDue] = useState<Dayjs | null>(null);
+    const [hasDue, setHasDue] = useState(edit?.due != null);
+    const [due, setDue] = useState<Dayjs | null>(edit?.due ?? null);
     const [dueOpen, setDueOpen] = useState(false);
 
     const missing = !type
@@ -159,15 +191,40 @@ const AddTeamForm = ({
             ? '삭제 날짜를 골라 주세요'
             : null;
 
+    const desc = [...members.map((member) => member.trim()), setlist];
+    const dueValue = hasDue && due ? due.format('YYYY-MM-DD') : NO_TEAM_DUE;
+    // 수정: 지금 값에서 바뀐 것이 없으면 저장할 수 없다 (옛 종류는 새 종류로 바꿔 채운 것과 비교)
+    const unchanged =
+        edit !== null &&
+        type === initialType &&
+        name.trim() === edit.name &&
+        desc.every(
+            (value, idx) =>
+                value === (idx < 6 ? (edit.desc[idx] ?? '').trim() : (edit.desc[6] ?? '')),
+        ) &&
+        (!TEAM_DUE_ENABLED ||
+            (hasDue && due ? edit.due !== null && due.isSame(edit.due, 'day') : edit.due === null));
+
+    // 수정 저장: 실패하면 입력을 그대로 두고 다시 누를 수 있게 (성공하면 팀 정보로 돌아간다)
+    const update = async () => {
+        if (!edit || !onUpdate || missing !== null || unchanged || submitting) return;
+        setSubmitting(true);
+        const saved = await onUpdate(edit.id, {
+            type: type!, // missing === null
+            name: name.trim(),
+            desc,
+            ...(TEAM_DUE_ENABLED && { due: dueValue }),
+        });
+        if (!saved) setSubmitting(false);
+    };
+
     const save = (pin: string) =>
-        onSubmit({
+        onSubmit!({
             type: type!, // PIN 단계는 빠진 것이 없을 때만 (missing === null)
             name: name.trim(),
-            desc: [...members.map((member) => member.trim()), setlist],
+            desc,
             pin,
-            ...(TEAM_DUE_ENABLED && {
-                due: hasDue && due ? due.format('YYYY-MM-DD') : NO_TEAM_DUE,
-            }),
+            ...(TEAM_DUE_ENABLED && { due: dueValue }),
         });
 
     if (step === 'pin') {
@@ -176,7 +233,7 @@ const AddTeamForm = ({
         );
     }
 
-    // 안 써도 되지만 되도록 쓰면 좋은 칸 (V-3 11차): 비어 있으면 "다음 (… 나중에 적기)", 버튼은 테두리만 (12차)
+    // 안 써도 되는 칸 (V-3 11차): 비어 있으면 "다음 (… 나중에 적기)" (팀 추가만. 12차의 테두리 버튼은 13차에 되돌림)
     const membersEmpty = members.every((member) => !member.trim());
     const setlistEmpty = !setlist.trim();
     const later =
@@ -190,6 +247,7 @@ const AddTeamForm = ({
     // 휴대폰에서 글자를 쓰는 동안(키보드가 열려 있으면)은 "다음" 버튼을 숨긴다 (V-3 11차): 키보드 위에 딸려 올라와
     // 팀명만 쓰고 눌러야 할 것처럼 보였다 (팀원·셋리스트를 건너뛰고 PIN으로 넘어감)
     const hideFooter = keyboardOpen || (editing && isTouch());
+    const ready = missing === null && !unchanged && !submitting;
 
     const setlistRows = Math.min(
         Math.max(setlist.split('\n').length, SETLIST_MIN_ROWS),
@@ -208,11 +266,11 @@ const AddTeamForm = ({
                 <div className="flex items-start justify-between gap-3 px-5 pt-[26px] md:px-7">
                     <div className="min-w-0">
                         <DrawerTitle className="text-[26px] leading-tight font-bold text-ink md:text-[28px]">
-                            팀 추가
+                            {edit ? '팀 수정' : '팀 추가'}
                         </DrawerTitle>
                         {/* 설명 문구는 화면에서 뺐다 (V-3 11차). 읽기 프로그램용으로만 */}
                         <DrawerDescription className="sr-only">
-                            팀 정보를 쓰고, 다음에 PIN을 만들어요
+                            {edit ? '팀 정보를 고쳐요' : '팀 정보를 쓰고, 다음에 PIN을 만들어요'}
                         </DrawerDescription>
                     </div>
                     <DrawerClose asChild>
@@ -370,31 +428,37 @@ const AddTeamForm = ({
             >
                 <button
                     type="button"
-                    disabled={missing !== null}
+                    disabled={!ready}
                     className={cn(
                         boxShape,
                         // "다음"과 "(… 나중에 적기)" 사이 한 칸 (flex 안에서는 공백 글자가 사라져 gap으로)
-                        'flex h-14 w-full items-center justify-center gap-[0.3em] text-[17px] font-bold transition-[background-color,border-color,scale] duration-150',
-                        missing !== null
-                            ? 'bg-neutral-100 text-neutral-400'
-                            : later
-                              ? // 비운 칸이 있으면 테두리만 (V-3 12차): 넘어갈 수는 있지만 다 쓰면 꽉 찬 버튼이 된다
-                                'border-2 border-dashed border-neutral-300 bg-surface text-ink hover:border-neutral-400 hover:bg-neutral-50 active:scale-[0.98]'
-                              : 'bg-ink text-on-ink hover:bg-neutral-800 active:scale-[0.98]',
+                        'flex h-14 w-full items-center justify-center gap-[0.3em] text-[17px] font-bold transition-[background-color,scale] duration-150',
+                        ready
+                            ? 'bg-ink text-on-ink hover:bg-neutral-800 active:scale-[0.98]'
+                            : 'bg-neutral-100 text-neutral-400',
                     )}
-                    onClick={() => setStep('pin')}
+                    onClick={() => (edit ? void update() : setStep('pin'))}
                 >
-                    {missing ?? (
-                        <>
-                            다음
-                            {later && ' '}
-                            {later && (
-                                <span className="text-[14px] font-medium text-neutral-500">
-                                    ({later} 나중에 적기)
-                                </span>
-                            )}
-                        </>
-                    )}
+                    {missing ??
+                        (edit ? (
+                            submitting ? (
+                                '저장하는 중…'
+                            ) : unchanged ? (
+                                '바뀐 내용이 없어요'
+                            ) : (
+                                '수정하기'
+                            )
+                        ) : (
+                            <>
+                                다음
+                                {later && ' '}
+                                {later && (
+                                    <span className="text-[14px] font-medium opacity-70">
+                                        ({later} 나중에 적기)
+                                    </span>
+                                )}
+                            </>
+                        ))}
                 </button>
             </div>
         </>

@@ -14,7 +14,7 @@ export interface TeamCreateRequest {
     due?: string;
 }
 
-export type TeamUpdateRequest = Pick<TeamCreateRequest, 'type' | 'name' | 'desc'>;
+export type TeamUpdateRequest = Pick<TeamCreateRequest, 'type' | 'name' | 'desc' | 'due'>;
 
 export interface EnsembleUpdateRequest {
     teamId: string;

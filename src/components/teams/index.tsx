@@ -30,12 +30,7 @@ import TeamInfoDrawer from './TeamInfoDrawer';
 import EventInfoDrawer from './EventInfoDrawer';
 import AddTeamDrawer from './AddTeamDrawer';
 import { pinnedFirst, usePinnedTeamsStore } from './pinnedTeamsStore';
-import type { AddTeamInput } from './types';
-import UpdateTeamDrawer1 from './updateTeamDrawers/UpdateTeamDrawer1';
-import UpdateTeamDrawer2 from './updateTeamDrawers/UpdateTeamDrawer2';
-import UpdateTeamDrawer3 from './updateTeamDrawers/UpdateTeamDrawer3';
-import UpdateTeamDrawer4 from './updateTeamDrawers/UpdateTeamDrawer4';
-import UpdateTeamDrawer5 from './updateTeamDrawers/UpdateTeamDrawer5';
+import type { AddTeamInput, UpdateTeamInput } from './types';
 
 const eventNames1 = ['보소', '기소', '베소', '드소', '키소'];
 const eventNames2 = ['메인 회의', '재학생 회의', '회의', '오디션', '합주 불가', '동방 사용 불가'];
@@ -125,18 +120,27 @@ const Teams = () => {
         [addTeamAsync, closeAllDrawers, setTeamStates],
     );
 
+    // 팀 수정 Drawer의 저장 (V-3 13차, 이전: 옛 Drawer 5단계, 알림 없음). 성공하면 고친 값으로 팀 정보 Drawer로 돌아가며 알림.
     // 이미 삭제됐으면 서버가 404를 준다 → 이미 삭제된 팀 처리 (이전에는 수정 전에 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
     const handleUpdateTeam = useCallback(
-        async (id: string, type: string, name: string, desc: string[]) => {
+        async (id: string, { type, name, desc, due }: UpdateTeamInput) => {
             try {
-                await updateTeamAsync({ id, type, name, desc });
+                await updateTeamAsync({ id, type, name, desc, ...(due !== undefined && { due }) });
+                setTeamStates(id, type, name, desc); // 팀 정보 Drawer가 고친 값으로
                 setOpenedDrawers(['teamInfo']);
+                toast.success('팀을 수정했어요.', { description: name });
+                return true;
             } catch (err) {
-                if (isNotFound(err)) handleTeamGone();
-                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
+                if (isNotFound(err)) {
+                    handleTeamGone();
+                    toast.error('이미 삭제된 팀이에요.');
+                } else {
+                    toast.error('저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+                }
+                return false;
             }
         },
-        [handleTeamGone, setOpenedDrawers, updateTeamAsync],
+        [handleTeamGone, setOpenedDrawers, setTeamStates, updateTeamAsync],
     );
 
     // 팀 정보 Drawer의 팀 삭제 PIN 단계에서 (V-3 9차: 알림 추가, 합주 삭제와 같은 문구)
@@ -256,11 +260,7 @@ const Teams = () => {
             <TeamInfoDrawer checkTeamExists={checkTeamExists} handleDeleteTeam={handleDeleteTeam} />
             <EventInfoDrawer />
             <AddTeamDrawer onSubmit={handleAddTeam} />
-            <UpdateTeamDrawer1 drawerId="updateTeam1" checkTeamExists={checkTeamExists} />
-            <UpdateTeamDrawer2 drawerId="updateTeam2" />
-            <UpdateTeamDrawer3 drawerId="updateTeam3" />
-            <UpdateTeamDrawer4 drawerId="updateTeam4" />
-            <UpdateTeamDrawer5 drawerId="updateTeam5" handleUpdateTeam={handleUpdateTeam} />
+            <AddTeamDrawer mode="update" onUpdate={handleUpdateTeam} />
             <AddEnsembleDrawer
                 teams={teamOptions}
                 events={eventOptions}

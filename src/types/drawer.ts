@@ -12,11 +12,7 @@ export type DrawerId =
     | 'teamInfo'
     | 'eventInfo'
     | 'addTeam'
-    | 'updateTeam1'
-    | 'updateTeam2'
-    | 'updateTeam3'
-    | 'updateTeam4'
-    | 'updateTeam5'
+    | 'updateTeam'
     // 합주
     | 'ensembleInfo'
     | 'slotInfo'

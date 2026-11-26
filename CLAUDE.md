@@ -56,6 +56,7 @@
 - View 개편의 디자인 원칙 (사용자 결정): 사용자의 약 90%가 모바일이다. UX는 모바일 기준, UI는 모바일·폴더블·PC 모두 불편함이 없게 한다.
   `src/styles/theme.ts`의 `teamColors` 20종은 서비스의 아이덴티티라 값·개수·순서를 바꾸지 않는다 (예외: 노랑만 사용자 요청으로 채도를 조금 낮춤, V-2).
 - V-2부터 디자인은 사용자가 시안을 먼저 제안하고, 그대로 만든 뒤 사용자가 상세 수정을 요청하는 식으로 진행한다.
+- 새 코드의 스크롤 영역에는 스크롤 막대가 보이지 않게 한다: `scroll-fade` 클래스 + `ref={scrollFadeRef}`(`src/components/ui/scroll-fade.ts`)로 막대를 숨기고 더 있는 쪽 끝을 흐리게 한다. Drawer 스크롤 영역은 `scrollAreaClassName`(`schedule/drawerParts`)에 이미 들어 있어 ref만 붙인다.
 - 새 코드의 색은 다크 모드(V-3)를 위해 토큰으로 쓴다: 바탕 `bg-surface`(`bg-white` 금지), 글씨 `text-ink`, ink 위 글씨 `text-on-ink`, 회색은 `neutral-*`. 팀 색 위 흰 글씨는 그대로 (`docs/VIEW_REDESIGN_PLAN.md` "공존 기간 규칙").
 - View 개편 중 새 코드는 Tailwind + shadcn/ui(`src/components/ui/`)로만 쓴다 (styled-components·antd 금지). 옛 코드와 공존하는 동안의 규칙(새 코드는 `ui` 클래스 요소 안, CSS 레이어, px 단위)은 `docs/VIEW_REDESIGN_PLAN.md` "공존 기간 규칙"을 따른다.
 - 알림(토스트) 기능은 3-6 폐기 때 삭제했다 (2026-11-23). 3단계에서는 다시 넣지 않고, View 개편 때 새로 추가한다 (`docs/VIEW_REDESIGN_PLAN.md`).

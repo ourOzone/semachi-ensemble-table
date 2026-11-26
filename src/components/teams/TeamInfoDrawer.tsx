@@ -9,12 +9,14 @@ import {
 } from '@/components/ui/drawer';
 import {
     boxShape,
+    headerBackdrop,
     overlayClassName,
     pressable,
     scrollAreaClassName,
     sheetClassName,
 } from '@/components/schedule/drawerParts';
 import { openAddEnsemble } from '@/components/schedule/addEnsembleStore';
+import { scrollFadeRef } from '@/components/ui/scroll-fade';
 import { useTeamContext } from '@/context';
 import { buildColorMap } from '@/lib/board';
 import { cn } from '@/lib/utils';
@@ -96,7 +98,7 @@ const TeamInfoDrawer = ({ checkTeamExists }: TeamInfoDrawerProps) => {
         const setlist = team.desc[6]?.trim() ?? '';
 
         return (
-            <div className={scrollAreaClassName}>
+            <div ref={scrollFadeRef} className={scrollAreaClassName} style={headerBackdrop(color)}>
                 {/* 머리: 팀 색 (손잡이는 이 위에 겹쳐 그린다) */}
                 <div
                     className="px-5 pt-[26px] pb-6 text-white md:px-7"
@@ -191,7 +193,7 @@ const TeamInfoDrawer = ({ checkTeamExists }: TeamInfoDrawerProps) => {
                         })}
                     </ul>
 
-                    <h3 className="mt-6 text-[14px] text-neutral-500">셋리스트</h3>
+                    <h3 className="mt-6 text-[14px] text-neutral-500">셋리스트 및 팀 정보</h3>
                     <div
                         className={cn(
                             boxShape,

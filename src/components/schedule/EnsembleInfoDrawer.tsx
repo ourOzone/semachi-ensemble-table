@@ -46,11 +46,13 @@ import {
     formatDate,
     formatSlots,
     formatTimeRange,
+    headerBackdrop,
     overlayClassName,
     pressable,
     scrollAreaClassName,
     sheetClassName,
 } from './drawerParts';
+import { scrollFadeRef } from '@/components/ui/scroll-fade';
 import PinStep from './PinStep';
 import { openAddEnsemble, openUpdateEnsemble } from './addEnsembleStore';
 
@@ -267,7 +269,7 @@ const EnsembleInfoDrawer = ({
                 update: { title: `${object} 수정할까요?`, label: undefined },
             }[step];
             return (
-                <div className={scrollAreaClassName}>
+                <div ref={scrollFadeRef} className={scrollAreaClassName}>
                     <div
                         key={step}
                         className="px-5 pt-[26px] pb-[calc(24px+env(safe-area-inset-bottom))] duration-200 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-4 md:px-7"
@@ -324,7 +326,7 @@ const EnsembleInfoDrawer = ({
         }
 
         return (
-            <div className={scrollAreaClassName}>
+            <div ref={scrollFadeRef} className={scrollAreaClassName} style={headerBackdrop(color)}>
                 {/* 머리: 팀 색 (손잡이는 이 위에 겹쳐 그린다) */}
                 <div
                     className="px-5 pt-[26px] pb-6 text-white md:px-7"

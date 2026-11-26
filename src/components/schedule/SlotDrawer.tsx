@@ -23,6 +23,7 @@ import {
     scrollAreaClassName,
     sheetClassName,
 } from './drawerParts';
+import { scrollFadeRef } from '@/components/ui/scroll-fade';
 import { openAddEnsemble } from './addEnsembleStore';
 
 // 합주 잡기 Drawer (View 개편 V-2). 합주판에서 시간을 눌렀을 때 아래에서 올라온다.
@@ -76,7 +77,7 @@ const SlotDrawer = ({ view, onSelect }: SlotDrawerProps) => {
         const total = axis ? axis.end - axis.start : 1;
 
         return (
-            <div className={scrollAreaClassName}>
+            <div ref={scrollFadeRef} className={scrollAreaClassName}>
                 {/* 머리 */}
                 <div className="flex items-start justify-between gap-3 px-5 pt-[26px] md:px-7">
                     <div className="min-w-0">

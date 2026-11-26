@@ -60,9 +60,22 @@ export const overlayClassName = 'ui bg-black/40 supports-backdrop-filter:backdro
 /**
  * Drawer 안의 스크롤 영역. 위 모서리를 바깥과 같은 모양으로 잘라 색 머리가 모서리 밖으로 나가지 않게.
  * 가로는 숨긴다: 단계가 바뀔 때 옆에서 밀려 들어오는 애니메이션이 잠깐 오른쪽으로 넘쳐 가로 스크롤 막대가 생겼다 사라졌다 (PC)
+ * 세로 스크롤 막대도 숨기고 위·아래 끝을 흐리게 한다 (V-3 5차, scroll-fade: 쓰는 곳에서 ref={scrollFadeRef}).
+ * 끝에서 더 당겨도 튕기지 않는다 (overscroll-y-none, V-3 5차): 아이폰에서 맨 위에서 아래로 당기면 내용만 내려가 머리 위가
+ * 비었다. 튕기지 않으면 그다음 당김은 vaul이 Drawer를 끌어내린다
  */
 export const scrollAreaClassName =
-    'squircle min-h-0 overflow-x-hidden overflow-y-auto rounded-t-[24px] supports-[corner-shape:squircle]:rounded-t-[36px]';
+    'squircle scroll-fade min-h-0 overflow-x-hidden overflow-y-auto overscroll-y-none rounded-t-[24px] supports-[corner-shape:squircle]:rounded-t-[36px]';
+
+/**
+ * 색 머리가 있는 Drawer(합주 정보·팀 정보·소모임 정보)의 스크롤 영역 바탕: 위 절반은 머리 색, 아래 절반은 Drawer 바탕.
+ * 혹시 튕겨서(overscroll을 무시하는 브라우저) 내용이 내려가도 머리 위가 머리 색으로 이어진다 (V-3 5차)
+ */
+export function headerBackdrop(color: string) {
+    return {
+        backgroundImage: `linear-gradient(to bottom, ${color} 50%, var(--color-surface) 50%)`,
+    };
+}
 
 /**
  * 맨 아래 "합주 잡기" 줄 (합주 정보: "같은 시간에 다른 팀 합주 잡기", 빈 시간: "이 시간에 합주 잡기").

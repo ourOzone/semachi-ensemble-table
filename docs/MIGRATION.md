@@ -1041,6 +1041,18 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 203/203 / `pnpm lint` → 에러 4·경고 20 (옛 팀 정보 Drawer 삭제로 감소, 새 코드 0건) / `pnpm format:check` ✅
 
+### 2026-11-26 — View 개편 V-3 (5차): 스크롤 막대 없애기, 팀 정보 문구, 모바일 끌어내림
+
+- 지금 → 바꾼 후
+  - 스크롤 막대: PC에서 Drawer 내용이 길면 막대가 생김(합주 잡기 Drawer만 숨김 + 아래 흰 그러데이션), 합주 잡기의 팀 고르기 목록에도 막대 → 새 코드의 세로 스크롤 영역 모두 막대 없음, 위·아래로 더 있으면 그쪽 끝을 흐리게 (마스크라 다크 모드·색 머리 위에서도 같음). 앞으로의 규칙으로 `CLAUDE.md`·계획 문서에 추가
+  - 모바일: Drawer 맨 위에서 아래로 당기면 내용만 튕겨 내려가 머리 위에 빈 띠 → 튕기지 않음(`overscroll-y-none`), 이어서 당기면 Drawer가 끌려 내려감 (vaul은 마지막 스크롤 뒤 0.5초 동안은 끌기를 막는다). 혹시 튕겨도 색 머리 위는 머리 색
+  - 팀 정보: "셋리스트" → "셋리스트 및 팀 정보"
+- 구조: `index.css`의 `scroll-fade` 유틸리티, `components/ui/scroll-fade.ts`(`attachScrollFade`·`scrollFadeRef`: 스크롤·크기 변화에 따라 `data-fade-top`·`data-fade-bottom`), `drawerParts`의 `scrollAreaClassName`에 `scroll-fade overscroll-y-none`, `headerBackdrop`
+- 테스트: `components/ui/scroll-fade.test.ts` 2개
+- 확인: Playwright Chrome 1280×720·390px, 밝은·어두운 기기 설정 — 팀 정보(셋리스트 30줄) 맨 위·가운데·맨 아래의 흐림 속성과 막대 폭 0, 합주 잡기 Drawer·팀 고르기(팀 41개) 막대 없음·흐림. 실제 아이폰 끌어내림은 사용자 확인 필요
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 205/205 / `pnpm lint` → 에러 4·경고 20 (새 코드 0건) / `pnpm format:check` ✅
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.

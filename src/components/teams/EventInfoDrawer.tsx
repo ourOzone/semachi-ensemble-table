@@ -9,12 +9,14 @@ import {
 } from '@/components/ui/drawer';
 import {
     boxShape,
+    headerBackdrop,
     overlayClassName,
     pressable,
     scrollAreaClassName,
     sheetClassName,
 } from '@/components/schedule/drawerParts';
 import { openAddEnsemble } from '@/components/schedule/addEnsembleStore';
+import { scrollFadeRef } from '@/components/ui/scroll-fade';
 import { eventIds } from '@/constants';
 import { useTeamContext } from '@/context';
 import { useDrawerStore } from '@/stores/drawer';
@@ -59,7 +61,11 @@ const EventInfoDrawer = () => {
                 handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-white/60"
             >
                 {shown && (
-                    <div className={scrollAreaClassName}>
+                    <div
+                        ref={scrollFadeRef}
+                        className={scrollAreaClassName}
+                        style={headerBackdrop(color)}
+                    >
                         {/* 합주판 블록·팀 목록 칩과 같은 줄무늬 */}
                         <div
                             className="px-5 pt-[26px] pb-[calc(24px+env(safe-area-inset-bottom))] text-white md:px-7"

@@ -74,6 +74,7 @@
 - **새 코드에 styled-components·antd를 쓰지 않는다.** 스타일은 Tailwind, 컴포넌트는 `src/components/ui/`
 - shadcn 컴포넌트 추가: `pnpm dlx shadcn@4.23.0 add <이름>` 후 `pnpm format`. 생성된 파일을 읽고 필요 없는 의존성(예: `next-themes`)이 들어오면 정리한다
 - 알림 문구·함수는 `src/lib/notify.ts`에 모은다
+- **스크롤 막대를 보이지 않게 한다 (V-3 5차, 사용자 결정).** 세로 스크롤 영역은 `scroll-fade` 클래스(`index.css`) + `ref={scrollFadeRef}`(`components/ui/scroll-fade.ts`): 막대 없이, 위·아래로 더 있으면 그쪽 끝을 마스크로 흐리게. Drawer 스크롤 영역은 `scrollAreaClassName`에 클래스가 들어 있고(끝에서 튕기지 않는 `overscroll-y-none`도), 쓰는 곳에서 ref만 붙인다. ref를 다른 용도로도 써야 하면 effect에서 `attachScrollFade(el)`. 색 머리가 있는 Drawer는 스크롤 영역 바탕에 `headerBackdrop(color)`
 - **색은 토큰으로 쓴다 (V-3 1차, 다크 모드).** 카드·Drawer 바탕 `bg-surface`(`bg-white` 금지), 페이지 `bg-page`, 글씨 `text-ink`, ink 바탕 위 글씨 `text-on-ink`, 글자 버튼 `text-link`, 회색은 `neutral-*` 단계(다크 모드에서 뒤집힘), 큰 카드 그림자 `shadow-card`. 팀 색·소모임 색 위의 흰 글씨(`text-white`)·반투명 흰색(`bg-white/20`)은 그대로 쓴다. 인라인 스타일의 색도 `var(--color-surface)` 등으로. 다크 모드 값은 `index.css`의 `.dark`
 
 #### 옛 화면 확인 결과 (V-1 전후 픽셀 비교)
@@ -272,7 +273,11 @@
   - 팀 정보: 오른쪽에서 열리는 옛 Drawer(이름·종류, 합주 추가·팀 수정·팀 삭제, 팀원/셋리 탭 전환) → 아래에서 올라오는 Drawer. 팀 색 머리(이름, 종류 "세마치공연 · 정기/연말", 흰 "합주 잡기" + 반투명 "수정"·"삭제"), 본문에 팀원 6칸(2열, PC 3열, 역할 점은 소모임 색, 빈 칸은 "없음")과 셋리스트를 한 화면에. 셋리스트가 길면 Drawer 전체가 스크롤 (안쪽 스크롤은 모바일 끌어내리기와 겹쳐 쓰지 않음)
   - 소모임·일정 정보: 옛 Drawer(전체 이름 + "일정 추가") → 같은 모양의 줄무늬 머리만 있는 Drawer (전체 이름, "소모임"/"팀 아닌 일정", "일정 잡기")
   - 수정·삭제의 PIN·입력 단계는 아직 옛 Drawer: 위에 쌓이면 팀 정보는 내려가고, 닫히면 다시 올라온다 (`BOTTOM_DRAWERS`에 `teamInfo`·`eventInfo`)
-- [ ] 5차 이후: 팀 추가·수정·삭제 Drawer (사용자 시안)
+- [x] **5차 (2026-11-26): 스크롤 막대 없애기(공용 규칙), 팀 정보 문구, 모바일 끌어내림**
+  - 스크롤: PC에서 내용이 길면 스크롤 막대가 생김(합주 잡기 Drawer만 막대를 숨기고 아래 흰 그러데이션) → 새 코드의 모든 세로 스크롤 영역(Drawer 6개·합주 잡기의 팀 고르기)에서 막대 없이 위·아래 끝 흐림 (`scroll-fade`, 위 "공존 기간 규칙")
+  - 모바일: 맨 위에서 아래로 당기면 내용만 튕겨 내려가 머리 위가 Drawer 바탕색으로 빔 → Drawer 스크롤 영역은 튕기지 않음(`overscroll-y-none`, 그다음 당김은 vaul이 Drawer를 끌어내림). 혹시 튕겨도 머리 위는 머리 색(`headerBackdrop`)
+  - 팀 정보: "셋리스트" → "셋리스트 및 팀 정보"
+- [ ] 6차 이후: 팀 추가·수정·삭제 Drawer (사용자 시안)
 
 ### 기능 단계(V-2 ~ V-5)에서 할 일
 1. **화면 구성안을 먼저 제안하고 승인을 받는다** (Drawer 하나에 무엇을 넣는지, 입력 순서, 완료·실패 표시, **화면 폭별 배치**). 동작이 바뀌는 부분은 목록으로 밝힌다. V-2부터 사용자 시안이 있으면 그것으로 대신한다

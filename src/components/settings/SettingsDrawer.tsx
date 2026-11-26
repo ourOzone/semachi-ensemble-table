@@ -8,6 +8,7 @@ import {
     DrawerTitle,
 } from '@/components/ui/drawer';
 import { IconSwitch } from '@/components/ui/icon-switch';
+import { scrollFadeRef } from '@/components/ui/scroll-fade';
 import { useBoardViewStore } from '@/components/schedule/boardViewStore';
 import {
     boxShape,
@@ -40,7 +41,7 @@ const SettingsDrawer = () => {
                 overlayClassName={overlayClassName}
                 handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-neutral-300"
             >
-                <div className={scrollAreaClassName}>
+                <div ref={scrollFadeRef} className={scrollAreaClassName}>
                     <div className="px-5 pt-[26px] pb-[calc(24px+env(safe-area-inset-bottom))] md:px-7">
                         <div className="flex items-start justify-between gap-3">
                             <div>

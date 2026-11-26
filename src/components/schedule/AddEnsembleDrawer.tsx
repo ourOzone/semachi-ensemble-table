@@ -27,6 +27,7 @@ import {
     X,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
+import { attachScrollFade, scrollFadeRef } from '@/components/ui/scroll-fade';
 import {
     Drawer,
     DrawerClose,
@@ -212,6 +213,11 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
     // 팀 정보에서 열면 팀이 골라져 있으므로 처음부터 "반복"을 맨 위로
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const sectionRefs = useRef<Partial<Record<SectionKey, HTMLElement | null>>>({});
+    // 위·아래 끝 흐림 (scrollAreaRef는 소제목 스크롤에도 쓰여 scrollFadeRef 대신 직접 붙인다)
+    useEffect(() => {
+        const area = scrollAreaRef.current;
+        return area ? attachScrollFade(area) : undefined;
+    }, []);
     const [scrollRequest, setScrollRequest] = useState<{
         target: SectionKey | 'bottom';
         smooth: boolean;
@@ -306,12 +312,8 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
         <>
             <div
                 ref={scrollAreaRef}
-                // 스크롤 막대는 숨긴다: PC에서 내용이 조금만 길어도 막대가 생기며 안쪽 폭이 줄어 보기 싫었다 (23차).
-                // 아래로 더 있으면 맨 아래의 흰 그러데이션으로 알 수 있다
-                className={cn(
-                    scrollAreaClassName,
-                    'flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-                )}
+                // 스크롤 막대는 숨기고 위·아래 끝을 흐리게 (23차, V-3 5차부터 공용 scroll-fade: 아래 effect)
+                className={cn(scrollAreaClassName, 'flex-1')}
             >
                 {/* 머리 */}
                 <div className="flex items-start justify-between gap-3 px-5 pt-[26px] md:px-7">
@@ -561,11 +563,6 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
                         </Section>
                     )}
                 </div>
-                {/* 아래로 더 있으면 흐리게 (스크롤 막대 대신) */}
-                <div
-                    aria-hidden
-                    className="pointer-events-none sticky bottom-0 -mt-6 h-6 bg-linear-to-t from-surface to-transparent"
-                />
             </div>
 
             {/* 저장 버튼은 스크롤과 관계없이 맨 아래 */}
@@ -817,7 +814,9 @@ const TeamPicker = ({
         <div
             role="radiogroup"
             aria-label="팀"
-            className={`${boxShape} max-h-[264px] overflow-y-auto overscroll-contain border border-neutral-200 bg-surface p-3`}
+            ref={scrollFadeRef}
+            // 팀이 많으면 이 안에서 스크롤: 막대 없이 위·아래 끝을 흐리게 (V-3 5차)
+            className={`${boxShape} scroll-fade max-h-[264px] overflow-y-auto overscroll-contain border border-neutral-200 bg-surface p-3`}
         >
             <div className="flex flex-wrap gap-1.5">{teams.map(chip)}</div>
             {events.length > 0 && (

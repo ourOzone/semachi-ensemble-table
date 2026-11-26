@@ -1,0 +1,80 @@
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Board from './board';
+import Teams from '@/features/teams/teams';
+import { useToday } from '@/hooks/use-today';
+import { formatWeekRange, getBoardDays, MAX_WEEK_OFFSET } from '@/lib/calendar';
+import { useBoardViewStore } from './board-view-store';
+
+// 합주판 카드 (View 개편 V-2): 팀 목록 → 주 제목·이동 → 주 단위 캘린더 (날짜 행은 캘린더에 붙여 둔다).
+// 첫 화면("이번 주")은 오늘부터 7일 (보기 방식은 헤더의 스위치: 오늘이 맨 왼쪽 / 일~토 요일 고정, 26차).
+// 다음 주부터는 일~토 한 주씩 MAX_WEEK_OFFSET주 뒤까지. 지난 날짜는 보여주지 않는다.
+// `ui` 클래스: 옛 전역 스타일이 적용되지 않는 새 코드 영역 (src/styles/index.css)
+
+// 누를 수 있는 버튼: 마우스를 올리면 옅은 회색 바탕, 누르면 살짝 작아짐 (비활성이면 없음)
+const pressable = 'transition-[background-color,scale] duration-150 enabled:active:scale-[0.95]';
+
+const navButton = `${pressable} inline-flex size-8 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100 disabled:text-neutral-300 disabled:hover:bg-transparent md:size-10`;
+
+type Direction = 'prev' | 'next' | null;
+
+const Schedule = () => {
+    const today = useToday();
+    const [week, setWeek] = useState<{ offset: number; direction: Direction }>({
+        offset: 0,
+        direction: null,
+    });
+    const view = useBoardViewStore((state) => state.view);
+    const days = getBoardDays(today, week.offset, view);
+
+    const moveTo = (offset: number) =>
+        setWeek((prev) =>
+            offset === prev.offset
+                ? prev
+                : { offset, direction: offset > prev.offset ? 'next' : 'prev' },
+        );
+
+    return (
+        <section className="ui w-full max-w-[1080px] rounded-card bg-surface p-4 shadow-card md:p-7">
+            <Teams />
+
+            <div className="mt-4 flex items-center justify-between gap-2 md:mt-6">
+                <h2 className="text-xl font-bold text-ink md:text-[28px]">
+                    {week.offset === 0 ? '이번 주' : formatWeekRange(days[0]!.date)}
+                </h2>
+                <div className="flex shrink-0 items-center gap-1">
+                    <button
+                        type="button"
+                        aria-label="이전 주"
+                        className={navButton}
+                        disabled={week.offset === 0}
+                        onClick={() => moveTo(week.offset - 1)}
+                    >
+                        <ChevronLeft className="size-5 md:size-6" aria-hidden />
+                    </button>
+                    <button
+                        type="button"
+                        className={`${pressable} h-8 rounded-full border border-neutral-300 px-3 text-[13px] font-medium text-neutral-800 hover:bg-neutral-100 disabled:text-neutral-400 disabled:hover:bg-transparent md:h-10 md:px-4 md:text-[15px]`}
+                        disabled={week.offset === 0}
+                        onClick={() => moveTo(0)}
+                    >
+                        오늘
+                    </button>
+                    <button
+                        type="button"
+                        aria-label="다음 주"
+                        className={navButton}
+                        disabled={week.offset === MAX_WEEK_OFFSET}
+                        onClick={() => moveTo(week.offset + 1)}
+                    >
+                        <ChevronRight className="size-5 md:size-6" aria-hidden />
+                    </button>
+                </div>
+            </div>
+
+            <Board days={days} today={today} view={view} direction={week.direction} />
+        </section>
+    );
+};
+
+export default Schedule;

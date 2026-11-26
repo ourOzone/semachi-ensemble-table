@@ -1,9 +1,9 @@
 import type { ReactElement, ReactNode } from 'react';
 import { render, type RenderOptions } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
-import App from '@/App';
+import App from '@/app/app';
 import { Toaster } from '@/components/ui/sonner';
-import { createQueryClient } from '@/lib/queryClient';
+import { createQueryClient } from '@/lib/query-client';
 
 interface ProvidersProps {
     children: ReactNode;

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
 import { Check, Info, LoaderCircle, TriangleAlert, X } from 'lucide-react';
-import { useThemeStore } from '@/components/settings/themeStore';
+import { useThemeStore } from '@/features/settings/theme-store';
 import { cn } from '@/lib/utils';
 
 // 알림 (V-1에서 shadcn Sonner로 시작, V-3 14차에 다시 디자인).

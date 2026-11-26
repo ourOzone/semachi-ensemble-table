@@ -5,7 +5,7 @@ import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-
 import { http, HttpResponse, type JsonBodyType } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { eventIds, url } from '@/constants';
-import { createQueryClient } from '@/lib/queryClient';
+import { createQueryClient } from '@/lib/query-client';
 import { teamColors } from '@/constants/colors';
 import { ensembles, mockInitialData, notes, notices, teams } from '@/test/fixtures';
 import { createTestQueryClient } from '@/test/render';

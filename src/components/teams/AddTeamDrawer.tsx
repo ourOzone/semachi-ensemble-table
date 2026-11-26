@@ -2,13 +2,11 @@ import { useState } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
     CalendarX2,
-    Check,
     ChevronLeft,
     Globe,
     Infinity as InfinityIcon,
     LoaderCircle,
     School,
-    Sparkles,
     Users,
     X,
 } from 'lucide-react';
@@ -178,7 +176,7 @@ const AddTeamForm = ({
         );
     }
 
-    // 안 써도 되지만 되도록 쓰면 좋은 칸 (V-3 11차): 비어 있으면 "다음 (… 나중에 적기)"와 소제목 옆 "권장"
+    // 안 써도 되지만 되도록 쓰면 좋은 칸 (V-3 11차): 비어 있으면 "다음 (… 나중에 적기)", 버튼은 테두리만 (12차)
     const membersEmpty = members.every((member) => !member.trim());
     const setlistEmpty = !setlist.trim();
     const later =
@@ -259,7 +257,7 @@ const AddTeamForm = ({
                     </Section>
 
                     {/* 팀원 (안 써도 된다) */}
-                    <Section label="팀원" aside={<SuggestBadge done={!membersEmpty} />}>
+                    <Section label="팀원">
                         <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                             {MEMBER_LABELS.map((label, idx) => (
                                 <label
@@ -304,12 +302,7 @@ const AddTeamForm = ({
                     {/* 셋리스트 및 팀 정보 (안 써도 된다) */}
                     <Section
                         label="셋리스트 및 팀 정보"
-                        aside={
-                            <span className="flex items-center gap-2">
-                                <Counter length={setlist.length} max={SETLIST_MAX} />
-                                <SuggestBadge done={!setlistEmpty} />
-                            </span>
-                        }
+                        aside={<Counter length={setlist.length} max={SETLIST_MAX} />}
                     >
                         <textarea
                             aria-label="셋리스트 및 팀 정보"
@@ -380,10 +373,14 @@ const AddTeamForm = ({
                     disabled={missing !== null}
                     className={cn(
                         boxShape,
-                        'flex h-14 w-full items-center justify-center text-[17px] font-bold transition-[background-color,scale] duration-150',
-                        missing === null
-                            ? 'bg-ink text-on-ink hover:bg-neutral-800 active:scale-[0.98]'
-                            : 'bg-neutral-100 text-neutral-400',
+                        // "다음"과 "(… 나중에 적기)" 사이 한 칸 (flex 안에서는 공백 글자가 사라져 gap으로)
+                        'flex h-14 w-full items-center justify-center gap-[0.3em] text-[17px] font-bold transition-[background-color,border-color,scale] duration-150',
+                        missing !== null
+                            ? 'bg-neutral-100 text-neutral-400'
+                            : later
+                              ? // 비운 칸이 있으면 테두리만 (V-3 12차): 넘어갈 수는 있지만 다 쓰면 꽉 찬 버튼이 된다
+                                'border-2 border-dashed border-neutral-300 bg-surface text-ink hover:border-neutral-400 hover:bg-neutral-50 active:scale-[0.98]'
+                              : 'bg-ink text-on-ink hover:bg-neutral-800 active:scale-[0.98]',
                     )}
                     onClick={() => setStep('pin')}
                 >
@@ -392,7 +389,7 @@ const AddTeamForm = ({
                             다음
                             {later && ' '}
                             {later && (
-                                <span className="text-[14px] font-medium opacity-70">
+                                <span className="text-[14px] font-medium text-neutral-500">
                                     ({later} 나중에 적기)
                                 </span>
                             )}
@@ -403,23 +400,6 @@ const AddTeamForm = ({
         </>
     );
 };
-
-/**
- * 안 써도 되지만 되도록 쓰면 좋은 칸의 표시 (팀원·셋리스트, V-3 11차).
- * 비어 있으면 노란 "권장"(반짝이), 쓰면 "작성함"(체크)으로 바뀐다
- */
-const SuggestBadge = ({ done }: { done: boolean }) =>
-    done ? (
-        <span className="inline-flex items-center gap-0.5 rounded-full bg-neutral-100 px-2 py-0.5 text-[12px] font-medium text-neutral-600">
-            <Check className="size-3" aria-hidden />
-            작성함
-        </span>
-    ) : (
-        <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/12 px-2 py-0.5 text-[12px] font-bold text-amber-700">
-            <Sparkles className="size-3" aria-hidden />
-            권장
-        </span>
-    );
 
 /** 글자 수 "3/20" (꽉 차면 진하게) */
 const Counter = ({ length, max }: { length: number; max: number }) => (

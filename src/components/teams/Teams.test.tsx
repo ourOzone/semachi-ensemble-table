@@ -127,22 +127,19 @@ describe('팀', () => {
         expect(useDrawerStore.getState().openedDrawers).toEqual([]);
     });
 
-    it('팀 추가: 팀원·셋리스트는 안 써도 되지만, 비어 있으면 "권장"과 "다음 (… 나중에 적기)"로 알린다', async () => {
+    it('팀 추가: 팀원·셋리스트는 안 써도 되지만, 비어 있으면 "다음 (… 나중에 적기)"로 알린다', async () => {
         const user = userEvent.setup();
         renderApp();
         await user.click(await screen.findByRole('button', { name: '팀 추가' }));
         const drawer = within(await findDialog('팀 추가'));
         await user.type(drawer.getByRole('textbox', { name: '팀명' }), '새밴드');
 
-        expect(drawer.getAllByText('권장')).toHaveLength(2);
         expect(
             drawer.getByRole('button', { name: '다음 (팀원 및 셋리스트 나중에 적기)' }),
         ).toBeEnabled();
 
         await user.type(drawer.getByRole('textbox', { name: '보컬' }), '홍길동');
         expect(drawer.getByRole('button', { name: '다음 (셋리스트 나중에 적기)' })).toBeEnabled();
-        expect(drawer.getAllByText('권장')).toHaveLength(1);
-        expect(drawer.getByText('작성함')).toBeInTheDocument();
 
         await user.clear(drawer.getByRole('textbox', { name: '보컬' }));
         await user.type(drawer.getByRole('textbox', { name: '셋리스트 및 팀 정보' }), '곡1');

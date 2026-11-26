@@ -100,13 +100,13 @@ Zod 스키마로 응답을 parse하면서 `_id → id` 같은 변환도 같이 �
 
 ## 🟢 적용 예정: View 개편
 
-> **View 개편의 진행 방식·사전 결정·단계·체크리스트와 8·9번 상세는 `docs/VIEW_REDESIGN_PLAN.md`로 옮겼다** (2026-11-23).
+> **View 개편의 진행 방식·사전 결정·단계·체크리스트와 8·9번 상세는 `docs/archive/VIEW_REDESIGN_PLAN.md`로 옮겼다** (2026-11-23).
 
-### View 개편 체크리스트 (3단계에서 넘긴 일) → `docs/VIEW_REDESIGN_PLAN.md`
+### View 개편 체크리스트 (3단계에서 넘긴 일) → `docs/archive/VIEW_REDESIGN_PLAN.md`
 
-### 8. 스타일링: Tailwind CSS v4 🔄 도입 (V-1, 2026-11-23), 기능 단계마다 styled-components 대체 중 → `docs/VIEW_REDESIGN_PLAN.md`
+### 8. 스타일링: Tailwind CSS v4 🔄 도입 (V-1, 2026-11-23), 기능 단계마다 styled-components 대체 중 → `docs/archive/VIEW_REDESIGN_PLAN.md`
 
-### 9. UI 라이브러리: shadcn/ui 🔄 도입 (V-1, 2026-11-23: Drawer·Sonner·Button), 기능 단계마다 antd 대체 중 → `docs/VIEW_REDESIGN_PLAN.md`
+### 9. UI 라이브러리: shadcn/ui 🔄 도입 (V-1, 2026-11-23: Drawer·Sonner·Button), 기능 단계마다 antd 대체 중 → `docs/archive/VIEW_REDESIGN_PLAN.md`
 
 ### 10. React 19 ✅ 적용 완료 (2026-11-19) / React Compiler ✅ V-1에서 적용 (2026-11-23, Babel판 1.0)
 
@@ -163,7 +163,7 @@ React Compiler는 별도로 검토한다:
 ✅ 2단계 TS 전환 (+ Zod 스키마·타입, 응답 parse는 3단계로)
 ✅ 로직 개선 전 characterization test 작성 (src/context/fetch.test.tsx, 3-2에서 lib 테스트로 이전)
 ✅ 3단계 로직 개선 (+ TanStack Query, Zustand(Drawer), Zod 검증) — 2026-11-23 완료, 3-6 폐기·알림 삭제
-  → View 개편 (Tailwind v4 + shadcn/ui, antd·styled-components 제거, Drawer 단일화) — 계획: docs/VIEW_REDESIGN_PLAN.md
+  → View 개편 (Tailwind v4 + shadcn/ui, antd·styled-components 제거, Drawer 단일화) — 계획: docs/archive/VIEW_REDESIGN_PLAN.md
   → React Compiler: ✅ View 개편 V-1에서 적용 (10번)
 ```
 

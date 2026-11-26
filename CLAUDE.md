@@ -33,7 +33,7 @@
 
 진행 상황은 @docs/MIGRATION.md 에 기록하고, 작업이 끝날 때마다 갱신한다.
 2단계(TS 전환)는 완료됐다 (기록: `docs/archive/TS_MIGRATION_PLAN.md`).
-3단계(내부 로직 개선)는 완료됐다 (2026-11-23, 기록: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`). 다음은 View 개편이며, 진행 방식·사전 결정·단계·체크리스트·작업마다 갱신할 문서는 `docs/VIEW_REDESIGN_PLAN.md`를 따른다.
+3단계(내부 로직 개선)는 완료됐다 (2026-11-23, 기록: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`). 다음은 View 개편이며, 진행 방식·사전 결정·단계·체크리스트·작업마다 갱신할 문서는 `docs/archive/VIEW_REDESIGN_PLAN.md`를 따른다.
 발견한 문제점은 `docs/ISSUES.md`에 ID(`B1`, `F1` 등)로 관리한다. 새로 발견하면 추가하고, 처리하면 상태를 갱신한다.
 
 ## TS 전환 규칙
@@ -48,7 +48,7 @@
 
 ## 로직 vs 뷰
 - 뷰: JSX 구조, styled-components 스타일, CSS, 마크업. 3단계까지는 구조를 바꾸지 않았다.
-  View 개편 중에는 `docs/VIEW_REDESIGN_PLAN.md`의 단계에 따라 뷰를 새로 만든다. 이때 로직 층(`src/lib`·`src/queries`·`src/api`·`src/stores`)은 바꾸지 않는 것이 원칙이다.
+  View 개편 중에는 `docs/archive/VIEW_REDESIGN_PLAN.md`의 단계에 따라 뷰를 새로 만든다. 이때 로직 층(`src/lib`·`src/queries`·`src/api`·`src/stores`)은 바꾸지 않는 것이 원칙이다.
 - 로직: 커스텀 훅, context, 상태 관리, 유틸 함수, 데이터 가공, API 호출. 3단계의 개선 대상이다.
 - 로직 개선은 동작이 바뀌지 않는 범위에서만 한다. 동작이 바뀌는 수정은 먼저 제안하고 승인을 받는다.
 - View 개편 때 Drawer는 "API 요청 하나에 단계별 Drawer 여러 개"에서 "Drawer 하나에서 모두 입력"으로 바뀐다. 완료 화면 Drawer("락앤롤!" 등)는 삭제된다.
@@ -58,9 +58,9 @@
 - V-2부터 디자인은 사용자가 시안을 먼저 제안하고, 그대로 만든 뒤 사용자가 상세 수정을 요청하는 식으로 진행한다.
 - 새 코드의 스크롤 영역에는 스크롤 막대가 보이지 않게 한다: `edge-fade` 클래스 + `ref={scrollFadeRef}`(`src/components/ui/scroll-fade.ts`)로 막대를 숨기고 더 있는 쪽 끝을 흐리게 한다. Drawer 스크롤 영역은 `scrollAreaClassName`(`schedule/drawerParts`)에 이미 들어 있어 ref만 붙인다. 맨 위 색 머리에는 `data-fade-skip`(위쪽 흐림 없음). shadcn의 `scroll-fade`(마스크)는 쓰지 않는다 (아이폰 도구 막대가 물든다).
 - Drawer 아래 끝과 스크롤 영역 바탕에는 팀 색을 쓰지 않는다 (아이폰 사파리 26의 아래 도구 막대가 팀 색으로 물든다). 팀 색은 안쪽 머리 요소에만.
-- 새 코드의 색은 다크 모드(V-3)를 위해 토큰으로 쓴다: 바탕 `bg-surface`(`bg-white` 금지), 글씨 `text-ink`, ink 위 글씨 `text-on-ink`, 회색은 `neutral-*`. 팀 색 위 흰 글씨는 그대로 (`docs/VIEW_REDESIGN_PLAN.md` "공존 기간 규칙").
-- View 개편 중 새 코드는 Tailwind + shadcn/ui(`src/components/ui/`)로만 쓴다 (styled-components·antd 금지). 옛 코드와 공존하는 동안의 규칙(새 코드는 `ui` 클래스 요소 안, CSS 레이어, px 단위)은 `docs/VIEW_REDESIGN_PLAN.md` "공존 기간 규칙"을 따른다.
-- 알림(토스트) 기능은 3-6 폐기 때 삭제했다 (2026-11-23). 3단계에서는 다시 넣지 않고, View 개편 때 새로 추가한다 (`docs/VIEW_REDESIGN_PLAN.md`).
+- 새 코드의 색은 다크 모드(V-3)를 위해 토큰으로 쓴다: 바탕 `bg-surface`(`bg-white` 금지), 글씨 `text-ink`, ink 위 글씨 `text-on-ink`, 회색은 `neutral-*`. 팀 색 위 흰 글씨는 그대로 (`docs/archive/VIEW_REDESIGN_PLAN.md` "공존 기간 규칙").
+- View 개편 중 새 코드는 Tailwind + shadcn/ui(`src/components/ui/`)로만 쓴다 (styled-components·antd 금지). 옛 코드와 공존하는 동안의 규칙(새 코드는 `ui` 클래스 요소 안, CSS 레이어, px 단위)은 `docs/archive/VIEW_REDESIGN_PLAN.md` "공존 기간 규칙"을 따른다.
+- 알림(토스트) 기능은 3-6 폐기 때 삭제했다 (2026-11-23). 3단계에서는 다시 넣지 않고, View 개편 때 새로 추가한다 (`docs/archive/VIEW_REDESIGN_PLAN.md`).
 
 ## 작업 방식
 - 한 번에 폴더 하나(또는 관련 파일 묶음)만 진행한다.

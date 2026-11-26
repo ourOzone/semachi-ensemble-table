@@ -1,5 +1,5 @@
 /*
- * 스타일 진입점 (View 개편, docs/VIEW_REDESIGN_PLAN.md)
+ * 스타일 진입점 (View 개편, docs/archive/VIEW_REDESIGN_PLAN.md)
  *
  * 레이어 순서 (사전 결정 1): 뒤에 올수록 우선한다.
  * - legacy: 옛 View 코드의 전역 스타일(legacy.css, 이전 GlobalStyle). preflight보다 뒤라 옛 화면의 초기화가 유지된다.

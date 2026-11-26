@@ -13,7 +13,7 @@ function readTokens(name: string): string[] {
     return tokens.map((m) => m[2]!.trim().toLowerCase());
 }
 
-// 팀 색 20종은 서비스의 아이덴티티라 바꾸지 않는다 (docs/VIEW_REDESIGN_PLAN.md 디자인 원칙)
+// 팀 색 20종은 서비스의 아이덴티티라 바꾸지 않는다 (docs/archive/VIEW_REDESIGN_PLAN.md 디자인 원칙)
 describe('디자인 토큰: 팀 색', () => {
     it('팀 색은 20종이고 theme.ts의 teamColors와 값·순서가 같다', () => {
         expect(theme.teamColors).toHaveLength(20);

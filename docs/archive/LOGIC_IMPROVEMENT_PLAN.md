@@ -200,7 +200,7 @@
 
 ## View 개편 때 넘겨주는 것
 
-> View 개편 계획은 `docs/VIEW_REDESIGN_PLAN.md`.
+> View 개편 계획은 `docs/archive/VIEW_REDESIGN_PLAN.md`.
 
 - 폼은 mutation 훅을 호출한다. 예: `await updateTeam.mutateAsync({ id, type, name, desc })`. 캐시 갱신은 훅이 처리한다.
 - 폼 입력값은 폼 로컬 상태에 둔다 (shadcn/ui Form = react-hook-form + Zod). 그다음 `context/team`·`context/ensemble`과 `orgXxx`를 삭제한다.

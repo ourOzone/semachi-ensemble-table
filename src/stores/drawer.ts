@@ -3,7 +3,7 @@ import type { DrawerId } from '@/types';
 
 // 열린 Drawer 스택. App(본문 밀기)과 모든 Drawer가 참조하는 전역 UI 상태라 Zustand store로 둔다 (3-9, 이전: context/drawer).
 // 컴포넌트 밖(이벤트 처리 함수 등)에서도 useDrawerStore.getState()로 읽고 바꿀 수 있다.
-// View 개편 때 단일 Drawer 구조에 맞게 줄인다 (docs/VIEW_REDESIGN_PLAN.md).
+// View 개편 때 단일 Drawer 구조에 맞게 줄인다 (docs/archive/VIEW_REDESIGN_PLAN.md).
 
 /**
  * 아래에서 올라오는 새 Drawer(View 개편, vaul). 옛 Drawer(antd, 오른쪽에서 열림)와 달리 본문을 밀지 않고,

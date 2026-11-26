@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, **V-4 날적이(한마디) ✅ (2026-11-26, 1~3차)**, V-5 공지 진행 중 (브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, **V-4 날적이(한마디) ✅ (2026-11-26, 1~3차)**, V-5 공지 진행 중 (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -526,13 +526,13 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 | 알림 | `useMessage` | 없음 (3-6 폐기 때 삭제, View 개편 때 새로 추가) |
 | 처리한 버그 | – | F1·F2·F3·F4·F5(알림 삭제)·F7·F8, P1·P2·P4·P6·P7·P8 |
 
-- 3단계에서 넘긴 일: `LOGIC_IMPROVEMENT_PLAN.md` "View 개편 때 넘겨주는 것", View 개편 체크리스트 (현재 `docs/VIEW_REDESIGN_PLAN.md`)
+- 3단계에서 넘긴 일: `LOGIC_IMPROVEMENT_PLAN.md` "View 개편 때 넘겨주는 것", View 개편 체크리스트 (현재 `docs/archive/VIEW_REDESIGN_PLAN.md`)
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 93/93 / `pnpm test:coverage` ✅ / `pnpm build` ✅ / `pnpm format:check` ✅ / `pnpm lint` → 에러 5·경고 42
 
 ### 2026-11-23 — View 개편 계획 수립
 
-- `docs/VIEW_REDESIGN_PLAN.md` 작성: 진행 방식(기반 작업 → 기능 단위 → 일괄 정리, 사용자 확정), 사전 결정 8개(V-0에서 확정), 단계 V-0 ~ V-7, 기능 단계에서 할 일, 멈추고 보고할 조건, 작업마다 갱신할 문서, 공통 검증
+- `docs/archive/VIEW_REDESIGN_PLAN.md` 작성: 진행 방식(기반 작업 → 기능 단위 → 일괄 정리, 사용자 확정), 사전 결정 8개(V-0에서 확정), 단계 V-0 ~ V-7, 기능 단계에서 할 일, 멈추고 보고할 조건, 작업마다 갱신할 문서, 공통 검증
 - `MODERNIZATION.md`의 View 개편 체크리스트·8번(Tailwind)·9번(shadcn/ui)을 새 문서로 옮기고 링크만 남김. antd 사용처 집계(컴포넌트별 import 횟수)와 대체 후보 표 추가
 - `CLAUDE.md`: View 개편은 새 문서를 따른다, 개편 중에도 로직 층은 바꾸지 않는 것이 원칙
 - 완료된 3단계 계획(`LOGIC_IMPROVEMENT_PLAN.md`)과 전달 완료한 백엔드 제안(`BACKEND_SUGGESTIONS.md`)을 `docs/archive/`로 이동 (사용자), 문서·주석의 경로 참조 갱신
@@ -1289,4 +1289,4 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 1. ~~2단계 TS 전환~~ ✅ 완료
 2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)
 3. ~~3단계 내부 로직 개선~~ ✅ 완료 (2026-11-23)
-4. View 개편: 계획 `docs/VIEW_REDESIGN_PLAN.md` (V-0~V-4 ✅, V-5 공지 진행 중)
+4. View 개편: 계획 `docs/archive/VIEW_REDESIGN_PLAN.md` (V-0~V-4 ✅, V-5 공지 진행 중)

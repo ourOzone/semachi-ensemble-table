@@ -30,7 +30,7 @@
 
 /*
  * 팀 색 20종: 서비스의 아이덴티티라 값·개수·순서를 바꾸지 않는다 (VIEW_REDESIGN_PLAN.md 디자인 원칙).
- * src/styles/theme.ts의 teamColors와 같은 값이어야 한다 (src/styles/tokens.test.ts가 확인).
+ * src/constants/colors.ts의 teamColors와 같은 값이어야 한다 (src/styles/tokens.test.ts가 확인).
  * 팀마다 배정되는 색은 lib/board의 buildColorMap이 이 순서로 정한다.
  * 클래스: bg-team-0 ~ bg-team-19, 소모임은 bg-event-0 ~ bg-event-10
  */

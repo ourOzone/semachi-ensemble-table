@@ -1,6 +1,6 @@
 import dayjs, { type Dayjs } from 'dayjs';
 import { eventIds, idx2hour } from '@/constants';
-import theme from '@/styles/theme';
+import { defaultTeamColor } from '@/constants/colors';
 import type { DayIndex, EnsembleResponse, TimeSlot } from '@/types';
 import { resolveNextDate, slotEndTime } from './board';
 import { parseRepeatEnd } from './ensemble';
@@ -227,7 +227,7 @@ export interface CalendarEvent {
     teamId: string;
     /** 팀(또는 일정) 이름 */
     name: string;
-    /** 블록 색. 색 매핑에 없는 팀(삭제된 팀 등)은 theme.blueGray */
+    /** 블록 색. 색 매핑에 없는 팀(삭제된 팀 등)은 defaultTeamColor */
     color: string;
     /** 팀 아닌 일정 (보소·기소 등 소모임, 회의, 오디션, 합주 불가, 동방 사용 불가: eventIds) */
     isEvent: boolean;
@@ -284,7 +284,7 @@ export function toWeekSchedule(
             id,
             teamId,
             name: teamName,
-            color: colorMap[teamId] ?? theme.blueGray,
+            color: colorMap[teamId] ?? defaultTeamColor,
             isEvent: eventIds.includes(teamId),
             status,
             day,

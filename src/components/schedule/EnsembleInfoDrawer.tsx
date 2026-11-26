@@ -35,7 +35,7 @@ import { getRepeatEnd } from '@/lib/ensemble';
 import { ensemblesQueryOptions } from '@/queries/ensembles';
 import { useTeams } from '@/queries/teams';
 import { useDrawerStore } from '@/stores/drawer';
-import theme from '@/styles/theme';
+import { defaultTeamColor } from '@/constants/colors';
 import type { TimeSlot } from '@/types';
 import {
     BookFooter,
@@ -205,8 +205,8 @@ const EnsembleInfoDrawer = ({
 
     // 머리 색: 팀의 지금 색 (캘린더 블록과 같음)
     const color = shown
-        ? (buildColorMap(teams)[shown.ensemble.teamId] ?? theme.blueGray)
-        : theme.blueGray;
+        ? (buildColorMap(teams)[shown.ensemble.teamId] ?? defaultTeamColor)
+        : defaultTeamColor;
 
     const content = (() => {
         if (!shown) return null;

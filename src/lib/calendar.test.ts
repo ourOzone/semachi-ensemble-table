@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { describe, expect, it } from 'vitest';
 import { eventIds } from '@/constants';
-import theme from '@/styles/theme';
+import { defaultTeamColor } from '@/constants/colors';
 import type { EnsembleResponse } from '@/types';
 import {
     assignLanes,
@@ -420,7 +420,7 @@ describe('toWeekSchedule', () => {
         const unknown = { ...base, _id: 'e4', teamId: 'gone', startTime: 10, endTime: 11 };
         const [monday] = toWeekSchedule([event, unknown], colorMap, dayjs('2026-11-23'), now);
         expect(monday?.find((e) => e.id === 'e3')?.isEvent).toBe(true);
-        expect(monday?.find((e) => e.id === 'e4')?.color).toBe(theme.blueGray);
+        expect(monday?.find((e) => e.id === 'e4')?.color).toBe(defaultTeamColor);
     });
 });
 

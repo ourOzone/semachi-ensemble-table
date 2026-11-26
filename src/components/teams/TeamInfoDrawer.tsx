@@ -27,7 +27,7 @@ import { getRepeatEnd } from '@/lib/ensemble';
 import { cn } from '@/lib/utils';
 import { useTeams } from '@/queries/teams';
 import { useDrawerStore } from '@/stores/drawer';
-import theme from '@/styles/theme';
+import { defaultTeamColor, eventColors } from '@/constants/colors';
 import { openUpdateTeam } from './editTeamStore';
 import { usePinnedTeamsStore } from './pinnedTeamsStore';
 import type { CheckTeamExists, HandleDeleteTeam } from './types';
@@ -114,7 +114,9 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
     };
 
     // 머리 색: 팀의 지금 색 (팀 목록·캘린더 블록과 같음)
-    const color = shown ? (buildColorMap(teams)[shown.team.id] ?? theme.blueGray) : theme.blueGray;
+    const color = shown
+        ? (buildColorMap(teams)[shown.team.id] ?? defaultTeamColor)
+        : defaultTeamColor;
 
     const content = (() => {
         if (!shown) return null;
@@ -292,7 +294,7 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
                                         <span
                                             aria-hidden
                                             className="size-2 shrink-0 rounded-full"
-                                            style={{ backgroundColor: theme.eventColors[idx] }}
+                                            style={{ backgroundColor: eventColors[idx] }}
                                         />
                                         {label}
                                     </p>

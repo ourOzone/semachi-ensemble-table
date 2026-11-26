@@ -1,6 +1,6 @@
 import dayjs, { type Dayjs } from 'dayjs';
 import { eventIds, idx2hour } from '@/constants';
-import theme from '@/styles/theme';
+import { eventColors, teamColors } from '@/constants/colors';
 import type { EnsembleResponse, Team, TeamResponse, TimeSlot } from '@/types';
 
 // 서버 응답 → 화면용 데이터(팀 목록·팀 색·다음 합주 날짜)로 바꾸는 순수 함수.
@@ -35,11 +35,9 @@ export function toTeams(teamsRaw: TeamResponse[]): Team[] {
 /** teamId → 색상. 팀은 목록 순서로 teamColors를 순환하고, 소모임·회의는 eventIds 순서대로 eventColors (없는 팀은 undefined) */
 export function buildColorMap(teams: Team[]): Partial<Record<string, string>> {
     const teamColorMap = Object.fromEntries(
-        teams.map((team, idx) => [team.id, theme.teamColors[idx % theme.teamColors.length]]),
+        teams.map((team, idx) => [team.id, teamColors[idx % teamColors.length]]),
     );
-    const eventColorMap = Object.fromEntries(
-        eventIds.map((id, idx) => [id, theme.eventColors[idx]]),
-    );
+    const eventColorMap = Object.fromEntries(eventIds.map((id, idx) => [id, eventColors[idx]]));
     return { ...teamColorMap, ...eventColorMap };
 }
 

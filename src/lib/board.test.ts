@@ -3,14 +3,14 @@
  * context/fetch.test.tsx의 characterization 기대값(현재 동작)을 now 인자 방식으로 옮겼다.
  * 동작을 바꿀 때는 승인 후 기대값을 함께 고친다.
  * 3-3에서 승인된 수정: 다시 계산한 nextDate는 0시 (F7, 이전에는 현재 시각 10:00이 붙었다),
- *   목록에 없는 팀의 teamColor는 theme.blueGray (F8, 이전에는 -1)
+ *   목록에 없는 팀의 teamColor는 defaultTeamColor (F8, 이전에는 -1)
  *
  * now는 2026-11-20(금) 10:00 (테스트 시간대 Asia/Seoul)
  */
 import dayjs from 'dayjs';
 import { describe, expect, it } from 'vitest';
 import { eventIds } from '@/constants';
-import theme from '@/styles/theme';
+import { eventColors, teamColors } from '@/constants/colors';
 import type { EnsembleResponse, TeamResponse } from '@/types';
 import { buildColorMap, resolveNextDate, slotEndTime, toTeams } from './board';
 
@@ -79,9 +79,9 @@ describe('buildColorMap', () => {
         const teams = toTeams(Array.from({ length: 22 }, (_, i) => teamRaw(`t${i}`, `팀${i}`)));
         const colorMap = buildColorMap(teams);
 
-        expect(colorMap.t0).toBe(theme.teamColors[0]);
-        expect(colorMap.t21).toBe(theme.teamColors[1]); // 21 % 20 = 1
-        expect(colorMap[eventIds[1]!]).toBe(theme.eventColors[1]);
+        expect(colorMap.t0).toBe(teamColors[0]);
+        expect(colorMap.t21).toBe(teamColors[1]); // 21 % 20 = 1
+        expect(colorMap[eventIds[1]!]).toBe(eventColors[1]);
     });
 });
 

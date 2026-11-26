@@ -38,7 +38,7 @@ import { PIN_LENGTH, PinSlots } from '@/components/schedule/PinStep';
 import { days, demoNames } from '@/constants';
 import { cn } from '@/lib/utils';
 import { useDrawerStore } from '@/stores/drawer';
-import theme from '@/styles/theme';
+import { eventColors } from '@/constants/colors';
 import type { LegacyTeamType, TeamType } from '@/types';
 import { useEditTeamStore, type EditTeamTarget } from './editTeamStore';
 import { TEAM_DUE_ENABLED } from './teamDue';
@@ -362,7 +362,7 @@ const AddTeamForm = ({
                                         <span
                                             aria-hidden
                                             className="size-2 shrink-0 rounded-full"
-                                            style={{ backgroundColor: theme.eventColors[idx] }}
+                                            style={{ backgroundColor: eventColors[idx] }}
                                         />
                                         {label}
                                     </span>

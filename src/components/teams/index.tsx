@@ -24,7 +24,7 @@ import AddEnsembleDrawer, {
     type AddEnsembleInput,
     type TeamOption,
 } from '@/components/schedule/AddEnsembleDrawer';
-import theme from '@/styles/theme';
+import { defaultTeamColor, eventColors } from '@/constants/colors';
 import TeamInfoDrawer from './TeamInfoDrawer';
 import EventInfoDrawer from './EventInfoDrawer';
 import AddTeamDrawer from './AddTeamDrawer';
@@ -212,14 +212,14 @@ const Teams = () => {
     const teamChips: Chip[] = teams.map((team) => ({
         key: team.id,
         name: team.name,
-        color: colorMap[team.id] ?? theme.blueGray,
+        color: colorMap[team.id] ?? defaultTeamColor,
         onClick: () => handleClickTeam(team),
         pinned: pinnedIds.includes(team.id),
     }));
     const eventChips: Chip[] = [...eventNames1, ...eventNames2].map((name, idx) => ({
         key: name,
         name,
-        color: theme.eventColors[idx] ?? theme.blueGray,
+        color: eventColors[idx] ?? defaultTeamColor,
         onClick: () => handleClickEvent(eventIds[idx]!, name), // eventIds와 같은 순서
         striped: true, // 합주판 블록과 같은 줄무늬 (V-3 1차)
     }));

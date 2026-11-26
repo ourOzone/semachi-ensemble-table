@@ -6,7 +6,7 @@ import { http, HttpResponse, type JsonBodyType } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { eventIds, url } from '@/constants';
 import { createQueryClient } from '@/lib/queryClient';
-import theme from '@/styles/theme';
+import { teamColors } from '@/constants/colors';
 import { ensembles, mockInitialData, notes, notices, teams } from '@/test/fixtures';
 import { createTestQueryClient } from '@/test/render';
 import { server } from '@/test/server';
@@ -70,7 +70,7 @@ describe('조회 훅 (TanStack Query)', () => {
         expect(result.current.teams.map((t) => t.id)).toEqual(['team-1']);
         expect(result.current.schedule[0]![0]).toMatchObject({
             id: 'ensemble-1',
-            color: theme.teamColors[0],
+            color: teamColors[0],
             startTime: 2,
         });
         expect(result.current.notes).toEqual([
@@ -123,7 +123,7 @@ describe('조회 훅 (TanStack Query)', () => {
 
         releaseTeams();
         await waitFor(() => expect(result.current.schedule[0]).toHaveLength(1));
-        expect(result.current.schedule[0]![0]!.color).toBe(theme.teamColors[0]);
+        expect(result.current.schedule[0]![0]!.color).toBe(teamColors[0]);
     });
 
     describe('앱 기본값 (createQueryClient, 사전 결정 3)', () => {

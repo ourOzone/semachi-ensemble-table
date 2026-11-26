@@ -19,7 +19,7 @@ import { scrollFadeRef } from '@/components/ui/scroll-fade';
 import { eventIds } from '@/constants';
 import { useTeamContext } from '@/context';
 import { useDrawerStore } from '@/stores/drawer';
-import theme from '@/styles/theme';
+import { defaultTeamColor, eventColors } from '@/constants/colors';
 
 // 소모임·회의 등 정보 Drawer (View 개편 V-3). 팀 정보 Drawer와 같은 모양의 머리만 있다 (전체 이름 + 일정 잡기).
 // 이전: 오른쪽에서 열리는 옛 Drawer
@@ -48,7 +48,7 @@ const EventInfoDrawer = () => {
     };
 
     const idx = shown ? eventIds.indexOf(shown.id) : -1;
-    const color = theme.eventColors[idx] ?? theme.blueGray;
+    const color = eventColors[idx] ?? defaultTeamColor;
     const club = shown ? name2FullName[shown.name] : undefined; // 소모임이면 전체 이름
 
     return (

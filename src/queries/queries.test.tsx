@@ -73,7 +73,9 @@ describe('조회 훅 (TanStack Query)', () => {
             color: theme.teamColors[0],
             startTime: 2,
         });
-        expect(result.current.notes).toEqual([{ id: 'note-1', text: '메모입니다' }]);
+        expect(result.current.notes).toEqual([
+            { id: 'note-1', text: '메모입니다', createdAt: null },
+        ]);
         expect(result.current.notices).toEqual([{ id: 'notice-1', text: '첫 공지\n둘째 줄' }]);
     });
 

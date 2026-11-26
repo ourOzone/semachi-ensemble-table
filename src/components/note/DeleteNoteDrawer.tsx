@@ -1,122 +1,110 @@
-import { useState, useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
-import type { InputRef } from 'antd';
-import Drawer from '@/components/common/Drawer';
-import styled from 'styled-components';
+import { useState } from 'react';
+import { X } from 'lucide-react';
 import { checkNotePin } from '@/api/note';
-import OkButton from '@/components/common/OkButton';
-import PinInput from '@/components/common/PinInput';
-import type { DrawerId } from '@/types';
+import {
+    Drawer,
+    DrawerClose,
+    DrawerContent,
+    DrawerDescription,
+    DrawerTitle,
+} from '@/components/ui/drawer';
+import { scrollFadeRef } from '@/components/ui/scroll-fade';
+import {
+    boxShape,
+    overlayClassName,
+    pressable,
+    scrollAreaClassName,
+    sheetClassName,
+} from '@/components/schedule/drawerParts';
+import { useKeyboardSheet } from '@/components/schedule/keyboardSheet';
+import PinStep from '@/components/schedule/PinStep';
+import { cn } from '@/lib/utils';
+import { useDrawerStore } from '@/stores/drawer';
+import type { Note } from '@/types';
 
-const maxInput = 4;
+// 한마디 삭제 Drawer (View 개편 V-4). 아래에서 올라오는 Drawer에서 PIN 4칸 → "삭제하기"
+// (이전: 오른쪽에서 열리는 옛 Drawer에 PIN 한 칸·"진짜 삭제해요", 알림 없음).
+// 합주·팀 삭제의 PIN 단계와 같은 모양 (PinStep, 틀리면 흔든 뒤 비움, PC는 Enter로도 삭제)
 
 interface DeleteNoteDrawerProps {
-    drawerId: DrawerId;
-    /** 삭제할 한마디 id */
-    id: string;
-    pin: string;
-    setPin: Dispatch<SetStateAction<string>>;
-    /** 삭제된 한마디면 false (경고 표시와 초기화는 부모가 처리) */
-    checkNoteExists: (id: string) => Promise<boolean>;
-    handleDeleteNote: (id: string) => Promise<void>;
+    /** 삭제할 한마디. 닫혀도 그대로 둔다 (내려가는 동안 내용 유지) */
+    note: Note | null;
+    /** 삭제. 성공하면 true (Drawer는 삭제하는 쪽이 닫는다), 실패하면 false → PIN부터 다시 */
+    onDelete: (id: string) => Promise<boolean>;
 }
 
-const DeleteNoteDrawer = ({
-    drawerId,
-    id,
-    pin,
-    setPin,
-    checkNoteExists,
-    handleDeleteNote,
-}: DeleteNoteDrawerProps) => {
-    const [error, setError] = useState(false); // 4자리 다 입력했는데 틀린 경우에만 true
-    const focusInputRef = useRef<InputRef>(null);
+const DeleteNoteDrawer = ({ note, onDelete }: DeleteNoteDrawerProps) => {
+    const openedDrawers = useDrawerStore((state) => state.openedDrawers);
+    const closeDrawer = useDrawerStore((state) => state.closeDrawer);
+    const open = openedDrawers[openedDrawers.length - 1] === 'deleteNote';
 
-    const onClose = useCallback(() => {
-        setPin('');
-        setError(false);
-    }, [setPin]);
+    // 열 때마다 PIN을 새로 받는다
+    const [session, setSession] = useState(0);
+    const [wasOpen, setWasOpen] = useState(false);
+    if (open !== wasOpen) {
+        setWasOpen(open);
+        if (open) setSession((n) => n + 1);
+    }
 
-    const handlePinChange = useCallback(
-        async (id: string, value: string) => {
-            const numeric = value.replace(/\D/g, '');
-            if (numeric.length <= maxInput) {
-                setPin(numeric);
-                setError(true);
-
-                if (numeric.length === maxInput) {
-                    // 4자리 모두 입력한 경우
-                    try {
-                        if (await checkNoteExists(id)) {
-                            // PIN 판별
-                            const result = await checkNotePin(id, numeric);
-                            setError(!result);
-                        }
-                    } catch {
-                        // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
-                    }
-                }
-            }
-        },
-        [setPin],
-    );
+    const sheet = useKeyboardSheet(open);
 
     return (
-        <Drawer drawerId={drawerId} onClose={onClose} focusInputRef={focusInputRef}>
-            <Title>PIN 입력해야 삭제돼요 🔑</Title>
-            <InputWrapper>
-                <StyledPinInput
-                    ref={focusInputRef}
-                    value={pin}
-                    type="password"
-                    onChange={(e) => handlePinChange(id, e.target.value)}
-                    inputMode="numeric"
-                    controls={false}
-                    placeholder="숫자 4자리"
-                    error={error}
-                    status={pin.length === maxInput && error ? 'error' : undefined}
-                    onKeyDown={(e) => {
-                        // Enter 키 누를시
-                        if (e.key === 'Enter' && !error && pin.length === maxInput) {
-                            handleDeleteNote(id);
-                        }
-                    }}
-                />
-            </InputWrapper>
-
-            <OkButton
-                label="진짜 삭제해요"
-                onClick={() => handleDeleteNote(id)}
-                disabled={error || pin.length !== maxInput}
-            />
+        <Drawer
+            open={open}
+            onOpenChange={(next) => !next && closeDrawer()}
+            repositionInputs={false}
+        >
+            <DrawerContent
+                className={sheetClassName}
+                style={sheet.style}
+                overlayClassName={overlayClassName}
+                handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-neutral-300"
+            >
+                {note && (
+                    <div ref={scrollFadeRef} className={scrollAreaClassName}>
+                        <div className="px-5 pt-[26px] pb-[calc(24px+env(safe-area-inset-bottom))] md:px-7">
+                            <div className="flex items-start justify-between gap-3">
+                                <DrawerTitle className="pt-1.5 text-[24px] leading-tight font-bold text-ink md:text-[26px]">
+                                    한마디를 삭제할까요?
+                                </DrawerTitle>
+                                <DrawerClose asChild>
+                                    <button
+                                        type="button"
+                                        aria-label="닫기"
+                                        className={`${pressable} -mr-2 inline-flex size-10 shrink-0 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100`}
+                                    >
+                                        <X className="size-6" aria-hidden />
+                                    </button>
+                                </DrawerClose>
+                            </div>
+                            {/* 어떤 한마디인지 (세 줄까지) */}
+                            <p
+                                className={cn(
+                                    boxShape,
+                                    'mt-3 line-clamp-3 bg-neutral-50 px-4 py-3 text-[15px] leading-relaxed break-keep whitespace-pre-line text-ink [overflow-wrap:anywhere]',
+                                )}
+                            >
+                                {note.text}
+                            </p>
+                            <DrawerDescription className="mt-3 text-[15px] break-keep text-neutral-500">
+                                되돌릴 수 없어요. 남길 때 정한 PIN 4자리를 입력해 주세요
+                            </DrawerDescription>
+                            <div className="mt-7">
+                                <PinStep
+                                    key={session}
+                                    checkPin={(pin) => checkNotePin(note.id, pin)}
+                                    confirmLabel="삭제하기"
+                                    danger
+                                    onConfirm={() => onDelete(note.id)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </DrawerContent>
+            {sheet.cover}
         </Drawer>
     );
 };
-
-const Title = styled.span`
-    font-size: 2.5rem;
-    font-family: Bold;
-`;
-
-const InputWrapper = styled.div`
-    margin: 4rem 0 2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    width: 100%;
-    align-items: center;
-`;
-
-interface StyledPinInputProps {
-    /** 항상 PIN 문자열 (antd Input의 value 타입을 좁힘) */
-    value: string;
-    /** PIN 4자리를 다 입력했는데 틀린 경우 true */
-    error: boolean;
-    /** Input에는 없는 prop(InputNumber 전용)이라 효과 없이 DOM으로 전달됨 (3단계 정리 대상) */
-    controls?: boolean;
-}
-
-const StyledPinInput = styled(PinInput)<StyledPinInputProps>`
-    color: ${({ theme, value, error }) => (value.length === maxInput && error ? theme.danger : theme.title)};
-`;
 
 export default DeleteNoteDrawer;

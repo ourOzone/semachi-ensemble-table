@@ -22,7 +22,10 @@ const CLEAR_DELAY_MS = 450;
 type Status = 'typing' | 'checking' | 'valid' | 'invalid' | 'submitting';
 
 interface PinStepProps {
-    teamId: string;
+    /** 팀 PIN으로 확인할 팀 (합주·팀). checkPin을 주면 쓰지 않는다 */
+    teamId?: string;
+    /** 팀 PIN이 아닌 것의 PIN 확인 (한마디, V-4). 없으면 팀 PIN(checkTeamPin) */
+    checkPin?: (pin: string) => Promise<boolean>;
     /** 확인 버튼 문구. 없으면 PIN이 맞는 즉시 onConfirm */
     confirmLabel?: string;
     /** 되돌릴 수 없는 동작(삭제): 빨간 버튼 */
@@ -31,7 +34,7 @@ interface PinStepProps {
     onConfirm: () => Promise<boolean | void> | boolean | void;
 }
 
-const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepProps) => {
+const PinStep = ({ teamId, checkPin, confirmLabel, danger = false, onConfirm }: PinStepProps) => {
     const [pin, setPin] = useState('');
     const [status, setStatus] = useState<Status>('typing');
     // 틀릴 때마다 흔들기 애니메이션을 다시 시작한다
@@ -69,7 +72,7 @@ const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepPro
         }
         setStatus('checking');
         try {
-            const ok = await checkTeamPin(teamId, value);
+            const ok = await (checkPin ? checkPin(value) : checkTeamPin(teamId ?? '', value));
             if (latestPin.current !== value) return; // 그새 PIN을 고쳤다
             if (!ok) {
                 setStatus('invalid');

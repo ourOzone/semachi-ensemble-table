@@ -33,6 +33,8 @@ export interface Team {
 export interface Note {
     id: string;
     text: string;
+    /** 작성 시각 (ms, id(ObjectId)에서 읽음, V-4). id가 ObjectId 형식이 아니면 null */
+    createdAt: number | null;
 }
 
 export interface Notice {

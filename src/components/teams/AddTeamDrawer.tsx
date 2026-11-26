@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
     CalendarX2,
@@ -25,7 +25,14 @@ import {
     scrollAreaClassName,
     sheetClassName,
 } from '@/components/schedule/drawerParts';
-import { DatePicker, DateToggle, Hint, Section, Segmented } from '@/components/schedule/formParts';
+import {
+    DatePicker,
+    DateToggle,
+    Hint,
+    Section,
+    Segmented,
+    useSectionScroll,
+} from '@/components/schedule/formParts';
 import { useKeyboardSheet } from '@/components/schedule/keyboardSheet';
 import { PIN_LENGTH, PinSlots } from '@/components/schedule/PinStep';
 import { days, demoNames } from '@/constants';
@@ -163,6 +170,9 @@ const AddTeamForm = ({
     keyboardOpen: boolean;
 }) => {
     const [step, setStep] = useState<'form' | 'pin'>('form');
+    // 고르거나 다 쓰면 그 소제목을 맨 위로 (팀원·셋리스트는 맨 아래로), 합주 잡기 Drawer와 같은 방식 (V-3 14차)
+    const { areaRef, sectionRef, scrollTo } = useSectionScroll<'type' | 'name'>();
+    const membersRef = useRef<HTMLDivElement>(null);
     // 기본은 교내 공연 (V-3 11차). 수정이면 지금 값 (옛 종류는 새 종류로)
     const initialType = edit ? toTeamType(edit.type) : '교내 공연';
     const [type, setType] = useState<TeamType | null>(initialType);
@@ -257,7 +267,7 @@ const AddTeamForm = ({
     return (
         <>
             <div
-                ref={scrollFadeRef}
+                ref={areaRef}
                 className={cn(scrollAreaClassName, 'flex-1')}
                 onFocus={(e) => isTextField(e.target) && setEditing(true)}
                 onBlur={(e) => !isTextField(e.relatedTarget) && setEditing(false)}
@@ -286,18 +296,25 @@ const AddTeamForm = ({
 
                 <div className="flex flex-col gap-6 px-5 pt-5 pb-6 md:px-7">
                     {/* 팀 종류: 고르면 아래에 설명 */}
-                    <Section label="팀 종류">
+                    <Section label="팀 종류" sectionRef={sectionRef('type')}>
                         <Segmented
                             label="팀 종류"
                             value={type}
                             options={TEAM_TYPES}
-                            onChange={setType}
+                            onChange={(value) => {
+                                setType(value);
+                                scrollTo('type');
+                            }}
                         />
                         {type && <Hint>{TYPE_HINTS[type]}</Hint>}
                     </Section>
 
                     {/* 팀명 */}
-                    <Section label="팀명" aside={<Counter length={name.length} max={NAME_MAX} />}>
+                    <Section
+                        label="팀명"
+                        sectionRef={sectionRef('name')}
+                        aside={<Counter length={name.length} max={NAME_MAX} />}
+                    >
                         <input
                             type="text"
                             aria-label="팀명"
@@ -311,12 +328,28 @@ const AddTeamForm = ({
                                 'h-14 w-full border border-neutral-200 bg-surface px-4 text-[17px] font-bold text-ink outline-none placeholder:font-normal placeholder:text-neutral-400 focus:border-ink',
                             )}
                             onChange={(e) => setName(e.target.value)}
+                            // 다 쓰면(포커스가 빠지면) "팀명"을 맨 위로. 키보드의 다음(Enter)은 보컬 칸으로
+                            onBlur={() => name.trim() && scrollTo('name')}
+                            onKeyDown={(e) => {
+                                if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+                                e.preventDefault();
+                                membersRef.current?.querySelector('input')?.focus();
+                            }}
                         />
                     </Section>
 
                     {/* 팀원 (안 써도 된다) */}
                     <Section label="팀원">
-                        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                        <div
+                            ref={membersRef}
+                            className="grid grid-cols-2 gap-2 md:grid-cols-3"
+                            // 팀원 칸들을 벗어나면(다 쓰면) 맨 아래로. 칸 사이를 옮겨 다니는 동안은 그대로
+                            onBlur={(e) => {
+                                if (e.currentTarget.contains(e.relatedTarget as Node | null))
+                                    return;
+                                if (members.some((member) => member.trim())) scrollTo('bottom');
+                            }}
+                        >
                             {MEMBER_LABELS.map((label, idx) => (
                                 <label
                                     key={label}
@@ -373,6 +406,8 @@ const AddTeamForm = ({
                             )}
                             placeholder={'아티스트 - 제목\n...'}
                             onChange={(e) => setSetlist(e.target.value)}
+                            // 다 쓰면 맨 아래로
+                            onBlur={() => setlist.trim() && scrollTo('bottom')}
                         />
                         <Hint>가능한 한 작성해주세요.</Hint>
                     </Section>

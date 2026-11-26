@@ -1,12 +1,59 @@
-import type { ComponentType, ReactNode } from 'react';
+import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
 import { ko } from 'react-day-picker/locale';
 import { CalendarDays, ChevronDown, Info } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
+import { attachScrollFade } from '@/components/ui/scroll-fade';
 import { cn } from '@/lib/utils';
 import { boxShape, pressable } from './drawerParts';
 
 // 입력 Drawer(합주 잡기·수정, 팀 추가)가 함께 쓰는 입력 부품 (V-3 10차에 합주 잡기 Drawer에서 꺼냄, 모양 그대로)
+
+/** 소제목을 맨 위로 올릴 때 스크롤 영역 위와의 간격 (합주 잡기 Drawer와 같음) */
+const SCROLL_TOP_GAP = 24;
+/** 화면 키보드가 닫히며 Drawer 높이·아래 버튼이 바뀐 뒤 한 번 더 맞추기까지 (휴대폰) */
+const SETTLE_MS = 350;
+
+/**
+ * 입력 Drawer의 스크롤 영역에서 고른·쓴 항목의 소제목을 맨 위로 올리거나(bottom: 맨 아래까지) 한다 (V-3 14차, 팀 추가·수정).
+ * areaRef는 스크롤 영역에(위·아래 끝 흐림도 함께 붙인다), sectionRef(key)는 Section에 넘긴다.
+ * 그려진 뒤(접힘·펼침이 반영된 뒤)에 스크롤하고, 키보드가 닫히며 배치가 바뀌면 한 번 더 맞춘다
+ */
+export function useSectionScroll<K extends string>() {
+    const area = useRef<HTMLElement | null>(null);
+    const sections = useRef<Partial<Record<K, HTMLElement | null>>>({});
+    // 스크롤 영역 ref: 단계가 바뀌어 영역이 새로 그려져도 다시 붙는다 (React 19 ref 정리 함수)
+    const [areaRef] = useState(() => (el: HTMLElement | null) => {
+        area.current = el;
+        return el ? attachScrollFade(el) : undefined;
+    });
+    const [request, setRequest] = useState<{ target: K | 'bottom'; count: number } | null>(null);
+    useEffect(() => {
+        const el = area.current;
+        if (!request || !el || typeof el.scrollTo !== 'function') return;
+        const go = () => {
+            const section = request.target === 'bottom' ? null : sections.current[request.target];
+            const top = section
+                ? section.getBoundingClientRect().top -
+                  el.getBoundingClientRect().top +
+                  el.scrollTop -
+                  SCROLL_TOP_GAP
+                : el.scrollHeight;
+            el.scrollTo({ top, behavior: 'smooth' });
+        };
+        go();
+        const timer = setTimeout(go, SETTLE_MS);
+        return () => clearTimeout(timer);
+    }, [request]);
+    return {
+        areaRef,
+        sectionRef: (key: K) => (el: HTMLElement | null) => {
+            sections.current[key] = el;
+        },
+        scrollTo: (target: K | 'bottom') =>
+            setRequest((prev) => ({ target, count: (prev?.count ?? 0) + 1 })),
+    };
+}
 
 /** 소제목 + 내용. 오른쪽에 덧붙일 것(aside)이 있으면 같은 줄에 */
 export const Section = ({

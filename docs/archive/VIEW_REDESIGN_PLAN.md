@@ -50,7 +50,7 @@
 | V-3 ✅ | **팀** (2026-11-26 완료, 1~17차 + 마무리): 팀 버튼, 팀 정보·추가·수정·삭제, 합주 추가, 소모임 정보 → 단일 Drawer. 규모가 커서 필요하면 V-3a(팀) / V-3b(합주 추가·소모임)로 나눈다. 합주 추가의 달력·시간 선택은 V-2의 컴포넌트를 다시 쓴다 | F11, V7 |
 | V-4 ✅ | **한마디 → 날적이** (2026-11-26 완료, 1~3차): 목록·등록·삭제 (V-2·V-3에서 정한 컨셉을 따른다). 아래 "V-4 진행" | |
 | V-5 ✅ | **공지** (2026-11-26 완료, 1차 + 사용자 실기기 확인): 공지 버튼·목록·등록·삭제 → 단일 Drawer. 아래 "V-5 진행" | V1·V2 일부 |
-| V-6 🔄 | **일괄 정리**: 아래 "V-6 상세"·"V-6 진행". 디렉터리 구조는 `docs/DIRECTORY_STRUCTURE.md` | V1~V5, E4, F9 |
+| V-6 ✅ | **일괄 정리** (2026-11-26 완료, ①~⑤): 아래 "V-6 상세"·"V-6 진행". 디렉터리 구조는 `docs/DIRECTORY_STRUCTURE.md` | V1~V5, E4, F9 |
 | V-7 | **마무리**: 린트·커버리지·번들 비교, 문서 | |
 
 ### V-1 상세 (기반 작업) ✅ 2026-11-23
@@ -380,6 +380,13 @@
 
 순서 (커밋 단위): ① 옛 코드·라이브러리 제거 ② `theme.ts` 제거 ③ 팀·합주 context 제거 ④ 디렉터리 재구성 ⑤ 문서
 
+- [x] **① 옛 코드·라이브러리 제거 (`b330dde`):** `components/common`, `legacy.css`·`media.ts`·`styled.d.ts`, antd·styled-components Provider·패치, `index.html`·`index.css`의 legacy·antd 레이어, 패키지 5개(antd, @ant-design/icons·cssinjs·v5-patch-for-react-19, styled-components). `stores/drawer`의 `BOTTOM_DRAWERS`·`sideDrawers`, `DrawerId` 2개. App 본문 밀기 → Tailwind `main`(간격은 옛 rem 값 그대로). 테스트 `renderWithTheme` → `renderWithProviders`, antd용 헬퍼 삭제. 간격·글자 크기 토큰을 Tailwind 기본(rem)으로
+- [x] **② `theme.ts` 제거 (`e34abee`):** 팀·소모임 색 → `constants/colors.ts` (`theme.blueGray` → `defaultTeamColor`), 옛 코드용 색은 삭제
+- [x] **③ 팀·합주 context 제거 (`7780651`):** `context/team`·`ensemble` → `stores/selection`(`useTeamSelectionStore`·`useEnsembleSelectionStore`, 값·함수 그대로). 처음 계획("id만 두고 내용은 조회 결과에서")과 다르게 내용을 그대로 둠: 미루기·수정 직후 다시 불러오기가 끝나기 전에도 바뀐 값을 바로 보여 주려고 (조회 결과에서 찾으면 잠깐 이전 값이 보여 동작이 바뀐다). `useDrawerContext` 별칭 삭제
+- [x] **④ 디렉터리 재구성 (`f4c30d7`):** `docs/DIRECTORY_STRUCTURE.md`대로 52개 파일 `git mv` + 가져오기 경로·주석 속 경로만 수정
+- [x] **⑤ 문서:** `CLAUDE.md`(테스트 헬퍼, 디렉터리 규칙, 공존 기간 규칙 삭제), `MODERNIZATION.md` 6·8·9번, ISSUES(V1·V3·V4·V5·V8·E4·F9·F11·P3·P5 ✅, 린트 0), MIGRATION
+- 확인: 단계마다 전후 스크린샷 21장(390px 밝은·어두운, 1280px × 메인·팀 정보·합주 잡기 달력·팀 추가·공지·날적이·설정) 픽셀 비교 0 (팀 추가의 팀 이름 예시는 무작위라 제외)
+
 #### 적용 예정: 팀 자동 삭제 (V-3 10차, 백엔드 팀 스키마에 `due`가 생기면)
 
 - 기능: 팀 추가 때 "팀 자동 삭제" — "계속 유지"(기본) / "삭제 날짜 지정"(달력, "이 날짜 이후에 자동으로 삭제돼요"). 합주의 반복 종료와 같은 모양·같은 형식(`due`: 'YYYY-MM-DD', 계속 유지는 '2099-12-31')
@@ -433,17 +440,17 @@
 > 3단계는 "View 개편 후에도 남는 층"만 정리하고, Drawer·폼에 묶인 정리는 여기로 넘겼다. (`MODERNIZATION.md`에서 옮김)
 > 근거: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md` 사전 결정 1·5번, `docs/ISSUES.md`의 View 항목.
 
-- [ ] **Drawer 단일화:** API 요청 하나에 Drawer 하나. 그 안에서 모든 값을 입력하고, 완료 화면 Drawer("락앤롤!" 등)는 삭제
-- [ ] **`context/team`·`context/ensemble` 제거:** 단계 사이 입력값 전달용이다. 폼 로컬 상태로 옮긴 뒤 삭제한다 (V-3까지: 입력은 모두 Drawer 로컬 `useState`로 옮겼고, context에는 "지금 보고 있는 팀·합주"만 남았다 → V-6 상세)
+- [x] **Drawer 단일화 (V-2~V-5):** API 요청 하나에 Drawer 하나. 그 안에서 모든 값을 입력하고, 완료 화면 Drawer("락앤롤!" 등)는 삭제
+- [x] **`context/team`·`context/ensemble` 제거 (V-6 ③):** 단계 사이 입력값 전달용이다. 폼 로컬 상태로 옮긴 뒤 삭제한다 (V-3까지: 입력은 모두 Drawer 로컬 `useState`로 옮겼고, context에는 "지금 보고 있는 팀·합주"만 남았다 → V-6 상세)
   - 함께 사라지는 것: 입력 한 글자마다 다시 렌더링(P3), 수정 취소용 `orgXxx` 복제(P5, 폼 초기값으로 대체), `setTeamStates()`·`setEnsembleStates()` 초기화 호출
-- [ ] **`stores/drawer` 축소:** 3-9에서 Context → Zustand로 옮긴 Drawer 스택을 단일 Drawer 구조에 맞게 줄이고, 호환용 `useDrawerContext` 별칭을 삭제한다
-- [ ] **PIN 흐름:** 지금은 PIN 단계 Drawer가 존재 확인과 `check-xxx-pin`을 따로 호출한다(P2 잔여, F6). 백엔드 B1 대응(변경 API에서 PIN 검증)에 맞춰 폼 submit 하나로 합친다
-- [ ] **(트렌디한) 알림 기능 새로 추가:** (V-1: Sonner와 조회 실패 알림 ✅, 변경 알림은 기능 단계마다) 3-6을 폐기하면서 기존 알림(`useMessage`)을 프로젝트에서 삭제했다(2026-11-23). 지금은 성공·실패·"이미 삭제됨"을 사용자에게 알리지 않는다
+- [x] **`stores/drawer` 축소 (V-6 ①③, 스택은 유지):** 3-9에서 Context → Zustand로 옮긴 Drawer 스택을 단일 Drawer 구조에 맞게 줄이고, 호환용 `useDrawerContext` 별칭을 삭제한다
+- [ ] **PIN 흐름 (백엔드 B1 대기):** 지금은 PIN 단계 Drawer가 존재 확인과 `check-xxx-pin`을 따로 호출한다(P2 잔여, F6). 백엔드 B1 대응(변경 API에서 PIN 검증)에 맞춰 폼 submit 하나로 합친다
+- [x] **(트렌디한) 알림 기능 새로 추가 (V-1~V-5):** (V-1: Sonner와 조회 실패 알림 ✅, 변경 알림은 기능 단계마다) 3-6을 폐기하면서 기존 알림(`useMessage`)을 프로젝트에서 삭제했다(2026-11-23). 지금은 성공·실패·"이미 삭제됨"을 사용자에게 알리지 않는다
   - 권장: shadcn/ui의 **Sonner**(토스트)를 앱 루트에 하나 두고, mutation 훅의 `onSuccess`·`onError`(404 → "이미 삭제됨")와 TanStack Query `QueryCache.onError`(조회 실패)에서 호출
   - 이전 알림 문구는 git 기록(`8af5868` 이전 코드)에서 참고할 수 있다
-- [ ] **폼은 3단계의 mutation 훅을 호출한다** (`useUpdateTeam().mutateAsync(...)` 등). 캐시 갱신은 훅이 처리한다 (알림은 위 항목에서 새로 연결)
-- [ ] **Drawer 쪽 잔여 이슈:** F9(Drawer의 `exhaustive-deps`), F10, F11, V1~V5, V7, E4
-- [ ] **테스트:** Drawer 흐름 테스트를 새 UI 기준으로 다시 작성한다. `lib/`·`queries/` 테스트는 유지한다
+- [x] **폼은 3단계의 mutation 훅을 호출한다** (`useUpdateTeam().mutateAsync(...)` 등). 캐시 갱신은 훅이 처리한다 (알림은 위 항목에서 새로 연결)
+- [x] **Drawer 쪽 잔여 이슈 (V-6):** F9(Drawer의 `exhaustive-deps`), F10, F11, V1~V5, V7, E4
+- [x] **테스트:** Drawer 흐름 테스트를 새 UI 기준으로 다시 작성한다. `lib/`·`queries/` 테스트는 유지한다
 - [x] **React Compiler 도입 판단** (`MODERNIZATION.md` 10번): V-1에서 켜기로 확정 (사전 결정 7, 2026-11-23)
 
 ## 스타일링: Tailwind CSS v4 (styled-components 대체) 📌

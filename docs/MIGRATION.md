@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, **V-4 날적이(한마디) ✅ (2026-11-26, 1~3차)**, V-5 공지 진행 중 (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, V-4 날적이 ✅, V-5 공지 ✅, **V-6 일괄 정리 ✅ (2026-11-26)**, 다음은 V-7 마무리 (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -1245,6 +1245,21 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 226/226 / `pnpm lint` → 에러 1·경고 3 (모두 이제 쓰지 않는 옛 공용 Drawer·Tooltip, V-6에서 삭제) / `pnpm format:check` ✅ / `pnpm build` ✅ (JS 1,088kB → 883kB, gzip 349 → 283kB: 기능 코드에서 antd 사용처가 사라짐)
 
+### 2026-11-26 — View 개편 V-5 마무리, V-6: 일괄 정리
+
+- V-5: 사용자 실기기 확인 → 완료. 계획 문서는 사용자가 `docs/archive/`로 옮김 (경로 참조 갱신)
+- 사용자 결정 (모두 추천안): 기능 단위 + 공용 로직 층 혼합 구조, 케밥 표기 파일 이름, Drawer 스택 유지, 팀 색 상수를 `constants/colors.ts`로
+- 커밋 다섯 (동작 변화 없음)
+  - ① `b330dde` 옛 코드·antd·styled-components 제거: `components/common`, `legacy.css`(옛 전역 스타일)·`media.ts`·`styled.d.ts`, antd Provider·패치, CSS의 legacy·antd 레이어, 패키지 5개. 옛 Drawer 구분(`BOTTOM_DRAWERS`·`sideDrawers`), 쓰지 않는 Drawer ID 2개. App 본문 밀기 → Tailwind `main`. 간격·글자 크기 토큰을 Tailwind 기본(rem)으로. 테스트 `renderWithTheme` → `renderWithProviders`, antd용 헬퍼·허용 경고 목록 삭제
+  - ② `e34abee` `styles/theme.ts` → `constants/colors.ts` (팀·소모임 색 값·순서 그대로, 로직 층은 가져오는 경로만)
+  - ③ `7780651` 팀·합주 context → `stores/selection`(Zustand), `useDrawerContext` 별칭 삭제. 내용은 그대로 들고 있다 (id만 두면 미루기·수정 직후 잠깐 이전 값이 보여서)
+  - ④ `f4c30d7` 디렉터리 재구성: `app/`·`features/`·`components/(ui·sheet·layout)`, 케밥 표기, 52개 파일 `git mv`
+  - ⑤ 문서: `docs/DIRECTORY_STRUCTURE.md`(새로), `CLAUDE.md`, `MODERNIZATION.md` 6·8·9번 ✅, ISSUES V1·V3·V4·V5·V8·E4·F9·F11·P3·P5 ✅
+- 확인: 단계마다 Playwright로 전후 스크린샷 21장(390px 밝은·어두운, 1280px × 메인·팀 정보·합주 잡기 달력·팀 추가·공지·날적이·설정, API는 모두 가짜 응답) 픽셀 비교 0 (팀 추가의 팀 이름 예시는 무작위라 제외). 1280px 메인은 팀 목록 높이 애니메이션 도중에 찍히면 차이가 나 대기 시간을 늘려 확인
+- 테스트: context 테스트 → `stores/drawer.test`·`stores/selection.test`, OkButton 테스트 삭제 (226 → 223)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 223/223 / `pnpm lint` → **에러 0·경고 0** / `pnpm format:check` ✅ / `pnpm build` ✅ (JS 883kB → 835kB, gzip 283 → 265kB)
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -1277,9 +1292,9 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 | ~~React 19 (+ `@ant-design/v5-patch-for-react-19`)~~ | ~~React 18~~ | ✅ 완료 (2026-11-19) |
 | ~~Zod~~ | ~~수동 응답 정제~~ | ✅ 3단계 (항목 단위 응답 검증) |
 | ~~TanStack Query~~ | ~~`context/fetch` (`fetchData`, `xxxExists` 사전 확인)~~ | ✅ 3단계 |
-| Zustand | ~~`context/drawer`~~ ✅ 3-9 / `context/team`·`ensemble`은 Zustand가 아니라 폼 로컬 상태로 | View 개편 |
-| Tailwind CSS v4 | styled-components | View 개편 (V-1에서 도입, 기능 단계마다 대체) |
-| shadcn/ui | antd (`PinInput` → input-otp), **알림 기능 새로 추가**(Sonner, 기존 `useMessage`는 3-6 폐기 때 삭제) | View 개편 |
+| ~~Zustand~~ | ~~`context/drawer`·`team`·`ensemble`~~ | ✅ 3-9 · V-6 |
+| ~~Tailwind CSS v4~~ | ~~styled-components~~ | ✅ V-1 도입, V-6 제거 완료 |
+| ~~shadcn/ui~~ | ~~antd~~ (`PinInput` → input-otp, 알림은 Sonner) | ✅ V-1 도입, V-6 제거 완료 |
 | ~~React Compiler~~ | ~~수동 `useCallback`/`useMemo`~~ | ✅ V-1 (2026-11-23) |
 
 ### 환경
@@ -1289,4 +1304,4 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 1. ~~2단계 TS 전환~~ ✅ 완료
 2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)
 3. ~~3단계 내부 로직 개선~~ ✅ 완료 (2026-11-23)
-4. View 개편: 계획 `docs/archive/VIEW_REDESIGN_PLAN.md` (V-0~V-4 ✅, V-5 공지 진행 중)
+4. View 개편: 계획 `docs/archive/VIEW_REDESIGN_PLAN.md` (V-0~V-6 ✅, 다음은 V-7 마무리. 디렉터리 구조: `docs/DIRECTORY_STRUCTURE.md`)

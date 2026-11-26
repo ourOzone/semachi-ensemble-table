@@ -76,7 +76,7 @@ CRA에는 ESLint가 내장돼 있었는데, Vite로 옮기면서 **린트가 완
 적용 방향: 리소스별 query로 분리하고, mutation 후 해당 데이터만 invalidate한다. 삭제된 리소스(404)는 사전 확인 요청 대신 mutation 에러로 처리한다.
 구체적인 query·mutation 설계는 `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`의 "목표 아키텍처".
 
-### 6. 클라이언트 상태: Zustand ✅ Drawer 상태만 적용 (3-9) / team·ensemble은 View 개편 때 폼 로컬 상태로
+### 6. 클라이언트 상태: Zustand ✅ 적용 완료 (Drawer 3-9, 폼 입력은 Drawer 로컬 상태 V-2~V-5, 보고 있는 팀·합주 V-6)
 
 - 각 Provider가 `value={{...}}`를 매번 새 객체로 넘겨서, **팀 이름 입력 한 글자마다 TeamContext를 구독하는 컴포넌트 전체가 다시 렌더링된다.**
 - `orgXxx` 상태 복제 패턴(수정 취소 시 복원용)은 store 안에서 "draft와 원본"으로 표현한다.
@@ -104,9 +104,9 @@ Zod 스키마로 응답을 parse하면서 `_id → id` 같은 변환도 같이 �
 
 ### View 개편 체크리스트 (3단계에서 넘긴 일) → `docs/archive/VIEW_REDESIGN_PLAN.md`
 
-### 8. 스타일링: Tailwind CSS v4 🔄 도입 (V-1, 2026-11-23), 기능 단계마다 styled-components 대체 중 → `docs/archive/VIEW_REDESIGN_PLAN.md`
+### 8. 스타일링: Tailwind CSS v4 ✅ 적용 완료 (V-1 도입, V-6에 styled-components 제거, 2026-11-26) → `docs/archive/VIEW_REDESIGN_PLAN.md`
 
-### 9. UI 라이브러리: shadcn/ui 🔄 도입 (V-1, 2026-11-23: Drawer·Sonner·Button), 기능 단계마다 antd 대체 중 → `docs/archive/VIEW_REDESIGN_PLAN.md`
+### 9. UI 라이브러리: shadcn/ui ✅ 적용 완료 (V-1 도입, V-6에 antd 제거, 2026-11-26) → `docs/archive/VIEW_REDESIGN_PLAN.md`
 
 ### 10. React 19 ✅ 적용 완료 (2026-11-19) / React Compiler ✅ V-1에서 적용 (2026-11-23, Babel판 1.0)
 

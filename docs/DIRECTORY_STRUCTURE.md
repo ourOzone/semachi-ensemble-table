@@ -48,7 +48,10 @@ src/
   - 윈도우는 대소문자만 다른 이름 변경을 알아채지 못한다. 대소문자만 바꿀 때는 `git mv a.tsx tmp.tsx` → `git mv tmp.tsx a-b.tsx` 두 단계로.
 - **테스트는 대상 파일 옆에** `*.test.ts(x)`.
 - **가져오기:** `src` 안은 `@/` 경로, 같은 폴더는 `./`. 폴더마다 `index.ts`로 다시 내보내기(배럴)는 만들지 않는다 (Vite 개발 서버가 느려지고 순환 참조가 생기기 쉽다).
-- **기능끼리 가져오기:** 되도록 피하고, 필요하면 그 파일을 직접 가져온다. 지금 있는 것: 팀 정보 → 합주 잡기 열기(`schedule/add-ensemble-store`), 합주판 카드 → 팀 목록(`teams/teams`).
+- **기능끼리 가져오기:** 되도록 피하고, 필요하면 그 파일을 직접 가져온다. 지금 있는 것:
+  - 합주판 카드 → 팀 목록 (`schedule/schedule-card` → `teams/teams`)
+  - 팀 → 합주 잡기 (`teams/teams`·`team-info-drawer`·`event-info-drawer` → `schedule/add-ensemble-store`·`add-ensemble-drawer`)
+  - 설정 → 합주판 보기 방식 (`settings/settings-drawer` → `schedule/board-view-store`)
 - **로직 층(`api`·`queries`·`lib`·`types`·`stores`)은 화면(`features`·`components`)을 가져오지 않는다.**
 
 ## 이렇게 나눈 이유

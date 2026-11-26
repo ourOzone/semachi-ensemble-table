@@ -42,9 +42,9 @@
 | F6 | 🟡 | 합주 수정 PIN 단계의 네트워크 오류가 `console.error`로만 처리되어 사용자에게 알림이 없다 | `UpdateEnsembleDrawer1.tsx` | 코드 | View (PIN 단계 Drawer). 현재는 알림 기능 자체가 없음(V6). ✅ 15차 PIN 단계 알림, 31차 옛 수정 Drawer 모두 삭제 |
 | F7 | 🟡 | 반복 합주의 "다음 날짜"가 오늘·다른 요일로 재계산되면 자정이 아니라 **현재 시각**이 붙는다. 이 값으로 미루기를 하면 시각이 붙은 날짜가 서버에 저장된다 | `context/fetch.tsx` → `lib/board` | 재현 (characterization test로 고정) | ✅ 3-3 (2026-11-20). 다시 계산한 날짜는 그날 0시 |
 | F8 | 🟡 | 팀 목록에 없는 팀의 합주는 `teamColor`가 `-1`이 되어 그대로 CSS 배경색 값이 된다 (팀 삭제는 합주도 지우므로 드묾) | `context/fetch.tsx` → `lib/board`, `board/index.tsx` | 재현 (characterization test) | ✅ 3-3 (2026-11-20). `theme.blueGray`로 표시, 타입도 `string`으로 |
-| F9 | 🟡 | `useCallback` 의존성 누락 31건(`exhaustive-deps`). 예: 공지·한마디의 `handleClickDelete`는 deps가 `[]`라 첫 렌더링의 함수를 계속 참조한다. 지금은 참조하는 값들이 대부분 고정이라 눈에 띄는 오동작은 확인하지 못함 | 여러 곳 | 린트 | 컨테이너·App: 3-5~3-9 ✅ 3단계에서 해소 (App 2건 3-5, 컨테이너 4개 3-7·3-8, deps `[]`였던 `handleClickDelete` 포함). 31건 → 16건, **남은 16건은 모두 Drawer** → View |
+| F9 | ✅ | `useCallback` 의존성 누락 31건(`exhaustive-deps`). 예: 공지·한마디의 `handleClickDelete`는 deps가 `[]`라 첫 렌더링의 함수를 계속 참조한다. 지금은 참조하는 값들이 대부분 고정이라 눈에 띄는 오동작은 확인하지 못함 | 여러 곳 | 린트 | 컨테이너·App: 3-5~3-9 ✅ 3단계에서 해소 (App 2건 3-5, 컨테이너 4개 3-7·3-8, deps `[]`였던 `handleClickDelete` 포함). 31건 → 16건, **남은 16건은 모두 Drawer** → View ✅ V-6: 옛 Drawer가 모두 사라져 린트 0건 |
 | F10 | 🟡 | 합주 정보 Drawer가 `handleSkip`으로 prop을 받지만 부모는 `handleSkipEnsemble`로 넘겨 항상 `undefined`. 실제로 쓰이지 않아 동작 영향 없음 | `EnsembleInfoDrawer.tsx` | 코드 | ✅ V-2 8차: 옛 합주 정보 Drawer 삭제 (새 Drawer는 `handleSkipEnsemble`을 그대로 받음) |
-| F11 | ⚪ | 쓰이지 않는 prop·인자: `NoticeDrawer`의 `setId`, 공지 추가의 `pin` 인자(부모가 버림), `Header`의 `scrollPosition`, Input에 없는 `controls={false}`(8곳) | 여러 곳 | 코드 (타입 주석으로 표시) | View 공지 쪽(`setId`·`pin` 인자) ✅ V-5 1차 (옛 공지 Drawer 삭제) |
+| F11 | ✅ | 쓰이지 않는 prop·인자: `NoticeDrawer`의 `setId`, 공지 추가의 `pin` 인자(부모가 버림), `Header`의 `scrollPosition`, Input에 없는 `controls={false}`(8곳) | 여러 곳 | 코드 (타입 주석으로 표시) | View 공지 쪽(`setId`·`pin` 인자) ✅ V-5 1차 (옛 공지 Drawer 삭제) ✅ V-6: 남은 곳(옛 Header의 `scrollPosition`, `controls={false}`) 모두 옛 코드와 함께 사라짐 |
 
 ## 3. 구조 · 성능 (3단계 리팩터링 대상)
 
@@ -52,9 +52,9 @@
 |---|---|---|---|
 | P1 | 🟡 | `fetchData`가 4개 API를 순서대로 기다린다(병렬 아님). 무엇이든 하나 바뀌면 전체를 다시 불러온다 | ✅ 병렬 조회 3-5 (2026-11-20). "하나 바뀌면 전체를 다시 불러옴": ✅ 3-7(공지·한마디)·3-8(팀·합주) — 변경마다 영향을 받는 목록만 다시 불러온다. 임시 `useRefetchAll` 삭제 |
 | P2 | 🟡 | 거의 모든 변경 전에 `xxxExists`로 존재 확인 요청을 한 번 더 보낸다 (PIN 입력·버튼 클릭마다 중복) | 404를 mutation 에러로 처리. 공지·한마디 ✅ 3-7 (삭제 흐름의 존재 확인 3회 → 1회), 팀·합주 ✅ 3-8 (팀·합주 클릭 시점과 수정·삭제·미루기 직전 확인 제거, 미루기 5회 → 2회·팀 수정 4회 → 2회). 합주 추가의 팀 확인(B4)과 PIN Drawer 안의 확인은 유지 → View·B1 대응 |
-| P3 | 🟡 | Context Provider의 `value`가 매 렌더링 새 객체라, 입력 한 글자마다 구독하는 컴포넌트 전체가 다시 렌더링된다 | View (입력값이 폼 로컬 상태로 이동). Drawer 상태는 ✅ 3-9에서 Zustand (`stores/drawer`, App은 열린 Drawer 스택만 구독) |
+| P3 | ✅ | Context Provider의 `value`가 매 렌더링 새 객체라, 입력 한 글자마다 구독하는 컴포넌트 전체가 다시 렌더링된다 | View (입력값이 폼 로컬 상태로 이동). Drawer 상태는 ✅ 3-9에서 Zustand (`stores/drawer`, App은 열린 Drawer 스택만 구독) ✅ V-6: 팀·합주 context → Zustand store(`stores/selection`), Provider 없음 |
 | P4 | 🟡 | `useMessage`가 렌더링마다 새 객체를 반환해 이를 의존하는 `useCallback`이 사실상 무의미. 거의 같은 알림 함수 4개가 반복 | ✅ 해소: 알림 기능 삭제 (2026-11-23, 3-6 폐기) |
-| P5 | 🟡 | 수정 취소 복원용 `orgXxx` 상태를 따로 복제해 관리 (team·ensemble context) | View (단일 Drawer 폼의 초기값으로 대체) |
+| P5 | ✅ | 수정 취소 복원용 `orgXxx` 상태를 따로 복제해 관리 (team·ensemble context) | View (단일 Drawer 폼의 초기값으로 대체) ✅ V-3 13차·V-6: `orgXxx` 복제 없음 (수정 Drawer는 지금 값을 초기값으로) |
 | P6 | 🟡 | 서버 응답을 런타임 검증 없이 사용 (Zod 스키마는 정의만 됨) | ✅ 3-4 (2026-11-20). 목록은 항목 단위 검증(`getList`), 존재 확인·PIN 확인은 boolean 검증 |
 | P9 | ⚪ | 실제 서버 데이터에 `endTime`이 `null`인 합주가 1건 있다 (반복 합주, `startTime` 26, `type` '일회성'·`due` 2025-09-13으로 레거시 필드도 서로 맞지 않음). 검증 전에도 칸이 만들어지지 않아 화면에 보이지 않았다 | 3-4에서 해당 항목만 제외하고 콘솔 경고. DB 정리 여부는 별도 판단 |
 | P7 | 🟡 | `noUncheckedIndexedAccess`를 켜면 타입 에러 21개 (teams 9, context 6, board 6). 대부분 배열 인덱스 접근. 3-2 이후 19개 (lib/board 6, board/index 1, teams/index 2, Drawer 10) | ✅ 3-10 (2026-11-23). 로직은 가드·스키마 범위 검증(합주 요일 0~6·시간칸 0~29·시작 ≤ 끝), Drawer 10곳은 `!` + 근거 주석 |
@@ -64,11 +64,11 @@
 
 | ID | 심각도 | 내용 |
 |---|---|---|
-| V1 | 🟡 | styled-components 커스텀 props가 DOM으로 새어 React 경고 발생 (`scrollPosition`, `isEvent`, `openedDrawers`, `row`, `idx`, `gray`, `teamColor`, `visible`, `error`, `controls` 등). App 테스트에 기존 경고로 허용 중 |
+| V1 | ✅ | styled-components 커스텀 props가 DOM으로 새어 React 경고 발생 (`scrollPosition`, `isEvent`, `openedDrawers`, `row`, `idx`, `gray`, `teamColor`, `visible`, `error`, `controls` 등). App 테스트에 기존 경고로 허용 중 ✅ V-6 (2026-11-26): styled-components 제거로 해소, App 테스트의 허용 경고 목록 비움 |
 | V2 | ✅ | 리스트 key 누락: ~~`TeamInfoDrawer`의 key 없는 Fragment map~~(V-3 4차, 새 팀 정보 Drawer로 해소), ~~완료 화면 `Result`의 `extra={[<OkButton />]}` 2곳(`jsx-key` 린트 에러)~~ (V-2 21차 합주 추가·V-3 10차 팀 추가 완료 화면 삭제로 해소) |
-| V3 | 🟡 | effect 안에서 바로 setState (`set-state-in-effect` 린트 에러 3건): `Drawer`의 창 너비, 팀 이름 입력의 무작위 예시 이름 2곳 → 팀 추가 쪽은 V-3 10차에 해소(새 Drawer는 처음 한 번 `useState` 초기값), 남은 2건: `common/Drawer`, 옛 `UpdateTeamDrawer3` |
-| V4 | 🟡 | antd Drawer의 deprecated prop `maskStyle` 사용 |
-| V5 | 🟡 | JS 번들 936kB (500kB 경고). 대부분 antd. 2단계 중 +79kB는 React 19가 주원인으로 판단. 3단계 완료 1,039kB, V-1 후 1,091kB(gzip 340kB, Sonner·lucide·React Compiler 런타임). antd 제거(V-6) 후 다시 측정 |
+| V3 | ✅ | effect 안에서 바로 setState (`set-state-in-effect` 린트 에러 3건): `Drawer`의 창 너비, 팀 이름 입력의 무작위 예시 이름 2곳 → 팀 추가 쪽은 V-3 10차에 해소(새 Drawer는 처음 한 번 `useState` 초기값), 남은 2건: `common/Drawer`, 옛 `UpdateTeamDrawer3` ✅ V-6: 남은 `common/Drawer` 삭제로 해소 (옛 `UpdateTeamDrawer3`는 V-3 13차에 삭제) |
+| V4 | ✅ | antd Drawer의 deprecated prop `maskStyle` 사용 ✅ V-6: antd 제거로 해소 |
+| V5 | ✅ | JS 번들 936kB (500kB 경고). 대부분 antd. 2단계 중 +79kB는 React 19가 주원인으로 판단. 3단계 완료 1,039kB, V-1 후 1,091kB(gzip 340kB, Sonner·lucide·React Compiler 런타임). antd 제거(V-6) 후 다시 측정 ✅ V-6: antd·styled-components 제거 → JS 835kB (gzip 265kB). 500kB 경고는 남음 (React·TanStack·Radix·Zod 등, 필요하면 V-7에서 나누기 검토) |
 | V6 | 🟡 | **알림 기능이 없다.** 3-6(알림 중앙화)을 폐기하면서 기존 알림(`useMessage`)을 삭제했다(2026-11-23). 성공·실패·"이미 삭제됨"을 사용자에게 알리지 않는다 → View 개편 때 Sonner 등으로 새로 추가 (`docs/archive/VIEW_REDESIGN_PLAN.md`). 🔄 V-1 (2026-11-23): Sonner `<Toaster />`(위쪽 가운데)와 **조회 실패 알림** 추가 (`lib/notify`, 여러 조회가 동시에 실패해도 하나). 변경의 성공·실패·"이미 삭제됨" 알림은 기능 단계(V-2~)에서 연결. 🔄 V-2 15차 (2026-11-24): 합주 변경(수정·미루기·바로 하기·반복으로 바꾸기) 실패·이미 삭제됨, 합주 삭제 성공·실패, PIN 확인 실패 알림 연결. 🔄 V-2 21차 (2026-11-24): 합주 추가 성공("합주를 잡았어요." + 팀·날짜·시간)·실패·팀 이미 삭제됨 알림 연결 🔄 V-2·V-3 (2026-11-26): 합주·팀의 모든 변경(잡기·수정·삭제·미루기·바로 하기·반복으로 바꾸기, 팀 추가·수정·삭제·고정)에 성공·실패·"이미 삭제됨" 알림, 존재 확인 실패는 404와 서버 오류를 나눠 알림 (V-3 17차). **남은 것: 공지·한마디(V-4·V-5, 계획 문서 "V-4·V-5에서 할 일"에 문구 정리)** 🔄 V-4 1차 (2026-11-26): 한마디 남기기·삭제 알림(가득 참 포함), X를 누를 때 존재 확인 404/서버 오류 구분. **남은 것: 공지(V-5)** ✅ V-5 1차 (2026-11-26): 공지 올리기·삭제 알림까지 적용, 모든 변경에 알림 |
 | V7 | ⚪ | 공용 Drawer가 열림 애니메이션이 끝난 뒤 첫 입력칸으로 포커스를 옮긴다(`afterOpenChange`). 그 전에 다른 칸에 입력 중이면 포커스가 되돌아간다 (팀 추가 PIN 단계의 "한 번 더" 칸, 한마디·공지 등록의 PIN 칸도 같은 구조). 사람이 겪을 가능성은 낮음. 테스트는 포커스가 옮겨진 뒤 입력하도록 수정 ✅ V-5 1차 (2026-11-26): 옛 공용 Drawer를 쓰는 곳이 없어져 해당 없음 (파일 삭제는 V-6) |
 | V9 | ⚪ | **반복 합주의 "이번 주 쉼"을 정확히 알 수 없다 (데이터 모델 한계, V-2 캘린더).** 서버에는 반복 합주의 "다음 날짜"만 있고, 미루기는 그 날짜를 7일 뒤로 옮긴다. 그래서 ① 시작일이 미래인 반복 합주도 시작 직전 주에 "쉼"으로 보이고 ② 두 주 이상 연속으로 미루면 마지막 주만 "쉼", 그 전 주는 아예 안 보인다. 지금 화면(이번 주만)에서도 ①은 회색으로 보였다. 정확히 하려면 백엔드에 "시작일"과 "건너뛴 날짜 목록"을 따로 저장해야 한다 → 백엔드 변경 필요, 사용자 판단 대기. **8차(합주 정보 Drawer, 미루기 취소)**: ②는 "미루지 않았다면 다음 합주였을 날짜"(오늘부터 처음 오는 그 요일)부터 다음 합주 전까지를 모두 "쉼"으로 보도록 바꿔 해소. 대신 ①은 시작 전 모든 주가 "쉼"으로 보이고, 정보 Drawer에 "미루기 취소"가 나온다(누르면 바로 시작). 적용 시점 실제 데이터: 반복 10개 중 1주 앞 2개, 2주 이상 0개. **9차**: 미래로 잡은 일회성 합주도 그 날짜 전 주들을 "쉼"(점선)으로 표시 (사용자 요청). ①과 미룸이 정보 Drawer에서 같은 문구("쉬어요"·"미루기 취소")로 보이는 문제는 **10차에서 두 경우 모두에 맞는 문구로 바꿈** ("…엔 합주가 없어요", "…부터 바로 하기", 사용자 선택 A안). 정확히 구분하려면 여전히 백엔드 변경(시작일·건너뛴 날짜 필드)이 필요하다. `due` 필드는 반복 종료일 기능용으로 남겨 두므로 이 용도로 쓰지 않는다 |
@@ -77,7 +77,7 @@
 | V12 | ⚪ | **아이폰 사파리 26: 키보드 위 막대(^ v 완료) 쪽에는 고정(position: fixed) 요소가 그려지지 않고 페이지 내용이 비친다 (V-2 18차).** 아래에서 올라오는 Drawer·어둡게 하는 덮개 모두 그 띠를 덮지 못한다. 키보드를 여는 단계(PIN)에서는 페이지 문서 안에 흰 판을 깔아 덮는다 (`EnsembleInfoDrawer`의 `KeyboardCover`). 앞으로 입력칸이 있는 Drawer(합주 추가 등)도 같은 처리가 필요하다 (흰 판 + 뒤 페이지 고정 `lib/pageScrollLock`: 20차. 흰 판만 깔면 사파리의 입력칸 스크롤에 공간이 생겨 뒤 페이지가 계속 내려가고, 스크롤된 뒤 되돌리면 깜빡인다). 근거: 한 개발자의 실험 글(https://1ar.io/updates/safari-26-liquid-glass-web/), Apple 공식 문서 없음 🔄 V-3 (2026-11-26): 처리를 `schedule/keyboardSheet`(`useKeyboardSheet`)로 모아 합주 정보·팀 정보의 PIN 단계, 팀 추가·수정(글자 입력)에 적용, 사용자 실기기 확인. 남은 것: 공지·한마디 입력 Drawer(V-4·V-5) 🔄 V-4 1차: 한마디 남기기·삭제 Drawer에 적용. 남은 것: 공지(V-5) ✅ V-5 1차: 공지 Drawer에도 적용, 입력칸이 있는 모든 Drawer에 적용 |
 | V13 | ✅ | **반복 종료 날짜(`due`)가 지난 주에도 합주판에 반복 합주가 그대로 보이고, 겹침(최대 4개) 계산에도 들어간다 (V-2 32차에 발견).** 23차에 반복 종료 날짜를 만들 때 실제 데이터의 지난 `due` 1건(옛 데이터)이 있어 숨기지 않았다. 그런데 앞으로 잡는 합주(예: 12/20 종료)도 12/23·12/30… 주에 계속 보인다. 서버가 지난 `due`를 걸러도(백엔드 전달) 미래 주는 프론트가 거를 일이다. 제안: `getRepeatEnd`가 있는 반복 합주는 종료 날짜 뒤 날짜에서 숨기고(`getOccurrence`), `findOverlapLimit`도 세지 않음. **✅ V-2 마무리 (2026-11-25, 사용자 승인):** 반복 합주는 종료 날짜 뒤 날짜에서 보이지 않음(`getOccurrence`, `lib/ensemble`의 `parseRepeatEnd`), 겹침 계산(`findOverlapLimit`·`isSlotFull`)도 같은 기준. 이미 지난 종료 날짜의 옛 데이터 1건도 같은 규칙으로 숨겨진다 (사용자 판단: 실제로도 보이지 않았고, 종료 뒤를 숨기면 문제없음) |
 | V14 | ✅ | **아이폰 사파리 26: 아래 도구 막대 색을 화면 아래 끝의 고정 요소에서 가져온다 (Apple 문서 없음, 개발자들의 실기기 확인).** 새 Drawer가 열려 있을 때 막대가 팀 색으로 물드는 일이 반복됐다 (V-2 9차: Drawer 바탕이 팀 색, V-3 5·6차: shadcn의 `scroll-fade` 마스크가 스크롤 영역에 걸림). → Drawer 아래 끝·스크롤 영역 바탕에 팀 색 금지, 마스크 대신 바탕색 그러데이션(`edge-fade`), 아이폰에서 새 Drawer가 열려 있는 동안 화면 아래 끝에 Drawer 바탕색 띠(`layout/ToolbarTint`, 가장 높은 z-index). 참고: https://jahir.dev/blog/safari-toolbar , https://1ar.io/updates/safari-26-liquid-glass-web/ (V-3 7차 처리, 사용자 실기기 확인 ✅) |
-| V8 | ⚪ | **새 코드·옛 코드 공존 기간의 전역 스타일 (V-1, 2026-11-23).** ① 옛 전역 스타일(`src/styles/legacy.css`, 이전 `GlobalStyle`)의 `* { font-size: 16px(모바일 12·10px); font-family: Regular }`가 새 요소에도 적용된다 → ✅ V-2: legacy 요소 규칙을 `.ui` 밖에만 적용. 단 html 글자 크기는 그대로라 새 코드의 간격·글자 크기를 px로 정의 (VIEW_REDESIGN_PLAN "공존 기간 규칙"). ② shadcn 기본 스타일 `* { outline-color: ring }`으로 antd Drawer의 포커스 외곽선 색이 검정 → 연회색으로 바뀜 (PC 폭에서 Drawer 왼쪽 가장자리 1px, 화면 비교에서 확인). V-6에서 legacy 레이어·antd 제거 시 해소 |
+| V8 | ✅ | **새 코드·옛 코드 공존 기간의 전역 스타일 (V-1, 2026-11-23).** ① 옛 전역 스타일(`src/styles/legacy.css`, 이전 `GlobalStyle`)의 `* { font-size: 16px(모바일 12·10px); font-family: Regular }`가 새 요소에도 적용된다 → ✅ V-2: legacy 요소 규칙을 `.ui` 밖에만 적용. 단 html 글자 크기는 그대로라 새 코드의 간격·글자 크기를 px로 정의 (VIEW_REDESIGN_PLAN "공존 기간 규칙"). ② shadcn 기본 스타일 `* { outline-color: ring }`으로 antd Drawer의 포커스 외곽선 색이 검정 → 연회색으로 바뀜 (PC 폭에서 Drawer 왼쪽 가장자리 1px, 화면 비교에서 확인). V-6에서 legacy 레이어·antd 제거 시 해소 ✅ V-6: `legacy.css`·`legacy`/`antd` 레이어 제거로 공존 기간 끝. 간격·글자 크기 토큰을 Tailwind 기본(rem)으로 |
 
 ## 5. 환경 · 테스트
 
@@ -86,14 +86,16 @@
 | E1 | 🟡 | 로컬 Node 24.14.0 < jsdom 31 하위 의존성 요구 `^24.15.0` → 설치 시 engine 경고 (동작 문제 없음). Node 24 최신으로 업데이트 권장 |
 | E2 | 🟡 | 테스트 커버리지 구문 87%·분기 77%. 미실행 부분은 대부분 네트워크 오류·"이미 삭제됨" catch 경로, Drawer 닫기 초기화, Enter 키 제출 → ✅ 3단계 완료 시점 구문 91%·분기 81%. View 개편 후에도 남는 층(`api`·`lib`·`queries`·`stores`·`hooks`·`context`·`types`)은 모두 100%. 미실행 부분은 Drawer와 진입점(`index.tsx`) |
 | E3 | 🟡 | `.claude/settings.json`의 권한 허용 목록이 `npm run ...`, `npx vitest ...` 기준이라 pnpm 전환 후 명령과 맞지 않음 → ✅ 3-0에서 pnpm 기준으로 갱신 (2026-11-20) |
-| E4 | ⚪ | 테스트가 antd 내부 구현에 의존하는 부분: 비활성 버튼의 `visibility: hidden`(`findEnabledButton`), Drawer 클래스(`findDrawer`), 달력 셀 `td[title]`. antd 교체 시 함께 수정 |
+| E4 | ✅ | 테스트가 antd 내부 구현에 의존하는 부분: 비활성 버튼의 `visibility: hidden`(`findEnabledButton`), Drawer 클래스(`findDrawer`), 달력 셀 `td[title]`. antd 교체 시 함께 수정 ✅ V-6: `findEnabledButton`·`findDrawer` 삭제 (antd 달력은 V-2에 이미 사라짐) |
 | E5 | ⚪ | jsdom의 XHR이 mock 응답에도 CORS를 검사해, 테스트 페이지 origin을 API origin으로 맞춰 둠 (`vite.config.mts`) |
 | E7 | ⚪ | 새 UI 라이브러리의 테스트 환경 보정 (`src/test/setup.ts`, V-1): ① jsdom에 포인터 캡처 API가 없어 vaul 드래그 처리가 에러 → 빈 구현 ② vaul이 스스로 넣는 열고 닫는 애니메이션 CSS 때문에 jsdom에서 `animationend`가 오지 않아 닫힌 Drawer가 DOM에 남음 → 테스트에서 vaul 애니메이션 끔 ③ Sonner 알림은 모듈 전역 상태라 다음 테스트의 `<Toaster />`에 이전 알림이 다시 그려짐 → 테스트마다 `toast.dismiss()` |
 | E6 | 🟡 | 흐름 테스트가 간헐적으로 실패했다 (`--maxWorkers=4`에서 잘 재현, 2단계부터 있었고 3-5 이후 잦아짐). ✅ 원인 3가지를 테스트 쪽에서 수정 (2026-11-23): ① Board `openEnsembleInfo`가 `findAllByText`의 두 번째 요소를 클릭 → 합주표가 늦게 그려지면 `undefined` 클릭 ② Teams `openTeamInfo`가 첫 번째 `'테스트밴드'`를 클릭 → 가끔 합주 블록이 잡혀 Drawer가 닫힘 ③ 팀 추가 PIN 단계에서 Drawer의 지연 포커스(V7). 수정 후 기본 3회·`--maxWorkers=4` 4회 모두 통과. 알림 삭제로 렌더링 타이밍도 바뀌어, 각 수정의 기여도를 완전히 분리하지는 못함. 3-7에서 한마디·공지 등록 테스트가 드물게 실패(2/9회) → 같은 구조(③)로 보고 포커스를 기다리도록 수정. 실패 시점 DOM으로 확인하지는 못했다(재현 12회 중 0회). 수정 후 6회 통과 |
 
 ---
 
-## 린트 현황 (3단계 완료 시점: 에러 5·경고 42, 2단계 완료 시점 에러 5·경고 62. V-1 후 같음, V-2 2차 후 에러 5·경고 41: 헤더를 새로 만들며 쓰지 않던 import 경고 1건 사라짐. 새 코드 0건)
+## 린트 현황 — **V-6 완료 (2026-11-26): 에러 0·경고 0** (옛 View 코드가 모두 사라짐). 아래는 기록용
+
+### 이전 (3단계 완료 시점: 에러 5·경고 42, 2단계 완료 시점 에러 5·경고 62. V-1 후 같음, V-2 2차 후 에러 5·경고 41: 헤더를 새로 만들며 쓰지 않던 import 경고 1건 사라짐. 새 코드 0건)
 
 남은 지적은 모두 View 쪽(Drawer·layout·common) 코드다. 로직 층(`api`·`lib`·`queries`·`stores`·`hooks`·`context`·컨테이너·App)은 0건.
 

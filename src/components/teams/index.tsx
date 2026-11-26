@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 import type { Team } from '@/types';
 import { isNotFound } from '@/api';
 import { teamExists } from '@/api/team';
-import { useTeamContext, useDrawerContext } from '@/context';
+import { useDrawerStore } from '@/stores/drawer';
+import { useTeamSelectionStore } from '@/stores/selection';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ensemblesQueryOptions, useAddEnsemble } from '@/queries/ensembles';
 import { findOverlapLimit } from '@/lib/calendar';
@@ -44,8 +45,8 @@ const Teams = () => {
     const { mutateAsync: deleteTeamAsync } = useDeleteTeam();
     const { mutateAsync: addEnsembleAsync } = useAddEnsemble();
     const queryClient = useQueryClient();
-    const { setTeamStates } = useTeamContext();
-    const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
+    const { setTeamStates } = useTeamSelectionStore();
+    const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerStore();
     const pinnedIds = usePinnedTeamsStore((state) => state.ids);
 
     // 이미 삭제된 팀을 만났을 때: 상태·Drawer 초기화 후 팀·합주 목록을 다시 불러온다

@@ -17,7 +17,7 @@ import {
 import { openAddEnsemble } from '@/components/schedule/addEnsembleStore';
 import { scrollFadeRef } from '@/components/ui/scroll-fade';
 import { eventIds } from '@/constants';
-import { useTeamContext } from '@/context';
+import { useTeamSelectionStore } from '@/stores/selection';
 import { useDrawerStore } from '@/stores/drawer';
 import { defaultTeamColor, eventColors } from '@/constants/colors';
 
@@ -33,7 +33,7 @@ const name2FullName: Record<string, string> = {
 };
 
 const EventInfoDrawer = () => {
-    const { id, name, setTeamStates } = useTeamContext();
+    const { id, name, setTeamStates } = useTeamSelectionStore();
     const openedDrawers = useDrawerStore((state) => state.openedDrawers);
     const closeDrawer = useDrawerStore((state) => state.closeDrawer);
     const open = openedDrawers[openedDrawers.length - 1] === 'eventInfo';

@@ -25,7 +25,7 @@ import type {
     HandleDeleteEnsemble,
     HandleSkipEnsemble,
 } from '@/components/board/types';
-import { useTeamContext, useEnsembleContext } from '@/context';
+import { useEnsembleSelectionStore, useTeamSelectionStore } from '@/stores/selection';
 import { days, eventIds } from '@/constants';
 import { buildColorMap } from '@/lib/board';
 import { getEnsembleSchedule, isSlotFull } from '@/lib/calendar';
@@ -136,8 +136,9 @@ const EnsembleInfoDrawer = ({
 }: EnsembleInfoDrawerProps) => {
     const teams = useTeams();
     const { data: ensembleList } = useQuery(ensemblesQueryOptions);
-    const { id: teamId, name, setTeamStates } = useTeamContext();
-    const { id, repeat, nextDate, startTime, endTime, setEnsembleStates } = useEnsembleContext();
+    const { id: teamId, name, setTeamStates } = useTeamSelectionStore();
+    const { id, repeat, nextDate, startTime, endTime, setEnsembleStates } =
+        useEnsembleSelectionStore();
     const openedDrawers = useDrawerStore((state) => state.openedDrawers);
     const closeDrawer = useDrawerStore((state) => state.closeDrawer);
 

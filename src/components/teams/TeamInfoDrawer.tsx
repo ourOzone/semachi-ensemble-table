@@ -21,7 +21,7 @@ import { formatDate } from '@/components/schedule/drawerParts';
 import PinStep from '@/components/schedule/PinStep';
 import { useKeyboardSheet } from '@/components/schedule/keyboardSheet';
 import { scrollFadeRef } from '@/components/ui/scroll-fade';
-import { useTeamContext } from '@/context';
+import { useTeamSelectionStore } from '@/stores/selection';
 import { buildColorMap } from '@/lib/board';
 import { getRepeatEnd } from '@/lib/ensemble';
 import { cn } from '@/lib/utils';
@@ -65,7 +65,7 @@ interface ShownTeam {
 
 const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerProps) => {
     const teams = useTeams();
-    const { id, type, name, desc, setTeamStates } = useTeamContext();
+    const { id, type, name, desc, setTeamStates } = useTeamSelectionStore();
     const openedDrawers = useDrawerStore((state) => state.openedDrawers);
     // 팀 고정 (V-3 11차): 메인 화면 팀 목록 맨 앞, 이 브라우저에 기억
     const pinnedIds = usePinnedTeamsStore((state) => state.ids);

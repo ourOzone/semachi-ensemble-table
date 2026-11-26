@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 import { isNotFound } from '@/api';
 import { ensembleExists } from '@/api/ensemble';
-import { useTeamContext, useEnsembleContext, useDrawerContext } from '@/context';
+import { useDrawerStore } from '@/stores/drawer';
+import { useEnsembleSelectionStore, useTeamSelectionStore } from '@/stores/selection';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     ensemblesQueryOptions,
@@ -57,9 +58,9 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
     const { mutateAsync: updateEnsembleAsync } = useUpdateEnsemble();
     const { mutateAsync: deleteEnsembleAsync } = useDeleteEnsemble();
     const queryClient = useQueryClient();
-    const { setTeamStates } = useTeamContext();
-    const { setEnsembleStates, setNextDate, setRepeat } = useEnsembleContext();
-    const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerContext();
+    const { setTeamStates } = useTeamSelectionStore();
+    const { setEnsembleStates, setNextDate, setRepeat } = useEnsembleSelectionStore();
+    const { setOpenedDrawers, openDrawer, closeAllDrawers } = useDrawerStore();
 
     // 이미 삭제된 합주를 만났을 때: 상태·Drawer 초기화 후 합주 목록을 다시 불러온다
     const handleEnsembleGone = useCallback(() => {

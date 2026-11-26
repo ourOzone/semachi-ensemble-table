@@ -4,7 +4,6 @@ import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
 import App from '@/App';
 import { Toaster } from '@/components/ui/sonner';
-import { ContextProvider } from '@/context';
 import { createQueryClient } from '@/lib/queryClient';
 
 const rootElement = document.getElementById('root');
@@ -15,10 +14,8 @@ const queryClient = createQueryClient();
 createRoot(rootElement).render(
     <StrictMode>
         <QueryClientProvider client={queryClient}>
-            <ContextProvider>
-                <App />
-                <Toaster />
-            </ContextProvider>
+            <App />
+            <Toaster />
         </QueryClientProvider>
     </StrictMode>,
 );

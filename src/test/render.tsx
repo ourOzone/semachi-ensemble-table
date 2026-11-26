@@ -3,7 +3,6 @@ import { render, type RenderOptions } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import App from '@/App';
 import { Toaster } from '@/components/ui/sonner';
-import { ContextProvider } from '@/context';
 import { createQueryClient } from '@/lib/queryClient';
 
 interface ProvidersProps {
@@ -36,9 +35,5 @@ export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptio
 
 /** 실제 진입점과 같은 Provider 구성으로 App 전체를 렌더링한다 (API는 각 테스트에서 MSW로 모킹) */
 export function renderApp() {
-    return renderWithProviders(
-        <ContextProvider>
-            <App />
-        </ContextProvider>,
-    );
+    return renderWithProviders(<App />);
 }

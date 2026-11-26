@@ -6,6 +6,7 @@ import { useBoardViewStore } from '@/components/schedule/boardViewStore';
 import { useThemeStore } from '@/components/settings/themeStore';
 import { usePinnedTeamsStore } from '@/components/teams/pinnedTeamsStore';
 import { useDrawerStore } from '@/stores/drawer';
+import { useEnsembleSelectionStore, useTeamSelectionStore } from '@/stores/selection';
 import { server } from '@/test/server';
 
 // jsdom에는 matchMedia가 없다. 터치 화면 판별·다크 모드(themeStore)·합주판 이름 표시 폭 등이 쓰므로 최소 구현을 제공한다.
@@ -46,6 +47,9 @@ afterEach(() => {
     server.events.removeAllListeners(); // test/requests.ts의 recordRequests 리스너 정리
     // Zustand store는 모듈 전역이라 테스트끼리 상태가 이어진다 (이전 Context는 렌더링마다 새로 만들어졌다) → 초기 상태로
     useDrawerStore.setState(useDrawerStore.getInitialState(), true);
+    // 지금 보고 있는 팀·합주 (V-6, 이전 context는 렌더링마다 새로 만들어졌다)
+    useTeamSelectionStore.setState(useTeamSelectionStore.getInitialState(), true);
+    useEnsembleSelectionStore.setState(useEnsembleSelectionStore.getInitialState(), true);
     // 합주판 보기 방식도 모듈 전역 상태 + localStorage (26차)
     localStorage.clear();
     useBoardViewStore.setState(useBoardViewStore.getInitialState(), true);

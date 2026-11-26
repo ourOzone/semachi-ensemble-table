@@ -21,7 +21,14 @@ export function slotEndTime(endTime: TimeSlot): [hour: number, minute: number] {
 /** _id를 id로 바꾸고 type·name·desc만 남긴다 (pin은 버린다). 소모임·회의(eventIds)는 뺀다 */
 export function toTeams(teamsRaw: TeamResponse[]): Team[] {
     return teamsRaw
-        .map(({ _id, type, name, desc }) => ({ id: _id, type, name, desc }))
+        .map(({ _id, type, name, desc, due }) => ({
+            id: _id,
+            type,
+            name,
+            desc,
+            // 팀 자동 삭제 날짜 (V-3 10차): 서버가 보낼 때만
+            ...(due !== undefined && { due }),
+        }))
         .filter((team) => !eventIds.includes(team.id));
 }
 

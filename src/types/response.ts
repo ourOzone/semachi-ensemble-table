@@ -11,6 +11,8 @@ export const teamResponseSchema = z.object({
     /** [보컬, 기타, 베이스, 드럼, 키보드, 매니저, 셋리스트] */
     desc: z.array(z.string()),
     publishDate: z.string().optional(),
+    /** 팀 자동 삭제 날짜 (V-3 10차). 아직 백엔드 스키마에 없다: 생기면 그대로 받는다 */
+    due: z.string().optional(),
     /** 백엔드가 그대로 내려주는 값. 앱 내부 타입(Team)으로 옮기지 않는다. */
     pin: z.string().optional(),
 });

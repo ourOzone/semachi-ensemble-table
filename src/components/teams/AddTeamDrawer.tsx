@@ -1,0 +1,484 @@
+import { useState } from 'react';
+import dayjs, { type Dayjs } from 'dayjs';
+import {
+    CalendarX2,
+    ChevronLeft,
+    Globe,
+    Infinity as InfinityIcon,
+    LoaderCircle,
+    School,
+    Users,
+    X,
+} from 'lucide-react';
+import {
+    Drawer,
+    DrawerClose,
+    DrawerContent,
+    DrawerDescription,
+    DrawerTitle,
+} from '@/components/ui/drawer';
+import { scrollFadeRef } from '@/components/ui/scroll-fade';
+import {
+    boxShape,
+    overlayClassName,
+    pressable,
+    scrollAreaClassName,
+    sheetClassName,
+} from '@/components/schedule/drawerParts';
+import { DatePicker, DateToggle, Hint, Section, Segmented } from '@/components/schedule/formParts';
+import { useKeyboardSheet } from '@/components/schedule/keyboardSheet';
+import { PIN_LENGTH, PinSlots } from '@/components/schedule/PinStep';
+import { days, demoNames } from '@/constants';
+import { cn } from '@/lib/utils';
+import { useDrawerStore } from '@/stores/drawer';
+import theme from '@/styles/theme';
+import type { TeamType } from '@/types';
+import { TEAM_DUE_ENABLED } from './teamDue';
+import type { HandleAddTeam } from './types';
+
+// 팀 추가 Drawer (View 개편 V-3 10차). 아래에서 올라오는 Drawer 하나에서 모두 입력한다
+// (이전: 오른쪽에서 쌓이는 옛 Drawer 6단계: 종류 → 이름 → 팀원 → 셋리 → PIN 두 번 → 완료 화면 "팀을 만들었어요").
+// 입력(종류·이름·팀원·셋리스트·자동 삭제) → "다음" → 같은 Drawer 안의 PIN 만들기(한 번 넣고, 확인으로 한 번 더) → 저장.
+// 합주 잡기 Drawer에서 해결한 것들을 그대로 따른다: 스크롤 막대 없이 끝 흐림, 끝에서 튕기지 않음, 아래 끝은 Drawer 바탕,
+// 아이폰 키보드 처리(keyboardSheet), 글자 크기 16px(아이폰이 입력칸을 누를 때 확대하지 않게), 닫히는 동안 내용 유지
+
+/** 팀 종류 (V-3 10차: 4개 → 3개, 서버에 이 문자열 그대로) */
+const TEAM_TYPES = [
+    ['교내 공연', '교내 공연', School],
+    ['외부 공연', '외부 공연', Globe],
+    ['기타 팀', '기타 팀', Users],
+] as const;
+
+const TYPE_HINTS: Record<TeamType, string> = {
+    '교내 공연': '정기공연, 연말공연, 축제, 버스킹 등',
+    '외부 공연': '연합공연, 대외공연, 버스킹 등',
+    '기타 팀': '공연 없는 팀, 기타 일정 등',
+};
+
+/** desc의 앞 6칸 (7번째는 셋리스트). 팀 정보 Drawer와 같은 순서·색 */
+const MEMBER_LABELS = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
+
+/** 글자 수 제한 (옛 Drawer와 같음): 팀 이름 20, 팀원 칸마다 12, 셋리스트 200 */
+const NAME_MAX = 20;
+const MEMBER_MAX = 12;
+const SETLIST_MAX = 200;
+/** 셋리스트 칸 높이: 줄 수만큼 4~10줄 (옛 Drawer와 같음) */
+const SETLIST_MIN_ROWS = 4;
+const SETLIST_MAX_ROWS = 10;
+
+/** 계속 유지를 뜻하는 팀 due (합주의 계속 반복과 같은 값) */
+const NO_TEAM_DUE = '2099-12-31';
+
+/** "12월 21일 월요일" (합주 잡기 Drawer와 같은 모양) */
+const formatLongDate = (date: Dayjs) =>
+    `${date.month() + 1}월 ${date.date()}일 ${days[(date.day() + 6) % 7]}요일`;
+
+interface AddTeamDrawerProps {
+    onSubmit: HandleAddTeam;
+}
+
+const AddTeamDrawer = ({ onSubmit }: AddTeamDrawerProps) => {
+    const openedDrawers = useDrawerStore((state) => state.openedDrawers);
+    const closeDrawer = useDrawerStore((state) => state.closeDrawer);
+    const open = openedDrawers[openedDrawers.length - 1] === 'addTeam';
+
+    // 열 때마다 입력을 새로 시작한다 (session). 닫히는 동안은 마지막 입력이 그대로 보인다
+    const [session, setSession] = useState(0);
+    const [wasOpen, setWasOpen] = useState(false);
+    if (open !== wasOpen) {
+        setWasOpen(open);
+        if (open) setSession((n) => n + 1);
+    }
+
+    // 입력칸이 있어 열려 있는 동안 키보드 처리 (keyboardSheet)
+    const sheet = useKeyboardSheet(open);
+
+    return (
+        <Drawer
+            open={open}
+            onOpenChange={(next) => !next && closeDrawer()}
+            // 키보드 위치 맞추기는 직접 한다 (keyboardSheet)
+            repositionInputs={false}
+        >
+            <DrawerContent
+                className={sheetClassName}
+                style={sheet.style}
+                overlayClassName={overlayClassName}
+                handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-neutral-300"
+            >
+                {session > 0 && <AddTeamForm key={session} onSubmit={onSubmit} />}
+            </DrawerContent>
+            {sheet.cover}
+        </Drawer>
+    );
+};
+
+const AddTeamForm = ({ onSubmit }: AddTeamDrawerProps) => {
+    const [step, setStep] = useState<'form' | 'pin'>('form');
+    const [type, setType] = useState<TeamType | null>(null);
+    const [name, setName] = useState('');
+    // 팀 이름 칸의 예시: 세계적인 록 밴드 중 하나 (열 때마다 바뀜, 옛 Drawer와 같음)
+    const [demoName] = useState(
+        () => demoNames[Math.floor(Math.random() * demoNames.length)] ?? '',
+    );
+    const [members, setMembers] = useState<string[]>(() => MEMBER_LABELS.map(() => ''));
+    const [setlist, setSetlist] = useState('');
+    // 팀 자동 삭제 (적용 예정: TEAM_DUE_ENABLED). 기본은 계속 유지
+    const [hasDue, setHasDue] = useState(false);
+    const [due, setDue] = useState<Dayjs | null>(null);
+    const [dueOpen, setDueOpen] = useState(false);
+
+    const missing = !type
+        ? '팀 종류를 골라 주세요'
+        : !name.trim()
+          ? '팀 이름을 써 주세요'
+          : TEAM_DUE_ENABLED && hasDue && !due
+            ? '삭제 날짜를 골라 주세요'
+            : null;
+
+    const save = (pin: string) =>
+        onSubmit({
+            type: type!, // PIN 단계는 빠진 것이 없을 때만 (missing === null)
+            name: name.trim(),
+            desc: [...members.map((member) => member.trim()), setlist],
+            pin,
+            ...(TEAM_DUE_ENABLED && {
+                due: hasDue && due ? due.format('YYYY-MM-DD') : NO_TEAM_DUE,
+            }),
+        });
+
+    if (step === 'pin') {
+        return (
+            <PinCreateStep teamName={name.trim()} onBack={() => setStep('form')} onDone={save} />
+        );
+    }
+
+    const setlistRows = Math.min(
+        Math.max(setlist.split('\n').length, SETLIST_MIN_ROWS),
+        SETLIST_MAX_ROWS,
+    );
+
+    return (
+        <>
+            <div ref={scrollFadeRef} className={cn(scrollAreaClassName, 'flex-1')}>
+                {/* 머리 */}
+                <div className="flex items-start justify-between gap-3 px-5 pt-[26px] md:px-7">
+                    <div className="min-w-0">
+                        <DrawerTitle className="text-[26px] leading-tight font-bold text-ink md:text-[28px]">
+                            팀 추가
+                        </DrawerTitle>
+                        <DrawerDescription className="mt-1.5 text-[15px] text-neutral-500">
+                            팀 정보를 쓰고, 다음에 PIN을 만들어요
+                        </DrawerDescription>
+                    </div>
+                    <DrawerClose asChild>
+                        <button
+                            type="button"
+                            aria-label="닫기"
+                            className={`${pressable} -mr-2 inline-flex size-10 shrink-0 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100`}
+                        >
+                            <X className="size-6" aria-hidden />
+                        </button>
+                    </DrawerClose>
+                </div>
+
+                <div className="flex flex-col gap-6 px-5 pt-5 pb-6 md:px-7">
+                    {/* 팀 종류: 고르면 아래에 설명 */}
+                    <Section label="팀 종류">
+                        <Segmented
+                            label="팀 종류"
+                            value={type}
+                            options={TEAM_TYPES}
+                            onChange={setType}
+                        />
+                        {type && <Hint>{TYPE_HINTS[type]}</Hint>}
+                    </Section>
+
+                    {/* 팀 이름 */}
+                    <Section
+                        label="팀 이름"
+                        aside={<Counter length={name.length} max={NAME_MAX} />}
+                    >
+                        <input
+                            type="text"
+                            aria-label="팀 이름"
+                            value={name}
+                            maxLength={NAME_MAX}
+                            placeholder={demoName}
+                            autoComplete="off"
+                            enterKeyHint="next"
+                            className={cn(
+                                boxShape,
+                                'h-14 w-full border border-neutral-200 bg-surface px-4 text-[17px] font-bold text-ink outline-none placeholder:font-normal placeholder:text-neutral-400 focus:border-ink',
+                            )}
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                    </Section>
+
+                    {/* 팀원 (안 써도 된다) */}
+                    <Section label="팀원">
+                        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                            {MEMBER_LABELS.map((label, idx) => (
+                                <label
+                                    key={label}
+                                    className={cn(
+                                        boxShape,
+                                        'block border border-neutral-200 bg-neutral-50 px-3.5 py-2.5 transition-colors focus-within:border-ink focus-within:bg-surface',
+                                    )}
+                                >
+                                    <span className="flex items-center gap-1.5 text-[13px] text-neutral-500">
+                                        <span
+                                            aria-hidden
+                                            className="size-2 shrink-0 rounded-full"
+                                            style={{ backgroundColor: theme.eventColors[idx] }}
+                                        />
+                                        {label}
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={members[idx] ?? ''}
+                                        maxLength={MEMBER_MAX}
+                                        placeholder="이름"
+                                        autoComplete="off"
+                                        className="mt-0.5 w-full bg-transparent text-[16px] font-bold text-ink outline-none placeholder:font-normal placeholder:text-neutral-400"
+                                        onChange={(e) =>
+                                            setMembers((prev) =>
+                                                prev.map((member, i) =>
+                                                    i === idx ? e.target.value : member,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                </label>
+                            ))}
+                        </div>
+                        <Hint>
+                            가능한 한 실명으로 써주세요. 특별한 사유 없이 알아보지 못하게 쓰면
+                            제재해요.
+                        </Hint>
+                    </Section>
+
+                    {/* 셋리스트 및 팀 정보 (안 써도 된다) */}
+                    <Section
+                        label="셋리스트 및 팀 정보"
+                        aside={<Counter length={setlist.length} max={SETLIST_MAX} />}
+                    >
+                        <textarea
+                            aria-label="셋리스트 및 팀 정보"
+                            value={setlist}
+                            maxLength={SETLIST_MAX}
+                            rows={setlistRows}
+                            className={cn(
+                                boxShape,
+                                'block w-full resize-none border border-neutral-200 bg-surface px-4 py-3 text-[16px] leading-[1.6] text-ink outline-none placeholder:text-neutral-400 focus:border-ink',
+                            )}
+                            placeholder={'1. 곡 제목 - 아티스트\n2. …'}
+                            onChange={(e) => setSetlist(e.target.value)}
+                        />
+                        <Hint>가능한 한 작성해주세요.</Hint>
+                    </Section>
+
+                    {/* 팀 자동 삭제 (적용 예정: 백엔드 팀 스키마에 due가 생기면 TEAM_DUE_ENABLED를 켠다) */}
+                    {TEAM_DUE_ENABLED && (
+                        <Section label="팀 자동 삭제">
+                            <Segmented
+                                label="팀 자동 삭제"
+                                value={hasDue}
+                                options={[
+                                    [false, '계속 유지', InfinityIcon],
+                                    [true, '삭제 날짜 지정', CalendarX2],
+                                ]}
+                                onChange={(value) => {
+                                    setHasDue(value);
+                                    // 날짜를 지정하면 바로 달력을 연다
+                                    setDueOpen(value && !due);
+                                }}
+                            />
+                            {hasDue && (
+                                <div className="mt-2.5">
+                                    <DateToggle
+                                        open={dueOpen}
+                                        text={due ? `${formatLongDate(due)}까지` : null}
+                                        placeholder="삭제 날짜 선택"
+                                        onClick={() => setDueOpen(!dueOpen)}
+                                    />
+                                    {dueOpen && (
+                                        <DatePicker
+                                            selected={due}
+                                            min={dayjs()}
+                                            onSelect={(picked) => {
+                                                setDue(picked);
+                                                setDueOpen(false);
+                                            }}
+                                        />
+                                    )}
+                                    <Hint>이 날짜 이후에 자동으로 삭제돼요</Hint>
+                                </div>
+                            )}
+                        </Section>
+                    )}
+                </div>
+            </div>
+
+            {/* 다음 버튼은 스크롤과 관계없이 맨 아래 (합주 잡기 Drawer와 같음) */}
+            <div className="border-t border-neutral-100 bg-surface px-5 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] md:px-7">
+                <button
+                    type="button"
+                    disabled={missing !== null}
+                    className={cn(
+                        boxShape,
+                        'flex h-14 w-full items-center justify-center text-[17px] font-bold transition-[background-color,scale] duration-150',
+                        missing === null
+                            ? 'bg-ink text-on-ink hover:bg-neutral-800 active:scale-[0.98]'
+                            : 'bg-neutral-100 text-neutral-400',
+                    )}
+                    onClick={() => setStep('pin')}
+                >
+                    {missing ?? '다음'}
+                </button>
+            </div>
+        </>
+    );
+};
+
+/** 글자 수 "3/20" (꽉 차면 진하게) */
+const Counter = ({ length, max }: { length: number; max: number }) => (
+    <span
+        className={cn(
+            'text-[13px] tabular-nums',
+            length >= max ? 'font-bold text-ink' : 'text-neutral-400',
+        )}
+    >
+        {length}/{max}
+    </span>
+);
+
+/** 틀린(서로 다른) PIN을 비우기까지 (흔들기 애니메이션 0.36초가 끝난 뒤, PinStep과 같음) */
+const CLEAR_DELAY_MS = 450;
+/** 첫 PIN을 다 넣은 뒤 확인 단계로 넘어가기까지 (4칸이 다 찬 것을 잠깐 보여준다) */
+const NEXT_DELAY_MS = 180;
+
+/**
+ * PIN 만들기: 4자리를 넣고, 확인으로 한 번 더 (같은 칸이 비워지며 "한 번 더"로 바뀐다).
+ * 두 번 받는 이유: PIN은 팀 수정·삭제와 합주 변경에 쓰는데 되찾을 방법이 없어, 잘못 누른 채 만들면 팀을 못 바꾼다.
+ * 서로 다르면 흔든 뒤 처음부터. 같으면 바로 저장하고, 실패하면 처음부터 (알림은 저장하는 쪽에서)
+ */
+const PinCreateStep = ({
+    teamName,
+    onBack,
+    onDone,
+}: {
+    teamName: string;
+    onBack: () => void;
+    onDone: (pin: string) => Promise<boolean>;
+}) => {
+    const [phase, setPhase] = useState<'first' | 'confirm' | 'saving'>('first');
+    const [first, setFirst] = useState('');
+    const [value, setValue] = useState('');
+    const [mismatch, setMismatch] = useState(false);
+    const [attempt, setAttempt] = useState(0);
+
+    const restart = () => {
+        setFirst('');
+        setValue('');
+        setPhase('first');
+    };
+
+    const handleChange = async (next: string) => {
+        setValue(next);
+        if (next.length > 0) setMismatch(false);
+        if (next.length < PIN_LENGTH) return;
+        if (phase === 'first') {
+            setFirst(next);
+            setTimeout(() => {
+                setValue('');
+                setPhase('confirm');
+            }, NEXT_DELAY_MS);
+            return;
+        }
+        if (next !== first) {
+            setMismatch(true);
+            setAttempt((n) => n + 1);
+            setTimeout(restart, CLEAR_DELAY_MS);
+            return;
+        }
+        setPhase('saving');
+        if (!(await onDone(next))) restart(); // 성공하면 Drawer가 닫힌다
+    };
+
+    const confirming = phase !== 'first';
+
+    return (
+        <div ref={scrollFadeRef} className={scrollAreaClassName}>
+            <div className="px-5 pt-[26px] pb-[calc(24px+env(safe-area-inset-bottom))] duration-200 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-4 md:px-7">
+                <div className="flex items-center justify-between">
+                    <button
+                        type="button"
+                        aria-label="뒤로"
+                        disabled={phase === 'saving'}
+                        className={`${pressable} -ml-2 inline-flex size-10 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100`}
+                        onClick={onBack}
+                    >
+                        <ChevronLeft className="size-6" aria-hidden />
+                    </button>
+                    <DrawerClose asChild>
+                        <button
+                            type="button"
+                            aria-label="닫기"
+                            className={`${pressable} -mr-2 inline-flex size-10 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100`}
+                        >
+                            <X className="size-6" aria-hidden />
+                        </button>
+                    </DrawerClose>
+                </div>
+                {/* 어떤 팀인지 + 두 단계 중 어디인지 */}
+                <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="truncate text-[14px] text-neutral-500">{teamName}</p>
+                    <div className="flex shrink-0 gap-1" aria-hidden>
+                        <span className="h-1.5 w-5 rounded-full bg-ink" />
+                        <span
+                            className={cn(
+                                'h-1.5 w-5 rounded-full transition-colors duration-200',
+                                confirming ? 'bg-ink' : 'bg-neutral-200',
+                            )}
+                        />
+                    </div>
+                </div>
+                <DrawerTitle className="mt-1.5 text-[24px] leading-tight font-bold text-ink md:text-[26px]">
+                    {confirming ? '한 번 더 입력해 주세요' : 'PIN을 만들어 주세요'}
+                </DrawerTitle>
+                <DrawerDescription className="mt-1.5 text-[15px] break-keep text-neutral-500">
+                    {confirming
+                        ? '확인을 위해 같은 PIN을 다시 입력해 주세요'
+                        : '숫자 4자리. 팀을 고치거나 지우고, 합주를 바꿀 때 써요. 잊지 않게 팀원과 나눠 두세요'}
+                </DrawerDescription>
+                <div className="mt-7 flex flex-col items-center">
+                    <PinSlots
+                        value={value}
+                        onChange={handleChange}
+                        invalid={mismatch}
+                        attempt={attempt}
+                        disabled={phase === 'saving'}
+                    />
+                    <p
+                        role="status"
+                        className={cn(
+                            'mt-3 flex h-5 items-center gap-1 text-[14px]',
+                            mismatch ? 'text-red-600' : 'text-neutral-500',
+                        )}
+                    >
+                        {mismatch && 'PIN이 서로 달라요. 처음부터 다시 입력해 주세요'}
+                        {phase === 'saving' && (
+                            <>
+                                <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                                팀을 만드는 중…
+                            </>
+                        )}
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default AddTeamDrawer;

@@ -10,6 +10,8 @@ export interface TeamCreateRequest {
     desc: string[];
     pin: string;
     publishDate: Dayjs;
+    /** 팀 자동 삭제 날짜 'YYYY-MM-DD' (계속 유지는 2099-12-31). 백엔드 스키마에 생기면 보낸다 (TEAM_DUE_ENABLED, V-3 10차) */
+    due?: string;
 }
 
 export type TeamUpdateRequest = Pick<TeamCreateRequest, 'type' | 'name' | 'desc'>;

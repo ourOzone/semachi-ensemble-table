@@ -6,8 +6,14 @@ export type DayIndex = number;
 /** 시간칸 인덱스. constants의 idx2hour 기준 0 ~ 29 (09:00부터 30분 단위) */
 export type TimeSlot = number;
 
-/** 팀 추가·수정 화면에서 고를 수 있는 팀 종류 */
-export type TeamType =
+/** 팀 추가 화면에서 고를 수 있는 팀 종류 (V-3 10차: 서버에도 이 문자열 그대로 보낸다) */
+export type TeamType = '교내 공연' | '외부 공연' | '기타 팀';
+
+/**
+ * 옛 팀 종류 (V-3 10차 전). 라이브 데이터에 남아 있고(DB에서 일괄 수정 예정), 옛 팀 수정 Drawer가 아직 쓴다.
+ * 새 종류와 함께 쓴다 (Team.type은 string)
+ */
+export type LegacyTeamType =
     '세마치공연(정기/연말)' | '교내공연(축제/버스킹)' | '외부공연(연합/대외)' | '기타 등등';
 
 export interface Team {
@@ -17,6 +23,11 @@ export interface Team {
     name: string;
     /** [보컬, 기타, 베이스, 드럼, 키보드, 매니저, 셋리스트] */
     desc: string[];
+    /**
+     * 팀 자동 삭제 날짜 (V-3 10차, 합주의 due와 같은 형식). 아직 백엔드 스키마에 없어 늘 없다 = 계속 유지.
+     * 없거나 2099년 이후면 계속 유지 (lib/ensemble의 getRepeatEnd로 읽는다)
+     */
+    due?: string;
 }
 
 export interface Note {

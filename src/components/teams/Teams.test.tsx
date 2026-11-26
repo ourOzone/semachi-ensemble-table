@@ -4,42 +4,39 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { url } from '@/constants';
-import { mockInitialData } from '@/test/fixtures';
+import { mockInitialData, teams } from '@/test/fixtures';
 import { useDrawerStore } from '@/stores/drawer';
 import { findDialog, findDrawer, findEnabledButton } from '@/test/queries';
 import { renderApp } from '@/test/render';
 import { countOf, recordRequests } from '@/test/requests';
 import { server } from '@/test/server';
 
-// 팀 기능 흐름 테스트: 팀 추가 6단계, 팀 정보, 팀 수정 5단계, 팀 삭제, 팀 정보에서 합주 잡기, 소모임 정보.
+// 팀 기능 흐름 테스트: 팀 추가(한 Drawer + PIN 만들기), 팀 정보, 팀 수정 5단계, 팀 삭제, 팀 정보에서 합주 잡기, 소모임 정보.
 // 합주 잡기 Drawer 자체(합주판에서 열기, 겹침 등)는 schedule/AddEnsembleDrawer.test.tsx
 // Drawer가 스택으로 쌓여 같은 문구의 버튼("확인")이 여러 개 있으므로 Drawer 범위로 찾는다.
 
-/** 팀 추가 흐름을 PIN 확인까지 입력하고 "완료"를 누른다 */
-async function fillAddTeam(user: ReturnType<typeof userEvent.setup>) {
-    await user.click(await screen.findByText('팀 추가'));
-    await user.click(await screen.findByText('교내공연'));
+/**
+ * 팀 추가 Drawer(V-3 10차, 한 Drawer)에서 종류·이름·팀원·셋리스트를 넣고 "다음" → PIN을 두 번 넣는다.
+ * 두 번째 PIN을 넣으면 바로 저장한다
+ */
+async function fillAddTeam(user: ReturnType<typeof userEvent.setup>, confirmPin = '1234') {
+    await user.click(await screen.findByRole('button', { name: '팀 추가' }));
+    const drawer = within(await findDialog('팀 추가'));
+    expect(drawer.getByRole('button', { name: '팀 종류를 골라 주세요' })).toBeDisabled();
 
-    const nameDrawer = await findDrawer(/팀 이름을 지어요/);
-    await user.type(within(nameDrawer).getByRole('textbox'), '새밴드');
-    await user.click(await findEnabledButton('확인', nameDrawer));
+    await user.click(drawer.getByRole('radio', { name: '교내 공연' }));
+    expect(drawer.getByText('정기공연, 연말공연, 축제, 버스킹 등')).toBeInTheDocument();
+    expect(drawer.getByRole('button', { name: '팀 이름을 써 주세요' })).toBeDisabled();
+    await user.type(drawer.getByRole('textbox', { name: '팀 이름' }), '새밴드');
+    await user.type(drawer.getByRole('textbox', { name: '보컬' }), '홍길동');
+    await user.type(drawer.getByRole('textbox', { name: '셋리스트 및 팀 정보' }), '곡1');
+    await user.click(drawer.getByRole('button', { name: '다음' }));
 
-    const memberDrawer = await findDrawer(/누구누구 있나요/);
-    await user.type(within(memberDrawer).getAllByRole('textbox')[0]!, '홍길동');
-    await user.click(await findEnabledButton('확인', memberDrawer));
-
-    const setlistDrawer = await findDrawer(/셋리 정한 거 있나요/);
-    await user.type(within(setlistDrawer).getByRole('textbox'), '곡1');
-    await user.click(await findEnabledButton('확인', setlistDrawer));
-
-    // PIN Drawer는 열림 애니메이션이 끝난 뒤 PIN 칸으로 포커스를 옮긴다 (common/Drawer의 afterOpenChange).
-    // 그 전에 입력을 시작하면 "한 번 더" 칸에 입력하는 도중 포커스가 PIN 칸으로 되돌아가 확인 PIN이 덜 입력되는 경우가 있었다
-    // → 포커스가 옮겨진 뒤 입력한다 (ISSUES V7)
-    const pinInput = await screen.findByPlaceholderText('숫자 4자리');
-    await waitFor(() => expect(pinInput).toHaveFocus());
-    await user.type(pinInput, '1234');
-    await user.type(screen.getByPlaceholderText('한 번 더'), '1234');
-    await user.click(await findEnabledButton('완료'));
+    // 같은 Drawer 안에서 PIN 만들기로 바뀐다: 한 번 넣으면 "한 번 더"
+    const pinDrawer = within(await findDialog('PIN을 만들어 주세요'));
+    await user.type(pinDrawer.getByLabelText('PIN 4자리'), '1234');
+    await screen.findByRole('heading', { name: '한 번 더 입력해 주세요' });
+    await user.type(screen.getByLabelText('PIN 4자리'), confirmPin);
 }
 
 /**
@@ -101,7 +98,7 @@ describe('팀', () => {
         server.use(http.get(`${url}/team/:id`, () => HttpResponse.json(true)));
     });
 
-    it('팀 추가: 종류 → 이름 → 멤버 → 셋리 → PIN 확인 후 서버에 보내고 완료 화면을 띄운다', async () => {
+    it('팀 추가: 한 Drawer에서 종류·이름·팀원·셋리스트 → PIN 두 번 → 서버에 보내고 닫으며 알린다', async () => {
         let posted: Record<string, unknown> | undefined;
         server.use(
             http.post(`${url}/team`, async ({ request }) => {
@@ -114,18 +111,44 @@ describe('팀', () => {
 
         await fillAddTeam(user);
 
-        expect(await screen.findByText('락앤롤!')).toBeInTheDocument();
+        // 완료 화면 Drawer 대신 알림 (이전: "락앤롤!")
+        expect(await screen.findByText('팀을 만들었어요.')).toBeInTheDocument();
         expect(posted).toMatchObject({
-            type: '교내공연(축제/버스킹)',
+            type: '교내 공연', // V-3 10차: 새 팀 종류 문자열 그대로
             name: '새밴드',
             desc: ['홍길동', '', '', '', '', '', '곡1'],
             pin: '1234',
         });
         expect(typeof posted!.publishDate).toBe('string'); // Dayjs → ISO 문자열로 직렬화
+        // 팀 자동 삭제는 적용 예정 (TEAM_DUE_ENABLED): 아직 보내지 않는다
+        expect(posted).not.toHaveProperty('due');
+        expect(useDrawerStore.getState().openedDrawers).toEqual([]);
+    });
+
+    it('팀 추가: 확인 PIN이 다르면 흔든 뒤 처음부터, 저장하지 않는다', async () => {
+        let attempted = false;
+        server.use(
+            http.post(`${url}/team`, () => {
+                attempted = true;
+                return HttpResponse.json({ id: 'x' });
+            }),
+        );
+        const user = userEvent.setup();
+        renderApp();
+
+        await fillAddTeam(user, '4321');
+
+        expect(
+            await screen.findByText('PIN이 서로 달라요. 처음부터 다시 입력해 주세요'),
+        ).toBeInTheDocument();
+        expect(
+            await screen.findByRole('heading', { name: 'PIN을 만들어 주세요' }),
+        ).toBeInTheDocument();
+        expect(attempted).toBe(false);
     });
 
     // F3: 이전에는 저장 결과와 관계없이 완료 화면을 열었다
-    it('팀 추가: 저장에 실패하면 완료 화면을 열지 않고 PIN 단계에 머문다', async () => {
+    it('팀 추가: 저장에 실패하면 알리고 PIN 만들기에 머문다', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         let attempted = false;
         server.use(
@@ -140,9 +163,13 @@ describe('팀', () => {
         await fillAddTeam(user);
 
         await waitFor(() => expect(attempted).toBe(true));
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        expect(screen.queryByText('락앤롤!')).not.toBeInTheDocument();
-        expect(screen.getByText('PIN 만들어요 🔑')).toBeInTheDocument();
+        expect(
+            await screen.findByText('저장하지 못했어요. 잠시 후 다시 시도해 주세요.'),
+        ).toBeInTheDocument();
+        expect(
+            await screen.findByRole('heading', { name: 'PIN을 만들어 주세요' }),
+        ).toBeInTheDocument();
+        expect(useDrawerStore.getState().openedDrawers).toEqual(['addTeam']);
     });
 
     it('팀 정보: 종류·팀원·셋리스트를 한 화면에 보여준다', async () => {
@@ -359,6 +386,45 @@ describe('팀', () => {
 
             await waitFor(() =>
                 expect(useDrawerStore.getState().openedDrawers).toEqual(['teamInfo']),
+            );
+        });
+
+        // V-3 10차: 팀 자동 삭제 날짜(서버 팀 due, 백엔드에 생기면)가 있으면 팀 정보에 적고, 매주 반복은 그 날짜까지만
+        it('팀에 삭제 날짜가 있으면 팀 정보에 적고, 매주 반복은 "종료 날짜 지정"만 (그 날짜까지)', async () => {
+            server.use(
+                http.get(`${url}/teams`, () =>
+                    HttpResponse.json([{ ...teams[0]!, due: '2026-12-10T00:00:00.000Z' }]),
+                ),
+            );
+            const user = await openTeamInfo();
+            const info = within(await findDialog('테스트밴드'));
+            expect(info.getByText('세마치공연 · 정기/연말 · 12/10(목)까지')).toBeInTheDocument();
+
+            await user.click(info.getByRole('button', { name: '합주 잡기' }));
+            const drawer = within(await findDialog('합주 잡기'));
+            await user.click(drawer.getByRole('radio', { name: '매주 반복' }));
+            expect(drawer.getByRole('radio', { name: '계속 반복' })).toBeDisabled();
+            expect(drawer.getByRole('radio', { name: '종료 날짜 지정' })).toHaveAttribute(
+                'aria-checked',
+                'true',
+            );
+            expect(
+                drawer.getByText(/팀이 12월 10일 목요일 이후에 자동으로 삭제돼서/),
+            ).toBeInTheDocument();
+        });
+
+        it('팀에 삭제 날짜가 없으면(계속 유지) 팀 정보에 적지 않고, 계속 반복을 고를 수 있다', async () => {
+            const user = await openTeamInfo();
+            const info = within(await findDialog('테스트밴드'));
+            expect(info.getByText('세마치공연 · 정기/연말')).toBeInTheDocument();
+
+            await user.click(info.getByRole('button', { name: '합주 잡기' }));
+            const drawer = within(await findDialog('합주 잡기'));
+            await user.click(drawer.getByRole('radio', { name: '매주 반복' }));
+            expect(drawer.getByRole('radio', { name: '계속 반복' })).toBeEnabled();
+            expect(drawer.getByRole('radio', { name: '계속 반복' })).toHaveAttribute(
+                'aria-checked',
+                'true',
             );
         });
 

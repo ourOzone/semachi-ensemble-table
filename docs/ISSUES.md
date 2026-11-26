@@ -65,8 +65,8 @@
 | ID | 심각도 | 내용 |
 |---|---|---|
 | V1 | 🟡 | styled-components 커스텀 props가 DOM으로 새어 React 경고 발생 (`scrollPosition`, `isEvent`, `openedDrawers`, `row`, `idx`, `gray`, `teamColor`, `visible`, `error`, `controls` 등). App 테스트에 기존 경고로 허용 중 |
-| V2 | 🟡 | 리스트 key 누락: ~~`TeamInfoDrawer`의 key 없는 Fragment map~~(V-3 4차, 새 팀 정보 Drawer로 해소), 완료 화면 `Result`의 `extra={[<OkButton />]}` 2곳(`jsx-key` 린트 에러) |
-| V3 | 🟡 | effect 안에서 바로 setState (`set-state-in-effect` 린트 에러 3건): `Drawer`의 창 너비, 팀 이름 입력의 무작위 예시 이름 2곳 |
+| V2 | ✅ | 리스트 key 누락: ~~`TeamInfoDrawer`의 key 없는 Fragment map~~(V-3 4차, 새 팀 정보 Drawer로 해소), ~~완료 화면 `Result`의 `extra={[<OkButton />]}` 2곳(`jsx-key` 린트 에러)~~ (V-2 21차 합주 추가·V-3 10차 팀 추가 완료 화면 삭제로 해소) |
+| V3 | 🟡 | effect 안에서 바로 setState (`set-state-in-effect` 린트 에러 3건): `Drawer`의 창 너비, 팀 이름 입력의 무작위 예시 이름 2곳 → 팀 추가 쪽은 V-3 10차에 해소(새 Drawer는 처음 한 번 `useState` 초기값), 남은 2건: `common/Drawer`, 옛 `UpdateTeamDrawer3` |
 | V4 | 🟡 | antd Drawer의 deprecated prop `maskStyle` 사용 |
 | V5 | 🟡 | JS 번들 936kB (500kB 경고). 대부분 antd. 2단계 중 +79kB는 React 19가 주원인으로 판단. 3단계 완료 1,039kB, V-1 후 1,091kB(gzip 340kB, Sonner·lucide·React Compiler 런타임). antd 제거(V-6) 후 다시 측정 |
 | V6 | 🟡 | **알림 기능이 없다.** 3-6(알림 중앙화)을 폐기하면서 기존 알림(`useMessage`)을 삭제했다(2026-11-23). 성공·실패·"이미 삭제됨"을 사용자에게 알리지 않는다 → View 개편 때 Sonner 등으로 새로 추가 (`docs/VIEW_REDESIGN_PLAN.md`). 🔄 V-1 (2026-11-23): Sonner `<Toaster />`(위쪽 가운데)와 **조회 실패 알림** 추가 (`lib/notify`, 여러 조회가 동시에 실패해도 하나). 변경의 성공·실패·"이미 삭제됨" 알림은 기능 단계(V-2~)에서 연결. 🔄 V-2 15차 (2026-11-24): 합주 변경(수정·미루기·바로 하기·반복으로 바꾸기) 실패·이미 삭제됨, 합주 삭제 성공·실패, PIN 확인 실패 알림 연결. 🔄 V-2 21차 (2026-11-24): 합주 추가 성공("합주를 잡았어요." + 팀·날짜·시간)·실패·팀 이미 삭제됨 알림 연결 |

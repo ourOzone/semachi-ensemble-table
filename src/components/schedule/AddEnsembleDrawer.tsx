@@ -9,7 +9,6 @@ import {
 } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
-import { ko } from 'react-day-picker/locale';
 import {
     CalendarCheck,
     CalendarDays,
@@ -26,7 +25,6 @@ import {
     TriangleAlert,
     X,
 } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
 import { attachScrollFade, scrollFadeRef } from '@/components/ui/scroll-fade';
 import {
     Drawer,
@@ -37,6 +35,7 @@ import {
 } from '@/components/ui/drawer';
 import { days, idx2hour } from '@/constants';
 import { buildColorMap } from '@/lib/board';
+import { getRepeatEnd } from '@/lib/ensemble';
 import {
     eventsOnDate,
     findOverlapLimit,
@@ -53,6 +52,7 @@ import { useTeams } from '@/queries/teams';
 import { useDrawerStore } from '@/stores/drawer';
 import type { TimeSlot } from '@/types';
 import { useAddEnsembleStore, type AddEnsemblePreset, type EditTarget } from './addEnsembleStore';
+import { DatePicker, DateToggle, Hint, Section, Segmented } from './formParts';
 import {
     boxShape,
     formatDate,
@@ -260,6 +260,16 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
 
     // 그날 동방: 합주판과 같은 기준으로 그날 보이는 합주 (색은 팀의 지금 색). 수정이면 그 합주 자신은 빼고 본다
     const allTeams = useTeams();
+    // 팀 자동 삭제 예정일 (V-3 10차, 서버 팀 due: 아직 백엔드에 없어 늘 null = 계속 유지).
+    // 있으면 매주 반복은 그 날짜까지만: "계속 반복"을 막고 "종료 날짜 지정"을 고른 것으로, 달력은 그 날짜까지
+    const teamDue =
+        team && !team.isEvent
+            ? getRepeatEnd(allTeams.find((one) => one.id === team.id)?.due, dayjs())
+            : null;
+    const repeatEndOn = hasRepeatEnd || (repeat === true && teamDue !== null);
+    // 팀 삭제 예정일 뒤로 고른 종료 날짜(팀을 바꾼 경우 등)는 다시 고르게 한다
+    const pickedRepeatEnd =
+        repeatEnd && teamDue && repeatEnd.isAfter(teamDue, 'day') ? null : repeatEnd;
     const { data: allEnsembles = [] } = useQuery(ensemblesQueryOptions);
     const ensembles = edit
         ? allEnsembles.filter(({ _id: ensembleId }) => ensembleId !== edit.id)
@@ -270,7 +280,7 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
         range,
     );
     // 반복 여부를 고르기 전에는 그날만 본다. 반복 종료 날짜가 있으면 그날까지만
-    const endDate = repeat && hasRepeatEnd ? repeatEnd : null;
+    const endDate = repeat && repeatEndOn ? pickedRepeatEnd : null;
     const limitDate = date
         ? findOverlapLimit(ensembles, { date, repeat: repeat ?? false, until: endDate, ...range })
         : null;
@@ -283,7 +293,7 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
           ? '반복 여부를 골라 주세요'
           : !date
             ? '날짜를 골라 주세요'
-            : repeat && hasRepeatEnd && !repeatEnd
+            : repeat && repeatEndOn && !pickedRepeatEnd
               ? '종료 날짜를 골라 주세요'
               : null;
     // 수정: 지금 값에서 바뀐 것이 없으면 저장할 수 없다
@@ -521,7 +531,9 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
                         <Section label="반복 종료" sectionRef={sectionRef('end')}>
                             <Segmented
                                 label="반복 종료"
-                                value={hasRepeatEnd}
+                                value={repeatEndOn}
+                                // 팀 삭제 예정일이 있으면 계속 반복할 수 없다
+                                disabled={(value) => !value && teamDue !== null}
                                 options={[
                                     [false, '계속 반복', InfinityIcon],
                                     [true, '종료 날짜 지정', CalendarX2],
@@ -533,11 +545,15 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
                                     scrollToSection(value ? 'end' : 'bottom');
                                 }}
                             />
-                            {hasRepeatEnd && (
+                            {repeatEndOn && (
                                 <div className="mt-2.5">
                                     <DateToggle
                                         open={repeatEndOpen}
-                                        text={repeatEnd ? `${formatLongDate(repeatEnd)}까지` : null}
+                                        text={
+                                            pickedRepeatEnd
+                                                ? `${formatLongDate(pickedRepeatEnd)}까지`
+                                                : null
+                                        }
                                         placeholder="종료 날짜 선택"
                                         onClick={() => {
                                             if (!repeatEndOpen) scrollToSection('end');
@@ -546,8 +562,9 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
                                     />
                                     {repeatEndOpen && (
                                         <DatePicker
-                                            selected={repeatEnd}
+                                            selected={pickedRepeatEnd}
                                             min={date ?? dayjs()}
+                                            max={teamDue}
                                             onSelect={(picked) => {
                                                 setRepeatEnd(picked);
                                                 setRepeatEndOpen(false);
@@ -555,10 +572,13 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
                                             }}
                                         />
                                     )}
-                                    <p className="mt-2 flex items-center gap-1.5 text-[13px] text-neutral-500">
-                                        <Info className="size-3.5 shrink-0" aria-hidden />이 날짜
-                                        이후에 자동으로 삭제돼요
-                                    </p>
+                                    <Hint>이 날짜 이후에 자동으로 삭제돼요</Hint>
+                                    {teamDue && (
+                                        <Hint className="mt-1">
+                                            팀이 {formatLongDate(teamDue)} 이후에 자동으로 삭제돼서,
+                                            그 날짜까지만 고를 수 있어요
+                                        </Hint>
+                                    )}
                                 </div>
                             )}
                         </Section>
@@ -608,109 +628,6 @@ const TeamBadge = ({ team, checked = false }: { team: TeamOption; checked?: bool
         {checked && <Check className="size-4 shrink-0" aria-hidden />}
         <span className="truncate">{team.name}</span>
     </span>
-);
-
-/** 둘 중 하나를 고르는 칸 (반복 여부, 반복 종료). 아무것도 고르지 않은 상태(null)도 있다 */
-function Segmented<T extends boolean>({
-    label,
-    value,
-    options,
-    onChange,
-}: {
-    label: string;
-    value: T | null;
-    options: readonly (readonly [T, string, ComponentType<{ className?: string }>])[];
-    onChange: (value: T) => void;
-}) {
-    return (
-        <div
-            role="radiogroup"
-            aria-label={label}
-            className="grid grid-cols-2 gap-1 rounded-2xl bg-neutral-100 p-1"
-        >
-            {options.map(([option, text, Icon]) => (
-                <button
-                    key={text}
-                    type="button"
-                    role="radio"
-                    aria-checked={value === option}
-                    className={cn(
-                        'flex h-11 items-center justify-center gap-1.5 rounded-xl text-[15px] font-medium transition-[background-color,color,box-shadow] duration-150',
-                        value === option
-                            ? 'bg-surface font-bold text-ink shadow-[0_1px_3px_rgb(0_0_0/0.12)]'
-                            : 'text-neutral-600 hover:text-ink',
-                    )}
-                    onClick={() => onChange(option)}
-                >
-                    <Icon className="size-4" aria-hidden />
-                    {text}
-                </button>
-            ))}
-        </div>
-    );
-}
-
-/** 달력을 펼치고 접는 줄 (고른 날짜, 없으면 안내 문구) */
-const DateToggle = ({
-    open,
-    text,
-    placeholder,
-    onClick,
-}: {
-    open: boolean;
-    text: string | null;
-    placeholder: string;
-    onClick: () => void;
-}) => (
-    <button
-        type="button"
-        aria-expanded={open}
-        className={cn(
-            pressable,
-            boxShape,
-            'flex h-14 w-full items-center justify-between gap-3 border border-neutral-200 bg-surface px-4 text-left hover:bg-neutral-50',
-        )}
-        onClick={onClick}
-    >
-        <span className="flex min-w-0 items-center gap-2.5">
-            <CalendarDays className="size-5 shrink-0 text-neutral-500" aria-hidden />
-            <span
-                className={cn(
-                    'truncate text-[16px]',
-                    text ? 'font-bold text-ink' : 'text-neutral-500',
-                )}
-            >
-                {text ?? placeholder}
-            </span>
-        </span>
-        <ChevronDown
-            className={cn(
-                'size-5 shrink-0 text-neutral-400 transition-transform duration-200',
-                open && 'rotate-180',
-            )}
-            aria-hidden
-        />
-    </button>
-);
-
-const Section = ({
-    label,
-    aside,
-    sectionRef,
-    children,
-}: {
-    label: string;
-    aside?: ReactNode;
-    sectionRef: (el: HTMLElement | null) => void;
-    children: ReactNode;
-}) => (
-    <section ref={sectionRef} aria-label={label}>
-        <div className="mb-2.5 flex items-baseline justify-between gap-3">
-            <h3 className="text-[15px] font-bold text-ink">{label}</h3>
-            {aside}
-        </div>
-        {children}
-    </section>
 );
 
 /** 고르는 칩 (소요 시간). 고르면 검정 */
@@ -828,64 +745,6 @@ const TeamPicker = ({
                         <div className="flex flex-wrap gap-1.5">{events.map(chip)}</div>
                     </>
                 )}
-            </div>
-        </div>
-    );
-};
-
-/** 달력: min(오늘, 반복 종료는 시작 날짜)부터 고를 수 있다. 토요일은 파랑, 일요일은 빨강 (23차) */
-const DatePicker = ({
-    selected,
-    min,
-    onSelect,
-}: {
-    selected: Dayjs | null;
-    min: Dayjs;
-    onSelect: (date: Dayjs) => void;
-}) => {
-    const first = min.startOf('day');
-    return (
-        <div className={`${boxShape} mt-2 border border-neutral-200 bg-surface p-2`}>
-            {/* 넓은 화면(PC 520px)에서 너무 퍼지지 않게 폭을 제한 */}
-            <div className="mx-auto max-w-[360px]">
-                <Calendar
-                    mode="single"
-                    required
-                    locale={ko}
-                    // 일요일부터 (25차, 이전: 합주판과 같이 월요일부터)
-                    weekStartsOn={0}
-                    selected={selected?.toDate()}
-                    defaultMonth={(selected ?? first).toDate()}
-                    startMonth={first.toDate()}
-                    disabled={{ before: first.toDate() }}
-                    showOutsideDays={false}
-                    onSelect={(picked) => onSelect(dayjs(picked).startOf('day'))}
-                    modifiers={{
-                        saturday: (day) => day.getDay() === 6,
-                        sunday: (day) => day.getDay() === 0,
-                    }}
-                    // 고른 날짜(검정 원)의 흰 글자가 이 색보다 우선한다 (data-selected 선택자가 더 구체적)
-                    modifiersClassNames={{
-                        saturday: '[&>button]:text-blue-600',
-                        sunday: '[&>button]:text-red-500',
-                    }}
-                    className="w-full bg-transparent p-0 [--cell-radius:9999px] [--cell-size:--spacing(9)] [&_button]:rounded-full"
-                    // 글자 크기는 px로 (공존 기간에는 html 글자 크기가 바뀌어 rem이 작아진다: 계획 문서 "공존 기간 규칙").
-                    // 날짜 칸은 정사각형(폭에 따라 커짐) 대신 높이 38px 줄, 날짜 버튼은 36px 원 (22차: 달력이 크고 줄 간격이 넓었다)
-                    classNames={{
-                        root: 'w-full',
-                        month: 'flex w-full flex-col gap-2',
-                        caption_label: 'text-[16px] font-bold select-none',
-                        // 요일 머리도 일(1번째)·토(7번째) 색
-                        weekdays:
-                            'flex [&>*:nth-child(1)]:text-red-500 [&>*:nth-child(7)]:text-blue-600',
-                        weekday: 'flex-1 text-[13px] font-normal text-neutral-400 select-none',
-                        week: 'mt-0.5 flex w-full',
-                        day: 'group/day relative flex h-[38px] flex-1 items-center justify-center p-0 text-center select-none',
-                        day_button: 'size-9 min-w-0 aspect-auto text-[15px]',
-                        today: '[&>button]:bg-neutral-100',
-                    }}
-                />
             </div>
         </div>
     );

@@ -3,25 +3,26 @@ import { createPortal } from 'react-dom';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { LOCKED_SCROLL_VAR, lockPageScroll } from '@/lib/pageScrollLock';
 
-// PIN 단계(입력칸)가 있는 아래 Drawer의 키보드 처리 (V-2 16~20차에 합주 정보 Drawer에서 만들고,
-// V-3 9차에 팀 정보 Drawer의 팀 삭제 PIN 단계와 함께 쓰려고 여기로 옮김. 동작은 그대로).
+// 입력칸이 있는 아래 Drawer의 키보드 처리 (V-2 16~20차에 합주 정보 Drawer의 PIN 단계에서 만들고,
+// V-3 9차에 팀 정보 Drawer의 팀 삭제 PIN 단계와 함께 쓰려고 여기로 옮김, 10차에 팀 추가 Drawer(글자 입력)도. 동작은 그대로).
+// 입력칸이 있는 새 Drawer는 모두 이것을 쓴다 (ISSUES V12)
 // Drawer에는 repositionInputs={false}를 주고, DrawerContent에 style, Drawer 안에 cover를 그린다.
 
 /**
- * @param pinStepOpen PIN 단계가 열려 있는지 (Drawer가 열려 있고 PIN 단계일 때)
+ * @param inputsOpen 입력칸이 있는 화면이 열려 있는지 (Drawer가 열려 있고 PIN 단계일 때 등)
  * @returns style: DrawerContent의 아래 여백·최대 높이, cover: 키보드 쪽 흰 판 (없으면 null)
  */
-export function usePinSheet(pinStepOpen: boolean): { style: CSSProperties; cover: ReactNode } {
+export function useKeyboardSheet(inputsOpen: boolean): { style: CSSProperties; cover: ReactNode } {
     // 화면 키보드가 열리면 내용을 보이는 영역의 아래 끝(키보드 바로 위)까지 올리고, 그 안에 들어가게 한다 (hooks/useKeyboardInset).
     // Drawer 자체는 화면 맨 아래에 둔 채 키보드 높이만큼 아래 여백을 준다: Drawer의 흰 바탕이 키보드 뒤까지 덮어,
     // 키보드 위 막대(완료 버튼)와 반투명 키보드 사이로 뒤 화면이 비치지 않는다
     // (17차, 이전: Drawer를 키보드 높이만큼 올렸더니 아이폰에서 그 아래가 비었다)
     const { inset, viewportHeight, visibleBottom } = useKeyboardInset();
 
-    // PIN 단계 동안 뒤 페이지를 스크롤할 수 없게 고정한다 (20차, lib/pageScrollLock).
+    // 입력하는 동안 뒤 페이지를 스크롤할 수 없게 고정한다 (20차, lib/pageScrollLock).
     // 아이폰 사파리는 입력칸에 포커스가 가거나 커서가 움직일 때마다(틀린 PIN을 비울 때 등) 입력칸을 보이려고 페이지를 스크롤한다.
     // Drawer 위치는 보이는 영역 기준으로 직접 맞추므로 이 스크롤은 필요 없고, 뒤 합주판만 계속 내려갔다
-    useEffect(() => (pinStepOpen ? lockPageScroll() : undefined), [pinStepOpen]);
+    useEffect(() => (inputsOpen ? lockPageScroll() : undefined), [inputsOpen]);
 
     const style: CSSProperties = {
         paddingBottom: inset > 0 ? `${inset}px` : undefined,
@@ -34,7 +35,7 @@ export function usePinSheet(pinStepOpen: boolean): { style: CSSProperties; cover
                   : `min(92dvh, ${viewportHeight - 12}px)`,
     };
     const cover =
-        pinStepOpen && visibleBottom !== null ? (
+        inputsOpen && visibleBottom !== null ? (
             <KeyboardCover visibleBottom={visibleBottom} />
         ) : null;
     return { style, cover };

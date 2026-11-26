@@ -28,12 +28,8 @@ import { formatEnsembleSummary } from '@/components/schedule/drawerParts';
 import theme from '@/styles/theme';
 import TeamInfoDrawer from './TeamInfoDrawer';
 import EventInfoDrawer from './EventInfoDrawer';
-import AddTeamDrawer1 from './addTeamDrawers/AddTeamDrawer1';
-import AddTeamDrawer2 from './addTeamDrawers/AddTeamDrawer2';
-import AddTeamDrawer3 from './addTeamDrawers/AddTeamDrawer3';
-import AddTeamDrawer4 from './addTeamDrawers/AddTeamDrawer4';
-import AddTeamDrawer5 from './addTeamDrawers/AddTeamDrawer5';
-import AddTeamDrawer6 from './addTeamDrawers/AddTeamDrawer6';
+import AddTeamDrawer from './AddTeamDrawer';
+import type { AddTeamInput } from './types';
 import UpdateTeamDrawer1 from './updateTeamDrawers/UpdateTeamDrawer1';
 import UpdateTeamDrawer2 from './updateTeamDrawers/UpdateTeamDrawer2';
 import UpdateTeamDrawer3 from './updateTeamDrawers/UpdateTeamDrawer3';
@@ -99,21 +95,32 @@ const Teams = () => {
     // 팀 추가 버튼
     const handleClickAddTeam = useCallback(() => {
         setTeamStates(); // 초기화
-        openDrawer('addTeam1');
+        openDrawer('addTeam');
     }, [setTeamStates, openDrawer]);
 
+    // 팀 추가 Drawer의 저장 (V-3 10차). 성공하면 Drawer를 닫고 알림 (이전: 완료 화면 Drawer "팀을 만들었어요"),
+    // 실패하면 알리고 Drawer(PIN 만들기)에 머문다. due는 TEAM_DUE_ENABLED가 켜져 있을 때만 들어 있다 (teamDue.ts)
     const handleAddTeam = useCallback(
-        async (type: string, name: string, desc: string[], pin: string) => {
+        async ({ type, name, desc, pin, due }: AddTeamInput) => {
             try {
-                await addTeamAsync({ type, name, desc, pin, publishDate: dayjs() });
+                await addTeamAsync({
+                    type,
+                    name,
+                    desc,
+                    pin,
+                    publishDate: dayjs(),
+                    ...(due !== undefined && { due }),
+                });
                 setTeamStates(); // 초기화
+                closeAllDrawers();
+                toast.success('팀을 만들었어요.', { description: name });
                 return true;
             } catch {
-                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
+                toast.error('저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
                 return false;
             }
         },
-        [addTeamAsync, setTeamStates],
+        [addTeamAsync, closeAllDrawers, setTeamStates],
     );
 
     // 이미 삭제됐으면 서버가 404를 준다 → 이미 삭제된 팀 처리 (이전에는 수정 전에 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
@@ -244,12 +251,7 @@ const Teams = () => {
             {/* DRAWERS */}
             <TeamInfoDrawer checkTeamExists={checkTeamExists} handleDeleteTeam={handleDeleteTeam} />
             <EventInfoDrawer />
-            <AddTeamDrawer1 drawerId="addTeam1" />
-            <AddTeamDrawer2 drawerId="addTeam2" />
-            <AddTeamDrawer3 drawerId="addTeam3" />
-            <AddTeamDrawer4 drawerId="addTeam4" />
-            <AddTeamDrawer5 drawerId="addTeam5" handleAddTeam={handleAddTeam} />
-            <AddTeamDrawer6 drawerId="addTeam6" />
+            <AddTeamDrawer onSubmit={handleAddTeam} />
             <UpdateTeamDrawer1 drawerId="updateTeam1" checkTeamExists={checkTeamExists} />
             <UpdateTeamDrawer2 drawerId="updateTeam2" />
             <UpdateTeamDrawer3 drawerId="updateTeam3" />

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import dayjs from 'dayjs';
 import { CalendarPlus, ChevronLeft, Pencil, Trash2, X } from 'lucide-react';
 import {
     Drawer,
@@ -15,11 +16,13 @@ import {
     sheetClassName,
 } from '@/components/schedule/drawerParts';
 import { openAddEnsemble } from '@/components/schedule/addEnsembleStore';
+import { formatDate } from '@/components/schedule/drawerParts';
 import PinStep from '@/components/schedule/PinStep';
-import { usePinSheet } from '@/components/schedule/pinSheet';
+import { useKeyboardSheet } from '@/components/schedule/keyboardSheet';
 import { scrollFadeRef } from '@/components/ui/scroll-fade';
 import { useTeamContext } from '@/context';
 import { buildColorMap } from '@/lib/board';
+import { getRepeatEnd } from '@/lib/ensemble';
 import { cn } from '@/lib/utils';
 import { useTeams } from '@/queries/teams';
 import { useDrawerStore } from '@/stores/drawer';
@@ -78,8 +81,8 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
         setStep('info');
     }
 
-    // PIN 단계의 키보드 처리 (합주 정보 Drawer와 같음: schedule/pinSheet)
-    const pinSheet = usePinSheet(open && step !== 'info');
+    // PIN 단계의 키보드 처리 (합주 정보 Drawer와 같음: schedule/keyboardSheet)
+    const pinSheet = useKeyboardSheet(open && step !== 'info');
 
     const handleClose = () => {
         closeDrawer(); // 열려 있을 때는 맨 위가 이 Drawer
@@ -111,6 +114,11 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
         if (!shown) return null;
         const { team } = shown;
         const setlist = team.desc[6]?.trim() ?? '';
+        // 팀 자동 삭제 날짜 (V-3 10차, 서버 팀 due). 없거나 계속 유지면 null이고 따로 적지 않는다
+        const due = getRepeatEnd(teams.find((one) => one.id === team.id)?.due, dayjs());
+        const summary = [team.type && formatTeamType(team.type), due && `${formatDate(due)}까지`]
+            .filter(Boolean)
+            .join(' · ');
 
         if (step === 'delete') {
             return (
@@ -180,13 +188,14 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
                             <DrawerTitle className="text-[28px] leading-tight font-bold break-keep text-white [overflow-wrap:anywhere] md:text-[32px]">
                                 {team.name}
                             </DrawerTitle>
+                            {/* 종류 · 자동 삭제 날짜 ("1/13(수)까지", 합주 정보의 반복 종료와 같은 모양) */}
                             <DrawerDescription
                                 className={cn(
                                     'mt-1.5 text-[15px] text-white/90',
-                                    !team.type && 'sr-only',
+                                    !summary && 'sr-only',
                                 )}
                             >
-                                {team.type ? formatTeamType(team.type) : '팀 정보'}
+                                {summary || '팀 정보'}
                             </DrawerDescription>
                         </div>
                         <DrawerClose asChild>
@@ -283,7 +292,7 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
         <Drawer
             open={open}
             onOpenChange={(next) => !next && handleClose()}
-            // 키보드 위치 맞추기는 직접 한다 (pinSheet, 합주 정보 Drawer와 같음)
+            // 키보드 위치 맞추기는 직접 한다 (keyboardSheet, 합주 정보 Drawer와 같음)
             repositionInputs={false}
         >
             <DrawerContent

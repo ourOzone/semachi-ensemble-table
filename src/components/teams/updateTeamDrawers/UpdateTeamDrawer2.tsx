@@ -3,9 +3,9 @@ import Drawer from '@/components/common/Drawer';
 import styled from 'styled-components';
 import { Button } from 'antd';
 import { useTeamContext, useDrawerContext } from '@/context';
-import type { DrawerId, TeamType } from '@/types';
+import type { DrawerId, LegacyTeamType } from '@/types';
 
-const options: { value: TeamType; label: string; desc: string }[] = [
+const options: { value: LegacyTeamType; label: string; desc: string }[] = [
     { value: '세마치공연(정기/연말)', label: '세마치공연', desc: '정기공연, 연말공연' },
     { value: '교내공연(축제/버스킹)', label: '교내공연', desc: '축제, 버스킹' },
     { value: '외부공연(연합/대외)', label: '외부공연', desc: '연합공연, 대외공연' },
@@ -21,7 +21,7 @@ const UpdateTeamDrawer2 = ({ drawerId }: UpdateTeamDrawer2Props) => {
     const { openDrawer } = useDrawerContext();
 
     const handleClick = useCallback(
-        (value: TeamType) => {
+        (value: LegacyTeamType) => {
             setType(value);
             openDrawer('updateTeam3');
         },

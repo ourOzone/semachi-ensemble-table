@@ -1107,6 +1107,21 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 208/208 / `pnpm lint` → 에러 4·경고 19 (옛 팀 삭제 Drawer 삭제로 1건 감소, 새 코드 0건) / `pnpm format:check` ✅
 
+### 2026-11-26 — View 개편 V-3 (10차): 팀 추가 Drawer, 팀 종류 개편, 팀 자동 삭제(적용 예정)
+
+- 지금 → 바꾼 후
+  - 팀 추가: 옛 Drawer 6단계(완료 화면 "락앤롤!", 저장 실패 알림 없음) → 아래에서 올라오는 Drawer 하나 + 같은 Drawer 안의 PIN 만들기. 성공하면 닫고 "팀을 만들었어요." 알림, 실패하면 알리고 머묾
+  - 팀 종류: 4개 → "교내 공연"·"외부 공연"·"기타 팀" (서버에 그대로, 고르면 아래 설명). 옛 값과 함께 쓴다
+  - 팀 이름 예시(록 밴드) 23 → 48개, 팀원 칸마다 12자·셋리스트 200자(옛 Drawer와 같음), 팀원·셋리스트 안내 문구
+  - PIN: 두 칸 → 4칸에 한 번 넣고 같은 칸에 한 번 더 (서로 다르면 흔든 뒤 처음부터)
+  - 팀 자동 삭제 (새 기능, 적용 예정): 다 만들고 `teams/teamDue.ts`의 `TEAM_DUE_ENABLED`로 꺼 둠 (백엔드 팀 스키마에 `due`가 없음). 읽는 쪽(팀 정보의 "…까지", 합주 잡기의 매주 반복 제한)은 서버가 보내면 바로 동작. 상세: 계획 문서 "적용 예정: 팀 자동 삭제"
+  - 메인 화면 팀 목록 판(밝은 모드): #f4f5f7 → #fbfbfc
+- 구조: `teams/AddTeamDrawer.tsx`, `teams/teamDue.ts`, `schedule/formParts.tsx`(합주 잡기에서 꺼낸 입력 부품), `schedule/keyboardSheet.tsx`(`pinSheet` 이름 변경: 입력칸이 있는 Drawer 공용), `PinStep`의 `PinSlots`. 로직 층에 더한 것(덧붙이기만): `types/response` 팀 `due`, `types/domain`의 `Team.due`·`TeamType`(새 3개)·`LegacyTeamType`, `types/request`의 `due`, `lib/board`의 `toTeams`가 `due`를 넘김. 옛 `addTeamDrawers/` 삭제
+- 테스트: 팀 추가 2개 → 3개(한 Drawer + PIN 두 번 → 본문 `type: '교내 공연'`·`due` 없음, 확인 PIN이 다르면 처음부터·저장 안 함, 저장 실패), 팀 자동 삭제 2개(삭제 날짜가 있으면 팀 정보 "12/10(목)까지"·계속 반복 막힘·안내, 없으면 그대로)
+- 확인: Playwright Chrome 390·360·1280px 밝은·어두운 — 빈 화면·채운 화면·맨 아래·PIN 1·2단계·서로 다름, 스크롤 막대 0·가로 넘침 없음·새 콘솔 오류 없음
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 211/211 / `pnpm lint` → 에러 2·경고 19 (옛 팀 추가 Drawer 삭제로 에러 2건 감소, 새 코드 0건) / `pnpm format:check` ✅
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.

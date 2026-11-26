@@ -15,7 +15,7 @@ import { pressable } from './drawerParts';
 // - 틀리면: 흔든 뒤 칸을 비워 첫 칸부터 다시 넣는다 (16차)
 // - 실행에 실패하면(onConfirm이 false) 칸을 비워 PIN부터 다시 (실패 알림은 실행한 쪽에서)
 
-const PIN_LENGTH = 4;
+export const PIN_LENGTH = 4;
 /** 틀린 PIN을 비우기까지 (흔들기 애니메이션 0.36초가 끝난 뒤) */
 const CLEAR_DELAY_MS = 450;
 
@@ -101,35 +101,13 @@ const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepPro
 
     return (
         <form className="flex flex-col items-center" onSubmit={handleSubmit}>
-            <div key={attempt} className={cn(invalid && 'animate-shake')}>
-                <InputOTP
-                    maxLength={PIN_LENGTH}
-                    value={pin}
-                    onChange={handleChange}
-                    pattern={REGEXP_ONLY_DIGITS}
-                    inputMode="numeric"
-                    autoComplete="off"
-                    autoFocus
-                    aria-label={`PIN ${PIN_LENGTH}자리`}
-                    disabled={status === 'submitting'}
-                >
-                    <InputOTPGroup className="gap-3 has-aria-invalid:ring-0">
-                        {Array.from({ length: PIN_LENGTH }, (_, index) => (
-                            <InputOTPSlot
-                                key={index}
-                                index={index}
-                                mask
-                                aria-invalid={invalid}
-                                className={cn(
-                                    'size-14 rounded-2xl border border-neutral-200 bg-neutral-50 text-ink first:rounded-2xl last:rounded-2xl md:size-16',
-                                    'data-[active=true]:border-ink data-[active=true]:bg-surface data-[active=true]:ring-4 data-[active=true]:ring-neutral-900/8',
-                                    'aria-invalid:border-red-400 aria-invalid:bg-red-50 aria-invalid:text-red-600 data-[active=true]:aria-invalid:border-red-400 data-[active=true]:aria-invalid:ring-red-500/15',
-                                )}
-                            />
-                        ))}
-                    </InputOTPGroup>
-                </InputOTP>
-            </div>
+            <PinSlots
+                value={pin}
+                onChange={handleChange}
+                invalid={invalid}
+                attempt={attempt}
+                disabled={status === 'submitting'}
+            />
 
             {/* 확인 결과 (화면 읽기 프로그램에도 알린다) */}
             <p
@@ -183,5 +161,53 @@ const PinStep = ({ teamId, confirmLabel, danger = false, onConfirm }: PinStepPro
         </form>
     );
 };
+
+/**
+ * PIN 4칸 (점으로 가림, 숫자만). 틀리면(invalid) 빨강 + 흔들기 (attempt가 바뀔 때마다 다시 흔든다).
+ * PIN 확인(PinStep)과 PIN 만들기(팀 추가, V-3 10차)가 함께 쓴다. aria-label은 "PIN 4자리"
+ */
+export const PinSlots = ({
+    value,
+    onChange,
+    invalid,
+    attempt,
+    disabled = false,
+}: {
+    value: string;
+    onChange: (value: string) => void;
+    invalid: boolean;
+    attempt: number;
+    disabled?: boolean;
+}) => (
+    <div key={attempt} className={cn(invalid && 'animate-shake')}>
+        <InputOTP
+            maxLength={PIN_LENGTH}
+            value={value}
+            onChange={onChange}
+            pattern={REGEXP_ONLY_DIGITS}
+            inputMode="numeric"
+            autoComplete="off"
+            autoFocus
+            aria-label={`PIN ${PIN_LENGTH}자리`}
+            disabled={disabled}
+        >
+            <InputOTPGroup className="gap-3 has-aria-invalid:ring-0">
+                {Array.from({ length: PIN_LENGTH }, (_, index) => (
+                    <InputOTPSlot
+                        key={index}
+                        index={index}
+                        mask
+                        aria-invalid={invalid}
+                        className={cn(
+                            'size-14 rounded-2xl border border-neutral-200 bg-neutral-50 text-ink first:rounded-2xl last:rounded-2xl md:size-16',
+                            'data-[active=true]:border-ink data-[active=true]:bg-surface data-[active=true]:ring-4 data-[active=true]:ring-neutral-900/8',
+                            'aria-invalid:border-red-400 aria-invalid:bg-red-50 aria-invalid:text-red-600 data-[active=true]:aria-invalid:border-red-400 data-[active=true]:aria-invalid:ring-red-500/15',
+                        )}
+                    />
+                ))}
+            </InputOTPGroup>
+        </InputOTP>
+    </div>
+);
 
 export default PinStep;

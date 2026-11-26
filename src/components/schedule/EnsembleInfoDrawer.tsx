@@ -50,7 +50,7 @@ import {
 } from './drawerParts';
 import { scrollFadeRef } from '@/components/ui/scroll-fade';
 import PinStep from './PinStep';
-import { usePinSheet } from './pinSheet';
+import { useKeyboardSheet } from './keyboardSheet';
 import { openAddEnsemble, openUpdateEnsemble } from './addEnsembleStore';
 
 // 합주 정보 Drawer (View 개편 V-2). 아래에서 올라오고, 아래로 끌어내리면 닫힌다 (vaul).
@@ -199,9 +199,9 @@ const EnsembleInfoDrawer = ({
         return handler(id, teamId, repeat, nextDate, startTime, endTime);
     };
 
-    // PIN 단계의 키보드 처리 (키보드 위로 올리기·뒤 페이지 고정·키보드 쪽 흰 판: pinSheet, 16~20차)
+    // PIN 단계의 키보드 처리 (키보드 위로 올리기·뒤 페이지 고정·키보드 쪽 흰 판: keyboardSheet, 16~20차)
     const pinStepOpen = open && step !== 'info';
-    const pinSheet = usePinSheet(pinStepOpen);
+    const pinSheet = useKeyboardSheet(pinStepOpen);
 
     // 머리 색: 팀의 지금 색 (캘린더 블록과 같음)
     const color = shown

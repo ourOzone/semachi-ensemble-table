@@ -10,19 +10,19 @@ import { countOf, recordRequests } from '@/test/requests';
 import { server } from '@/test/server';
 import { useDrawerStore } from '@/stores/drawer';
 
-// 한마디 흐름 테스트 (View 개편 V-4): 남기기 / 삭제 Drawer, PIN, 알림, 서버 요청 내용까지 확인한다.
+// 날적이 흐름 테스트 (View 개편 V-4): 남기기 / 삭제 Drawer, PIN, 알림, 서버 요청 내용까지 확인한다.
 
-/** 한마디 카드 (삭제 버튼이 있는 li) */
+/** 날적이 카드 (삭제 버튼이 있는 li) */
 const findCard = async (text: string) => (await screen.findByText(text)).closest('li')!;
 
 async function writeNote(user: ReturnType<typeof userEvent.setup>, text: string) {
-    await user.click(await screen.findByRole('button', { name: '한마디 남기기' }));
-    const drawer = within(await findDialog('한마디 남기기'));
-    await user.type(drawer.getByLabelText('한마디'), text);
+    await user.click(await screen.findByRole('button', { name: '날적이 남기기' }));
+    const drawer = within(await findDialog('날적이 남기기'));
+    await user.type(drawer.getByLabelText('날적이'), text);
     return drawer;
 }
 
-describe('한마디', () => {
+describe('날적이', () => {
     beforeEach(() => {
         mockInitialData();
     });
@@ -38,7 +38,7 @@ describe('한마디', () => {
         const user = userEvent.setup();
         renderApp();
 
-        const drawer = await writeNote(user, '  새 한마디 ');
+        const drawer = await writeNote(user, '  새 날적이 ');
         await user.click(drawer.getByRole('button', { name: '다음' }));
         const pinDrawer = within(await findDialog('PIN을 정해 주세요'));
         const submit = pinDrawer.getByRole('button', { name: '남기기' });
@@ -46,8 +46,8 @@ describe('한마디', () => {
         await user.type(pinDrawer.getByLabelText('PIN 4자리'), '1234');
         await user.click(submit);
 
-        expect(await screen.findByText('한마디를 남겼어요.')).toBeInTheDocument();
-        expect(posted).toEqual({ text: '새 한마디', pin: '1234' });
+        expect(await screen.findByText('날적이를 남겼어요.')).toBeInTheDocument();
+        expect(posted).toEqual({ text: '새 날적이', pin: '1234' });
         expect(useDrawerStore.getState().openedDrawers).toEqual([]);
     });
 
@@ -59,36 +59,31 @@ describe('한마디', () => {
         expect(drawer.getByRole('button', { name: '내용을 써 주세요' })).toBeDisabled();
     });
 
-    it('한마디가 가득 차면(400 Note limit exceeded) 전용 알림, 그 밖의 실패는 저장 실패 알림. PIN 단계에 머문다', async () => {
+    it('저장에 실패하면 알리고 PIN 단계에 머문다', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
-        let full = true;
-        server.use(
-            http.post(`${url}/note`, () =>
-                full
-                    ? new HttpResponse('Note limit exceeded', { status: 400 })
-                    : new HttpResponse(null, { status: 500 }),
-            ),
-        );
+        server.use(http.post(`${url}/note`, () => new HttpResponse(null, { status: 500 })));
         const user = userEvent.setup();
         renderApp();
 
-        const drawer = await writeNote(user, '새 한마디');
+        const drawer = await writeNote(user, '새 날적이');
         await user.click(drawer.getByRole('button', { name: '다음' }));
         const pinDrawer = within(await findDialog('PIN을 정해 주세요'));
-        await user.type(pinDrawer.getByLabelText('PIN 4자리'), '1234');
-        await user.click(pinDrawer.getByRole('button', { name: '남기기' }));
-        expect(
-            await screen.findByText('한마디가 가득 찼어요. 며칠 뒤 다시 남겨 주세요.'),
-        ).toBeInTheDocument();
-        expect(useDrawerStore.getState().openedDrawers).toEqual(['addNote']);
-
-        full = false;
         await user.type(pinDrawer.getByLabelText('PIN 4자리'), '1234');
         await user.click(pinDrawer.getByRole('button', { name: '남기기' }));
         expect(
             await screen.findByText('저장하지 못했어요. 잠시 후 다시 시도해 주세요.'),
         ).toBeInTheDocument();
         expect(useDrawerStore.getState().openedDrawers).toEqual(['addNote']);
+    });
+
+    it('제목 옆 물음표를 누르면 날적이 설명 말풍선', async () => {
+        const user = userEvent.setup();
+        renderApp();
+
+        await user.click(await screen.findByRole('button', { name: '날적이란?' }));
+        expect(
+            await screen.findByText(/날적이\(날마다 적는 이야기\)는 매년 초 동방에/),
+        ).toBeInTheDocument();
     });
 
     it('X → PIN이 맞으면 삭제하기: 서버에 삭제를 보내고 알린다', async () => {
@@ -110,9 +105,9 @@ describe('한마디', () => {
         renderApp();
 
         await user.click(
-            within(await findCard('메모입니다')).getByRole('button', { name: '한마디 삭제' }),
+            within(await findCard('메모입니다')).getByRole('button', { name: '날적이 삭제' }),
         );
-        const drawer = within(await findDialog('한마디를 삭제할까요?'));
+        const drawer = within(await findDialog('날적이를 삭제할까요?'));
         await user.type(drawer.getByLabelText('PIN 4자리'), '1234');
         await waitFor(() => expect(drawer.getByRole('button', { name: '삭제하기' })).toBeEnabled());
         await user.click(drawer.getByRole('button', { name: '삭제하기' }));
@@ -122,7 +117,7 @@ describe('한마디', () => {
         expect(new URL(deletedUrl).searchParams.get('id')).toBe('note-1');
         // 존재 확인은 X를 누를 때 한 번
         expect(countOf(requests, 'GET /note/note-1')).toBe(1);
-        // 삭제 후에는 한마디 목록만 다시 불러온다
+        // 삭제 후에는 날적이 목록만 다시 불러온다
         await waitFor(() => expect(countOf(requests, 'GET /notes')).toBe(2));
         expect(countOf(requests, 'GET /teams')).toBe(1);
     });
@@ -134,10 +129,10 @@ describe('한마디', () => {
         renderApp();
 
         await user.click(
-            within(await findCard('메모입니다')).getByRole('button', { name: '한마디 삭제' }),
+            within(await findCard('메모입니다')).getByRole('button', { name: '날적이 삭제' }),
         );
 
-        expect(await screen.findByText('이미 삭제된 한마디예요.')).toBeInTheDocument();
+        expect(await screen.findByText('이미 삭제된 날적이예요.')).toBeInTheDocument();
         expect(useDrawerStore.getState().openedDrawers).toEqual([]);
     });
 
@@ -145,7 +140,7 @@ describe('한마디', () => {
         // 0x69270000 = 2025-11-26 22:26:24 (서울)
         const many = Array.from({ length: 8 }, (_, idx) => ({
             _id: `6927000${idx}aaaaaaaaaaaaaaaa`,
-            text: idx === 0 ? '자료는 https://example.com/a. 여기' : `한마디 ${idx}`,
+            text: idx === 0 ? '자료는 https://example.com/a. 여기' : `날적이 ${idx}`,
         }));
         server.use(http.get(`${url}/notes`, () => HttpResponse.json(many)));
         const user = userEvent.setup();
@@ -156,10 +151,10 @@ describe('한마디', () => {
         expect(link).toHaveAttribute('target', '_blank');
         expect(within(link.closest('li')!).getByText('2025.11.26 22:26:24')).toBeInTheDocument();
 
-        expect(screen.queryByText('한마디 6')).not.toBeInTheDocument();
+        expect(screen.queryByText('날적이 6')).not.toBeInTheDocument();
         await user.click(screen.getByRole('button', { name: '전체 보기 (8개)' }));
-        expect(screen.getByText('한마디 7')).toBeInTheDocument();
+        expect(screen.getByText('날적이 7')).toBeInTheDocument();
         await user.click(screen.getByRole('button', { name: '접기' }));
-        expect(screen.queryByText('한마디 6')).not.toBeInTheDocument();
+        expect(screen.queryByText('날적이 6')).not.toBeInTheDocument();
     });
 });

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, CircleHelp, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { isNotFound } from '@/api';
-import { isNoteLimitExceeded, noteExists } from '@/api/note';
+import { noteExists } from '@/api/note';
 import { AddPill } from '@/components/ui/add-pill';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import {
@@ -21,15 +22,19 @@ import AddNoteDrawer from './AddNoteDrawer';
 import DeleteNoteDrawer from './DeleteNoteDrawer';
 import { linkify } from './linkify';
 
-// 한마디 카드 (View 개편 V-4, 카드 모양은 V-3 1차에 미리 만듦).
+// 날적이 카드 (View 개편 V-4, 카드 모양은 V-3 1차에 미리 만듦).
 // 남기기·삭제는 아래에서 올라오는 새 Drawer (이전: 오른쪽에서 열리는 옛 Drawer, 알림 없음).
-// 목록: 처음 PREVIEW_COUNT개만, "전체 보기"로 펼침. 긴 한마디는 LINE_CLAMP줄까지, "더 보기"로 펼침.
-// 한마디마다 작성 시각(초까지), 글 속 주소는 링크
+// 목록: 처음 PREVIEW_COUNT개만, "전체 보기"로 펼침. 긴 날적이는 LINE_CLAMP줄까지, "더 보기"로 펼침.
+// 날적이마다 작성 시각(초까지), 글 속 주소는 링크
 
-/** 처음 보이는 한마디 수 (PC는 두 줄로 3줄) */
+/** 처음 보이는 날적이 수 (PC는 두 줄로 3줄) */
 const PREVIEW_COUNT = 6;
 
 const CHECK_FAILED = '확인하지 못했어요. 잠시 후 다시 시도해 주세요.';
+
+/** 물음표 말풍선 (V-4 2차, 사용자 문구) */
+const NOTE_ABOUT =
+    '날적이(날마다 적는 이야기)는 매년 초 동방에 노트를 한 권 두고, 찾아오는 사람들이 아무 말(주로 쓸데없는 말)이나 적고 놀며 채웠던 세마치의 유구한 전통이에요. 수십 년 전부터 꽤 최근까지 유지됐지만, 코로나 때 명맥이 끊겼어요. 매년 아카이빙할테니, 온라인에서나마 전통을 이어 나가 보아요.';
 
 const Note = () => {
     const notes = useNotes();
@@ -40,7 +45,7 @@ const Note = () => {
     const { mutateAsync: deleteNoteAsync } = useDeleteNote();
     const openDrawer = useDrawerStore((state) => state.openDrawer);
     const closeAllDrawers = useDrawerStore((state) => state.closeAllDrawers);
-    // 삭제할 한마디. 닫혀도 지우지 않는다 (내려가는 동안 내용이 그대로 보이게)
+    // 삭제할 날적이. 닫혀도 지우지 않는다 (내려가는 동안 내용이 그대로 보이게)
     const [target, setTarget] = useState<NoteItem | null>(null);
     const [showAll, setShowAll] = useState(false);
 
@@ -48,21 +53,16 @@ const Note = () => {
     const handleAddNote = async (text: string, pin: string) => {
         try {
             await addNoteAsync({ text, pin });
-        } catch (err) {
-            // 한마디가 이미 100개면 서버가 거절한다 (오래된 한마디는 서버가 목록을 불러올 때 지운다)
-            toast.error(
-                isNoteLimitExceeded(err)
-                    ? '한마디가 가득 찼어요. 며칠 뒤 다시 남겨 주세요.'
-                    : '저장하지 못했어요. 잠시 후 다시 시도해 주세요.',
-            );
+        } catch {
+            toast.error('저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
             return false;
         }
         closeAllDrawers();
-        toast.success('한마디를 남겼어요.');
+        toast.success('날적이를 남겼어요.');
         return true;
     };
 
-    // 삭제 X: 한마디가 아직 있으면 삭제 Drawer를 연다. 이미 삭제됐으면(404) 알리고 목록을 다시 불러온다,
+    // 삭제 X: 날적이가 아직 있으면 삭제 Drawer를 연다. 이미 삭제됐으면(404) 알리고 목록을 다시 불러온다,
     // 확인 요청 자체가 실패하면 알리고 열지 않는다 (팀·합주와 같음, 이전: PIN Drawer 안에서 확인하고 실패하면 알림 없이 닫음)
     const handleClickDelete = async (note: NoteItem) => {
         try {
@@ -70,7 +70,7 @@ const Note = () => {
         } catch (err) {
             if (isNotFound(err)) {
                 refreshNotes();
-                toast.error('이미 삭제된 한마디예요.');
+                toast.error('이미 삭제된 날적이예요.');
             } else {
                 toast.error(CHECK_FAILED);
             }
@@ -102,12 +102,24 @@ const Note = () => {
         <section className="ui w-full max-w-[1080px] rounded-card bg-surface p-4 shadow-card md:p-7">
             <div className="mb-3 flex items-center justify-between gap-3 md:mb-4">
                 <div className="min-w-0">
-                    <h2 className="text-[17px] font-bold text-ink md:text-[20px]">한마디</h2>
+                    <div className="flex items-center gap-0.5">
+                        <h2 className="text-[17px] font-bold text-ink md:text-[20px]">날적이</h2>
+                        {/* 날적이가 무엇인지 (V-4 2차): 누르면 작은 말풍선 */}
+                        <Popover>
+                            <PopoverTrigger
+                                aria-label="날적이란?"
+                                className="-my-1 inline-flex size-6 items-center justify-center rounded-full text-neutral-400 transition-colors hover:text-ink data-[state=open]:text-ink"
+                            >
+                                <CircleHelp className="size-3.5" aria-hidden />
+                            </PopoverTrigger>
+                            <PopoverContent align="start">{NOTE_ABOUT}</PopoverContent>
+                        </Popover>
+                    </div>
                     <p className="text-[12px] text-neutral-500 md:text-[13px]">
-                        일주일 후 자동으로 삭제돼요
+                        아무말 대잔치만 해요.
                     </p>
                 </div>
-                <AddPill label="한마디 남기기" onClick={() => openDrawer('addNote')} />
+                <AddPill label="날적이 남기기" onClick={() => openDrawer('addNote')} />
             </div>
             {isPending ? (
                 <div aria-busy className="grid gap-2 md:grid-cols-2 md:gap-3">
@@ -120,7 +132,7 @@ const Note = () => {
                 </div>
             ) : notes.length === 0 ? (
                 <p className="squircle rounded-2xl bg-neutral-50 py-8 text-center text-[14px] text-neutral-500 supports-[corner-shape:squircle]:rounded-[24px] md:text-[15px]">
-                    아직 한마디가 없어요. 첫 한마디를 남겨 보세요
+                    아직 날적이가 없어요. 첫 날적이를 남겨 보세요
                 </p>
             ) : (
                 <>
@@ -161,7 +173,7 @@ const Note = () => {
     );
 };
 
-/** 긴 한마디는 이 줄 수까지만 보이고 "더 보기"로 펼친다 */
+/** 긴 날적이는 이 줄 수까지만 보이고 "더 보기"로 펼친다 */
 const LINE_CLAMP = 'line-clamp-5';
 
 /** "2026.11.26 14:03:22" (작성 시각, 초까지) */
@@ -181,7 +193,7 @@ const NoteCard = ({ note, onDelete }: { note: NoteItem; onDelete: () => void }) 
         );
         observer.observe(el);
         return () => observer.disconnect();
-    }, [expanded]); // 한마디는 수정할 수 없어 글이 바뀌지 않는다 (카드는 id로 구분)
+    }, [expanded]); // 날적이는 수정할 수 없어 글이 바뀌지 않는다 (카드는 id로 구분)
 
     return (
         <li className="squircle flex items-start gap-1 rounded-2xl bg-neutral-50 py-3 pr-1.5 pl-4 supports-[corner-shape:squircle]:rounded-[24px] md:py-4 md:pr-2 md:pl-5">
@@ -217,7 +229,7 @@ const NoteCard = ({ note, onDelete }: { note: NoteItem; onDelete: () => void }) 
             </div>
             <button
                 type="button"
-                aria-label="한마디 삭제"
+                aria-label="날적이 삭제"
                 onClick={onDelete}
                 className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-neutral-400 transition-[background-color,color,scale] duration-150 hover:bg-neutral-200 hover:text-ink active:scale-[0.95]"
             >

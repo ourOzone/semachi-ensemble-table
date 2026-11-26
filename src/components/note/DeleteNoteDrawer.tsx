@@ -22,12 +22,12 @@ import { cn } from '@/lib/utils';
 import { useDrawerStore } from '@/stores/drawer';
 import type { Note } from '@/types';
 
-// 한마디 삭제 Drawer (View 개편 V-4). 아래에서 올라오는 Drawer에서 PIN 4칸 → "삭제하기"
+// 날적이 삭제 Drawer (View 개편 V-4). 아래에서 올라오는 Drawer에서 PIN 4칸 → "삭제하기"
 // (이전: 오른쪽에서 열리는 옛 Drawer에 PIN 한 칸·"진짜 삭제해요", 알림 없음).
 // 합주·팀 삭제의 PIN 단계와 같은 모양 (PinStep, 틀리면 흔든 뒤 비움, PC는 Enter로도 삭제)
 
 interface DeleteNoteDrawerProps {
-    /** 삭제할 한마디. 닫혀도 그대로 둔다 (내려가는 동안 내용 유지) */
+    /** 삭제할 날적이. 닫혀도 그대로 둔다 (내려가는 동안 내용 유지) */
     note: Note | null;
     /** 삭제. 성공하면 true (Drawer는 삭제하는 쪽이 닫는다), 실패하면 false → PIN부터 다시 */
     onDelete: (id: string) => Promise<boolean>;
@@ -65,7 +65,7 @@ const DeleteNoteDrawer = ({ note, onDelete }: DeleteNoteDrawerProps) => {
                         <div className="px-5 pt-[26px] pb-[calc(24px+env(safe-area-inset-bottom))] md:px-7">
                             <div className="flex items-start justify-between gap-3">
                                 <DrawerTitle className="pt-1.5 text-[24px] leading-tight font-bold text-ink md:text-[26px]">
-                                    한마디를 삭제할까요?
+                                    날적이를 삭제할까요?
                                 </DrawerTitle>
                                 <DrawerClose asChild>
                                     <button
@@ -77,7 +77,7 @@ const DeleteNoteDrawer = ({ note, onDelete }: DeleteNoteDrawerProps) => {
                                     </button>
                                 </DrawerClose>
                             </div>
-                            {/* 어떤 한마디인지 (세 줄까지) */}
+                            {/* 어떤 날적이인지 (세 줄까지) */}
                             <p
                                 className={cn(
                                     boxShape,

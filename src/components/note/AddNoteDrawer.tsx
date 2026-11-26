@@ -15,14 +15,14 @@ import {
     scrollAreaClassName,
     sheetClassName,
 } from '@/components/schedule/drawerParts';
-import { Hint, Section } from '@/components/schedule/formParts';
+import { Section } from '@/components/schedule/formParts';
 import { useKeyboardSheet } from '@/components/schedule/keyboardSheet';
 import { PIN_LENGTH, PinSlots } from '@/components/schedule/PinStep';
 import { cn } from '@/lib/utils';
 import { useDrawerStore } from '@/stores/drawer';
 
-// 한마디 남기기 Drawer (View 개편 V-4). 아래에서 올라오는 Drawer 하나에서 글 → "다음" → 같은 Drawer 안의 PIN → "남기기"
-// (이전: 오른쪽에서 열리는 옛 Drawer에 글·PIN 한 칸·"완료 (일주일 후 삭제)", 알림 없음).
+// 날적이 남기기 Drawer (View 개편 V-4). 아래에서 올라오는 Drawer 하나에서 글 → "다음" → 같은 Drawer 안의 PIN → "남기기"
+// (이전: 오른쪽에서 열리는 옛 Drawer에 글·PIN 한 칸·"완료", 알림 없음).
 // 팀 추가 Drawer와 같은 규칙: 스크롤 막대 없이 끝 흐림, 아이폰 키보드 처리(keyboardSheet), 글자 16px 이상,
 // 휴대폰에서 글을 쓰는 동안 아래 버튼 숨김, 닫히는 동안 내용 유지.
 // PIN은 한 번만 받는다 (사용자 결정: 잊어도 관리자가 지울 수 있는 가벼운 기능)
@@ -114,10 +114,10 @@ const AddNoteForm = ({
                 <div className="flex items-start justify-between gap-3 px-5 pt-[26px] md:px-7">
                     <div className="min-w-0">
                         <DrawerTitle className="text-[26px] leading-tight font-bold text-ink md:text-[28px]">
-                            한마디 남기기
+                            날적이 남기기
                         </DrawerTitle>
                         <DrawerDescription className="sr-only">
-                            한마디를 쓰고, 다음에 PIN을 정해요
+                            날적이를 쓰고, 다음에 PIN을 정해요
                         </DrawerDescription>
                     </div>
                     <DrawerClose asChild>
@@ -148,20 +148,22 @@ const AddNoteForm = ({
                         }
                     >
                         <textarea
-                            aria-label="한마디"
+                            aria-label="날적이"
                             value={text}
                             maxLength={TEXT_MAX}
                             rows={rows}
-                            placeholder="내용 여따 써요"
+                            // 쓰는 규칙 (V-4 2차, 사용자 문구)
+                            placeholder={
+                                '비방, 도배, 따끔한 일갈 등은 안 돼요. 정색 계열은 그냥 안 돼요.\n공지나 건의 등도 다른 창구를 이용해요. 유쾌하게만 사용해요.'
+                            }
                             className={cn(
                                 boxShape,
-                                'block w-full resize-none border border-neutral-200 bg-surface px-4 py-3 text-[16px] leading-[1.6] text-ink outline-none placeholder:text-neutral-400 focus:border-ink',
+                                'block w-full resize-none border border-neutral-200 bg-surface px-4 py-3 text-[16px] leading-[1.6] break-keep text-ink outline-none placeholder:text-neutral-400 focus:border-ink',
                             )}
                             onChange={(e) => setText(e.target.value)}
                             onFocus={() => setEditing(true)}
                             onBlur={() => setEditing(false)}
                         />
-                        <Hint>일주일 후 자동으로 삭제돼요</Hint>
                     </Section>
                 </div>
             </div>
@@ -250,7 +252,7 @@ const PinCreateStep = ({
                     PIN을 정해 주세요
                 </DrawerTitle>
                 <DrawerDescription className="mt-1.5 text-[15px] break-keep text-neutral-500">
-                    숫자 4자리. 한마디를 지울 때 필요해요
+                    숫자 4자리. 날적이를 지울 때 필요해요
                 </DrawerDescription>
                 <form className="mt-7 flex flex-col items-center" onSubmit={handleSubmit}>
                     <PinSlots

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-// 한마디 글 속의 주소를 누를 수 있는 링크로 (V-4). http(s):// 또는 www.로 시작하는 것만.
+// 날적이 글 속의 주소를 누를 수 있는 링크로 (V-4). http(s):// 또는 www.로 시작하는 것만.
 // 링크 주소는 글에서 찾은 문자열에 https://만 붙여 만든다 (javascript: 등 다른 scheme은 링크가 되지 않는다)
 
 const URL_PATTERN = /(?:https?:\/\/|www\.)[^\s<>"']+/gi;

@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, V-3 팀 진행 중 (1차: 팀 목록·설정·다크 모드·스켈레톤, 공지·한마디 메인 화면 미리) (브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | 🔄 V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, 다음은 V-4 한마디 (브랜치 `ui3.0`, 계획: `docs/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -1188,6 +1188,14 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 217/217 / `pnpm lint` → 에러 1·경고 19 (새 코드 0건) / `pnpm format:check` ✅
 
+### 2026-11-26 — View 개편 V-3 마무리
+
+- 사용자 실기기 확인: 팀 추가·수정의 키보드·"다음"/"수정하기" 숨김·소제목 스크롤, 알림 위치
+- 사전 결정 3(폼) 확정: react-hook-form + Zod → Drawer 로컬 `useState` (검증이 필수 한두 개 + 글자 수뿐이라 폼 라이브러리로 얻는 것이 없다)
+- V-3 결과: 팀 목록(고정·스켈레톤·다크 모드), 팀 정보·추가·수정·삭제, 합주 잡기(팀 정보에서), 소모임·일정 정보 → 아래에서 올라오는 새 Drawer. 옛 팀 Drawer(추가 6·수정 5·삭제·정보·소모임 정보) 모두 삭제, 팀·합주 쪽 코드에 antd·styled-components 없음. 팀 종류 3개 개편, 팀 자동 삭제(적용 예정)
+- V-6으로 넘긴 것 (계획 문서 "V-6 상세"): `context/team`·`context/ensemble`(지금 보고 있는 팀·합주만 남음), 호환용 `useDrawerContext` 별칭, 옛 공용 Drawer(공지·한마디만 사용)
+- ISSUES: V6(알림)·V12(키보드)를 공지·한마디만 남은 것으로 갱신
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -1232,4 +1240,4 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 1. ~~2단계 TS 전환~~ ✅ 완료
 2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)
 3. ~~3단계 내부 로직 개선~~ ✅ 완료 (2026-11-23)
-4. View 개편: 계획 `docs/VIEW_REDESIGN_PLAN.md` (V-0·V-1·V-2 ✅, V-3 팀 진행 중)
+4. View 개편: 계획 `docs/VIEW_REDESIGN_PLAN.md` (V-0·V-1·V-2·V-3 ✅, 다음은 V-4 한마디)

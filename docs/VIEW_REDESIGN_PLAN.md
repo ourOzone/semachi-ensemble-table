@@ -33,7 +33,7 @@
 |---|---|---|---|---|
 | 1 | 공존 기간 CSS 충돌 | (a) CSS 레이어 순서 지정 + antd `StyleProvider`의 `layer` / (b) 전환 기간에 Tailwind preflight 끄기 | **(a)** (추천안) | Tailwind v4의 기본 스타일 초기화(preflight)가 antd 스타일을 덮어쓸 수 있다. 레이어 순서(`theme, base, antd, components, utilities`)를 정하면 둘 다 의도대로 적용된다. 문제가 크면 (b)로 |
 | 2 | 단일 Drawer 컴포넌트 | (a) shadcn **Sheet**(오른쪽에서 열림) / (b) shadcn **Drawer**(vaul, 아래에서 올라옴) | **(b)** (사용자 선택) | 사용자 대부분이 모바일이라 아래에서 올라오는 Drawer가 한 손 조작에 맞다. 넓은 화면에서는 폭을 제한하고 가운데에 두는 등 PC에서 어색하지 않게 한다. 넓은 화면의 구체 배치(예: PC에서는 Dialog로 바꾸는 반응형 방식)는 V-2 화면 구성안에서 제안한다 |
-| 3 | 폼 | react-hook-form + Zod (shadcn Form) / 로컬 `useState` | **react-hook-form + Zod** (추천안) | shadcn Form의 표준. 요청 본문 검증(Zod)을 폼 검증과 같이 쓸 수 있다. `context/team`·`ensemble`은 이걸로 대체하고 삭제 |
+| 3 | 폼 | react-hook-form + Zod (shadcn Form) / 로컬 `useState` | ~~react-hook-form + Zod~~ → **로컬 `useState`** (V-3 마무리에 사용자 확정, 2026-11-26) | 처음엔 shadcn Form의 표준이라 추천안으로 골랐다. 실제 폼(합주 잡기·수정, 팀 추가·수정)의 검증이 "필수 한두 개 + 글자 수(입력칸의 maxLength)"뿐이라 폼 라이브러리로 얻는 것이 없어 쓰지 않는다. 입력값은 Drawer 로컬 상태, 여는 곳이 여러 곳이면 미리 채울 값만 작은 store(`addEnsembleStore`·`editTeamStore`) |
 | 4 | 아이콘 | lucide-react / `@ant-design/icons` 유지 | **lucide-react** (추천안) | shadcn 기본. 마지막 정리 때 `@ant-design/icons` 제거 |
 | 5 | 달력 | shadcn Calendar(react-day-picker + date-fns 한국어) / 직접 구현 | **shadcn Calendar** (추천안) | 날짜 계산 로직은 dayjs(`lib/`) 그대로 두고, 컴포넌트 경계에서 `Date` ↔ `Dayjs`만 변환 |
 | 6 | 알림 | shadcn **Sonner**(토스트) | **Sonner** (추천안) | 앱 루트에 `<Toaster />` 하나. 3-6 폐기 때 알림을 삭제했으므로 새로 추가한다 (ISSUES V6). 모바일에서 아래 Drawer와 겹치지 않는 위치(위쪽)에 둔다 |
@@ -47,7 +47,7 @@
 | V-0 ✅ | 사전 결정 확정 (2026-11-23) | |
 | V-1 ✅ | **기반 작업**: 아래 "V-1 상세" (2026-11-23) | V6(조회 실패 알림) |
 | V-2 ✅ | **합주표** (2026-11-25 완료, 1~32차 + 마무리): 합주표 그리드, 합주 정보·수정·미루기·삭제 → 단일 Drawer, 달력·시간 선택. **디자인 컨셉을 이 단계에서 정한다** (색·글꼴·간격·모서리·Drawer 모양, 화면 폭별 배치). 아래 "V-2 진행" | F6, F10 |
-| V-3 🔄 | **팀**: 팀 버튼, 팀 정보·추가·수정·삭제, 합주 추가, 소모임 정보 → 단일 Drawer. 규모가 커서 필요하면 V-3a(팀) / V-3b(합주 추가·소모임)로 나눈다. 합주 추가의 달력·시간 선택은 V-2의 컴포넌트를 다시 쓴다 | F11, V7 |
+| V-3 ✅ | **팀** (2026-11-26 완료, 1~17차 + 마무리): 팀 버튼, 팀 정보·추가·수정·삭제, 합주 추가, 소모임 정보 → 단일 Drawer. 규모가 커서 필요하면 V-3a(팀) / V-3b(합주 추가·소모임)로 나눈다. 합주 추가의 달력·시간 선택은 V-2의 컴포넌트를 다시 쓴다 | F11, V7 |
 | V-4 | **한마디**: 한마디 목록·등록·삭제 (V-2·V-3에서 정한 컨셉을 따른다) | |
 | V-5 | **공지**: 공지 버튼·목록·등록·삭제 → 단일 Drawer (V-2·V-3에서 정한 컨셉을 따른다) | V1·V2 일부 |
 | V-6 | **일괄 정리**: 아래 "V-6 상세" | V1~V5, E4, F9 |
@@ -333,7 +333,7 @@
 - [x] **17차 (2026-11-26): 존재 확인 실패·이미 삭제된 팀 알림**
   - 팀·합주 존재 확인(팀 정보의 합주 잡기·팀 수정·팀 삭제, 합주 정보의 미루기·바로 하기·반복으로 바꾸기·수정·삭제, 팀 정보에서 합주 잡기 저장 직전): 실패하면 알림 없이 Drawer를 모두 닫음(이미 삭제됨과 서버 오류를 구분하지 않음) → 404면 "이미 삭제된 팀이에요."/"이미 삭제된 합주예요." + 모두 닫음, 그 밖의 실패는 "확인하지 못했어요. 잠시 후 다시 시도해 주세요." + 그대로 머묾
   - 합주 정보에서 팀 이름을 눌렀는데 그 팀이 이미 없음: 알림 없이 닫음 → "이미 삭제된 팀이에요."
-- [ ] 18차 이후: (사용자 시안)
+- [x] **마무리 (2026-11-26):** 사용자 실기기 확인(팀 추가·수정 키보드·버튼 숨김·스크롤, 알림 위치). 사전 결정 3을 로컬 `useState`로 확정. 남은 정리는 아래 "V-6 상세"에 (팀·합주 context, `useDrawerContext` 별칭, 옛 공용 Drawer)
 
 #### 적용 예정: 팀 자동 삭제 (V-3 10차, 백엔드 팀 스키마에 `due`가 생기면)
 
@@ -359,7 +359,7 @@
 ### 기능 단계(V-2 ~ V-5)에서 할 일
 1. **화면 구성안을 먼저 제안하고 승인을 받는다** (Drawer 하나에 무엇을 넣는지, 입력 순서, 완료·실패 표시, **화면 폭별 배치**). 동작이 바뀌는 부분은 목록으로 밝힌다. V-2부터 사용자 시안이 있으면 그것으로 대신한다
 2. 새 컴포넌트를 shadcn + Tailwind로 만든다. 서버 요청은 3단계의 mutation 훅(`src/queries/`)을 호출한다. 성공·실패 알림(Sonner)을 그 기능에 연결한다
-3. 폼 입력값은 폼 로컬 상태(react-hook-form)에 둔다. 그 기능이 쓰던 `context/team`·`context/ensemble` 값과 `orgXxx` 복원 로직을 쓰지 않게 한다
+3. 폼 입력값은 Drawer 로컬 상태(`useState`, 사전 결정 3 확정)에 둔다. 그 기능이 쓰던 `context/team`·`context/ensemble` 값과 `orgXxx` 복원 로직을 쓰지 않게 한다
 4. 그 기능의 옛 Drawer와 완료 화면 Drawer("락앤롤!")를 삭제하고, `src/types/drawer.ts`의 `DrawerId`에서 해당 ID를 뺀다
 5. 그 기능의 흐름 테스트를 새 UI 기준(역할·이름 기반 조회)으로 다시 쓴다. `lib/`·`queries/` 테스트는 그대로 통과해야 한다
 6. PIN 흐름: 백엔드 B1(변경 API의 서버 측 PIN 검증)이 바뀌기 전까지는 폼 안에서 `check-xxx-pin`으로 확인한 뒤 저장한다. 바뀌었다는 통보가 오면 그때 저장 요청 하나로 합친다
@@ -370,6 +370,10 @@
 - `theme.ts` 제거 전: `lib/board`의 `buildColorMap`이 `theme.teamColors`를 쓴다 → 팀 색 상수를 로직 층으로 옮겨야 한다 (로직 변경이므로 먼저 보고. `tokens.test.ts`도 그 상수와 비교하도록)
 - 제거: `antd`, `@ant-design/icons`, `@ant-design/cssinjs`, `@ant-design/v5-patch-for-react-19`(+ `src/index.tsx`의 import), `styled-components`, `src/styles/theme.ts`(토큰으로 이전 완료 후), `context/team`·`context/ensemble`·`ContextProvider`, 호환용 `useDrawerContext` 별칭
 - `stores/drawer`를 단일 Drawer 구조에 맞게 줄인다 (스택이 필요 없으면 "열린 Drawer 하나 + 대상 id")
+- **V-3 마무리에서 넘긴 것 (잊지 말 것):**
+  - `context/team`(id·type·name·desc·`setTeamStates`)·`context/ensemble`: 이제 입력 전달용이 아니라 "지금 보고 있는 팀·합주"만 담는다 (팀 정보·소모임 정보·합주 정보 Drawer, 합주 수정 뒤 정보로 돌아오기). 열 때 대상 id만 store에 두고 내용은 조회 결과(`useTeams`·합주 목록)에서 찾도록 바꾼 뒤 삭제. 함께 `setTeamStates()`·`setEnsembleStates()` 초기화 호출을 모두 없앤다
+  - 호환용 `useDrawerContext` 별칭: 아직 `teams/index`·`board/index`·공지·한마디 쪽이 쓴다 → `useDrawerStore` 직접 구독으로 바꾸고 삭제
+  - 옛 공용 `common/Drawer`·`OkButton`·`PinInput`·`Tooltip`: 남은 사용처는 공지·한마디뿐 (V-4·V-5 뒤 삭제). App의 본문 밀기(`sideDrawers`)·`BOTTOM_DRAWERS` 구분도 옛 Drawer가 사라지면 함께 정리
 - antd 의존 테스트 헬퍼(`findEnabledButton`·`findDrawer`·달력 `td[title]`) 정리 (E4), App 테스트의 허용 경고 목록(`KNOWN_WARNINGS`) 정리
 
 ### 멈추고 보고할 조건
@@ -385,7 +389,7 @@
 > 근거: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md` 사전 결정 1·5번, `docs/ISSUES.md`의 View 항목.
 
 - [ ] **Drawer 단일화:** API 요청 하나에 Drawer 하나. 그 안에서 모든 값을 입력하고, 완료 화면 Drawer("락앤롤!" 등)는 삭제
-- [ ] **`context/team`·`context/ensemble` 제거:** 단계 사이 입력값 전달용이다. 폼 로컬 상태(shadcn/ui Form = react-hook-form + Zod)로 옮긴 뒤 삭제한다. Zustand로 옮기지 않는다
+- [ ] **`context/team`·`context/ensemble` 제거:** 단계 사이 입력값 전달용이다. 폼 로컬 상태로 옮긴 뒤 삭제한다 (V-3까지: 입력은 모두 Drawer 로컬 `useState`로 옮겼고, context에는 "지금 보고 있는 팀·합주"만 남았다 → V-6 상세)
   - 함께 사라지는 것: 입력 한 글자마다 다시 렌더링(P3), 수정 취소용 `orgXxx` 복제(P5, 폼 초기값으로 대체), `setTeamStates()`·`setEnsembleStates()` 초기화 호출
 - [ ] **`stores/drawer` 축소:** 3-9에서 Context → Zustand로 옮긴 Drawer 스택을 단일 Drawer 구조에 맞게 줄이고, 호환용 `useDrawerContext` 별칭을 삭제한다
 - [ ] **PIN 흐름:** 지금은 PIN 단계 Drawer가 존재 확인과 `check-xxx-pin`을 따로 호출한다(P2 잔여, F6). 백엔드 B1 대응(변경 API에서 PIN 검증)에 맞춰 폼 submit 하나로 합친다

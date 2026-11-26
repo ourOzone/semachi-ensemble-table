@@ -313,7 +313,10 @@ app.get('/ensembles', async (req, res) => {
 
     const ensembles = await Ensemble.find({
       $or: [
-        { repeat: true }, // 반복되는 일정
+        {
+          repeat: true,
+          due: { $not: { $lt: today } } // 반복되는 일정 중 반복 종료 날짜(due)가 오늘 이전이 아닌 것 (due가 없으면 포함)
+        },
         {
           repeat: false,
           nextDate: { $gte: today } // 반복되지 않고, 아직 지나지 않은 일정

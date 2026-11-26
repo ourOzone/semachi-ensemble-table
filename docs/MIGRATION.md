@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| View 개편 | 🔄 V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, V-4 날적이 ✅, V-5 공지 ✅, **V-6 일괄 정리 ✅ (2026-11-26)**, 다음은 V-7 마무리 (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
+| View 개편 | ✅ **완료 (2026-11-26, V-0 ~ V-7)**: V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, V-4 날적이 ✅, V-5 공지 ✅, **V-6 일괄 정리 ✅**, **V-7 마무리 ✅ (2026-11-26)** (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
 
@@ -1260,6 +1260,28 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 223/223 / `pnpm lint` → **에러 0·경고 0** / `pnpm format:check` ✅ / `pnpm build` ✅ (JS 883kB → 835kB, gzip 283 → 265kB)
 
+### 2026-11-26 — View 개편 V-7: 마무리 (View 개편 완료)
+
+| 항목 | 3단계 완료 (2026-11-23) | View 개편 완료 (2026-11-26) |
+|---|---|---|
+| 테스트 | 17개 파일, 93개 | 28개 파일, 223개 |
+| 커버리지 (구문 · 분기 · 줄) | 91% · 81% · – | 92.2% · 85.0% · 95.4% (`lib` 99·93%, `stores` 100·92%. 낮은 곳은 shadcn 기본 부품과 진입점) |
+| 린트 | 에러 5 · 경고 42 (모두 옛 View) | **에러 0 · 경고 0** |
+| JS 번들 | 1,039kB (gzip 324kB) | **835kB (gzip 265kB)** + CSS 87kB (gzip 15kB). 가장 컸을 때 1,301kB(V-2 21차, antd와 새 달력이 함께 있던 때) |
+| UI·스타일 | antd 5 + styled-components 6 | shadcn/ui(Radix·vaul·Sonner·input-otp·react-day-picker) + Tailwind 4 + lucide. antd·@ant-design 3개·styled-components 제거 |
+| 상태 | Context 2개(team·ensemble) + Zustand(Drawer) | Zustand만 (Drawer, 보고 있는 팀·합주, 기능별 store), Context 0개 |
+| Drawer | 오른쪽에서 쌓이는 옛 Drawer(기능마다 단계별 여러 개, 완료 화면) | 아래에서 올라오는 Drawer 하나에서 모두 입력, PIN 4칸, 키보드 처리 |
+| 알림 | 없음 (3-6 폐기) | 모든 조회 실패·변경 결과에 Sonner 알림 (굵은 한 문장) |
+| 새 기능 | – | 주 단위 합주판(12주, 보기 방식 2가지), 반복 종료 날짜, 미루기 취소·반복으로 바꾸기, 겹침 4개 제한, 팀 고정, 다크 모드, 스켈레톤, 날적이 작성 시각·링크 등 |
+| 디렉터리 | 종류별(`components/`·`context/`) | 기능 단위(`features/`) + 공용 로직 층, 케밥 표기 (`docs/DIRECTORY_STRUCTURE.md`) |
+
+- 번들 구성 (V-7에 소스맵으로 잰 압축 전 크기 비율): react-dom 25%, zod 14%, 앱 코드 13%, axios 8%, react-day-picker 6%(+ date-fns 7%), TanStack Query 7%, vaul 3%, sonner 3% 등. 500kB 경고는 남아 있다 → ISSUES V15 (줄일 후보, 적용 전 승인)
+- 정리: 직접 쓰지 않는 `date-fns` 의존성 삭제 (react-day-picker의 자체 의존성, 번들 변화 없음), 지금 동작과 맞지 않는 주석 4곳
+- 화면 확인: Playwright 360·390·430·600·768·900·1024·1280px × 밝은·어두운 (API 가짜 응답), 가로 넘침 0·콘솔 오류 0
+- 문서: 계획 문서 완료 표시, `CLAUDE.md` 마이그레이션 단계, MODERNIZATION 진행 순서, ISSUES(F6·V11·E2 상태 ✅, V15 추가)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 223/223 / `pnpm test:coverage` ✅ / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -1304,4 +1326,5 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 1. ~~2단계 TS 전환~~ ✅ 완료
 2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)
 3. ~~3단계 내부 로직 개선~~ ✅ 완료 (2026-11-23)
-4. View 개편: 계획 `docs/archive/VIEW_REDESIGN_PLAN.md` (V-0~V-6 ✅, 다음은 V-7 마무리. 디렉터리 구조: `docs/DIRECTORY_STRUCTURE.md`)
+4. ~~View 개편~~ ✅ 완료 (2026-11-26, 기록: `docs/archive/VIEW_REDESIGN_PLAN.md`, 디렉터리 구조: `docs/DIRECTORY_STRUCTURE.md`)
+5. 남은 것: 백엔드 대기 항목(ISSUES B1·B3, 팀 자동 삭제, 반복 종료 합주의 실제 삭제), 번들 줄이기 제안(ISSUES V15)

@@ -163,8 +163,8 @@ React Compiler는 별도로 검토한다:
 ✅ 2단계 TS 전환 (+ Zod 스키마·타입, 응답 parse는 3단계로)
 ✅ 로직 개선 전 characterization test 작성 (src/context/fetch.test.tsx, 3-2에서 lib 테스트로 이전)
 ✅ 3단계 로직 개선 (+ TanStack Query, Zustand(Drawer), Zod 검증) — 2026-11-23 완료, 3-6 폐기·알림 삭제
-  → View 개편 (Tailwind v4 + shadcn/ui, antd·styled-components 제거, Drawer 단일화) — 계획: docs/archive/VIEW_REDESIGN_PLAN.md
-  → React Compiler: ✅ View 개편 V-1에서 적용 (10번)
+✅ View 개편 (Tailwind v4 + shadcn/ui, antd·styled-components 제거, Drawer 단일화, 기능 단위 디렉터리) — 2026-11-26 완료, 기록: docs/archive/VIEW_REDESIGN_PLAN.md
+✅ React Compiler: View 개편 V-1에서 적용 (10번)
 ```
 
 ---

@@ -1,6 +1,6 @@
 # semachi-ensemble-table
 
-레거시 CRA 프로젝트를 Vite + TypeScript로 마이그레이션하는 중인 React 프론트엔드.
+레거시 CRA 프로젝트를 Vite + TypeScript로 옮기고(1~3단계) 화면을 새로 만든(View 개편) React 프론트엔드. 마이그레이션은 모두 끝났다 (2026-11-26).
 
 ## 명령어
 패키지 매니저는 pnpm이다 (`package.json`의 `packageManager`로 버전 고정). npm/yarn을 쓰지 않는다.
@@ -34,7 +34,7 @@
 
 진행 상황은 @docs/MIGRATION.md 에 기록하고, 작업이 끝날 때마다 갱신한다.
 2단계(TS 전환)는 완료됐다 (기록: `docs/archive/TS_MIGRATION_PLAN.md`).
-3단계(내부 로직 개선)는 완료됐다 (2026-11-23, 기록: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`). 다음은 View 개편이며, 진행 방식·사전 결정·단계·체크리스트·작업마다 갱신할 문서는 `docs/archive/VIEW_REDESIGN_PLAN.md`를 따른다.
+3단계(내부 로직 개선)는 완료됐다 (2026-11-23, 기록: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`). View 개편도 완료됐다 (2026-11-26, 기록: `docs/archive/VIEW_REDESIGN_PLAN.md`). 이후 화면 작업은 아래 "로직 vs 뷰"·"디렉터리" 규칙을 따른다.
 발견한 문제점은 `docs/ISSUES.md`에 ID(`B1`, `F1` 등)로 관리한다. 새로 발견하면 추가하고, 처리하면 상태를 갱신한다.
 
 ## TS 전환 규칙
@@ -52,7 +52,7 @@
 
 ## 로직 vs 뷰
 - 뷰: JSX 구조, Tailwind 클래스, CSS, 마크업 (`src/features`·`src/components`). 3단계까지는 구조를 바꾸지 않았다.
-  View 개편 중에는 `docs/archive/VIEW_REDESIGN_PLAN.md`의 단계에 따라 뷰를 새로 만든다. 이때 로직 층(`src/lib`·`src/queries`·`src/api`·`src/stores`)은 바꾸지 않는 것이 원칙이다.
+  화면을 바꿀 때 로직 층(`src/lib`·`src/queries`·`src/api`·`src/stores`)은 바꾸지 않는 것이 원칙이다. 바꿔야 하면 먼저 이유를 보고한다.
 - 로직: 커스텀 훅, 상태 관리(store), 유틸 함수, 데이터 가공, API 호출. 3단계의 개선 대상이다.
 - 로직 개선은 동작이 바뀌지 않는 범위에서만 한다. 동작이 바뀌는 수정은 먼저 제안하고 승인을 받는다.
 - View 개편 때 Drawer는 "API 요청 하나에 단계별 Drawer 여러 개"에서 "Drawer 하나에서 모두 입력"으로 바뀐다. 완료 화면 Drawer("락앤롤!" 등)는 삭제된다.

@@ -1,6 +1,7 @@
 # View 개편 계획 (styled-components → Tailwind v4, antd → shadcn/ui)
 
-> View 개편 동안 작업을 지시받을 때마다 이 문서를 기준으로 한다. (작성: 2026-11-23)
+> **View 개편 완료 (2026-11-23 ~ 2026-11-26, V-0 ~ V-7).** 결과 요약은 아래 "V-7 진행"과 `docs/MIGRATION.md`. 이후 화면 작업 규칙은 `CLAUDE.md`·`docs/DIRECTORY_STRUCTURE.md`를 따른다.
+> View 개편 동안 작업을 지시받을 때마다 이 문서를 기준으로 했다. (작성: 2026-11-23)
 > 3단계(로직) 결과는 `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`, 문제 목록은 `docs/ISSUES.md`(V·F·E 항목), 진행 기록은 `docs/MIGRATION.md`.
 
 ## 진행 방식 (확정)
@@ -51,7 +52,7 @@
 | V-4 ✅ | **한마디 → 날적이** (2026-11-26 완료, 1~3차): 목록·등록·삭제 (V-2·V-3에서 정한 컨셉을 따른다). 아래 "V-4 진행" | |
 | V-5 ✅ | **공지** (2026-11-26 완료, 1차 + 사용자 실기기 확인): 공지 버튼·목록·등록·삭제 → 단일 Drawer. 아래 "V-5 진행" | V1·V2 일부 |
 | V-6 ✅ | **일괄 정리** (2026-11-26 완료, ①~⑤): 아래 "V-6 상세"·"V-6 진행". 디렉터리 구조는 `docs/DIRECTORY_STRUCTURE.md` | V1~V5, E4, F9 |
-| V-7 | **마무리**: 린트·커버리지·번들 비교, 문서 | |
+| V-7 ✅ | **마무리** (2026-11-26): 린트·커버리지·번들 비교, 문서. 아래 "V-7 진행" | |
 
 ### V-1 상세 (기반 작업) ✅ 2026-11-23
 - [x] Tailwind v4.3(`@tailwindcss/vite`), 진입 CSS `src/styles/index.css`, 사전 결정 1의 레이어 순서 → 아래 "공존 기간 규칙"
@@ -416,6 +417,31 @@
 5. 그 기능의 흐름 테스트를 새 UI 기준(역할·이름 기반 조회)으로 다시 쓴다. `lib/`·`queries/` 테스트는 그대로 통과해야 한다
 6. PIN 흐름: 백엔드 B1(변경 API의 서버 측 PIN 검증)이 바뀌기 전까지는 폼 안에서 `check-xxx-pin`으로 확인한 뒤 저장한다. 바뀌었다는 통보가 오면 그때 저장 요청 하나로 합친다
 
+### V-7 진행 (마무리, 2026-11-26)
+
+- [x] 린트 에러 0·경고 0, 타입 체크·포맷·빌드 통과, 테스트 223개
+- [x] 커버리지: 구문 92.2%·분기 85.0%·줄 95.4% (3단계 완료 91%·81%)
+- [x] 번들 비교 (아래 표) 와 구성 측정
+- [x] 정리: 직접 쓰지 않는 `date-fns` 의존성 삭제(react-day-picker가 자체 의존성으로 가져옴, 번들 변화 없음), 지금 동작과 맞지 않는 주석 4곳(공존 기간·legacy.css 설명)
+- [x] 화면 확인: 360·390·430·600·768·900·1024·1280px × 밝은·어두운에서 가로 넘침 0, 콘솔 오류 0
+- [x] 문서: 계획 문서 완료 표시, `CLAUDE.md`(마이그레이션 단계 완료), MIGRATION 결과 요약, MODERNIZATION 진행 순서, ISSUES(F6·V11·E2 ✅, V15 추가)
+
+| 항목 | 3단계 완료 (2026-11-23) | View 개편 완료 (2026-11-26) |
+|---|---|---|
+| 테스트 | 17개 파일, 93개 | 28개 파일, 223개 |
+| 커버리지 (구문 · 분기 · 줄) | 91% · 81% · – | 92.2% · 85.0% · 95.4% (`lib` 99·93%, `stores` 100·92%. 낮은 곳은 shadcn 기본 부품과 진입점) |
+| 린트 | 에러 5 · 경고 42 (모두 옛 View) | **에러 0 · 경고 0** |
+| JS 번들 | 1,039kB (gzip 324kB) | **835kB (gzip 265kB)** + CSS 87kB (gzip 15kB). 가장 컸을 때 1,301kB(V-2 21차, antd와 새 달력이 함께 있던 때) |
+| UI·스타일 | antd 5 + styled-components 6 | shadcn/ui(Radix·vaul·Sonner·input-otp·react-day-picker) + Tailwind 4 + lucide. antd·@ant-design 3개·styled-components 제거 |
+| 상태 | Context 2개(team·ensemble) + Zustand(Drawer) | Zustand만 (Drawer, 보고 있는 팀·합주, 기능별 store), Context 0개 |
+| Drawer | 오른쪽에서 쌓이는 옛 Drawer(기능마다 단계별 여러 개, 완료 화면) | 아래에서 올라오는 Drawer 하나에서 모두 입력, PIN 4칸, 키보드 처리 |
+| 알림 | 없음 (3-6 폐기) | 모든 조회 실패·변경 결과에 Sonner 알림 (굵은 한 문장) |
+| 새 기능 | – | 주 단위 합주판(12주, 보기 방식 2가지), 반복 종료 날짜, 미루기 취소·반복으로 바꾸기, 겹침 4개 제한, 팀 고정, 다크 모드, 스켈레톤, 날적이 작성 시각·링크 등 |
+| 디렉터리 | 종류별(`components/`·`context/`) | 기능 단위(`features/`) + 공용 로직 층, 케밥 표기 (`docs/DIRECTORY_STRUCTURE.md`) |
+
+- 번들 구성 (V-7에 소스맵으로 잰 압축 전 크기 비율): react-dom 25%, zod 14%, 앱 코드 13%, axios 8%, react-day-picker 6%(+ date-fns 7%), TanStack Query 7%, vaul 3%, sonner 3% 등. 500kB 경고는 남아 있다 → ISSUES V15 (줄일 후보, 적용 전 승인)
+- 남은 것 (View 개편 범위 밖): 백엔드 대기(B1 PIN 검증 → PIN 흐름 합치기, 팀 자동 삭제 `TEAM_DUE_ENABLED`, 반복 종료 합주의 실제 삭제, B3 PIN 노출), 번들 줄이기 제안(V15), 참고 항목(V9 쉼 구분의 데이터 한계, V10 사파리 스쿼클)
+
 ### V-6 상세 (일괄 정리)
 - 끝까지 손대지 않은 View: `layout`(Footer. Header는 V-2에서 새로 만듦), `common`(Drawer·OkButton·PinInput·Tooltip·Container), App의 본문 밀기(`openedDrawers` 기반 translate), `media`·`styled.d.ts`
 - 공존 기간 장치 제거: `src/styles/legacy.css`와 `legacy` 레이어, `src/styles/cardRadius.ts`(옛 코드용 스쿼클), `index.html`의 레이어 선언 중 `antd`, `src/index.tsx`의 `StyleProvider`·`IconProvider`, 테스트 setup의 vaul 외 antd용 보정(`matchMedia` 등은 필요 여부 확인)
@@ -504,7 +530,7 @@
 ## 공통 검증 (작업마다)
 
 - `pnpm typecheck` / `pnpm test:run` / `pnpm format:check` / `pnpm build`
-- `pnpm lint`: 에러·경고가 늘지 않아야 한다 (View 개편 시작 시점: 에러 5·경고 42, 모두 옛 View 코드. V-2 2차 후 에러 5·경고 41). 새 코드는 0건
+- `pnpm lint`: 에러·경고 0을 유지한다 (V-6부터. View 개편 시작 시점: 에러 5·경고 42, 모두 옛 View 코드)
 - 테스트를 스크립트로 판정할 때는 `CLAUDE.md`의 테스트 규칙(기준선 먼저, `Tests N failed`로 판정)을 따른다
 - 화면이 바뀌는 작업은 개발 서버로 실제 렌더링을 확인한다. 디자인 원칙의 확인 폭(모바일·폴더블·PC)에서 모두 본다
 - 옛 화면이 남아 있는 동안은, 바꾸지 않은 옛 화면이 그대로인지도 확인한다 (V-1의 픽셀 비교 방식: 작업 전 커밋을 worktree로 띄워 같은 상황을 비교)

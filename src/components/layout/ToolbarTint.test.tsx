@@ -15,7 +15,7 @@ describe('ToolbarTint', () => {
         vi.restoreAllMocks();
     });
 
-    it('아이폰에서 새 Drawer가 맨 위에 열려 있는 동안만 바탕색 띠를 그린다', () => {
+    it('아이폰에서 Drawer가 열려 있는 동안만 바탕색 띠를 그린다', () => {
         vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(IPHONE);
         const { rerender } = render(<ToolbarTint />);
         expect(tint()).toBeNull(); // 열린 Drawer 없음
@@ -24,8 +24,8 @@ describe('ToolbarTint', () => {
         rerender(<ToolbarTint />);
         expect(tint()).toHaveClass('fixed', 'bg-surface');
 
-        // 옛 Drawer가 위에 쌓이면 그리지 않는다
-        useDrawerStore.getState().setOpenedDrawers(['teamInfo', 'addNotice']);
+        // 모두 닫으면 그리지 않는다 (V-6: 옛 Drawer가 위에 쌓이는 경우는 옛 Drawer와 함께 사라짐)
+        useDrawerStore.getState().closeAllDrawers();
         rerender(<ToolbarTint />);
         expect(tint()).toBeNull();
     });

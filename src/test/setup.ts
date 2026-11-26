@@ -8,7 +8,7 @@ import { usePinnedTeamsStore } from '@/components/teams/pinnedTeamsStore';
 import { useDrawerStore } from '@/stores/drawer';
 import { server } from '@/test/server';
 
-// jsdom에는 matchMedia가 없다. antd의 반응형 컴포넌트(Grid, Drawer 등)가 사용하므로 최소 구현을 제공한다.
+// jsdom에는 matchMedia가 없다. 터치 화면 판별·다크 모드(themeStore)·합주판 이름 표시 폭 등이 쓰므로 최소 구현을 제공한다.
 Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: (query: string): MediaQueryList => ({

@@ -18,8 +18,8 @@ describe('useDrawerContext (stores/drawer)', () => {
         const { result } = renderHook(() => useDrawerContext());
 
         act(() => result.current.openDrawer('teamInfo'));
-        act(() => result.current.openDrawer('addNotice'));
-        expect(result.current.openedDrawers).toEqual(['teamInfo', 'addNotice']);
+        act(() => result.current.openDrawer('addTeam'));
+        expect(result.current.openedDrawers).toEqual(['teamInfo', 'addTeam']);
 
         act(() => result.current.closeDrawer());
         expect(result.current.openedDrawers).toEqual(['teamInfo']);
@@ -29,7 +29,7 @@ describe('useDrawerContext (stores/drawer)', () => {
         const { result } = renderHook(() => useDrawerContext());
 
         act(() => result.current.openDrawer('notice'));
-        act(() => result.current.openDrawer('addNotice'));
+        act(() => result.current.openDrawer('addTeam'));
         act(() => result.current.closeAllDrawers());
         expect(result.current.openedDrawers).toEqual([]);
     });
@@ -38,7 +38,7 @@ describe('useDrawerContext (stores/drawer)', () => {
         const { result } = renderHook(() => useDrawerContext());
 
         act(() => result.current.openDrawer('teamInfo'));
-        act(() => result.current.openDrawer('addNotice'));
+        act(() => result.current.openDrawer('addTeam'));
         act(() => result.current.setOpenedDrawers(['teamInfo']));
         expect(result.current.openedDrawers).toEqual(['teamInfo']);
     });

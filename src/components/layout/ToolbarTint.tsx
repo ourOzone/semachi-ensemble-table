@@ -1,4 +1,4 @@
-import { BOTTOM_DRAWERS, useDrawerStore } from '@/stores/drawer';
+import { useDrawerStore } from '@/stores/drawer';
 
 // 아이폰 사파리 26의 아래 도구 막대 색 고정 (V-3 7차).
 // 사파리 26은 화면 아래 끝에 닿은 고정(position: fixed) 요소 중 가장 위(z-index)의 바탕색으로 도구 막대를 물들인다
@@ -18,7 +18,7 @@ function isIOS() {
 
 const ToolbarTint = () => {
     const top = useDrawerStore((state) => state.openedDrawers[state.openedDrawers.length - 1]);
-    if (!top || !BOTTOM_DRAWERS.includes(top) || !isIOS()) return null;
+    if (!top || !isIOS()) return null;
     return (
         <div
             aria-hidden

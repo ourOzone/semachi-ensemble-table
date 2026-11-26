@@ -1,11 +1,9 @@
-// Drawer ID. context/drawer의 openedDrawers 스택과 각 Drawer 컴포넌트의 drawerId prop에 쓴다.
+// Drawer ID. stores/drawer의 openedDrawers 스택에 쓴다.
 
 export type DrawerId =
     // 공지
     | 'notice'
-    | 'addNotice'
-    | 'deleteNotice'
-    // 메모
+    // 날적이 (코드 이름 note)
     | 'addNote'
     | 'deleteNote'
     // 팀

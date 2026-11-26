@@ -1,5 +1,3 @@
-import styled from 'styled-components';
-import { sideDrawers, useDrawerStore } from '@/stores/drawer';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Notice from '@/components/notice';
@@ -7,51 +5,25 @@ import Schedule from '@/components/schedule';
 import Note from '@/components/note';
 import SettingsDrawer from '@/components/settings/SettingsDrawer';
 import ToolbarTint from '@/components/layout/ToolbarTint';
-import { media } from '@/styles/media';
-import type { DrawerId } from '@/types';
 
+// 화면 배치: 헤더 → 공지 → 합주판(팀 목록 포함) → 날적이 → 푸터.
+// 데이터는 각 컴포넌트의 query 훅(src/queries)이 마운트될 때 불러온다.
+// 본문 간격은 옛 styled-components(rem, 옛 전역 스타일이 html 글자 크기를 화면 폭에 따라 16·12·10px로 바꿨다)와 같은 값 (V-6)
 function App() {
-    // 데이터는 각 컴포넌트의 query 훅(src/queries)이 마운트될 때 불러온다 (이전에는 여기서 fetchData()를 한 번 호출)
-    // 열린 Drawer 스택만 구독한다 (Drawer가 열리고 닫힐 때만 다시 렌더링)
-    const openedDrawers = useDrawerStore((state) => state.openedDrawers);
-
     return (
         <>
             <Header />
-            <Container openedDrawers={sideDrawers(openedDrawers)}>
+            <main className="flex w-full flex-col items-center gap-2.5 px-2.5 pt-2.5 min-[426px]:gap-3 min-[426px]:px-3 min-[426px]:pt-3 md:gap-4 md:px-4 md:pt-4">
                 <Notice />
                 <Schedule />
                 <Note />
                 <Footer />
-            </Container>
+            </main>
             <SettingsDrawer />
-            {/* 아이폰 사파리 아래 도구 막대를 Drawer 바탕색으로 (새 Drawer가 열려 있는 동안) */}
+            {/* 아이폰 사파리 아래 도구 막대를 Drawer 바탕색으로 (Drawer가 열려 있는 동안) */}
             <ToolbarTint />
         </>
     );
 }
-
-interface ContainerProps {
-    /** 옛 Drawer(오른쪽에서 열림)가 하나라도 열려 있으면 본문을 왼쪽으로 민다. 아래에서 올라오는 새 Drawer는 빼고 넘긴다 */
-    openedDrawers: DrawerId[];
-}
-
-const Container = styled.div<ContainerProps>`
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem 1rem 0;
-
-    // Drawer 열 때 트랜지션 (384는 media large 기준인 767의 절반)
-    transition: transform 0.3s ease;
-    transform: translateX(${({ openedDrawers }) => (openedDrawers.length > 0 ? '-384px' : '0')});
-    ${media.large(
-        ({ openedDrawers }) => `
-		transform: translateX(${openedDrawers.length > 0 ? '-50%' : '0'});
-	`,
-    )}
-`;
 
 export default App;

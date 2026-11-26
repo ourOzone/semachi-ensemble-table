@@ -12,7 +12,7 @@ import {
     DrawerTrigger,
 } from '@/components/ui/drawer';
 import { findDialog } from '@/test/queries';
-import { renderWithTheme } from '@/test/render';
+import { renderWithProviders } from '@/test/render';
 
 // 단일 Drawer(사전 결정 2: vaul)가 테스트 환경(jsdom)에서 열고 닫히는지 확인한다.
 // 기능 단계(V-2~)의 흐름 테스트가 이 동작에 기대므로 기반 작업에서 먼저 확인해 둔다.
@@ -38,7 +38,7 @@ function Example() {
 describe('Drawer (vaul)', () => {
     it('열면 제목으로 찾을 수 있고, 안에서 입력할 수 있고, 닫으면 사라진다', async () => {
         const user = userEvent.setup();
-        renderWithTheme(<Example />);
+        renderWithProviders(<Example />);
 
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         await user.click(screen.getByRole('button', { name: '열기' }));

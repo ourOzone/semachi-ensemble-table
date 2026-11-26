@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { get } from '@/api';
 import { url } from '@/constants';
 import { QUERY_ERROR_MESSAGE } from '@/lib/notify';
-import { renderWithTheme } from '@/test/render';
+import { renderWithProviders } from '@/test/render';
 import { server } from '@/test/server';
 
 /** 목록 두 개를 동시에 불러온다 (서버가 내려가면 여러 목록이 한꺼번에 실패한다) */
@@ -30,7 +30,7 @@ describe('조회 실패 알림 (View 개편 V-1)', () => {
             http.get(`${url}/ensembles`, () => new HttpResponse(null, { status: 500 })),
         );
 
-        const { queryClient } = renderWithTheme(<TwoQueries />);
+        const { queryClient } = renderWithProviders(<TwoQueries />);
 
         await waitAllSettled(queryClient);
         expect(await screen.findByText(QUERY_ERROR_MESSAGE)).toBeInTheDocument();
@@ -43,7 +43,7 @@ describe('조회 실패 알림 (View 개편 V-1)', () => {
             http.get(`${url}/ensembles`, () => HttpResponse.json([])),
         );
 
-        const { queryClient } = renderWithTheme(<TwoQueries />);
+        const { queryClient } = renderWithProviders(<TwoQueries />);
 
         await waitAllSettled(queryClient);
         expect(screen.queryByText(QUERY_ERROR_MESSAGE)).not.toBeInTheDocument();

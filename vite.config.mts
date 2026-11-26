@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => {
                 exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/**/*.d.ts'],
                 reporter: ['text-summary', 'text'],
             },
-            // antd Drawer를 여러 단계 거치는 흐름 테스트는 병렬 실행 시 기본값(5초)을 넘길 수 있다
+            // Drawer를 여러 단계 거치는 흐름 테스트는 병렬 실행 시 기본값(5초)을 넘길 수 있다
             testTimeout: 15_000,
         },
     };

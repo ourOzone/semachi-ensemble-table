@@ -11,15 +11,11 @@ import { server } from '@/test/server';
 
 // 기존 코드에서 이미 나던 경고 (React 18에서도 동일하게 발생함을 확인).
 // View 개편(styled-components·antd 교체) 때 사라질 예정이며, 그 외의 경고가 새로 생기면 테스트가 실패한다.
-const KNOWN_WARNINGS = [
-    /React does not recognize the `%s` prop on a DOM element/, // styled-components props가 DOM으로 전달됨
-    /Received `%s` for a non-boolean attribute/, // 위와 같음 (boolean props)
-    /Each child in a list should have a unique "key" prop/, // 옛 완료 화면 Result의 extra 배열 (옛 TeamInfoDrawer의 Fragment map은 V-3 4차에 사라짐)
-    /\[antd: Drawer\] `maskStyle` is deprecated/,
-];
+// 허용하는 경고: 없음 (V-6: 옛 styled-components props·antd Drawer 경고가 옛 코드와 함께 사라짐, ISSUES V1·V4)
+const KNOWN_WARNINGS: RegExp[] = [];
 
 describe('App', () => {
-    // React·antd가 남기는 경고(호환성, deprecated API 등)를 수집한다.
+    // React가 남기는 경고(호환성, deprecated API 등)를 수집한다.
     let consoleMessages: string[];
 
     const unexpectedWarnings = () =>

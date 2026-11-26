@@ -1,24 +1,14 @@
 /*
- * 스타일 진입점 (View 개편, docs/archive/VIEW_REDESIGN_PLAN.md)
- *
- * 레이어 순서 (사전 결정 1): 뒤에 올수록 우선한다.
- * - legacy: 옛 View 코드의 전역 스타일(legacy.css, 이전 GlobalStyle). preflight보다 뒤라 옛 화면의 초기화가 유지된다.
- * - antd는 StyleProvider의 layer 옵션으로 `antd` 레이어에 들어간다 (src/index.tsx).
- *   Tailwind의 기본 초기화(preflight, base)보다 뒤라 antd 컴포넌트 모양이 유지되고,
- *   Tailwind 유틸리티(utilities)보다 앞이라 새 코드의 클래스가 antd를 덮어쓸 수 있다.
- * - styled-components(옛 View 코드의 컴포넌트 스타일)는 레이어 밖이라 모든 레이어보다 우선한다.
- *   옛 요소에만 붙는 클래스라 새 코드와 겹치지 않는다. V-6에서 legacy와 함께 제거한다.
+ * 스타일 진입점 (Tailwind 4 + shadcn). 색·글꼴 등은 아래 @theme 토큰으로 정하고, 화면 코드는 토큰 클래스를 쓴다.
+ * V-6에 옛 코드(antd·styled-components)의 전역 스타일(legacy.css)과 CSS 레이어 구분(legacy·antd)을 없앴다
  */
-@layer theme, base, legacy, antd, components, utilities;
-
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
-@import './legacy.css' layer(legacy);
 
 @custom-variant dark (&:is(.dark *));
 
-/* 글꼴: 나눔스퀘어 네오. 옛 코드는 GlobalStyle의 'Light'·'Regular'·'Bold' 이름을 쓴다 (V-6에서 정리) */
+/* 글꼴: 나눔스퀘어 네오 */
 @font-face {
     font-family: 'NanumSquare Neo';
     font-weight: 300;
@@ -47,12 +37,7 @@
 @theme {
     --font-sans: 'NanumSquare Neo', system-ui, sans-serif;
 
-    /*
-     * 공존 기간(V-1 ~ V-6): 옛 전역 스타일이 html 글자 크기를 화면 폭에 따라 16·12·10px로 바꾼다 (legacy.css).
-     * rem 단위면 새 코드도 함께 줄어들므로, 간격·글자 크기를 px로 정의한다. legacy 제거(V-6) 후 Tailwind 기본값(rem)으로 되돌린다.
-     * 화면 폭 기준(sm·md·lg)은 미디어 쿼리라 html 글자 크기와 관계없이 브라우저 기본(16px) 기준이다.
-     */
-    --spacing: 4px;
+    /* 간격·글자 크기는 Tailwind 기본값(rem). V-1~V-5에는 옛 전역 스타일이 html 글자 크기를 바꿔 px로 정의했다 (V-6에 되돌림, 16px 기준 같은 값) */
 
     /* 화면 색 (V-2 컨셉: 회색 바탕 + 흰 카드 + 검은 글씨). 오늘 표시는 파란빛이 은은한 회색(슬레이트) 원 + 아주 옅은 열 배경 */
     --color-page: #f2f3f5;
@@ -72,14 +57,6 @@
 
     /* 큰 카드(공지·합주판·한마디) 그림자 */
     --shadow-card: 0 2px 10px 2px rgb(0 0 0 / 0.06);
-
-    --text-xs: 12px;
-    --text-sm: 14px;
-    --text-base: 16px;
-    --text-lg: 18px;
-    --text-xl: 20px;
-    --text-2xl: 24px;
-    --text-3xl: 30px;
 
     --color-team-0: #f94144;
     --color-team-1: #ff6347;
@@ -323,7 +300,6 @@
  * - neutral 단계를 뒤집는다 (50이 가장 어둡고 950이 가장 밝다): 옅은 회색 바탕·테두리·흐린 글씨가 그대로 어두운 화면에 맞는다
  * - 팀 색 20종·소모임 색은 그대로 (서비스의 아이덴티티). 팀 색 위의 흰 글씨(text-white)도 그대로
  * - 빨강·주황·파랑 글씨는 어두운 바탕에서 읽히게 밝은 쪽으로
- * 옛 코드(antd·styled-components Drawer)는 밝은 그대로다 (V-3~V-5에서 새 Drawer로 바꾸면서 함께)
  */
 .dark {
     color-scheme: dark;
@@ -356,20 +332,20 @@
     --color-blue-600: #3b82f6;
 }
 
-/* 공존 기간에는 legacy 레이어(base보다 뒤)의 body 배경·`*` 글꼴이 우선한다 */
 @layer base {
     * {
         @apply border-border outline-ring/50;
     }
+    /* 페이지 바탕: 회색 (V-2 컨셉, 다크 모드는 토큰이 바뀐다) */
     body {
-        @apply bg-background text-foreground;
+        @apply bg-page text-foreground;
     }
     html {
         @apply font-sans;
     }
     /*
-     * 새 코드(View 개편)의 루트. 옛 전역 스타일(legacy.css)의 요소 규칙이 이 안에는 적용되지 않으므로
-     * 글꼴·글자 크기·줄 간격을 여기서 정한다 (안쪽 요소는 이 값을 물려받는다)
+     * 화면 요소의 루트 (카드·Drawer·알림 등). 글꼴·글자 크기·줄 간격을 여기서 정한다 (안쪽 요소는 이 값을 물려받는다).
+     * V-1~V-5에는 옛 전역 스타일이 이 안에 적용되지 않게 구분하는 용도였다
      */
     .ui {
         font-family: var(--font-sans);

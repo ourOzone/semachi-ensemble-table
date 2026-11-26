@@ -128,7 +128,7 @@ describe('합주표', () => {
 
     /** 수정 → PIN → 합주 수정 Drawer (31차, 합주 잡기 Drawer의 수정 모드) */
     async function openEdit(user: User, dialog: HTMLElement) {
-        await user.click(within(dialog).getByRole('button', { name: '수정' }));
+        await user.click(within(dialog).getByRole('button', { name: '합주 수정' }));
         await findDialog('합주를 수정할까요?');
         await enterPin(user);
         return within(await findDialog('합주 수정'));
@@ -352,7 +352,7 @@ describe('합주표', () => {
             }),
         );
         const { user, dialog } = await openEnsembleInfo();
-        await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+        await user.click(within(dialog).getByRole('button', { name: '합주 삭제' }));
         await enterPin(user, '9999');
 
         // 응답 전 (이전: 4자리를 넣는 즉시 빨간색 → 맞는 PIN도 잠깐 빨갛게 보였다)
@@ -386,7 +386,7 @@ describe('합주표', () => {
             }),
         );
         const { user, dialog } = await openEnsembleInfo();
-        await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+        await user.click(within(dialog).getByRole('button', { name: '합주 삭제' }));
         await enterPin(user, '1111');
         await waitFor(() => expect(pending).toHaveLength(1));
         await user.type(screen.getByLabelText('PIN 4자리'), '{Backspace}2');
@@ -460,7 +460,7 @@ describe('합주표', () => {
         );
         const { user, dialog } = await openEnsembleInfo();
 
-        await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+        await user.click(within(dialog).getByRole('button', { name: '합주 삭제' }));
         await findDialog('합주를 삭제할까요?');
         await confirmPin(user, '삭제하기');
 
@@ -479,7 +479,7 @@ describe('합주표', () => {
             }),
         );
         const { user, dialog } = await openEnsembleInfo();
-        await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+        await user.click(within(dialog).getByRole('button', { name: '합주 삭제' }));
         await findDialog('합주를 삭제할까요?');
         await enterPin(user);
         await waitFor(() => expect(screen.getByRole('button', { name: '삭제하기' })).toBeEnabled());
@@ -501,7 +501,7 @@ describe('합주표', () => {
             }),
         );
         const { user, dialog } = await openEnsembleInfo();
-        await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+        await user.click(within(dialog).getByRole('button', { name: '합주 삭제' }));
         await findDialog('합주를 삭제할까요?');
         await enterPin(user);
         await user.keyboard('{Enter}'); // 확인 중
@@ -529,7 +529,7 @@ describe('합주표', () => {
 
     it('PIN 단계에서 뒤로 가면 정보로 돌아간다', async () => {
         const { user, dialog } = await openEnsembleInfo();
-        await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+        await user.click(within(dialog).getByRole('button', { name: '합주 삭제' }));
         const pinStep = await findDialog('합주를 삭제할까요?');
 
         await user.click(within(pinStep).getByRole('button', { name: '뒤로' }));
@@ -585,7 +585,7 @@ describe('합주표', () => {
             // 정보 단계(입력칸 없음)에서는 없다
             expect(document.querySelector('[data-keyboard-cover]')).toBeNull();
 
-            await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+            await user.click(within(dialog).getByRole('button', { name: '합주 삭제' }));
             await findDialog('합주를 삭제할까요?');
             const cover = document.querySelector<HTMLElement>('[data-keyboard-cover]');
             // 고정(fixed) 요소가 아니라 문서 안(body의 자식, absolute)이어야 키보드 쪽에 비친다
@@ -611,7 +611,7 @@ describe('합주표', () => {
             const { user, dialog } = await openEnsembleInfo();
             expect(document.body.style.position).toBe('');
 
-            await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+            await user.click(within(dialog).getByRole('button', { name: '합주 삭제' }));
             await findDialog('합주를 삭제할까요?');
             // body를 고정(화면은 그대로: top = -스크롤 위치)해 사파리가 입력칸을 보이려고 페이지를 스크롤할 공간이 없다
             // (19차: 스크롤된 뒤 되돌려 깜빡였다)

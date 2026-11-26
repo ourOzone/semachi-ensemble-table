@@ -209,7 +209,7 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
     const [submitting, setSubmitting] = useState(false);
 
     // 고른 항목의 소제목을 맨 위로 (bottom: 맨 아래까지). 그려진 뒤(접힘·펼침이 반영된 뒤)에 스크롤한다.
-    // 팀 정보에서 열면 팀이 골라져 있으므로 처음부터 "반복"을 맨 위로
+    // 처음에는 늘 맨 위에서 시작한다 (V-3 8차, 사용자 요청: 22차의 "팀 정보에서 열면 처음부터 반복을 맨 위로"를 되돌림)
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const sectionRefs = useRef<Partial<Record<SectionKey, HTMLElement | null>>>({});
     // 위·아래 끝 흐림 (scrollAreaRef는 소제목 스크롤에도 쓰여 scrollFadeRef 대신 직접 붙인다)
@@ -221,7 +221,7 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
         target: SectionKey | 'bottom';
         smooth: boolean;
         count: number;
-    } | null>(preset.teamId && !edit ? { target: 'repeat', smooth: false, count: 0 } : null);
+    } | null>(null);
     const scrollToSection = (target: SectionKey | 'bottom') =>
         setScrollRequest((prev) => ({ target, smooth: true, count: (prev?.count ?? 0) + 1 }));
     useEffect(() => {
@@ -339,7 +339,8 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
 
                 <div className="flex flex-col gap-5 px-5 pt-5 pb-6 md:px-7">
                     {/* 팀 */}
-                    <Section label="팀" sectionRef={sectionRef('team')}>
+                    {/* 소모임·회의 등 일정이면 "일정" (V-3 8차) */}
+                    <Section label={team?.isEvent ? '일정' : '팀'} sectionRef={sectionRef('team')}>
                         {edit ? (
                             // 수정: 팀은 바꿀 수 없다
                             <div

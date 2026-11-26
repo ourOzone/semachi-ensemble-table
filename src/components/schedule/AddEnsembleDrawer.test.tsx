@@ -510,16 +510,17 @@ describe('합주 잡기 Drawer: 스크롤·막대 끌기', () => {
         expect(lastScroll()).toEqual({ top: 0, behavior: 'smooth' });
     });
 
-    it('팀 정보에서 열면 처음부터 "반복"이 맨 위', async () => {
+    it('팀 정보에서 열어도 맨 위에서 시작한다 (팀은 골라져 있음)', async () => {
         const user = userEvent.setup();
         renderApp();
         const teamList = await screen.findByRole('group', { name: '팀 목록' });
         await user.click(await within(teamList).findByText('테스트밴드'));
         await user.click(await screen.findByRole('button', { name: '합주 잡기' }));
-        await findDialog('합주 잡기');
+        const drawer = within(await findDialog('합주 잡기'));
 
-        expect(scrollTo).toHaveBeenCalledTimes(1);
-        expect(lastScroll()).toEqual({ top: target('반복'), behavior: 'auto' });
+        // V-3 8차: 22차의 "처음부터 반복을 맨 위로"를 되돌림
+        expect(scrollTo).not.toHaveBeenCalled();
+        expect(drawer.getByRole('button', { name: /^테스트밴드\s*바꾸기$/ })).toBeInTheDocument();
     });
 
     it('그날 동방 막대: 창을 끌어 옮기고, 창 밖을 누르면 그 자리를 가운데로 (막대 안에서만)', async () => {

@@ -129,7 +129,11 @@ const TeamInfoDrawer = ({ checkTeamExists }: TeamInfoDrawerProps) => {
                         </DrawerClose>
                     </div>
 
-                    {/* 합주 잡기(주 동작) + 수정·삭제. 흰 버튼의 글씨는 팀 색 머리 위라 다크 모드에서도 검정 */}
+                    {/*
+                      합주 잡기(주 동작) + 팀 수정·팀 삭제. 흰 버튼의 글씨는 팀 색 머리 위라 다크 모드에서도 검정.
+                      합주 정보 Drawer와 모양이 비슷해 "팀 수정"·"팀 삭제"로 무엇을 바꾸는지 적는다 (V-3 8차).
+                      360px 화면에서도 "합주 잡기"가 잘리지 않게 모바일은 14px 글씨·16px 아이콘
+                    */}
                     <div className="mt-5 flex gap-2">
                         <button
                             type="button"
@@ -141,21 +145,17 @@ const TeamInfoDrawer = ({ checkTeamExists }: TeamInfoDrawerProps) => {
                         </button>
                         <button
                             type="button"
-                            aria-label="팀 수정"
-                            className={`${pressable} ${boxShape} flex h-12 shrink-0 items-center justify-center gap-1 bg-white/20 px-3.5 text-[15px] font-medium hover:bg-white/30 md:h-13 md:px-4`}
+                            className={`${pressable} ${boxShape} flex h-12 shrink-0 items-center justify-center gap-1 bg-white/20 px-3 text-[14px] font-medium hover:bg-white/30 md:h-13 md:px-4 md:text-[15px]`}
                             onClick={() => handleClickUpdateTeam(team)}
                         >
-                            <Pencil className="size-[18px]" aria-hidden />
-                            수정
+                            <Pencil className="size-4 md:size-[18px]" aria-hidden />팀 수정
                         </button>
                         <button
                             type="button"
-                            aria-label="팀 삭제"
-                            className={`${pressable} ${boxShape} flex h-12 shrink-0 items-center justify-center gap-1 bg-white/20 px-3.5 text-[15px] font-medium hover:bg-white/30 md:h-13 md:px-4`}
+                            className={`${pressable} ${boxShape} flex h-12 shrink-0 items-center justify-center gap-1 bg-white/20 px-3 text-[14px] font-medium hover:bg-white/30 md:h-13 md:px-4 md:text-[15px]`}
                             onClick={() => handleClickDeleteTeam(team.id)}
                         >
-                            <Trash2 className="size-[18px]" aria-hidden />
-                            삭제
+                            <Trash2 className="size-4 md:size-[18px]" aria-hidden />팀 삭제
                         </button>
                     </div>
                 </div>

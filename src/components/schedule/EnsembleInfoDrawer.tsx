@@ -447,11 +447,12 @@ const EnsembleInfoDrawer = ({
                             </ActionButton>
                         )}
                         <div className="grid grid-cols-2 gap-2.5">
+                            {/* 팀 정보 Drawer와 모양이 비슷해 무엇을 바꾸는지 적는다 (V-3 8차) */}
                             <ActionButton icon={Pencil} onClick={() => goStep('update')}>
-                                수정
+                                {noun} 수정
                             </ActionButton>
                             <ActionButton icon={Trash2} danger onClick={() => goStep('delete')}>
-                                삭제
+                                {noun} 삭제
                             </ActionButton>
                         </div>
                     </div>

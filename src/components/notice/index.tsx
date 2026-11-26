@@ -1,6 +1,8 @@
-import { useState, useCallback } from 'react';
-import { useDrawerContext } from '@/context';
 import { useQuery } from '@tanstack/react-query';
+import { Bell, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
+import { isNotFound } from '@/api';
+import { noticeExists } from '@/api/notice';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     noticesQueryOptions,
@@ -9,11 +11,13 @@ import {
     useNotices,
     useRefreshNotices,
 } from '@/queries/notes';
-import { noticeExists } from '@/api/notice';
-import { Bell, ChevronRight } from 'lucide-react';
+import { useDrawerStore } from '@/stores/drawer';
 import NoticeDrawer from './NoticeDrawer';
-import AddNoticeDrawer from './AddNoticeDrawer';
-import DeleteNoticeDrawer from './DeleteNoticeDrawer';
+
+// 공지 카드 + 공지 Drawer (View 개편 V-5, 카드 모양은 V-3 1차에 미리 만듦).
+// 올리기·삭제 결과는 알림으로 (이전: 알림 없음). Drawer는 결과에 따라 목록으로 돌아오거나 그 단계에 머문다
+
+const CHECK_FAILED = '확인하지 못했어요. 잠시 후 다시 시도해 주세요.';
 
 const Notice = () => {
     const notices = useNotices();
@@ -22,69 +26,51 @@ const Notice = () => {
     const refreshNotices = useRefreshNotices();
     const { mutateAsync: addNoticeAsync } = useAddNotice();
     const { mutateAsync: deleteNoticeAsync } = useDeleteNotice();
-    const [id, setId] = useState('');
-    const [text, setText] = useState('');
-    const [pin, setPin] = useState('');
-    const { openDrawer, closeAllDrawers } = useDrawerContext();
+    const openDrawer = useDrawerStore((state) => state.openDrawer);
 
-    // 이미 삭제된 공지인지 체크. PIN 확인 Drawer가 PIN을 확인하기 전에 사용한다 (true를 리턴하면 계속 진행)
-    const checkNoticeExists = useCallback(
-        async (id: string) => {
-            try {
-                await noticeExists(id);
-                return true;
-            } catch {
-                setId('');
-                setText('');
-                setPin('');
-                closeAllDrawers();
+    const handleAddNotice = async (text: string) => {
+        try {
+            await addNoticeAsync(text);
+        } catch {
+            toast.error('저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+            return false;
+        }
+        toast.success('공지를 올렸어요.');
+        return true;
+    };
+
+    // 삭제 X: 이미 삭제됐으면(404) 알리고 목록을 다시 불러온다 (Drawer는 목록에 머묾), 확인 요청 자체가 실패하면 알림
+    // (팀·합주·날적이와 같음. 이전: PIN을 넣는 순간 확인하고, 실패하면 알림 없이 Drawer를 모두 닫음)
+    const checkNoticeExists = async (id: string) => {
+        try {
+            await noticeExists(id);
+            return true;
+        } catch (err) {
+            if (isNotFound(err)) {
                 refreshNotices();
+                toast.error('이미 삭제된 공지예요.');
+            } else {
+                toast.error(CHECK_FAILED);
+            }
+            return false;
+        }
+    };
+
+    // 삭제: 그새 삭제됐어도(404) 결과는 같아 "삭제했어요." 실패하면 알리고 PIN부터 다시
+    const handleDeleteNotice = async (id: string) => {
+        try {
+            await deleteNoticeAsync(id);
+        } catch (err) {
+            if (!isNotFound(err)) {
+                toast.error('삭제하지 못했어요. 잠시 후 다시 시도해 주세요.');
                 return false;
             }
-        },
-        [closeAllDrawers, refreshNotices],
-    );
+        }
+        toast.success('삭제했어요.');
+        return true;
+    };
 
-    const handleAddNotice = useCallback(
-        async (text: string) => {
-            try {
-                await addNoticeAsync(text);
-                setText('');
-                setPin('');
-                closeAllDrawers();
-            } catch {
-                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
-            }
-        },
-        [addNoticeAsync, closeAllDrawers],
-    );
-
-    // 삭제 X 버튼: 바로 PIN 확인 Drawer를 연다 (이전에는 여기서 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
-    const handleClickDelete = useCallback(
-        (id: string) => {
-            setId(id);
-            openDrawer('deleteNotice');
-        },
-        [openDrawer],
-    );
-
-    // 이미 삭제됐으면 서버가 404를 준다 → 다른 실패와 같이 처리 (이전에는 삭제 전에 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
-    const handleDeleteNotice = useCallback(
-        async (id: string) => {
-            try {
-                await deleteNoticeAsync(id);
-            } catch {
-                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
-            } finally {
-                setId('');
-                setPin('');
-                closeAllDrawers();
-            }
-        },
-        [closeAllDrawers, deleteNoticeAsync],
-    );
-
-    // 맨 위 공지의 첫 줄. 누르면 공지 목록(아직 옛 Drawer)
+    // 맨 위 공지의 첫 줄. 누르면 공지 Drawer
     const first = notices[0]?.text.split('\n')[0];
 
     return (
@@ -104,11 +90,10 @@ const Notice = () => {
                         <Bell className="size-5 md:size-6" aria-hidden />
                     </span>
                     <span className="min-w-0 flex-1">
-                        <span className="block text-[12px] font-bold text-neutral-500 md:text-[13px]">
-                            공지
-                        </span>
+                        {/* 작은 "공지" 글씨는 뺐다 (V-5). 읽기 프로그램용으로만 */}
+                        <span className="sr-only">공지: </span>
                         {isPending ? (
-                            <Skeleton className="mt-1.5 h-5 w-48 max-w-full md:h-6 md:w-64" />
+                            <Skeleton className="h-5 w-48 max-w-full md:h-6 md:w-64" />
                         ) : (
                             <span
                                 className={
@@ -130,26 +115,10 @@ const Notice = () => {
                 </button>
             </section>
             <NoticeDrawer
-                drawerId="notice"
                 notices={notices}
-                setId={setId}
-                handleClickDelete={handleClickDelete}
-            />
-            <AddNoticeDrawer
-                drawerId="addNotice"
-                text={text}
-                setText={setText}
-                pin={pin}
-                setPin={setPin}
-                handleAddNotice={handleAddNotice}
-            />
-            <DeleteNoticeDrawer
-                drawerId="deleteNotice"
-                id={id}
-                pin={pin}
-                setPin={setPin}
-                checkNoticeExists={checkNoticeExists}
-                handleDeleteNotice={handleDeleteNotice}
+                onAdd={handleAddNotice}
+                checkExists={checkNoticeExists}
+                onDelete={handleDeleteNotice}
             />
         </>
     );

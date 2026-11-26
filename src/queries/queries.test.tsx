@@ -76,7 +76,9 @@ describe('조회 훅 (TanStack Query)', () => {
         expect(result.current.notes).toEqual([
             { id: 'note-1', text: '메모입니다', createdAt: null },
         ]);
-        expect(result.current.notices).toEqual([{ id: 'notice-1', text: '첫 공지\n둘째 줄' }]);
+        expect(result.current.notices).toEqual([
+            { id: 'notice-1', text: '첫 공지\n둘째 줄', createdAt: null },
+        ]);
     });
 
     // P1: 이전 fetchData는 4개 API를 하나씩 순서대로 기다렸다

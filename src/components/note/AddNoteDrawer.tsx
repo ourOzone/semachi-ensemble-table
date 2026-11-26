@@ -96,7 +96,6 @@ const AddNoteForm = ({
     if (step === 'pin') {
         return (
             <PinCreateStep
-                text={trimmed}
                 onBack={() => setStep('form')}
                 onDone={(pin) => onSubmit(trimmed, pin)}
             />
@@ -199,11 +198,9 @@ const AddNoteForm = ({
  * 저장에 실패하면 칸을 비워 다시 (알림은 저장하는 쪽에서), 성공하면 Drawer가 닫힌다
  */
 const PinCreateStep = ({
-    text,
     onBack,
     onDone,
 }: {
-    text: string;
     onBack: () => void;
     onDone: (pin: string) => Promise<boolean>;
 }) => {
@@ -244,15 +241,12 @@ const PinCreateStep = ({
                         </button>
                     </DrawerClose>
                 </div>
-                {/* 무엇을 남기는지 (두 줄까지) */}
-                <p className="mt-3 line-clamp-2 text-[14px] break-keep whitespace-pre-line text-neutral-500 [overflow-wrap:anywhere]">
-                    {text}
-                </p>
-                <DrawerTitle className="mt-1.5 text-[24px] leading-tight font-bold text-ink md:text-[26px]">
+                {/* 제목 위의 글 미리 보기는 뺐다 (V-4 3차) */}
+                <DrawerTitle className="mt-3 text-[24px] leading-tight font-bold text-ink md:text-[26px]">
                     PIN을 정해 주세요
                 </DrawerTitle>
                 <DrawerDescription className="mt-1.5 text-[15px] break-keep text-neutral-500">
-                    숫자 4자리. 날적이를 지울 때 필요해요
+                    숫자 4자리. 지울 때 필요해요
                 </DrawerDescription>
                 <form className="mt-7 flex flex-col items-center" onSubmit={handleSubmit}>
                     <PinSlots

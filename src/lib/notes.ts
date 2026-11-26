@@ -16,7 +16,11 @@ export function toNotes(notesRaw: NoteResponse[]): Note[] {
     return notesRaw.map(({ _id, text }) => ({ id: _id, text, createdAt: objectIdTime(_id) }));
 }
 
-/** 서버 필드 content를 text로 바꾼다 */
+/** 서버 필드 content를 text로 바꾼다. createdAt은 id에서 읽은 작성 시각 (V-5) */
 export function toNotices(noticesRaw: NoticeResponse[]): Notice[] {
-    return noticesRaw.map(({ _id, content }) => ({ id: _id, text: content }));
+    return noticesRaw.map(({ _id, content }) => ({
+        id: _id,
+        text: content,
+        createdAt: objectIdTime(_id),
+    }));
 }

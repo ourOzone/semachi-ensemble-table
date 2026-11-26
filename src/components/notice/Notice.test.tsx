@@ -1,22 +1,23 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { url } from '@/constants';
+import { useDrawerStore } from '@/stores/drawer';
 import { mockInitialData } from '@/test/fixtures';
-import { findEnabledButton } from '@/test/queries';
+import { findDialog } from '@/test/queries';
 import { renderApp } from '@/test/render';
 import { countOf, recordRequests } from '@/test/requests';
 import { server } from '@/test/server';
 
-// 공지 기능 흐름 테스트: 목록 Drawer → 추가 / 삭제 Drawer, PIN 확인, 서버 요청 내용까지 확인한다.
+// 공지 흐름 테스트 (View 개편 V-5): 공지 Drawer 하나에서 목록 → 올리기(관리자 PIN → 글) / 삭제(PIN), 알림, 서버 요청
 
 async function openNoticeDrawer() {
     const user = userEvent.setup();
     renderApp();
-    await user.click(await screen.findByText('첫 공지'));
-    const addButton = await screen.findByRole('button', { name: /공지를 추가해요/ });
-    return { user, addButton };
+    await user.click(await screen.findByRole('button', { name: /첫 공지/ }));
+    const drawer = within(await findDialog('공지'));
+    return { user, drawer };
 }
 
 describe('공지', () => {
@@ -24,57 +25,78 @@ describe('공지', () => {
         mockInitialData();
     });
 
-    it('PIN이 맞으면 공지를 등록하고, 서버에는 내용(content)만 보낸다', async () => {
+    it('목록에 공지 전체(여러 줄)를 보여 준다', async () => {
+        const { drawer } = await openNoticeDrawer();
+        expect(drawer.getByText(/첫 공지\s+둘째 줄/)).toBeInTheDocument();
+    });
+
+    it('올리기: 관리자 PIN이 맞으면 글쓰기로, 올리면 서버에 내용(content)만 보내고 알린 뒤 목록으로', async () => {
         let posted: unknown;
+        let pinBody: unknown;
         server.use(
-            http.post(`${url}/check-notice-pin`, () => HttpResponse.json(true)),
+            http.post(`${url}/check-notice-pin`, async ({ request }) => {
+                pinBody = await request.json();
+                return HttpResponse.json(true);
+            }),
             http.post(`${url}/notice`, async ({ request }) => {
                 posted = await request.json();
                 return HttpResponse.json({ message: 'Notice created', id: 'notice-2' });
             }),
         );
-        const { user, addButton } = await openNoticeDrawer();
+        const { user, drawer } = await openNoticeDrawer();
 
-        await user.click(addButton);
-        // Drawer는 열림 애니메이션 뒤 내용 칸으로 포커스를 옮긴다. 그 전에 입력을 시작하면 PIN 입력 도중 포커스가
-        // 내용 칸으로 되돌아갈 수 있어(ISSUES V7, 팀 추가 PIN 단계와 같은 구조), 포커스가 옮겨진 뒤 입력한다
-        const contentInput = await screen.findByPlaceholderText('내용 여따 써요');
-        await waitFor(() => expect(contentInput).toHaveFocus());
-        await user.type(contentInput, '새 공지');
-        await user.type(screen.getByPlaceholderText('숫자 4자리'), '1234');
-        await user.click(await findEnabledButton('완료'));
+        await user.click(drawer.getByRole('button', { name: '공지 올리기 (관리자)' }));
+        const pinDrawer = within(await findDialog('공지를 올릴까요?'));
+        await user.type(pinDrawer.getByLabelText('PIN 4자리'), '1234');
+        const writeDrawer = within(await findDialog('공지 올리기'));
+        expect(writeDrawer.getByRole('button', { name: '내용을 써 주세요' })).toBeDisabled();
+        await user.type(writeDrawer.getByLabelText('공지 내용'), ' 새 공지 ');
+        await user.click(writeDrawer.getByRole('button', { name: '올리기' }));
 
-        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
-        await waitFor(() => expect(posted).toBeDefined());
+        expect(await screen.findByText('공지를 올렸어요.')).toBeInTheDocument();
+        expect(pinBody).toEqual({ pin: '1234' });
         expect(posted).toEqual({ content: '새 공지' });
+        expect(await findDialog('공지')).toBeInTheDocument();
     });
 
-    it('PIN이 틀리면 완료 버튼이 비활성화된다', async () => {
-        let pinChecked = false;
+    it('관리자 PIN이 틀리면 글쓰기로 넘어가지 않는다', async () => {
+        server.use(http.post(`${url}/check-notice-pin`, () => HttpResponse.json(false)));
+        const { user, drawer } = await openNoticeDrawer();
+
+        await user.click(drawer.getByRole('button', { name: '공지 올리기 (관리자)' }));
+        const pinDrawer = within(await findDialog('공지를 올릴까요?'));
+        await user.type(pinDrawer.getByLabelText('PIN 4자리'), '0000');
+
+        expect(
+            await pinDrawer.findByText('PIN이 맞지 않아요. 다시 입력해 주세요'),
+        ).toBeInTheDocument();
+        expect(screen.queryByLabelText('공지 내용')).not.toBeInTheDocument();
+    });
+
+    it('올리기에 실패하면 알리고 글쓰기에 머문다', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
         server.use(
-            http.post(`${url}/check-notice-pin`, () => {
-                pinChecked = true;
-                return HttpResponse.json(false);
-            }),
+            http.post(`${url}/check-notice-pin`, () => HttpResponse.json(true)),
+            http.post(`${url}/notice`, () => new HttpResponse(null, { status: 500 })),
         );
-        const { user, addButton } = await openNoticeDrawer();
+        const { user, drawer } = await openNoticeDrawer();
 
-        await user.click(addButton);
-        // Drawer는 열림 애니메이션 뒤 내용 칸으로 포커스를 옮긴다. 그 전에 입력을 시작하면 PIN 입력 도중 포커스가
-        // 내용 칸으로 되돌아갈 수 있어(ISSUES V7, 팀 추가 PIN 단계와 같은 구조), 포커스가 옮겨진 뒤 입력한다
-        const contentInput = await screen.findByPlaceholderText('내용 여따 써요');
-        await waitFor(() => expect(contentInput).toHaveFocus());
-        await user.type(contentInput, '새 공지');
-        await user.type(screen.getByPlaceholderText('숫자 4자리'), '0000');
+        await user.click(drawer.getByRole('button', { name: '공지 올리기 (관리자)' }));
+        await user.type(
+            within(await findDialog('공지를 올릴까요?')).getByLabelText('PIN 4자리'),
+            '1234',
+        );
+        const writeDrawer = within(await findDialog('공지 올리기'));
+        await user.type(writeDrawer.getByLabelText('공지 내용'), '새 공지');
+        await user.click(writeDrawer.getByRole('button', { name: '올리기' }));
 
-        // PIN 입력 중에도 버튼은 비활성이므로, 서버 확인이 끝난 뒤의 상태를 본다
-        await waitFor(() => expect(pinChecked).toBe(true));
-        await new Promise((resolve) => setTimeout(resolve, 50));
-        // 비활성화된 OkButton은 visibility: hidden이라 접근성 이름이 비므로 문구로 찾는다
-        expect(screen.getByText('완료').closest('button')).toBeDisabled();
+        expect(
+            await screen.findByText('저장하지 못했어요. 잠시 후 다시 시도해 주세요.'),
+        ).toBeInTheDocument();
+        expect(writeDrawer.getByLabelText('공지 내용')).toHaveValue('새 공지');
     });
 
-    it('PIN이 맞으면 공지를 삭제한다', async () => {
+    it('삭제: X → 관리자 PIN → 삭제하기, 알리고 목록으로. 공지 목록만 다시 불러온다', async () => {
         let deletedUrl = '';
         server.use(
             http.get(`${url}/notice/:id`, () => HttpResponse.json(true)),
@@ -85,21 +107,34 @@ describe('공지', () => {
             }),
         );
         const requests = recordRequests();
-        const { user } = await openNoticeDrawer();
+        const { user, drawer } = await openNoticeDrawer();
 
-        // 목록 Drawer 안의 공지 카드에서 삭제(X) 아이콘 클릭
-        const card = (await screen.findByText(/둘째 줄/)).parentElement!;
-        await user.click(within(card).getByRole('img', { name: 'close' }));
-        await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
-        await user.click(await findEnabledButton('진짜 삭제해요'));
+        await user.click(drawer.getByRole('button', { name: '공지 삭제' }));
+        const pinDrawer = within(await findDialog('공지를 삭제할까요?'));
+        await user.type(pinDrawer.getByLabelText('PIN 4자리'), '1234');
+        await waitFor(() =>
+            expect(pinDrawer.getByRole('button', { name: '삭제하기' })).toBeEnabled(),
+        );
+        await user.click(pinDrawer.getByRole('button', { name: '삭제하기' }));
 
-        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
-        await waitFor(() => expect(deletedUrl).not.toBe(''));
+        expect(await screen.findByText('삭제했어요.')).toBeInTheDocument();
         expect(new URL(deletedUrl).searchParams.get('id')).toBe('notice-1');
-        // 존재 확인은 PIN Drawer에서 한 번만 (이전: X 클릭·PIN 입력·삭제 직전 3회, 사전 결정 5)
+        expect(await findDialog('공지')).toBeInTheDocument();
+        // 존재 확인은 X를 누를 때 한 번
         expect(countOf(requests, 'GET /notice/notice-1')).toBe(1);
-        // 삭제 후에는 공지 목록만 다시 불러온다 (이전: 4개 목록 전체)
         await waitFor(() => expect(countOf(requests, 'GET /notices')).toBe(2));
         expect(countOf(requests, 'GET /teams')).toBe(1);
+    });
+
+    it('X를 눌렀는데 이미 삭제됐으면 알리고 목록에 머문다', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        server.use(http.get(`${url}/notice/:id`, () => new HttpResponse(null, { status: 404 })));
+        const { user, drawer } = await openNoticeDrawer();
+
+        await user.click(drawer.getByRole('button', { name: '공지 삭제' }));
+
+        expect(await screen.findByText('이미 삭제된 공지예요.')).toBeInTheDocument();
+        expect(useDrawerStore.getState().openedDrawers).toEqual(['notice']);
+        expect(screen.queryByText('공지를 삭제할까요?')).not.toBeInTheDocument();
     });
 });

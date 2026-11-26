@@ -8,7 +8,7 @@ describe('toNotes · toNotices', () => {
         ]);
         expect(
             toNotices([{ _id: 'c1', content: '공지 내용', publishDate: '2026-11-01T00:00:00Z' }]),
-        ).toEqual([{ id: 'c1', text: '공지 내용' }]);
+        ).toEqual([{ id: 'c1', text: '공지 내용', createdAt: null }]);
     });
 
     it('한마디의 작성 시각은 ObjectId 앞 8자리(초)에서 읽는다 (V-4), 형식이 다르면 null', () => {

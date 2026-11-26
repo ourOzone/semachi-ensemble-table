@@ -41,4 +41,6 @@ export interface Notice {
     id: string;
     /** 서버 필드명은 content */
     text: string;
+    /** 올린 시각 (ms, id(ObjectId)에서 읽음, V-5). id가 ObjectId 형식이 아니면 null */
+    createdAt: number | null;
 }

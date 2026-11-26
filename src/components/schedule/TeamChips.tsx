@@ -110,7 +110,7 @@ const TeamChips = ({ teams, eventGroups, onAddTeam, loading = false }: TeamChips
             </div>
             {/*
               팀 목록 판 (V-3 2차): 다크 모드에서 쨍한 팀 색이 아주 어두운 카드 바로 위에 있으면 강해 보여, 한 단계 밝은 바탕을 깐다.
-              밝은 모드는 투명(--color-chip-panel). 음수 여백 = 안쪽 여백이라 두 모드의 배치가 같다
+              밝은 모드도 카드보다 흐린 회색 판으로 묶는다 (9차, 사용자 요청). 음수 여백 = 안쪽 여백이라 판이 칩 줄과 맞는다
             */}
             <div className="-mx-2 rounded-[20px] bg-chip-panel p-2 md:-mx-3 md:p-3">
                 <TeamList heightStyle={heightStyle} innerRef={innerRef}>

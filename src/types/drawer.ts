@@ -11,7 +11,6 @@ export type DrawerId =
     // 팀
     | 'teamInfo'
     | 'eventInfo'
-    | 'deleteTeam'
     | 'addTeam1'
     | 'addTeam2'
     | 'addTeam3'

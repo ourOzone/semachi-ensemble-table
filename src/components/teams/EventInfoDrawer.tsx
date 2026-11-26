@@ -71,7 +71,7 @@ const EventInfoDrawer = () => {
                                         {club ?? shown.name}
                                     </DrawerTitle>
                                     <DrawerDescription className="mt-1.5 text-[15px] text-white/90">
-                                        {club ? '소모임' : '팀 아닌 일정'}
+                                        {club ? '소모임' : '일정'}
                                     </DrawerDescription>
                                 </div>
                                 <DrawerClose asChild>

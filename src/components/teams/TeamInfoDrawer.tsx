@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarPlus, Pencil, Trash2, X } from 'lucide-react';
+import { CalendarPlus, ChevronLeft, Pencil, Trash2, X } from 'lucide-react';
 import {
     Drawer,
     DrawerClose,
@@ -15,6 +15,8 @@ import {
     sheetClassName,
 } from '@/components/schedule/drawerParts';
 import { openAddEnsemble } from '@/components/schedule/addEnsembleStore';
+import PinStep from '@/components/schedule/PinStep';
+import { usePinSheet } from '@/components/schedule/pinSheet';
 import { scrollFadeRef } from '@/components/ui/scroll-fade';
 import { useTeamContext } from '@/context';
 import { buildColorMap } from '@/lib/board';
@@ -22,13 +24,14 @@ import { cn } from '@/lib/utils';
 import { useTeams } from '@/queries/teams';
 import { useDrawerStore } from '@/stores/drawer';
 import theme from '@/styles/theme';
-import type { CheckTeamExists } from './types';
+import type { CheckTeamExists, HandleDeleteTeam } from './types';
 
 // 팀 정보 Drawer (View 개편 V-3). 아래에서 올라오고, 아래로 끌어내리면 닫힌다 (vaul).
 // 위쪽은 팀 색 머리(종류·이름, 합주 잡기·수정·삭제), 아래는 팀원(6칸)과 셋리스트를 한 화면에.
 // 이전: 오른쪽에서 열리는 옛 Drawer, 팀원·셋리를 탭으로 전환.
 // 셋리스트가 길면 Drawer 전체가 스크롤된다 (안쪽에 스크롤을 따로 두면 모바일에서 끌어내리기와 겹친다).
-// 수정·삭제의 PIN·입력 단계는 아직 옛 Drawer: 위에 쌓이면 이 Drawer는 내려가고, 닫히면 다시 올라온다.
+// 팀 삭제의 PIN 단계는 이 Drawer 안에서 내용이 바뀐다 (V-3 9차, 합주 정보 Drawer의 삭제와 같은 모양, 뒤로 가면 정보로).
+// 팀 수정의 PIN·입력 단계는 아직 옛 Drawer: 위에 쌓이면 이 Drawer는 내려가고, 닫히면 다시 올라온다.
 
 /** desc의 앞 6칸 (7번째는 셋리스트) */
 const MEMBER_LABELS = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
@@ -40,7 +43,11 @@ function formatTeamType(type: string): string {
 
 interface TeamInfoDrawerProps {
     checkTeamExists: CheckTeamExists;
+    handleDeleteTeam: HandleDeleteTeam;
 }
+
+/** Drawer 안의 단계: 정보, 또는 팀 삭제 PIN 확인 */
+type Step = 'info' | 'delete';
 
 interface ShownTeam {
     id: string;
@@ -49,7 +56,7 @@ interface ShownTeam {
     desc: string[];
 }
 
-const TeamInfoDrawer = ({ checkTeamExists }: TeamInfoDrawerProps) => {
+const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerProps) => {
     const teams = useTeams();
     const { id, type, name, desc, setTeamStates, setTeamOrgStates } = useTeamContext();
     const openedDrawers = useDrawerStore((state) => state.openedDrawers);
@@ -64,7 +71,15 @@ const TeamInfoDrawer = ({ checkTeamExists }: TeamInfoDrawerProps) => {
     const live: ShownTeam | null = open && id ? { id, type, name, desc } : null;
     const liveKey = live ? JSON.stringify(live) : null;
     const [shown, setShown] = useState<{ key: string; team: ShownTeam } | null>(null);
-    if (live && liveKey && liveKey !== shown?.key) setShown({ key: liveKey, team: live });
+    const [step, setStep] = useState<Step>('info');
+    if (live && liveKey && liveKey !== shown?.key) {
+        // 새로 열리거나 수정으로 값이 바뀌면 정보 단계부터
+        setShown({ key: liveKey, team: live });
+        setStep('info');
+    }
+
+    // PIN 단계의 키보드 처리 (합주 정보 Drawer와 같음: schedule/pinSheet)
+    const pinSheet = usePinSheet(open && step !== 'info');
 
     const handleClose = () => {
         closeDrawer(); // 열려 있을 때는 맨 위가 이 Drawer
@@ -84,8 +99,9 @@ const TeamInfoDrawer = ({ checkTeamExists }: TeamInfoDrawerProps) => {
         }
     };
 
+    // 팀 삭제: 팀이 아직 있으면 PIN 단계로 (이전: 옛 Drawer "PIN 입력해야 삭제돼요")
     const handleClickDeleteTeam = async (teamId: string) => {
-        if (await checkTeamExists(teamId)) openDrawer('deleteTeam');
+        if (await checkTeamExists(teamId)) setStep('delete');
     };
 
     // 머리 색: 팀의 지금 색 (팀 목록·캘린더 블록과 같음)
@@ -95,6 +111,61 @@ const TeamInfoDrawer = ({ checkTeamExists }: TeamInfoDrawerProps) => {
         if (!shown) return null;
         const { team } = shown;
         const setlist = team.desc[6]?.trim() ?? '';
+
+        if (step === 'delete') {
+            return (
+                <div ref={scrollFadeRef} className={scrollAreaClassName}>
+                    <div className="px-5 pt-[26px] pb-[calc(24px+env(safe-area-inset-bottom))] duration-200 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-4 md:px-7">
+                        <div className="flex items-center justify-between">
+                            <button
+                                type="button"
+                                aria-label="뒤로"
+                                className={`${pressable} -ml-2 inline-flex size-10 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100`}
+                                onClick={() => setStep('info')}
+                            >
+                                <ChevronLeft className="size-6" aria-hidden />
+                            </button>
+                            <DrawerClose asChild>
+                                <button
+                                    type="button"
+                                    aria-label="닫기"
+                                    className={`${pressable} -mr-2 inline-flex size-10 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100`}
+                                >
+                                    <X className="size-6" aria-hidden />
+                                </button>
+                            </DrawerClose>
+                        </div>
+                        {/* 어떤 팀인지 */}
+                        <p className="mt-3 flex min-w-0 items-center gap-1.5 text-[14px] text-neutral-500">
+                            <span
+                                className="size-2.5 shrink-0 rounded-full"
+                                style={{ backgroundColor: color }}
+                            />
+                            <span className="truncate">{team.name}</span>
+                        </p>
+                        <DrawerTitle className="mt-1.5 text-[24px] leading-tight font-bold text-ink md:text-[26px]">
+                            팀을 삭제할까요?
+                        </DrawerTitle>
+                        {/* 서버가 팀의 합주도 함께 지운다 */}
+                        <DrawerDescription className="mt-1.5 text-[15px] break-keep text-neutral-500">
+                            팀의 합주도 모두 삭제되고, 되돌릴 수 없어요. 팀 PIN 4자리를 입력해
+                            주세요
+                        </DrawerDescription>
+                        <div className="mt-7">
+                            <PinStep
+                                teamId={team.id}
+                                confirmLabel="삭제하기"
+                                danger
+                                onConfirm={async () => {
+                                    await handleDeleteTeam(team.id); // Drawer를 모두 닫는다
+                                    return true;
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            );
+        }
 
         return (
             <div ref={scrollFadeRef} className={scrollAreaClassName}>
@@ -209,15 +280,25 @@ const TeamInfoDrawer = ({ checkTeamExists }: TeamInfoDrawerProps) => {
     })();
 
     return (
-        <Drawer open={open} onOpenChange={(next) => !next && handleClose()}>
+        <Drawer
+            open={open}
+            onOpenChange={(next) => !next && handleClose()}
+            // 키보드 위치 맞추기는 직접 한다 (pinSheet, 합주 정보 Drawer와 같음)
+            repositionInputs={false}
+        >
             <DrawerContent
                 className={sheetClassName}
+                style={pinSheet.style}
                 overlayClassName={overlayClassName}
-                // 손잡이는 팀 색 머리 위에 겹친다
-                handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-white/60"
+                // 손잡이는 머리 위에 겹친다 (정보: 팀 색 머리, PIN: 흰 머리)
+                handleClassName={cn(
+                    'absolute inset-x-0 top-2.5 z-10 mt-0 w-10',
+                    step === 'info' ? 'bg-white/60' : 'bg-neutral-300',
+                )}
             >
                 {content}
             </DrawerContent>
+            {pinSheet.cover}
         </Drawer>
     );
 };

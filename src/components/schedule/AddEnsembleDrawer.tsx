@@ -348,7 +348,7 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
                             >
                                 <TeamBadge team={edit.team} />
                                 <span className="shrink-0 text-[13px] text-neutral-400">
-                                    팀은 바꿀 수 없어요
+                                    {edit.team.isEvent ? '일정은' : '팀은'} 바꿀 수 없어요
                                 </span>
                             </div>
                         ) : team && !teamOpen ? (
@@ -366,6 +366,7 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
                             </button>
                         ) : (
                             <TeamPicker
+                                label={team?.isEvent ? '일정' : '팀'}
                                 teams={teams}
                                 events={events}
                                 selectedId={teamId}
@@ -769,11 +770,14 @@ const StepButton = ({
  * 고른 팀은 체크 표시와 팀 색 테두리(흰 간격을 둔 바깥 링). 팀 뒤에 소모임·일정
  */
 const TeamPicker = ({
+    label,
     teams,
     events,
     selectedId,
     onSelect,
 }: {
+    /** 소제목과 같은 이름 (일정을 골라 두었으면 "일정", V-3 9차) */
+    label: string;
     teams: TeamOption[];
     events: TeamOption[];
     selectedId: string | null;
@@ -808,7 +812,7 @@ const TeamPicker = ({
     return (
         <div
             role="radiogroup"
-            aria-label="팀"
+            aria-label={label}
             ref={scrollFadeRef}
             // 팀이 많으면 이 안에서 스크롤: 막대 없이 위·아래 끝을 흐리게 (V-3 5차).
             // 안쪽 여백은 안의 div에: 흐림(끝에 붙는 그러데이션)이 여백 안쪽이 아니라 테두리 바로 안에 붙게

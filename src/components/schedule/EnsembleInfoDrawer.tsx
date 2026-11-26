@@ -1,5 +1,4 @@
-import { useEffect, useState, type ComponentType, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, type ComponentType, type ReactNode } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
     CalendarCheck,
@@ -32,10 +31,8 @@ import { buildColorMap } from '@/lib/board';
 import { getEnsembleSchedule, isSlotFull } from '@/lib/calendar';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
-import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { getRepeatEnd } from '@/lib/ensemble';
 import { ensemblesQueryOptions } from '@/queries/ensembles';
-import { LOCKED_SCROLL_VAR, lockPageScroll } from '@/lib/pageScrollLock';
 import { useTeams } from '@/queries/teams';
 import { useDrawerStore } from '@/stores/drawer';
 import theme from '@/styles/theme';
@@ -53,6 +50,7 @@ import {
 } from './drawerParts';
 import { scrollFadeRef } from '@/components/ui/scroll-fade';
 import PinStep from './PinStep';
+import { usePinSheet } from './pinSheet';
 import { openAddEnsemble, openUpdateEnsemble } from './addEnsembleStore';
 
 // 합주 정보 Drawer (View 개편 V-2). 아래에서 올라오고, 아래로 끌어내리면 닫힌다 (vaul).
@@ -201,17 +199,9 @@ const EnsembleInfoDrawer = ({
         return handler(id, teamId, repeat, nextDate, startTime, endTime);
     };
 
-    // 화면 키보드가 열리면 내용을 보이는 영역의 아래 끝(키보드 바로 위)까지 올리고, 그 안에 들어가게 한다 (hooks/useKeyboardInset).
-    // Drawer 자체는 화면 맨 아래에 둔 채 키보드 높이만큼 아래 여백을 준다: Drawer의 흰 바탕이 키보드 뒤까지 덮어,
-    // 키보드 위 막대(완료 버튼)와 반투명 키보드 사이로 뒤 화면이 비치지 않는다
-    // (17차, 이전: Drawer를 키보드 높이만큼 올렸더니 아이폰에서 그 아래가 비었다)
-    const { inset, viewportHeight, visibleBottom } = useKeyboardInset();
-
-    // PIN 단계 동안 뒤 페이지를 스크롤할 수 없게 고정한다 (20차, lib/pageScrollLock).
-    // 아이폰 사파리는 입력칸에 포커스가 가거나 커서가 움직일 때마다(틀린 PIN을 비울 때 등) 입력칸을 보이려고 페이지를 스크롤한다.
-    // Drawer 위치는 보이는 영역 기준으로 직접 맞추므로 이 스크롤은 필요 없고, 뒤 합주판만 계속 내려갔다
+    // PIN 단계의 키보드 처리 (키보드 위로 올리기·뒤 페이지 고정·키보드 쪽 흰 판: pinSheet, 16~20차)
     const pinStepOpen = open && step !== 'info';
-    useEffect(() => (pinStepOpen ? lockPageScroll() : undefined), [pinStepOpen]);
+    const pinSheet = usePinSheet(pinStepOpen);
 
     // 머리 색: 팀의 지금 색 (캘린더 블록과 같음)
     const color = shown
@@ -305,9 +295,9 @@ const EnsembleInfoDrawer = ({
                         <DrawerTitle className="mt-1.5 text-[24px] leading-tight font-bold text-ink md:text-[26px]">
                             {pinStep.title}
                         </DrawerTitle>
-                        <DrawerDescription className="mt-1.5 text-[15px] text-neutral-500">
-                            {step === 'delete' && '삭제하면 되돌릴 수 없어요. '}팀 PIN 4자리를
-                            입력해 주세요
+                        <DrawerDescription className="mt-1.5 text-[15px] break-keep text-neutral-500">
+                            {step === 'delete' && '삭제하면 되돌릴 수 없어요. '}
+                            {isEvent ? '일정' : '팀'} PIN 4자리를 입력해 주세요
                         </DrawerDescription>
                         <div className="mt-7">
                             <PinStep
@@ -483,16 +473,7 @@ const EnsembleInfoDrawer = ({
         >
             <DrawerContent
                 className={sheetClassName}
-                style={{
-                    paddingBottom: inset > 0 ? `${inset}px` : undefined,
-                    // 높이에는 아래 여백(키보드)이 들어가므로, 보이는 부분 = 보이는 영역 - 위 12px
-                    maxHeight:
-                        viewportHeight === null
-                            ? undefined
-                            : inset > 0
-                              ? `${viewportHeight - 12 + inset}px`
-                              : `min(92dvh, ${viewportHeight - 12}px)`,
-                }}
+                style={pinSheet.style}
                 overlayClassName={overlayClassName}
                 // 손잡이는 머리 위에 겹친다 (정보: 팀 색 머리, PIN: 흰 머리)
                 handleClassName={cn(
@@ -502,40 +483,9 @@ const EnsembleInfoDrawer = ({
             >
                 {content}
             </DrawerContent>
-            {pinStepOpen && visibleBottom !== null && (
-                <KeyboardCover visibleBottom={visibleBottom} />
-            )}
+            {pinSheet.cover}
         </Drawer>
     );
 };
-
-/** KeyboardCover가 보이는 영역 아래 끝보다 얼마나 위에서 시작하는지 (Drawer 아래에 숨는 부분, 줄바꿈 오차 여유) */
-const KEYBOARD_COVER_OVERLAP = 240;
-/**
- * 흰 판의 높이: 키보드(약 300~400px)와 그 위 막대를 덮고도 남게. 너무 길면 문서가 그만큼 길어져
- * 사파리가 입력칸을 보이려고 스크롤할 공간이 생긴다 (19차 이전 3000px: 틀릴 때마다 뒤 페이지가 계속 내려갔다)
- */
-const KEYBOARD_COVER_HEIGHT = 1000;
-
-/**
- * 아이폰 사파리 26: 키보드 위 막대(^ v 완료)와 반투명 키보드 쪽에는 고정(position: fixed) 요소가 아니라
- * "페이지 내용"의 그 부분이 그대로 비친다 (어둡게 하는 덮개·Drawer·vaul의 흰 연장 모두 닿지 않음. 17차까지 그대로였던 이유).
- * 그래서 페이지 문서 안에(absolute) 흰 판을 깔아, 보이는 영역 아래 끝 조금 위부터 그 아래를 덮는다.
- * 보이는 영역 안에 걸친 부분은 Drawer(z-50) 아래에 숨는다. 보이는 영역 밖이라 다른 브라우저에서는 보이지 않는다
- */
-const KeyboardCover = ({ visibleBottom }: { visibleBottom: number }) =>
-    createPortal(
-        <div
-            aria-hidden
-            data-keyboard-cover
-            className="pointer-events-none absolute inset-x-0 z-40 bg-surface"
-            style={{
-                // body가 고정(lockPageScroll)되면 body 기준 위치라 고정할 때의 스크롤만큼 더한다
-                top: `calc(var(${LOCKED_SCROLL_VAR}, 0px) + ${visibleBottom - KEYBOARD_COVER_OVERLAP}px)`,
-                height: `${KEYBOARD_COVER_HEIGHT}px`,
-            }}
-        />,
-        document.body,
-    );
 
 export default EnsembleInfoDrawer;

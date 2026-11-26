@@ -39,7 +39,6 @@ import UpdateTeamDrawer2 from './updateTeamDrawers/UpdateTeamDrawer2';
 import UpdateTeamDrawer3 from './updateTeamDrawers/UpdateTeamDrawer3';
 import UpdateTeamDrawer4 from './updateTeamDrawers/UpdateTeamDrawer4';
 import UpdateTeamDrawer5 from './updateTeamDrawers/UpdateTeamDrawer5';
-import DeleteTeamDrawer from './DeleteTeamDrawer';
 
 const eventNames1 = ['보소', '기소', '베소', '드소', '키소'];
 const eventNames2 = ['메인 회의', '재학생 회의', '회의', '오디션', '합주 불가', '동방 사용 불가'];
@@ -131,12 +130,16 @@ const Teams = () => {
         [handleTeamGone, setOpenedDrawers, updateTeamAsync],
     );
 
+    // 팀 정보 Drawer의 팀 삭제 PIN 단계에서 (V-3 9차: 알림 추가, 합주 삭제와 같은 문구)
     const handleDeleteTeam = useCallback(
         async (id: string) => {
             try {
                 await deleteTeamAsync(id);
-            } catch {
-                // 오류 알림 없음 (알림 기능 삭제, View 개편 때 새로 추가 예정)
+                toast.success('삭제했어요.');
+            } catch (err) {
+                // 이미 삭제됐으면(404) 결과는 같다
+                if (isNotFound(err)) toast.success('삭제했어요.');
+                else toast.error('삭제하지 못했어요. 잠시 후 다시 시도해 주세요.');
             } finally {
                 setTeamStates();
                 closeAllDrawers();
@@ -239,7 +242,7 @@ const Teams = () => {
             />
 
             {/* DRAWERS */}
-            <TeamInfoDrawer checkTeamExists={checkTeamExists} />
+            <TeamInfoDrawer checkTeamExists={checkTeamExists} handleDeleteTeam={handleDeleteTeam} />
             <EventInfoDrawer />
             <AddTeamDrawer1 drawerId="addTeam1" />
             <AddTeamDrawer2 drawerId="addTeam2" />
@@ -252,11 +255,6 @@ const Teams = () => {
             <UpdateTeamDrawer3 drawerId="updateTeam3" />
             <UpdateTeamDrawer4 drawerId="updateTeam4" />
             <UpdateTeamDrawer5 drawerId="updateTeam5" handleUpdateTeam={handleUpdateTeam} />
-            <DeleteTeamDrawer
-                drawerId="deleteTeam"
-                checkTeamExists={checkTeamExists}
-                handleDeleteTeam={handleDeleteTeam}
-            />
             <AddEnsembleDrawer
                 teams={teamOptions}
                 events={eventOptions}

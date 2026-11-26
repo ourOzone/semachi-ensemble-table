@@ -158,7 +158,7 @@ describe('팀', () => {
         expect(countOf(requests, 'GET /team/team-1')).toBe(0);
     });
 
-    it('팀 삭제: PIN이 맞으면 팀을 삭제한다', async () => {
+    it('팀 삭제: 팀 정보 Drawer 안의 PIN 단계에서 PIN이 맞으면 삭제하고 모두 닫으며 알린다', async () => {
         let pinBody: unknown;
         let deletedUrl = '';
         server.use(
@@ -174,13 +174,17 @@ describe('팀', () => {
         const user = await openTeamInfo();
 
         await user.click(screen.getByRole('button', { name: /팀 삭제/ }));
-        await user.type(await screen.findByPlaceholderText('숫자 4자리'), '1234');
-        await user.click(await findEnabledButton('진짜 삭제해요'));
+        // 같은 Drawer 안에서 PIN 단계로 바뀐다 (V-3 9차, 이전: 옛 Drawer "PIN 입력해야 삭제돼요")
+        const drawer = within(await findDialog('팀을 삭제할까요?'));
+        await user.type(drawer.getByLabelText('PIN 4자리'), '1234');
+        const button = drawer.getByRole('button', { name: '삭제하기' });
+        await waitFor(() => expect(button).toBeEnabled());
+        await user.click(button);
 
-        // 알림 기능 삭제로 완료 알림 대신 서버 요청을 기다린다
-        await waitFor(() => expect(deletedUrl).not.toBe(''));
+        expect(await screen.findByText('삭제했어요.')).toBeInTheDocument();
         expect(pinBody).toEqual({ teamId: 'team-1', pin: '1234' });
         expect(new URL(deletedUrl).searchParams.get('id')).toBe('team-1');
+        expect(useDrawerStore.getState().openedDrawers).toEqual([]);
     });
 
     it('팀 수정: PIN → 종류 → 이름 → 멤버 → 셋리 순으로 바꾸고 서버에 보낸다', async () => {

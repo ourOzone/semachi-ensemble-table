@@ -524,22 +524,17 @@ describe('합주 잡기 Drawer: 스크롤·막대 끌기', () => {
         expect(lastScroll()).toEqual({ top: 0, behavior: 'smooth' });
     });
 
-    it('팀 정보에서 열어도 맨 위에서 시작한다 (팀은 PIN을 받은 팀으로 고정)', async () => {
+    it('팀 정보에서 열어도 맨 위에서 시작한다 (팀은 골라져 있음)', async () => {
         const user = userEvent.setup();
         renderApp();
         const teamList = await screen.findByRole('group', { name: '팀 목록' });
         await user.click(await within(teamList).findByText('테스트밴드'));
         await user.click(await screen.findByRole('button', { name: '합주 잡기' }));
-        // 팀 정보에서는 그 팀의 PIN을 먼저 받는다 (백엔드 개편 B-6 뒤)
-        await user.type(
-            within(await findDialog('합주를 잡을까요?')).getByLabelText('PIN 4자리'),
-            '1234',
-        );
         const drawer = within(await findDialog('합주 잡기'));
 
         // V-3 8차: 22차의 "처음부터 반복을 맨 위로"를 되돌림
         expect(scrollTo).not.toHaveBeenCalled();
-        expect(drawer.getByText('팀은 바꿀 수 없어요')).toBeInTheDocument();
+        expect(drawer.getByRole('button', { name: /^테스트밴드\s*바꾸기$/ })).toBeInTheDocument();
     });
 
     it('그날 동방 막대: 창을 끌어 옮기고, 창 밖을 누르면 그 자리를 가운데로 (막대 안에서만)', async () => {

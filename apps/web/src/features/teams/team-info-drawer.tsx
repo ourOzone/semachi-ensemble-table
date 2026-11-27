@@ -54,7 +54,7 @@ interface TeamInfoDrawerProps {
 }
 
 /** Drawer 안의 단계: 정보, 또는 팀 삭제 PIN 확인 */
-type Step = 'info' | 'delete' | 'update' | 'book';
+type Step = 'info' | 'delete' | 'update';
 
 interface ShownTeam {
     id: string;
@@ -97,10 +97,9 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
         setTeamStates();
     };
 
-    // 합주 잡기: 팀이 아직 있으면 PIN 단계로, PIN이 맞으면 팀이 고정된 합주 잡기 Drawer로 바뀐다
-    // (닫으면 팀 정보로 돌아온다. 백엔드 개편 B-6 뒤 사용자 결정, 이전: PIN 없이 바로 합주 잡기 Drawer)
+    // 합주 잡기: 팀을 골라 둔 합주 잡기 Drawer로 바뀐다 (닫으면 팀 정보로 돌아온다, V-2 21차)
     const handleClickAddEnsemble = async (teamId: string) => {
-        if (await checkTeamExists(teamId)) setStep('book');
+        if (await checkTeamExists(teamId)) openAddEnsemble({ teamId, returnTo: 'teamInfo' });
     };
 
     // 팀 수정: 팀이 아직 있으면 PIN 단계로, PIN이 맞으면 지금 값을 채운 팀 수정 Drawer로 바뀐다
@@ -132,11 +131,6 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
 
         if (step !== 'info') {
             const deleting = step === 'delete';
-            const title = {
-                delete: '팀을 삭제할까요?',
-                update: '팀을 수정할까요?',
-                book: '합주를 잡을까요?',
-            }[step];
             return (
                 <div ref={scrollFadeRef} className={scrollAreaClassName}>
                     <div className="px-5 pt-[26px] pb-[calc(24px+env(safe-area-inset-bottom))] duration-200 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-4 md:px-7">
@@ -168,7 +162,7 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
                             <span className="truncate">{team.name}</span>
                         </p>
                         <DrawerTitle className="mt-1.5 text-[24px] leading-tight font-bold text-ink md:text-[26px]">
-                            {title}
+                            {deleting ? '팀을 삭제할까요?' : '팀을 수정할까요?'}
                         </DrawerTitle>
                         {/* 삭제: 서버가 팀의 합주도 함께 지운다 */}
                         <DrawerDescription className="mt-1.5 text-[15px] break-keep text-neutral-500">
@@ -178,18 +172,12 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
                         <div className="mt-7">
                             <PinStep
                                 teamId={team.id}
-                                // 확인 버튼은 되돌릴 수 없는 삭제만. 수정·합주 잡기는 PIN이 맞는 즉시 그 Drawer로
+                                // 확인 버튼은 되돌릴 수 없는 삭제만. 수정은 PIN이 맞는 즉시 팀 수정 Drawer로
                                 confirmLabel={deleting ? '삭제하기' : undefined}
                                 danger={deleting}
                                 onConfirm={async (pin) => {
                                     if (deleting) {
                                         await handleDeleteTeam(team.id, pin); // Drawer를 모두 닫는다
-                                    } else if (step === 'book') {
-                                        openAddEnsemble({
-                                            teamId: team.id,
-                                            returnTo: 'teamInfo',
-                                            pin,
-                                        });
                                     } else {
                                         openUpdateTeam({ ...team, due, pin });
                                     }

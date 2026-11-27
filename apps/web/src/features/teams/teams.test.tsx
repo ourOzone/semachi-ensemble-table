@@ -41,15 +41,19 @@ async function fillAddTeam(user: ReturnType<typeof userEvent.setup>, confirmPin 
     await user.type(screen.getByLabelText('PIN 4자리'), confirmPin);
 }
 
-/** 팀 정보에서 "합주 잡기" → PIN 단계(팀 PIN 1234, 백엔드 개편 B-6 뒤) → 팀이 고정된 합주 잡기 Drawer */
+/** 팀 정보에서 "합주 잡기" → 팀이 골라져 있는 합주 잡기 Drawer */
 async function openAddEnsembleFromTeam(user: ReturnType<typeof userEvent.setup>) {
-    server.use(http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)));
     await user.click(
         within(await findDialog('테스트밴드')).getByRole('button', { name: '합주 잡기' }),
     );
+    return within(await findDialog('합주 잡기'));
+}
+
+/** 합주 잡기의 마지막: "합주 잡기"를 누른 뒤 고른 팀의 PIN (팀 PIN 1234, 백엔드 개편 B-6 뒤) */
+async function enterBookingPin(user: ReturnType<typeof userEvent.setup>) {
+    server.use(http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)));
     const pinStep = within(await findDialog('합주를 잡을까요?'));
     await user.type(pinStep.getByLabelText('PIN 4자리'), '1234');
-    return within(await findDialog('합주 잡기'));
 }
 
 /**
@@ -58,8 +62,7 @@ async function openAddEnsembleFromTeam(user: ReturnType<typeof userEvent.setup>)
  */
 async function fillAddEnsemble(user: ReturnType<typeof userEvent.setup>) {
     const drawer = await openAddEnsembleFromTeam(user);
-    // 그 팀의 PIN을 받고 열어 팀은 바꿀 수 없다
-    expect(drawer.getByText('팀은 바꿀 수 없어요')).toBeInTheDocument();
+    expect(drawer.getByRole('button', { name: /^테스트밴드\s*바꾸기$/ })).toBeInTheDocument();
     expect(drawer.getByRole('button', { name: '반복 여부를 골라 주세요' })).toBeDisabled();
 
     await user.click(drawer.getByRole('radio', { name: '한 번만' }));
@@ -75,6 +78,7 @@ async function fillAddEnsemble(user: ReturnType<typeof userEvent.setup>) {
     expect(drawer.getByRole('radio', { name: '2시간' })).toBeChecked();
     expect(drawer.getByText('11월 27일 금요일 한 번만 · 12:00 – 14:00')).toBeInTheDocument();
     await user.click(drawer.getByRole('button', { name: '합주 잡기' }));
+    await enterBookingPin(user);
     return drawer;
 }
 
@@ -84,6 +88,7 @@ async function fillAddEnsembleAfterOpen(user: ReturnType<typeof userEvent.setup>
     await user.click(drawer.getByRole('radio', { name: '한 번만' }));
     await user.click(drawer.getByRole('button', { name: /11월 27일/ }));
     await user.click(drawer.getByRole('button', { name: '합주 잡기' }));
+    await enterBookingPin(user);
 }
 
 /** 팀 버튼('테스트밴드')을 눌러 팀 정보 Drawer를 연다 */
@@ -429,7 +434,7 @@ describe('팀', () => {
                 day: 4, // 금요일 (월요일 0 기준)
                 type: '일회성',
                 due: '2026-11-27',
-                pin: '1234', // 팀 정보에서 받은 PIN (서버가 다시 확인)
+                pin: '1234', // 마지막에 받은 그 팀의 PIN (서버가 다시 확인)
             });
             // 날짜에 시작 시각을 붙여 보낸다 (서버가 지난 일회성 합주를 날짜로 걸러 냄)
             expect(dayjs(posted!.nextDate as string).format('YYYY-MM-DD HH:mm')).toBe(
@@ -537,14 +542,7 @@ describe('팀', () => {
         expect(drawer.getByRole('button', { name: '일정 잡기' })).toBeInTheDocument();
     });
 
-    it('일정 잡기: 그 일정의 PIN을 먼저 받고, 맞으면 일정이 고정된 일정 잡기 Drawer (뒤로 가면 정보로)', async () => {
-        let pinBody: unknown;
-        server.use(
-            http.post(`${url}/check-team-pin`, async ({ request }) => {
-                pinBody = await request.json();
-                return HttpResponse.json(true);
-            }),
-        );
+    it('일정 잡기: 일정이 골라진 일정 잡기 Drawer, 다 고른 뒤 그 일정의 PIN을 받는다', async () => {
         const user = userEvent.setup();
         renderApp();
         await user.click(await screen.findByText('보소'));
@@ -552,19 +550,8 @@ describe('팀', () => {
             within(await findDialog('보컬 소모임')).getByRole('button', { name: '일정 잡기' }),
         );
 
-        const pinStep = within(await findDialog('일정을 잡을까요?'));
-        await user.click(pinStep.getByRole('button', { name: '뒤로' }));
-        await user.click(
-            within(await findDialog('보컬 소모임')).getByRole('button', { name: '일정 잡기' }),
-        );
-        await user.type(
-            within(await findDialog('일정을 잡을까요?')).getByLabelText('PIN 4자리'),
-            '1234',
-        );
-
         const add = within(await findDialog('일정 잡기'));
-        expect(add.getByText('일정은 바꿀 수 없어요')).toBeInTheDocument();
-        expect(pinBody).toMatchObject({ pin: '1234' });
+        expect(add.getByRole('button', { name: /^보소\s*바꾸기$/ })).toBeInTheDocument();
         expect(useDrawerStore.getState().openedDrawers).toEqual(['addEnsemble']);
     });
 });

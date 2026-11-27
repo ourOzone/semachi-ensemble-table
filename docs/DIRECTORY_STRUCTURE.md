@@ -69,16 +69,17 @@ apps/server/
 │   ├── dev-prod-db.ts       내 PC 서버를 운영 DB에 연결 (pnpm dev:server, 루트 .env)
 │   ├── dev-sample.ts        내 PC 서버를 메모리 MongoDB + 예시 데이터로 (pnpm dev:server:sample)
 │   ├── port-check.ts        개발 서버를 켜기 전 포트 확인 (이미 켜 둔 서버가 있으면 알림)
+│   ├── hash-pins.ts         한 번짜리: 기존 평문 PIN을 해시로 (기본 세어 보기, --apply. B-14 때)
 │                            (예정) 한 번만 실행하는 데이터 변경 스크립트 (PIN 해시 등, 미리 세어 보기부터)
 ├── src/
 │   ├── main.ts              시작: 설정 검사 → DB 연결 → HTTP(S) 실행 → 종료 신호 처리
 │   ├── app.ts               Express 앱 조립: createApp({ masterPin, logFile }) (테스트는 이것만 가져다 씀)
 │   ├── config.ts            환경변수 읽기·검사 (MONGO_DB·MASTER_PIN 필수, PORT·LOG_FILE·TLS_*)
-│   ├── models/              MongoDB 스키마 (team·ensemble·note·notice, 예정 B-7 activity)
-│   ├── routes/              API (teams·ensembles·notes·notices·health, 예정 admin)
+│   ├── models/              MongoDB 스키마 (team·ensemble·note·notice·setting(마스터 PIN), 예정 B-7 activity)
+│   ├── routes/              API (teams·ensembles·notes·notices·health·admin)
 │   ├── middleware/          요청 앞에 걸리는 처리 (cors·visitor 쿠키·pin-limit 시도 제한, 예정 PIN 확인·오류 응답)
 │   ├── jobs/                (예정 B-9) 정해진 시간에 도는 일 (날짜 지난 팀·합주 정리)
-│   ├── lib/                 공용 함수 (log: 활동 로그 파일, time: 로그 시각)
+│   ├── lib/                 공용 함수 (log: 활동 로그 파일, time: 로그 시각, pin: 해시·비교, pin-auth: 마스터·팀 PIN 확인 규칙, pin-migration: 평문 → 해시)
 │   └── types/               Express에 붙이는 타입 (req.visitorId)
 └── test/                    API 테스트 (메모리 MongoDB, 실제 DB·포트 없음)
     ├── setup.ts · helpers.ts  DB 켜기·비우기, 임시 로그 파일, 요청·데이터 도우미

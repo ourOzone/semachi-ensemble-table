@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅ · B-3 ✅ · B-4 ✅ · B-5 ✅, 다음은 B-6 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
+| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅ · B-3 ✅ · B-4 ✅ · B-5 ✅ · B-6 ✅, 다음은 B-7 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
 | View 개편 | ✅ **완료 (2026-11-26, V-0 ~ V-7)**: V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, V-4 날적이 ✅, V-5 공지 ✅, **V-6 일괄 정리 ✅**, **V-7 마무리 ✅ (2026-11-26)** (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
@@ -1373,6 +1373,23 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 예시 데이터: `pnpm dev:server:sample` (`scripts/dev.ts` → `dev-sample.ts`), 지우기 `pnpm --filter @semachi/server dev:sample:reset`
 - Claude는 운영 DB에 닿는 `dev:server`를 실행하지 않는다 (`CLAUDE.md`)
 - 사용자가 켜 보니 `DB에 연결하지 못했습니다: querySrv ECONNREFUSED`. 운영 DB는 MongoDB Atlas(`mongodb+srv://`, 인터넷에서 접속하는 클라우드 DB). DB가 아니라 DB 주소를 찾는 DNS 조회에서 실패했다: 이 PC의 Node는 DNS 서버를 `127.0.0.1`로 알고 있는데 응답이 없다(윈도우 자체 `nslookup`은 통신사 DNS로 성공, 공용 DNS 8.8.8.8로도 성공). → 서버에 `DNS_SERVERS` 설정(있으면 `dns.setServers`), `dev:server`는 이 PC의 DNS로 찾지 못할 때만 공용 DNS(8.8.8.8·1.1.1.1)로. DB에는 Claude가 접속하지 않고 DNS 조회만 확인
+
+### 2026-11-27 — 백엔드 개편 B-6: PIN (서버에서 확인·응답에서 제거·해시 준비, 틀린 횟수, 마스터 PIN 관리)
+
+- 사용자 요청 두 가지: PIN이 틀릴 때 갑자기 막지 말고 틀린 횟수 "(7/10)"을, 마스터 PIN은 관리자 화면에서 관리
+- 서버 `f54c467` — 지금 → 바꾼 후
+  - B1: 팀 수정·삭제, 합주 수정·삭제, 날적이 삭제, 공지 올리기·삭제가 PIN을 보지 않음 → 요청 본문의 `pin`(팀·글 PIN 또는 마스터 PIN)이 맞아야, 없거나 틀리면 403 `{ error: 'Wrong PIN' }`. 합주는 그 합주 팀의 PIN (팀이 없으면 마스터 PIN만). 합주 추가는 그대로 (웹에 PIN 단계가 없다)
+  - B3: `GET /teams`·`GET /notes`에 PIN → 없음 (모델 `select: false`, 확인할 때만 `+pin`)
+  - S4: 새 PIN 평문 저장 → `PIN_HASH=true`면 해시(Node `scrypt`, `scrypt$N$r$p$소금$해시`). 기본은 꺼짐 (같은 DB의 옛 서버가 평문 비교, 사전 결정 10). 확인은 평문·해시 둘 다, `timingSafeEqual`. 기존 평문을 바꾸는 `scripts/hash-pins.ts` (기본 세어 보기, `--apply`, 이미 해시면 건너뜀, 값은 출력하지 않음). 메모리 DB로만 테스트, 실행은 B-14
+  - 틀린 횟수: 응답 헤더 `Pin-Attempts: 틀린 횟수/한도` (같은 대상 10·IP 전체 30 중 빠듯한 쪽). 대상별 횟수를 확인 API와 변경 API가 함께 센다 (`team:<id>` 등, 하나의 제한기). CORS로 `Pin-Attempts`·`Retry-After`를 웹에 공개
+  - 마스터 PIN: `.env`의 `MASTER_PIN`만 → DB `settings`의 `masterPin`(해시)이 있으면 그것, 없으면 `.env`. `PUT /admin/master-pin { currentPin, newPin }`(숫자 4자리, 시도 제한). 매번 DB에서 읽어 운영·베타가 바로 같이 따른다
+- 웹 `6501cbf` — 지금 → 바꾼 후
+  - PIN 단계에서 맞은 PIN을 변경 요청에 함께 보냄 (`PinStep`의 `onConfirm(pin)`, 수정 Drawer는 열 때 받은 PIN을 들고 있음, 공지 올리기는 글을 쓰는 동안)
+  - PIN이 틀리면 "PIN이 맞지 않아요. 다시 입력해 주세요" → 뒤에 "(7/10)"
+  - 너무 많이 틀리면 "PIN을 확인하지 못했어요…" 알림 → 그 자리에 "너무 많이 틀렸어요. N분 뒤에 다시 입력해 주세요"
+- 진행 중 알게 된 것: 사용자가 켜 둔 `pnpm dev:server`(운영 DB)가 코드를 고칠 때마다 새 서버 코드로 다시 켜졌다. Claude는 그 서버에 요청을 보내지 않았다. 새 코드가 켜지면서 운영 DB에 생길 수 있는 것: 빈 `settings` 컬렉션 (Mongoose가 모델을 준비할 때 만든다. 데이터는 바뀌지 않고 옛 서버는 무시)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 웹 228 + 서버 144 / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅
 
 ## 남은 일
 

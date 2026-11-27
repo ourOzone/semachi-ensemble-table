@@ -65,25 +65,24 @@ apps/server/
 ├── vitest.config.mts        테스트 설정 (서버 시간대 UTC)
 ├── Dockerfile               (예정 B-11) 운영 이미지
 ├── .dev-db/                 개발 서버의 메모리 DB 데이터·로그 (커밋 안 함, pnpm dev:server·dev:server:sample이 만듦)
-├── scripts/
-│   ├── dev-prod-db.ts       내 PC 서버를 운영 DB에 연결 (pnpm dev:server, 루트 .env)
-│   ├── dev-sample.ts        내 PC 서버를 메모리 MongoDB + 예시 데이터로 (pnpm dev:server:sample)
-│   ├── port-check.ts        개발 서버를 켜기 전 포트 확인 (이미 켜 둔 서버가 있으면 알림)
-│   ├── hash-pins.ts         한 번짜리: 기존 평문 PIN을 해시로 (기본 세어 보기, --apply. B-14 때)
-│                            (예정) 한 번만 실행하는 데이터 변경 스크립트 (PIN 해시 등, 미리 세어 보기부터)
+├── scripts/                 서버 앱이 아닌, 사람이 터미널에서 직접 실행하는 프로그램 (아래 "서버 자세히")
+│   ├── dev-prod-db.ts       [개발] 내 PC 서버를 운영 DB에 연결 (pnpm dev:server, 루트 .env)
+│   ├── dev-sample.ts        [개발] 내 PC 서버를 메모리 MongoDB + 예시 데이터로 (pnpm dev:server:sample)
+│   ├── port-check.ts        [개발] 위 둘이 켜기 전에 포트 확인 (이미 켜 둔 서버가 있으면 알림)
+│   └── hash-pins.ts         [데이터 변경, 한 번] 기존 평문 PIN을 해시로 (기본 세어 보기, --apply. B-14 때)
 ├── src/
 │   ├── main.ts              시작: 설정 검사 → DB 연결 → HTTP(S) 실행 → 종료 신호 처리
 │   ├── app.ts               Express 앱 조립: createApp({ masterPin, logFile }) (테스트는 이것만 가져다 씀)
 │   ├── config.ts            환경변수 읽기·검사 (MONGO_DB·MASTER_PIN 필수, PORT·LOG_FILE·TLS_*)
 │   ├── models/              MongoDB 스키마 (team·ensemble·note·notice·setting(마스터 PIN), 예정 B-7 activity)
 │   ├── routes/              API (teams·ensembles·notes·notices·health·admin)
-│   ├── middleware/          요청 앞에 걸리는 처리 (cors·visitor 쿠키·pin-limit 시도 제한, 예정 PIN 확인·오류 응답)
+│   ├── middleware/          모든 요청이 라우트 전에 거치는 처리 (cors: 다른 주소의 웹 허락, visitor: 방문자 쿠키)
 │   ├── jobs/                (예정 B-9) 정해진 시간에 도는 일 (날짜 지난 팀·합주 정리)
-│   ├── lib/                 공용 함수 (log: 활동 로그 파일, time: 로그 시각, pin: 해시·비교, pin-auth: 마스터·팀 PIN 확인 규칙, pin-migration: 평문 → 해시)
+│   ├── lib/                 라우트가 불러 쓰는 함수 (log·time: 활동 로그 파일, pin: 해시·비교, pin-auth: PIN 확인 규칙, pin-guard: 틀린 횟수, pin-migration: 평문 → 해시)
 │   └── types/               Express에 붙이는 타입 (req.visitorId)
 └── test/                    API 테스트 (메모리 MongoDB, 실제 DB·포트 없음)
     ├── setup.ts · helpers.ts  DB 켜기·비우기, 임시 로그 파일, 요청·데이터 도우미
-    └── *.test.ts            팀·합주·날적이·공지·공통 처리(middleware)·설정(config)·health
+    └── *.test.ts            팀·합주·날적이·공지·공통 처리(middleware)·설정·health·PIN(pin, pin-limit)·삭제 안전·생성 시각
 ```
 - 가져오기는 실제 파일 확장자로 (`./app.ts`), 타입만 가져올 때는 `import type`. enum·namespace처럼 타입만 지워서는 실행되지 않는 문법은 쓰지 않는다 (Node가 타입만 지우고 실행하므로)
 - 새 API: `routes/<리소스>.ts`에 `xxxRouter(의존성)` 함수를 만들고 `app.ts`에서 `app.use`
@@ -128,3 +127,111 @@ packages/shared/
 - **로직 층(`api`·`queries`·`lib`·`types`·`stores`)은 화면(`features`·`components`)을 가져오지 않는다**
 - **웹과 서버는 서로를 직접 가져오지 않는다.** 둘 다 필요한 것은 `packages/shared`로
 - 패키지 추가: `pnpm --filter @semachi/web add <이름>` (서버는 `@semachi/server`)
+
+## 서버 자세히 (apps/server)
+
+> 프론트엔드는 해 봤지만 백엔드는 처음인 사람을 위한 설명. 웹에서 비슷한 것이 있으면 괄호에 적었다.
+
+### 요청 하나가 지나가는 길
+
+```
+브라우저 (웹의 api/ 함수가 axios로 보냄)
+  │  HTTP 요청: 메서드(GET·POST·PUT·DELETE) + 주소(/team?id=…) + 헤더(쿠키 등) + 본문(JSON)
+  ▼
+(B-11부터) Caddy: HTTPS를 풀고, semachi.net/api/… 의 /api를 떼어 서버로 넘긴다
+  ▼
+Node 프로세스 — src/main.ts가 연 HTTP 서버 (한 번 켜면 계속 떠서 요청을 기다린다)
+  ▼
+Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한다
+  ① helmet          보안 헤더를 붙인다
+  ② health 라우터    GET /health면 여기서 바로 답하고 끝
+  ③ express.json    본문(JSON 글자)을 객체로 바꿔 req.body에 둔다
+  ④ cors            다른 주소의 웹이면 허락 헤더 (허락 목록에 있을 때만)
+  ⑤ visitor         방문자 쿠키를 읽거나 새로 만들어 req.visitorId에 둔다
+  ⑥ 라우터들         teams·ensembles·notes·notices·admin 중 메서드·주소가 맞는 핸들러 하나가 처리하고 응답
+  ⑦ (아무것도 안 맞으면) Express 기본 404
+  ▼
+핸들러 안 (예: PUT /team): 입력 확인 → DB에서 팀 읽기(models) → PIN 확인(lib/pin-guard·pin-auth) → 바꾸고 저장 → res.json(...)
+```
+
+### 용어
+
+- **미들웨어 (middleware)**: `(req, res, next) => { … }` 꼴의 함수. Express는 요청마다 등록된 미들웨어를 차례로 부른다. 각 미들웨어는 요청을 읽거나 덧붙이고(`req.visitorId = …`), 응답 헤더를 붙이고, 다음으로 넘기거나(`next()`) 직접 응답해 끝낸다. 요청 처리 파이프라인의 한 단계 (웹에서 비슷한 것: axios 인터셉터. Java라면 서블릿 필터)
+- **라우터 (router)·핸들러 (handler)**: 라우터는 "메서드 + 주소 → 처리 함수" 표의 묶음(`express.Router()`), 핸들러는 그 처리 함수 하나(`router.put('/team', async (req, res) => …)`). 핸들러가 `res.json(…)`·`res.status(404)`로 답을 보낸다 (웹의 라우터와 이름은 같지만, 화면이 아니라 응답을 고른다)
+- **모델 (model)**: MongoDB 컬렉션(테이블에 해당)을 코드에서 다루는 객체. Mongoose 스키마(필드 이름·타입)로 만든다. `Team.findById(id)` 처럼 쓴다. SQL의 ORM과 같은 역할이라 ODM(Object Document Mapper)이라고 부른다
+- **요청 본문·쿼리·파라미터**: `req.body`(POST·PUT·DELETE의 JSON), `req.query`(주소의 `?id=…`), `req.params`(주소 안의 `/team/:id`)
+- **의존성 넘기기 (dependency injection)**: 라우터가 설정·도구를 직접 가져오지 않고 인자로 받는다 (`teamsRouter({ log, pins, guard })`). 테스트가 다른 마스터 PIN·임시 로그 파일·빠른 시도 제한을 넣을 수 있다 (웹에서 props로 넘기는 것과 같은 생각)
+- **프로세스·환경변수**: 서버는 OS의 프로그램 하나(Node 프로세스)로 계속 떠 있다. 설정(비밀번호·주소)은 코드가 아니라 실행할 때 주는 환경변수(`.env`)로 받는다. 코드를 바꾸지 않고 운영·베타·내 PC를 다르게 켤 수 있다
+
+### 폴더·파일별 역할
+
+**src/ — 서버 앱 (배포되어 계속 도는 코드)**
+
+| 파일 | 역할 |
+|---|---|
+| `main.ts` | 프로그램의 시작점. 부수 효과(바깥 세상과 닿는 일)만 한다: 환경변수 검사 → DB 연결(실패하면 종료) → 포트 열기 → 종료 신호(Ctrl+C·Docker 정지)에 하던 요청 마치고 끄기. `node src/main.ts`로 켠다 |
+| `app.ts` | Express 앱 조립만 한다(미들웨어·라우터를 순서대로 등록). DB 연결·포트는 없다 → 테스트가 이것만 가져다 메모리 안에서 요청을 보낸다 |
+| `config.ts` | 환경변수(`MONGO_DB`·`MASTER_PIN`·`PORT`·`CORS_ORIGINS`·`TRUST_PROXY`·`PIN_HASH`…)를 읽어 검사하고 한 객체로. 없거나 틀리면 시작하지 않게(빨리 실패) |
+| `types/express.d.ts` | Express의 `Request` 타입에 이 서버가 붙이는 값(`req.visitorId`)을 더한다 (TypeScript 선언 합치기) |
+
+**src/models/ — DB에 저장하는 모양**
+
+| 파일 | 컬렉션 | 메모 |
+|---|---|---|
+| `team.ts` | teams | 팀 이름·종류·멤버/셋리(`desc` 7칸)·PIN. PIN은 `select: false`(조회 결과에 기본으로 넣지 않음) |
+| `ensemble.ts` | ensembles | 합주: 팀 id·요일·시간칸·반복·다음 날짜·반복 종료(`due`). `teamId` 인덱스(팀으로 빨리 찾기). `type`·`day`·`teamName`은 옛 필드 |
+| `note.ts` | notes | 날적이 글·PIN |
+| `notice.ts` | notices | 공지 글·올린 시각 |
+| `setting.ts` | settings | 서버 설정을 "이름 → 값" 문서로. 지금은 `masterPin`(마스터 PIN 해시) 하나 |
+
+모든 모델에 `createdAt`·`updatedAt`을 서버가 자동으로 채운다 (B-5부터 만들거나 고친 문서).
+
+**src/routes/ — API (주소별 처리)**. 파일마다 `xxxRouter(의존성)` 함수가 라우터를 만들어 돌려주고, `app.ts`가 `app.use`로 붙인다
+
+| 파일 | 주소 |
+|---|---|
+| `teams.ts` | `GET /teams` 목록, `POST /team` 만들기, `PUT·DELETE /team?id=` 수정·삭제(PIN), `POST /check-team-pin`, `GET /team/:id` 있는지 |
+| `ensembles.ts` | `GET /ensembles`(지난 것 빼고), `POST·PUT·DELETE /ensemble` 잡기·수정·삭제(그 팀 PIN), `GET /ensemble/:id` |
+| `notes.ts` | 날적이 목록·남기기·삭제(PIN)·PIN 확인·있는지 |
+| `notices.ts` | 공지 목록·올리기·삭제(마스터 PIN)·PIN 확인·있는지 |
+| `admin.ts` | 관리자: `PUT /admin/master-pin` 마스터 PIN 바꾸기 (화면은 B-7) |
+| `health.ts` | `GET /health` 서버·DB가 살아 있는지 (배포 확인용) |
+
+**src/middleware/ — 모든 요청이 라우트 전에 거치는 처리**. 어떤 API든 똑같이 해야 하는 일만 둔다
+
+| 파일 | 역할 |
+|---|---|
+| `cors.ts` | 브라우저는 A 주소의 웹이 B 주소의 응답을 읽지 못하게 막는다(동일 출처 정책). 허락 목록(`CORS_ORIGINS`)의 주소면 "읽어도 된다" 헤더를 붙인다. 다른 주소에서 JSON을 보내기 전에 브라우저가 먼저 보내는 확인 요청(OPTIONS, preflight)에도 답한다. 운영은 웹과 API가 같은 주소라 필요 없다 |
+| `visitor.ts` | 방문자 쿠키(`semachi_vid`, 1년)를 읽고, 없거나 이상하면 새로 만들어 응답에 심는다. 값을 `req.visitorId`에 두어 라우트가 활동 기록에 쓴다 |
+
+라이브러리가 주는 미들웨어(`helmet` 보안 헤더, `express.json` 본문 해석)는 파일 없이 `app.ts`에서 바로 등록한다.
+
+**src/lib/ — 라우트가 불러 쓰는 함수** (Express를 모르는 순수 로직이 대부분이라 단위 테스트하기 쉽다)
+
+| 파일 | 역할 |
+|---|---|
+| `pin.ts` | PIN 해시 만들기·비교 (Node 내장 `scrypt`, 소금). 저장값이 평문이면 평문으로 비교 (운영 전환 전까지). 비교에 걸리는 시간으로 값을 짐작하지 못하게 `timingSafeEqual` |
+| `pin-auth.ts` | PIN 확인 규칙: 마스터 PIN이 어디서 오는지(DB 우선, 없으면 `.env`), "마스터이거나 저장된 PIN과 맞는지", 새 PIN을 해시로 저장할지(`PIN_HASH`), 마스터 PIN 바꾸기 |
+| `pin-guard.ts` | PIN 틀린 횟수 세기·막기: 대상별(팀·날적이·마스터) 10번(맞추면 0), IP 전체 30번(맞춰도 그대로), 15분. 서버 메모리의 표. 미들웨어가 아니라 핸들러 안에서 부르는 이유: 합주는 DB에서 합주를 읽어야 어느 팀의 PIN인지 알 수 있다 |
+| `pin-migration.ts` | 기존 평문 PIN을 해시로 바꾸는 로직 (scripts/hash-pins.ts가 부르고, 테스트가 메모리 DB로 확인) |
+| `log.ts`·`time.ts` | 옛 활동 로그 파일(`log.txt`)에 한 줄 쓰기와 그 시각. B-7에서 DB 활동 기록으로 바뀐다 |
+
+**src/jobs/ — (예정 B-9) 요청 없이 정해진 시간에 도는 일**. 예: 매일 새벽 날짜 지난 팀·합주 정리. 운영 서버에서만 돈다 (같은 DB를 쓰는 베타가 같은 일을 두 번 하지 않게)
+
+**scripts/ — 서버 앱이 아닌, 사람이 터미널에서 직접 실행하는 프로그램**. 배포된 서버가 스스로 부르지 않는다
+
+| 종류 | 파일 | 설명 |
+|---|---|---|
+| 개발 도구 | `dev-prod-db.ts`, `dev-sample.ts` | 내 PC에서 서버를 띄우는 바깥 프로그램. 이 프로그램(부모 프로세스)이 DB 연결 정보를 준비하고(운영 DB의 `.env` 또는 메모리 MongoDB), `node --watch src/main.ts`를 자식 프로세스로 켠다. 코드를 고치면 자식(서버)만 다시 켜지고 메모리 DB는 그대로 |
+| 개발 도구 | `port-check.ts` | 위 둘이 켜기 전에 포트가 비었는지 본다 |
+| 데이터 변경 (한 번) | `hash-pins.ts` | DB의 기존 데이터를 고치는 일회성 작업(마이그레이션). 실행 전 백업, 기본은 "세어 보기"(dry run)만, `--apply`로 실제로. 두 번 실행해도 결과가 같게(멱등). 운영 전환(B-14) 때 한 번 |
+
+**test/ — 서버 테스트** (Vitest + supertest + mongodb-memory-server)
+
+| 파일 | 역할 |
+|---|---|
+| `setup.ts` | 테스트 파일마다 한 번: 메모리 MongoDB를 켜고 연결, 테스트마다 DB를 비우고, 임시 로그 파일 |
+| `helpers.ts` | `api()`(앱에 요청 보내기), `freshApi()`(시도 횟수 같은 앱 상태를 새로 시작), `insert`·`findOne`(모델을 거치지 않고 컬렉션에 직접: 옛 데이터처럼 스키마와 다른 모양도 넣으려고), 예시 데이터 |
+| `*.test.ts` | 대부분 HTTP로 요청을 보내 응답·DB를 확인하는 블랙박스 테스트(B-2에서 옛 동작을 고정한 것부터). `pin.test.ts`·`config.test.ts`·`pin-limit.test.ts`의 일부는 함수 단위 |
+
+**설정 파일**: `package.json`(의존성·스크립트), `tsconfig.json`(Node가 타입만 지우고 실행하므로 `.ts` 확장자로 가져오기·`import type`·enum 금지), `vitest.config.mts`(테스트 시간대 UTC)

@@ -6,12 +6,15 @@
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { exitIfPortsBusy } from './port-check.ts';
 
 const SERVER_DIR = fileURLToPath(new URL('..', import.meta.url));
 const ROOT_ENV = fileURLToPath(new URL('../../../.env', import.meta.url));
 const DATA_DIR = fileURLToPath(new URL('../.dev-db', import.meta.url));
 const LOG_FILE = `${DATA_DIR}/log-prod-db.txt`;
 const PORT = 8081;
+
+await exitIfPortsBusy({ 서버: PORT });
 
 if (!existsSync(ROOT_ENV)) {
     console.error('저장소 루트에 .env가 없습니다 (MONGO_DB·MASTER_PIN)');

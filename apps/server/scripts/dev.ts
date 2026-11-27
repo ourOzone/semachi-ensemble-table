@@ -8,6 +8,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
+import { exitIfPortsBusy } from './port-check.ts';
 
 const SERVER_DIR = fileURLToPath(new URL('..', import.meta.url));
 const DATA_DIR = fileURLToPath(new URL('../.dev-db', import.meta.url));
@@ -18,6 +19,8 @@ const PORT = 8081;
 /** 개발용 PIN. 실제 PIN(루트 .env)과 관계없다 */
 const DEV_MASTER_PIN = '0000';
 const DEV_TEAM_PIN = '1234';
+
+await exitIfPortsBusy({ DB: DB_PORT, 서버: PORT });
 
 mkdirSync(DB_DIR, { recursive: true });
 if (!existsSync(LOG_FILE)) writeFileSync(LOG_FILE, '');

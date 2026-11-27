@@ -32,10 +32,12 @@
     "import/no-named-as-default": "off",
     "import/no-unassigned-import": "off",
     "import/no-named-as-default-member": "off",
-    "typescript/no-explicit-any": "error"
+    "typescript/no-explicit-any": "error",
+    "no-underscore-dangle": ["warn", { "allow": ["_id", "__v"] }]
   },
   "ignorePatterns": [
-    "**/api.js",
+    "apps/server/app.js",
+    "apps/server/main.js",
     "**/build/**",
     "**/dist/**",
     "**/node_modules/**",
@@ -44,7 +46,10 @@
   "overrides": [
     {
       "files": ["**/*.test.ts", "**/*.test.tsx"],
-      "plugins": ["vitest"]
+      "plugins": ["vitest"],
+      "rules": {
+        "vitest/expect-expect": ["error", { "assertFunctionNames": ["expect", "waitForLog"] }]
+      }
     }
   ]
 }

@@ -2,14 +2,25 @@
   "name": "@semachi/server",
   "version": "0.1.0",
   "private": true,
-  "main": "api.js",
+  "main": "main.js",
   "scripts": {
-    "start": "node api.js"
+    "start": "node main.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
-    "body-parser": "^2.4.0",
+    "body-parser": "^1.20.9",
     "dotenv": "^18.0.10",
     "express": "^4.22.3",
     "mongoose": "^8.24.11"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.4",
+    "@types/supertest": "^7.2.1",
+    "mongodb-memory-server": "^11.4.0",
+    "supertest": "^7.3.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
   }
 }

@@ -1,0 +1,16 @@
+{
+  // 지금(B-2)은 테스트(test/)만 TypeScript다. 서버 코드(app.js·main.js)는 B-3에서 TypeScript로 옮긴다
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["test", "*.d.ts", "vitest.config.mts"]
+}

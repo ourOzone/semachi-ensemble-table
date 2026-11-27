@@ -1,5 +1,6 @@
-# 옛 백엔드 코드 (apps/server/api.js, 백엔드 개편 B-3에서 TypeScript로 나눈 뒤 포맷 대상에 넣는다)
-api.js
+# 옛 백엔드 코드 (api.js를 B-2에서 둘로 나눔. 코드는 그대로라 B-3에서 TypeScript로 나눈 뒤 포맷 대상에 넣는다)
+apps/server/app.js
+apps/server/main.js
 
 # 빌드 산출물 / 의존성
 build

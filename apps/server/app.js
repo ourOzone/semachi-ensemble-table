@@ -1,4 +1,6 @@
 //new version 7.0
+// 백엔드 개편 B-2: api.js를 app.js(앱 조립)와 main.js(환경변수·DB 연결·HTTPS 실행)로만 나눴다. 코드는 그대로다.
+// 테스트(test/)는 이 파일의 app을 가져다 메모리 MongoDB로 요청을 보낸다. B-3에서 TypeScript로 나눈다.
 
 const mongoose = require('mongoose');
 const express = require('express');
@@ -7,14 +9,9 @@ const fs = require('fs');
 const crypto = require('crypto');
 const app = express();
 const PORT = 8081;
-require('dotenv').config();
 const MASTER_PIN = process.env.MASTER_PIN;
-
-
-//Mongo DB 연결
-mongoose.connect(process.env.MONGO_DB)
-  .then(() => console.log('connected'))
-  .catch(() => console.log('failed'));
+// 로그 파일 위치. 운영은 지금처럼 이 폴더의 log.txt, 테스트는 LOG_FILE로 임시 파일을 쓴다 (B-2에서 추가)
+const LOG_FILE = process.env.LOG_FILE || __dirname + '/log.txt';
 
 const teamSchema = new mongoose.Schema({
   name: String,
@@ -109,7 +106,7 @@ app.use((req, res, next) => {
 });
 
 function append_log(contentToAdd) {
-  const filePath = __dirname + '/log.txt';
+  const filePath = LOG_FILE;
 
   fs.readFile(filePath, 'utf8', (err, data) => {
     if (err) {
@@ -150,7 +147,7 @@ function getTime() {
 }
 
 app.get('/', (req, res) => {
-  const filePath = __dirname + '/log.txt';
+  const filePath = LOG_FILE;
   fs.readFile(filePath, 'utf8', (err, data) => {
     if (err) {
       console.error('파일을 읽을 수 없습니다:', err);
@@ -639,13 +636,4 @@ app.get('/notice/:id', async (req, res) => {
   }
 });
 
-const https = require('https');
-
-const sslOptions = {
-  key: fs.readFileSync('/etc/letsencrypt/live/semachi.net/privkey.pem'),
-  cert: fs.readFileSync('/etc/letsencrypt/live/semachi.net/fullchain.pem'),
-};
-
-https.createServer(sslOptions, app).listen(8081, '0.0.0.0', () => {
-  console.log('HTTPS 서버 실행 중: https://semachi.net:8081');
-});
+module.exports = app;

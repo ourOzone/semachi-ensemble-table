@@ -5,3 +5,8 @@
 packages:
   - apps/*
   - packages/*
+
+# 설치할 때 패키지가 스크립트를 실행해도 되는지 (pnpm은 허락한 것만 실행한다)
+allowBuilds:
+  # 설치 때 MongoDB 실행 파일을 미리 받는 스크립트. 끄면 테스트를 처음 돌릴 때 받는다 (서버 테스트용, B-2)
+  mongodb-memory-server: false

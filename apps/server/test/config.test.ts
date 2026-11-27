@@ -40,6 +40,12 @@ describe('loadConfig', () => {
         expect(trust('loopback, uniquelocal')).toBe('loopback, uniquelocal');
     });
 
+    test('PIN_HASH: "true"일 때만 새 PIN을 해시로 (기본 꺼짐: 전환 전)', () => {
+        expect(loadConfig(required).hashPins).toBe(false);
+        expect(loadConfig({ ...required, PIN_HASH: 'true' }).hashPins).toBe(true);
+        expect(loadConfig({ ...required, PIN_HASH: '1' }).hashPins).toBe(false);
+    });
+
     test('DNS_SERVERS: 쉼표로 여러 개, 없으면 빈 목록(컴퓨터 설정)', () => {
         expect(loadConfig(required).dnsServers).toEqual([]);
         expect(loadConfig({ ...required, DNS_SERVERS: '8.8.8.8, 1.1.1.1' }).dnsServers).toEqual([

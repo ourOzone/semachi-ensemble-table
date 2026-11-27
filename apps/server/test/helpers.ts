@@ -28,22 +28,21 @@ export function freshApi(options: Partial<AppOptions> = {}) {
     return () => request(fresh);
 }
 
+type Collection = 'teams' | 'ensembles' | 'notes' | 'notices' | 'settings';
+
 /** DB 컬렉션에 직접 넣는다. 실제 데이터처럼 스키마와 다른 모양(빠진 필드, null 등)도 넣을 수 있다. undefined인 필드는 넣지 않는다 */
-export async function insert(
-    collection: 'teams' | 'ensembles' | 'notes' | 'notices',
-    doc: Record<string, unknown>,
-) {
+export async function insert(collection: Collection, doc: Record<string, unknown>) {
     const defined = Object.fromEntries(Object.entries(doc).filter(([, v]) => v !== undefined));
     const { insertedId } = await mongoose.connection.collection(collection).insertOne(defined);
     return insertedId.toHexString();
 }
 
 /** DB 컬렉션에서 직접 읽는다 */
-export function findAll(collection: 'teams' | 'ensembles' | 'notes' | 'notices') {
+export function findAll(collection: Collection) {
     return mongoose.connection.collection(collection).find().toArray();
 }
 
-export function findOne(collection: 'teams' | 'ensembles' | 'notes' | 'notices', id: string) {
+export function findOne(collection: Collection, id: string) {
     return mongoose.connection
         .collection(collection)
         .findOne({ _id: new mongoose.Types.ObjectId(id) });

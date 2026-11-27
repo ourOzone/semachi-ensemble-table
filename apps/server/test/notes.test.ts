@@ -24,14 +24,14 @@ const noteDoc = (over: Record<string, unknown> = {}) => ({
 });
 
 describe('GET /notes', () => {
-    test('최근에 넣은 것부터, 저장된 필드 그대로 (현재 동작: PIN 포함, B3)', async () => {
+    test('최근에 넣은 것부터, PIN만 빼고 저장된 필드 그대로 (B-6 B3)', async () => {
         const a = await insert('notes', noteDoc({ text: '먼저' }));
         const b = await insert('notes', noteDoc({ text: '나중' }));
         const res = await api().get('/notes');
         expect(res.status).toBe(200);
         expect(res.body).toEqual([
-            { _id: b, text: '나중', pin: '1234', __v: 0 },
-            { _id: a, text: '먼저', pin: '1234', __v: 0 },
+            { _id: b, text: '나중', __v: 0 },
+            { _id: a, text: '먼저', __v: 0 },
         ]);
     });
 
@@ -87,14 +87,19 @@ describe('POST /note', () => {
 describe('DELETE /note?id=', () => {
     test('지우고 { id }', async () => {
         const id = await insert('notes', noteDoc());
-        const res = await api().delete(`/note?id=${id}`);
+        const res = await api().delete(`/note?id=${id}`).send({ pin: '1234' });
         expect([res.status, res.body]).toEqual([200, { id }]);
         expect(await findAll('notes')).toHaveLength(0);
     });
 
-    test('현재 동작: PIN 없이 지운다 (B1)', async () => {
-        const id = await insert('notes', noteDoc());
-        expect((await api().delete(`/note?id=${id}`)).status).toBe(200);
+    test('PIN이 없거나 틀리면 403, 지우지 않는다. 마스터 PIN은 통과 (B-6 B1)', async () => {
+        const id = await insert('notes', noteDoc({ pin: '1234' }));
+        for (const body of [{}, { pin: '0000' }]) {
+            const res = await api().delete(`/note?id=${id}`).send(body);
+            expect([res.status, res.body]).toEqual([403, { error: 'Wrong PIN' }]);
+        }
+        expect(await findAll('notes')).toHaveLength(1);
+        expect((await api().delete(`/note?id=${id}`).send({ pin: MASTER_PIN })).status).toBe(200);
     });
 
     test('없으면 404 { id: -1 } (id가 없어도), 형식이 잘못되면 500 (텍스트)', async () => {
@@ -108,7 +113,10 @@ describe('DELETE /note?id=', () => {
     test('deletenote_글 내용을 로그에 남긴다', async () => {
         const id = await insert('notes', noteDoc({ text: '지울 글' }));
         await resetLog();
-        await api().delete(`/note?id=${id}`).set('Cookie', `semachi_vid=${VID}`);
+        await api()
+            .delete(`/note?id=${id}`)
+            .set('Cookie', `semachi_vid=${VID}`)
+            .send({ pin: '1234' });
         await waitForLog(logLine('deletenote_지울 글'));
     });
 });

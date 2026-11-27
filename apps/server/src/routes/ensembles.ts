@@ -1,11 +1,30 @@
 // 합주 API: GET /ensembles, POST /ensemble, DELETE /ensemble, GET /ensemble/:id, PUT /ensemble
 // 현재 동작: 변경 API가 PIN을 확인하지 않는다 (B1, B-6). 합주를 만들 때 팀이 있는지 보지 않는다 (B4)
 import express from 'express';
+import mongoose from 'mongoose';
 import type { Logger } from '../lib/log.ts';
+import { WRONG_PIN, type PinAuth } from '../lib/pin-auth.ts';
+import { markPin, type PinLimit } from '../middleware/pin-limit.ts';
 import { Ensemble } from '../models/ensemble.ts';
+import { Team } from '../models/team.ts';
 
-export function ensemblesRouter({ log }: { log: Logger }) {
+export function ensemblesRouter({
+    log,
+    pins,
+    pinLimit,
+}: {
+    log: Logger;
+    pins: PinAuth;
+    pinLimit: PinLimit;
+}) {
     const router = express.Router();
+    const limitEnsemble = pinLimit((req) => `ensemble:${req.query.id}`);
+
+    /** 합주 팀의 PIN. 팀이 없거나(삭제된 팀의 합주) id 형식이 아니면 없음 → 마스터 PIN만 통과 */
+    const teamPinOf = async (teamId: string | null | undefined) =>
+        teamId && mongoose.isValidObjectId(teamId)
+            ? (await Team.findById(teamId).select('+pin'))?.pin
+            : undefined;
 
     // 전체 합주
     router.get('/ensembles', async (req, res) => {
@@ -59,23 +78,27 @@ export function ensemblesRouter({ log }: { log: Logger }) {
     });
 
     // 합주 삭제
-    router.delete('/ensemble', async (req, res) => {
+    router.delete('/ensemble', ...limitEnsemble, async (req, res) => {
         const ensembleId = req.query.id;
 
-        // id가 없으면 바로 404. findByIdAndDelete(undefined)가 무엇을 하는지(지금 Mongoose 9는 아무것도 지우지 않음)에 기대지 않는다
+        // id가 없으면 바로 404 (조건 없이 찾거나 지우지 않게)
         if (ensembleId === undefined) {
             return res.status(404).json({ id: -1 });
         }
 
         try {
-            // 조회 없이 바로 지운다 (O5)
-            const deletedEnsemble = await Ensemble.findByIdAndDelete(ensembleId);
+            const existingEnsemble = await Ensemble.findById(ensembleId);
 
-            if (!deletedEnsemble) {
+            if (!existingEnsemble) {
                 return res.status(404).json({ id: -1 });
             }
 
-            log(req.visitorId, `deleteensemble_${deletedEnsemble.teamName}`);
+            const ok = await pins.matches(req.body.pin, await teamPinOf(existingEnsemble.teamId));
+            markPin(req, res, ok);
+            if (!ok) return res.status(403).json(WRONG_PIN);
+
+            await Ensemble.findByIdAndDelete(ensembleId);
+            log(req.visitorId, `deleteensemble_${existingEnsemble.teamName}`);
             res.json({ id: ensembleId });
         } catch {
             res.status(500).send('Internal Server Error');
@@ -100,7 +123,7 @@ export function ensemblesRouter({ log }: { log: Logger }) {
     });
 
     // 합주 수정. teamName은 바꾸지 않는다. 현재 동작: 본문에 빠진 필드는 지워진다
-    router.put('/ensemble', async (req, res) => {
+    router.put('/ensemble', ...limitEnsemble, async (req, res) => {
         const { teamId, startTime, endTime, day, type, due, nextDate, repeat } = req.body;
         const ensembleId = req.query.id;
 
@@ -114,6 +137,11 @@ export function ensemblesRouter({ log }: { log: Logger }) {
             if (!existingEnsemble) {
                 return res.status(404).json({ error: 'Ensemble not found' });
             }
+
+            // 지금 합주의 팀 PIN으로 확인한다 (본문의 teamId로 바꾸기 전)
+            const ok = await pins.matches(req.body.pin, await teamPinOf(existingEnsemble.teamId));
+            markPin(req, res, ok);
+            if (!ok) return res.status(403).json(WRONG_PIN);
 
             existingEnsemble.teamId = teamId;
             existingEnsemble.startTime = startTime;

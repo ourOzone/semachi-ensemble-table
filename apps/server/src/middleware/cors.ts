@@ -21,6 +21,8 @@ export function cors(allowedOrigins: readonly string[]): RequestHandler {
         }
         res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
         res.header('Access-Control-Allow-Headers', 'Content-Type');
+        // 웹이 읽는 응답 헤더: PIN 틀린 횟수, 다시 해도 되는 때 (다른 주소에서 부를 때 브라우저는 이 목록만 보여준다)
+        res.header('Access-Control-Expose-Headers', 'Pin-Attempts, Retry-After');
         next();
     };
 }

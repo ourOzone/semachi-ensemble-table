@@ -2,9 +2,11 @@
 import express from 'express';
 import helmet from 'helmet';
 import { createLogger } from './lib/log.ts';
+import { createPinAuth } from './lib/pin-auth.ts';
 import { cors } from './middleware/cors.ts';
 import { createPinLimiters, type PinLimitOptions } from './middleware/pin-limit.ts';
 import { visitor } from './middleware/visitor.ts';
+import { adminRouter } from './routes/admin.ts';
 import { ensemblesRouter } from './routes/ensembles.ts';
 import { healthRouter } from './routes/health.ts';
 import { notesRouter } from './routes/notes.ts';
@@ -12,8 +14,10 @@ import { noticesRouter } from './routes/notices.ts';
 import { teamsRouter } from './routes/teams.ts';
 
 export interface AppOptions {
-    /** 모든 PIN 확인에서 통과하는 관리자 PIN */
+    /** 모든 PIN 확인에서 통과하는 관리자 PIN. 관리자가 바꾸면(DB) 그쪽이 먼저 (lib/pin-auth) */
     masterPin: string;
+    /** 새 PIN을 해시로 저장 (기본 false: 운영 전환 전까지 옛 서버가 평문으로 비교, 사전 결정 10) */
+    hashPins?: boolean;
     /** 활동 로그 파일 경로 */
     logFile: string;
     /** 다른 주소에서 이 서버를 부를 수 있게 허락할 웹 주소 (CORS). 없으면 허락하지 않음 */
@@ -30,11 +34,13 @@ export function createApp({
     corsOrigins = [],
     pinLimits,
     trustProxy = false,
+    hashPins = false,
 }: AppOptions) {
     const app = express();
     app.set('trust proxy', trustProxy);
     const log = createLogger(logFile);
     const pinLimit = createPinLimiters(pinLimits);
+    const pins = createPinAuth({ envMasterPin: masterPin, hashNewPins: hashPins });
 
     // 보안 헤더 (O6): 브라우저가 응답을 다른 형식으로 짐작하지 않게, 다른 사이트의 iframe에 넣지 못하게, HTTPS만 쓰게 등.
     // 다른 사이트가 이 응답을 가져다 쓰는 것은 막되, 같은 사이트(semachi.net:8081, localhost끼리)는 허락한다
@@ -53,10 +59,11 @@ export function createApp({
     app.use(cors(corsOrigins));
     app.use(visitor);
 
-    app.use(teamsRouter({ log, masterPin, pinLimit }));
-    app.use(ensemblesRouter({ log }));
-    app.use(notesRouter({ log, masterPin, pinLimit }));
-    app.use(noticesRouter({ masterPin, pinLimit }));
+    app.use(teamsRouter({ log, pins, pinLimit }));
+    app.use(ensemblesRouter({ log, pins, pinLimit }));
+    app.use(notesRouter({ log, pins, pinLimit }));
+    app.use(noticesRouter({ pins, pinLimit }));
+    app.use(adminRouter({ log, pins, pinLimit }));
 
     return app;
 }

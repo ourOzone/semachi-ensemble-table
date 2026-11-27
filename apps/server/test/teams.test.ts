@@ -20,7 +20,7 @@ const logLine = (action: string) =>
     new RegExp(`^${VID}_\\d{4}\\.\\d{2}\\.\\d{2}:\\d{2}:\\d{2}_${action}$`, 'm');
 
 describe('GET /teams', () => {
-    test('모든 팀을 넣은 순서대로, 저장된 필드 그대로 (현재 동작: PIN 포함, B3)', async () => {
+    test('모든 팀을 넣은 순서대로, PIN만 빼고 저장된 필드 그대로 (B-6 B3)', async () => {
         const a = await insert('teams', teamDoc({ name: 'A' }));
         const b = await insert('teams', teamDoc({ name: 'B', type: '세마치공연(정기/연말)' }));
         const res = await api().get('/teams');
@@ -32,16 +32,11 @@ describe('GET /teams', () => {
                 desc: ['보컬', '기타', '베이스', '드럼', '키보드', '매니저', '셋리스트'],
                 type: '교내 공연',
                 publishDate: '2026-11-01T03:00:00.000Z',
-                pin: '1234',
                 __v: 0,
             },
-            expect.objectContaining({
-                _id: b,
-                name: 'B',
-                type: '세마치공연(정기/연말)',
-                pin: '1234',
-            }),
+            expect.objectContaining({ _id: b, name: 'B', type: '세마치공연(정기/연말)' }),
         ]);
+        expect(res.body[1]).not.toHaveProperty('pin');
     });
 
     test('빈 목록', async () => {
@@ -71,7 +66,7 @@ describe('POST /team', () => {
         publishDate: '2026-11-27T01:02:03.000Z',
     };
 
-    test('저장하고 { id }를 돌려준다. PIN은 평문 그대로 저장 (S4)', async () => {
+    test('저장하고 { id }를 돌려준다. PIN은 해시 저장을 켜기 전까지 평문 (S4, 사전 결정 10)', async () => {
         const res = await api().post('/team').send(body);
         expect(res.status).toBe(200);
         expect(res.body).toEqual({ id: expect.stringMatching(/^[0-9a-f]{24}$/) });
@@ -206,16 +201,21 @@ describe('DELETE /team?id=', () => {
         await insert('ensembles', ensembleDoc({ teamId: id }));
         await insert('ensembles', ensembleDoc({ teamId: other }));
 
-        const res = await api().delete(`/team?id=${id}`);
+        const res = await api().delete(`/team?id=${id}`).send({ pin: '1234' });
         expect(res.status).toBe(200);
         expect(res.body).toEqual({ id });
         expect((await findAll('teams')).map((t) => String(t._id))).toEqual([other]);
         expect((await findAll('ensembles')).map((e) => e.teamId)).toEqual([other]);
     });
 
-    test('현재 동작: PIN 없이 지운다 (B1)', async () => {
-        const id = await insert('teams', teamDoc());
-        expect((await api().delete(`/team?id=${id}`)).status).toBe(200);
+    test('PIN이 없거나 틀리면 403, 지우지 않는다. 마스터 PIN은 통과 (B-6 B1)', async () => {
+        const id = await insert('teams', teamDoc({ pin: '1234' }));
+        for (const body of [{}, { pin: '0000' }, { pin: 1234 }]) {
+            const res = await api().delete(`/team?id=${id}`).send(body);
+            expect([res.status, res.body]).toEqual([403, { error: 'Wrong PIN' }]);
+        }
+        expect(await findAll('teams')).toHaveLength(1);
+        expect((await api().delete(`/team?id=${id}`).send({ pin: MASTER_PIN })).status).toBe(200);
     });
 
     test('없는 팀이면 404 { id: -1 }', async () => {
@@ -239,7 +239,10 @@ describe('DELETE /team?id=', () => {
     test('deleteteam_팀이름을 로그에 남긴다', async () => {
         const id = await insert('teams', teamDoc({ name: '지울 팀' }));
         await resetLog();
-        await api().delete(`/team?id=${id}`).set('Cookie', `semachi_vid=${VID}`);
+        await api()
+            .delete(`/team?id=${id}`)
+            .set('Cookie', `semachi_vid=${VID}`)
+            .send({ pin: '1234' });
         await waitForLog(logLine('deleteteam_지울 팀'));
     });
 });
@@ -254,7 +257,7 @@ describe('DELETE /teams (B-5 B2에서 삭제)', () => {
 });
 
 describe('PUT /team?id=', () => {
-    test('이름·멤버·종류를 바꾸고, 그 팀 합주의 teamName도 바꾼다. PIN·publishDate는 그대로', async () => {
+    test('이름·멤버·종류를 바꾸고, 그 팀 합주의 teamName도 바꾼다. 저장된 PIN·publishDate는 그대로', async () => {
         const id = await insert('teams', teamDoc({ name: '옛 이름' }));
         const e = await insert('ensembles', ensembleDoc({ teamId: id, teamName: '옛 이름' }));
         const other = await insert('ensembles', ensembleDoc({ teamName: '다른 팀' }));
@@ -265,7 +268,7 @@ describe('PUT /team?id=', () => {
                 name: '새 이름',
                 desc: ['1', '2', '3', '4', '5', '6', '7'],
                 type: '외부 공연',
-                pin: '0000',
+                pin: MASTER_PIN, // 본문의 pin은 확인에만 쓰고 저장하지 않는다
             });
         expect(res.status).toBe(200);
         expect(res.body).toEqual({ id });
@@ -285,7 +288,7 @@ describe('PUT /team?id=', () => {
     test('현재 동작: 본문에 빠진 필드(name·desc·type)는 지워진다', async () => {
         const id = await insert('teams', teamDoc());
         const e = await insert('ensembles', ensembleDoc({ teamId: id }));
-        await api().put(`/team?id=${id}`).send({});
+        await api().put(`/team?id=${id}`).send({ pin: '1234' });
         const saved = await findOne('teams', id);
         expect(Object.keys(saved ?? {}).sort()).toEqual([
             '__v',
@@ -298,9 +301,12 @@ describe('PUT /team?id=', () => {
         expect((await findOne('ensembles', e))?.teamName).toBe('테스트밴드');
     });
 
-    test('현재 동작: PIN 없이 바꾼다 (B1)', async () => {
-        const id = await insert('teams', teamDoc());
-        expect((await api().put(`/team?id=${id}`).send({ name: 'x' })).status).toBe(200);
+    test('PIN이 없거나 틀리면 403, 바꾸지 않는다 (B-6 B1)', async () => {
+        const id = await insert('teams', teamDoc({ name: '그대로', pin: '1234' }));
+        const res = await api().put(`/team?id=${id}`).send({ name: 'x', pin: '0000' });
+        expect([res.status, res.body]).toEqual([403, { error: 'Wrong PIN' }]);
+        expect((await api().put(`/team?id=${id}`).send({ name: 'x' })).status).toBe(403);
+        expect((await findOne('teams', id))?.name).toBe('그대로');
     });
 
     test('없는 팀이면 404', async () => {
@@ -322,7 +328,7 @@ describe('PUT /team?id=', () => {
         await api()
             .put(`/team?id=${id}`)
             .set('Cookie', `semachi_vid=${VID}`)
-            .send({ name: '새 이름' });
+            .send({ name: '새 이름', pin: '1234' });
         await waitForLog(logLine('modifyteam_옛 이름'));
     });
 });

@@ -12,6 +12,8 @@ import {
     settledLog,
     waitForLog,
     resetLog,
+    MASTER_PIN,
+    teamDoc,
 } from './helpers.ts';
 
 const VID = '0b8a5c7e-1f2d-4c3b-9a8e-7d6c5b4a3f21';
@@ -206,10 +208,30 @@ describe('DELETE /ensemble?id=', () => {
     test('지우고 { id }', async () => {
         const id = await insert('ensembles', ensembleDoc());
         const keep = await insert('ensembles', ensembleDoc());
-        const res = await api().delete(`/ensemble?id=${id}`);
+        // ensembleDoc의 팀은 DB에 없다: 마스터 PIN만 통과
+        const res = await api().delete(`/ensemble?id=${id}`).send({ pin: MASTER_PIN });
         expect(res.status).toBe(200);
         expect(res.body).toEqual({ id });
         expect((await findAll('ensembles')).map((e) => String(e._id))).toEqual([keep]);
+    });
+
+    test('그 합주 팀의 PIN이 맞아야 지운다. 없거나 틀리면 403 (B-6 B1)', async () => {
+        const teamId = await insert('teams', teamDoc({ pin: '1234' }));
+        const id = await insert('ensembles', ensembleDoc({ teamId }));
+        for (const body of [{}, { pin: '0000' }]) {
+            const res = await api().delete(`/ensemble?id=${id}`).send(body);
+            expect([res.status, res.body]).toEqual([403, { error: 'Wrong PIN' }]);
+        }
+        expect(await findAll('ensembles')).toHaveLength(1);
+        expect((await api().delete(`/ensemble?id=${id}`).send({ pin: '1234' })).status).toBe(200);
+    });
+
+    test('팀이 없는 합주(삭제된 팀)는 마스터 PIN만 통과', async () => {
+        const id = await insert('ensembles', ensembleDoc({ teamId: 'not-an-object-id' }));
+        expect((await api().delete(`/ensemble?id=${id}`).send({ pin: '1234' })).status).toBe(403);
+        expect((await api().delete(`/ensemble?id=${id}`).send({ pin: MASTER_PIN })).status).toBe(
+            200,
+        );
     });
 
     test('없으면 404 { id: -1 } (id가 없어도), 형식이 잘못되면 500 (텍스트)', async () => {
@@ -223,7 +245,10 @@ describe('DELETE /ensemble?id=', () => {
     test('deleteensemble_팀이름을 로그에 남긴다', async () => {
         const id = await insert('ensembles', ensembleDoc({ teamName: '지울 팀' }));
         await resetLog();
-        await api().delete(`/ensemble?id=${id}`).set('Cookie', `semachi_vid=${VID}`);
+        await api()
+            .delete(`/ensemble?id=${id}`)
+            .set('Cookie', `semachi_vid=${VID}`)
+            .send({ pin: MASTER_PIN });
         await waitForLog(logLine('deleteensemble_지울 팀'));
     });
 });
@@ -256,7 +281,7 @@ describe('PUT /ensemble?id=', () => {
         const id = await insert('ensembles', ensembleDoc({ teamName: '그대로' }));
         const res = await api()
             .put(`/ensemble?id=${id}`)
-            .send({ ...body, teamName: '무시됨' });
+            .send({ ...body, teamName: '무시됨', pin: MASTER_PIN });
         expect(res.status).toBe(200);
         expect(res.body).toEqual({ message: 'Ensemble updated successfully', id });
         expect(await findOne('ensembles', id)).toMatchObject({
@@ -269,27 +294,37 @@ describe('PUT /ensemble?id=', () => {
 
     test('현재 동작: 본문에 빠진 필드는 지워진다 (teamName만 남음)', async () => {
         const id = await insert('ensembles', ensembleDoc());
-        await api().put(`/ensemble?id=${id}`).send({});
+        await api().put(`/ensemble?id=${id}`).send({ pin: MASTER_PIN });
         const saved = await findOne('ensembles', id);
         expect(Object.keys(saved ?? {}).sort()).toEqual(['__v', '_id', 'teamName', 'updatedAt']);
     });
 
-    test('현재 동작: PIN 없이 바꾼다 (B1), 로그에 남기지 않는다', async () => {
-        const id = await insert('ensembles', ensembleDoc());
+    test('그 합주 팀의 PIN이 맞아야 바꾼다. 없거나 틀리면 403 (B-6 B1). 로그에 남기지 않는다', async () => {
+        const teamId = await insert('teams', teamDoc({ pin: '1234' }));
+        const id = await insert('ensembles', ensembleDoc({ teamId, startTime: 10 }));
         await resetLog();
-        expect((await api().put(`/ensemble?id=${id}`).send(body)).status).toBe(200);
+        expect((await api().put(`/ensemble?id=${id}`).send(body)).status).toBe(403);
+        expect(
+            (
+                await api()
+                    .put(`/ensemble?id=${id}`)
+                    .send({ ...body, pin: '0000' })
+            ).status,
+        ).toBe(403);
+        expect((await findOne('ensembles', id))?.startTime).toBe(10);
+        expect(
+            (
+                await api()
+                    .put(`/ensemble?id=${id}`)
+                    .send({ ...body, pin: '1234' })
+            ).status,
+        ).toBe(200);
         expect(await settledLog()).toBe('');
     });
 
-    test('본문 없이 보내면 모든 필드를 지운다 (빈 본문으로 본다)', async () => {
+    test('본문 없이 보내면 PIN이 없어 403 (빈 본문으로 본다)', async () => {
         const id = await insert('ensembles', ensembleDoc());
-        expect((await api().put(`/ensemble?id=${id}`)).status).toBe(200);
-        expect(Object.keys((await findOne('ensembles', id)) ?? {}).sort()).toEqual([
-            '__v',
-            '_id',
-            'teamName',
-            'updatedAt',
-        ]);
+        expect((await api().put(`/ensemble?id=${id}`)).status).toBe(403);
     });
 
     test('id가 없으면 400, 없는 합주면 404, 형식이 잘못되면 500 (JSON)', async () => {

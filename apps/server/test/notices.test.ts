@@ -25,7 +25,7 @@ describe('POST /notice', () => {
         freezeTime('2026-11-27T05:06:07.000Z');
         const res = await api()
             .post('/notice')
-            .send({ content: '새 공지', publishDate: '2000-01-01' });
+            .send({ content: '새 공지', publishDate: '2000-01-01', pin: MASTER_PIN });
         expect(res.status).toBe(201);
         expect(res.body).toEqual({
             message: 'Notice created',
@@ -37,9 +37,13 @@ describe('POST /notice', () => {
         });
     });
 
-    test('현재 동작: 마스터 PIN 없이 올린다 (B1), 로그에 남기지 않는다', async () => {
+    test('마스터 PIN이 없거나 틀리면 403, 올리지 않는다 (B-6 B1). 로그에 남기지 않는다', async () => {
         await resetLog();
-        expect((await api().post('/notice').send({ content: '누구나' })).status).toBe(201);
+        for (const body of [{ content: '누구나' }, { content: '누구나', pin: '0000' }]) {
+            const res = await api().post('/notice').send(body);
+            expect([res.status, res.body]).toEqual([403, { error: 'Wrong PIN' }]);
+        }
+        expect(await findAll('notices')).toHaveLength(0);
         expect(await settledLog()).toBe('');
     });
 
@@ -47,7 +51,9 @@ describe('POST /notice', () => {
         const res = await api().post('/notice').send({});
         expect([res.status, res.body]).toEqual([400, { error: 'Content are required' }]);
         expect((await api().post('/notice').send({ content: '' })).status).toBe(400);
-        expect((await api().post('/notice').send({ content: '   ' })).status).toBe(201);
+        expect((await api().post('/notice').send({ content: '   ', pin: MASTER_PIN })).status).toBe(
+            201,
+        );
     });
 });
 
@@ -67,24 +73,26 @@ describe('GET /notices', () => {
 describe('DELETE /notice?id=', () => {
     test('지우고 200 { message }', async () => {
         const id = await insert('notices', noticeDoc());
-        const res = await api().delete(`/notice?id=${id}`);
+        const res = await api().delete(`/notice?id=${id}`).send({ pin: MASTER_PIN });
         expect([res.status, res.body]).toEqual([200, { message: 'Notice deleted successfully' }]);
         expect(await findAll('notices')).toHaveLength(0);
     });
 
-    test('현재 동작: 마스터 PIN 없이 지운다 (B1), 로그에 남기지 않는다', async () => {
+    test('마스터 PIN이 없거나 틀리면 403, 지우지 않는다 (B-6 B1). 로그에 남기지 않는다', async () => {
         const id = await insert('notices', noticeDoc());
         await resetLog();
-        expect((await api().delete(`/notice?id=${id}`)).status).toBe(200);
+        expect((await api().delete(`/notice?id=${id}`)).status).toBe(403);
+        expect((await api().delete(`/notice?id=${id}`).send({ pin: '0000' })).status).toBe(403);
+        expect(await findAll('notices')).toHaveLength(1);
         expect(await settledLog()).toBe('');
     });
 
     test('id가 없으면 400, 없는 공지면 404, 형식이 잘못되면 500 (JSON)', async () => {
         const noId = await api().delete('/notice');
         expect([noId.status, noId.body]).toEqual([400, { error: 'Notice ID is required' }]);
-        const missing = await api().delete(`/notice?id=${missingId()}`);
+        const missing = await api().delete(`/notice?id=${missingId()}`).send({ pin: MASTER_PIN });
         expect([missing.status, missing.body]).toEqual([404, { error: 'Notice not found' }]);
-        const bad = await api().delete('/notice?id=abc');
+        const bad = await api().delete('/notice?id=abc').send({ pin: MASTER_PIN });
         expect([bad.status, bad.body]).toEqual([500, { error: 'Internal Server Error' }]);
     });
 });

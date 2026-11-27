@@ -1,22 +1,27 @@
 // 팀 API: GET /teams, POST /team, POST /check-team-pin, DELETE /team, PUT /team, GET /team/:id
 // (모든 팀을 지우던 DELETE /teams는 B-5에서 삭제: B2)
-// 현재 동작: 변경 API가 PIN을 확인하지 않는다 (B1, B-6). 응답에 PIN이 들어 있다 (B3)
+// 수정·삭제는 요청 본문의 pin(팀 PIN 또는 마스터 PIN)을 서버가 확인한다. 틀리면 403 (B-6 B1)
+// 목록에는 PIN을 넣지 않는다 (모델의 select: false, B-6 B3)
 import express from 'express';
 import type { Logger } from '../lib/log.ts';
-import type { PinLimit } from '../middleware/pin-limit.ts';
+import { WRONG_PIN, type PinAuth } from '../lib/pin-auth.ts';
+import { markPin, type PinLimit } from '../middleware/pin-limit.ts';
 import { Ensemble } from '../models/ensemble.ts';
 import { Team } from '../models/team.ts';
 
 export function teamsRouter({
     log,
-    masterPin,
+    pins,
     pinLimit,
 }: {
     log: Logger;
-    masterPin: string;
+    pins: PinAuth;
     pinLimit: PinLimit;
 }) {
     const router = express.Router();
+    // 확인 API와 수정·삭제가 같은 팀이면 함께 센다
+    const limitTeamFromBody = pinLimit((req) => `team:${req.body.teamId}`);
+    const limitTeamFromQuery = pinLimit((req) => `team:${req.query.id}`);
 
     // 전체팀
     router.get('/teams', async (req, res) => {
@@ -29,7 +34,7 @@ export function teamsRouter({
         }
     });
 
-    // 팀 추가
+    // 팀 추가 (PIN을 정하는 요청이라 확인하지 않는다)
     router.post('/team', async (req, res) => {
         try {
             const data = req.body;
@@ -40,7 +45,7 @@ export function teamsRouter({
                 desc: data.desc,
                 type: data.type,
                 publishDate: data.publishDate,
-                pin: data.pin,
+                pin: await pins.forStorage(data.pin),
             });
 
             await newTeam.save();
@@ -50,31 +55,29 @@ export function teamsRouter({
         }
     });
 
-    // 틀린 시도는 횟수 제한 (S2)
-    router.post('/check-team-pin', ...pinLimit('teamId'), async (req, res) => {
+    // PIN 확인 (웹의 PIN 칸이 4자리를 다 넣으면 바로 부른다). 틀린 시도는 횟수 제한 (S2)
+    router.post('/check-team-pin', ...limitTeamFromBody, async (req, res) => {
         try {
             const { teamId, pin } = req.body;
 
-            // teamId와 pin이 제공되지 않은 경우 오류 처리
             if (!teamId || !pin) {
                 return res.status(400).json({ error: 'Both teamId and pin are required' });
             }
 
-            if (pin === masterPin) {
-                res.locals.pinOk = true;
+            if (await pins.isMaster(pin)) {
+                markPin(req, res, true);
                 return res.json(true);
             }
 
-            // 해당 팀을 데이터베이스에서 조회
-            const team = await Team.findById(teamId);
+            const team = await Team.findById(teamId).select('+pin');
 
             if (!team) {
                 return res.status(404).json({ error: 'Team not found' });
             }
 
-            // 팀의 pin과 제공된 pin이 일치하는지 확인
-            res.locals.pinOk = team.pin === pin;
-            return res.json(res.locals.pinOk);
+            const ok = await pins.matches(pin, team.pin);
+            markPin(req, res, ok);
+            return res.json(ok);
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
@@ -82,23 +85,29 @@ export function teamsRouter({
     });
 
     // 팀 삭제 (그 팀의 합주도 함께)
-    router.delete('/team', async (req, res) => {
+    router.delete('/team', ...limitTeamFromQuery, async (req, res) => {
         const teamId = req.query.id as string | undefined; // 현재 동작: 형식 검사 없음 (B-8)
 
-        // id가 없으면 바로 404. findByIdAndDelete(undefined)가 무엇을 하는지(지금 Mongoose 9는 아무것도 지우지 않음)에 기대지 않는다
+        // id가 없으면 바로 404 (조건 없이 찾거나 지우지 않게)
         if (teamId === undefined) {
             return res.status(404).json({ id: -1 });
         }
 
         try {
-            // 조회 없이 바로 지우고(O5), 팀을 먼저 지운다: 합주 삭제가 실패해도 팀만 남는 일은 없다
-            const deletedTeam = await Team.findByIdAndDelete(teamId);
+            // PIN을 확인하려면 팀을 먼저 읽어야 한다 (B-5 O5의 "조회 한 번"은 PIN 확인 때문에 두 번으로)
+            const team = await Team.findById(teamId).select('+pin');
 
-            if (!deletedTeam) {
+            if (!team) {
                 return res.status(404).json({ id: -1 });
             }
 
-            log(req.visitorId, `deleteteam_${deletedTeam.name}`);
+            const ok = await pins.matches(req.body.pin, team.pin);
+            markPin(req, res, ok);
+            if (!ok) return res.status(403).json(WRONG_PIN);
+
+            // 팀을 먼저 지운다: 합주 삭제가 실패해도 팀만 남는 일은 없다
+            await Team.findByIdAndDelete(teamId);
+            log(req.visitorId, `deleteteam_${team.name}`);
             await Ensemble.deleteMany({ teamId });
             res.json({ id: teamId });
         } catch {
@@ -106,15 +115,19 @@ export function teamsRouter({
         }
     });
 
-    // 팀 수정 (그 팀 합주의 teamName도 함께). 현재 동작: 본문에 빠진 필드는 지워진다
-    router.put('/team', async (req, res) => {
+    // 팀 수정 (그 팀 합주의 teamName도 함께). 현재 동작: 본문에 빠진 필드는 지워진다. PIN은 바꾸지 않는다
+    router.put('/team', ...limitTeamFromQuery, async (req, res) => {
         try {
             const teamId = req.query.id as string | undefined; // 현재 동작: 형식 검사 없음 (B-8)
-            const existingTeam = await Team.findById(teamId);
+            const existingTeam = await Team.findById(teamId).select('+pin');
 
             if (!existingTeam) {
                 return res.status(404).json({ error: 'Team not found' });
             }
+
+            const ok = await pins.matches(req.body.pin, existingTeam.pin);
+            markPin(req, res, ok);
+            if (!ok) return res.status(403).json(WRONG_PIN);
 
             log(req.visitorId, `modifyteam_${existingTeam.name}`);
 

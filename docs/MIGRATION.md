@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅ · B-3 ✅ · B-4 ✅ · B-5 ✅ · B-6 ✅, 다음은 B-7 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
+| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅ · B-3 ✅ · B-4 ✅ · B-5 ✅ · B-6 ✅ · B-7 ✅, 다음은 B-8 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
 | View 개편 | ✅ **완료 (2026-11-26, V-0 ~ V-7)**: V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, V-4 날적이 ✅, V-5 공지 ✅, **V-6 일괄 정리 ✅**, **V-7 마무리 ✅ (2026-11-26)** (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
@@ -1406,6 +1406,24 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 문서: `docs/DIRECTORY_STRUCTURE.md`에 "서버 자세히" (요청이 지나가는 길, 미들웨어·라우터·핸들러·모델 같은 용어, 폴더·파일별 역할, scripts의 종류). 사용자 요청: 백엔드를 처음 보는 컴퓨터공학 고학년 수준
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 웹 229 + 서버 150 / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅
+
+### 2026-11-27 — 합주 잡기 PIN은 마지막에 (통일), 백엔드 개편 B-7: 활동 기록·관리자 화면
+
+- 합주 잡기 `fd78132` (사용자 결정): 팀·일정 정보에서 열면 PIN 먼저 → 어디서 열든 다 고른 뒤 "합주 잡기"를 누르면 고른 팀의 PIN (팀은 미리 골라져 있고 바꿀 수 있음)
+- 서버 `cf6dc01` — 지금 → 바꾼 후
+  - 활동 로그: `log.txt`를 요청마다 통째로 읽고 다시 씀(O1, 동시에 쓰면 줄이 사라짐), `방문자id_시각_동작` 한 줄, 시각은 서버 시간대에 따라 틀림(D1) → MongoDB `activities`에 한 건씩: 시각·서버(APP_ENV)·방문자 id·IP·기기(User-Agent를 풀어서)·동작·대상(id·이름)·바뀌기 전후(삭제는 지운 내용 전체, 팀 삭제는 그 팀 합주도)·어떤 PIN(own/master)·결과(ok·wrong-pin·not-found·blocked). PIN 값은 어디에도 없음. 1년 뒤 자동 삭제
+  - 기록하는 것: 방문, 팀·합주·날적이·공지의 만들기·수정·삭제(PIN 틀림·막힘 포함), PIN 확인, 관리자 로그인, 마스터 PIN 바꾸기. 목록 조회는 기록하지 않음
+  - "페이지 열기": `GET /teams`마다 → `POST /visits` (웹을 열 때 한 번, O2)
+  - 운영 로그(새로): pino-http, 요청마다 JSON 한 줄(메서드·주소·상태·걸린 시간, 본문·쿠키 없음), `/health`는 빼고. `LOG_LEVEL`
+  - 관리자(새로): `POST /admin/login`(마스터 PIN, 틀린 횟수는 "마스터") → 서명한 쿠키(HttpOnly·Secure·SameSite=Strict, 12시간), `GET /admin/session`, `POST /admin/logout`, `GET /admin/activities`(방문자·IP·동작·대상·결과·PIN·서버로 거르기, 50건씩), `GET /admin/visitors/:id`(처음·마지막·IP·기기·기록·같은 IP나 같은 기기의 다른 방문자), `GET /admin/overview`. `PUT /admin/master-pin`은 로그인도 필요
+  - 변경 API의 PIN 확인을 `lib/pin-check.ts` 한곳으로. 설정 `LOG_FILE` 삭제, `APP_ENV`·`LOG_LEVEL` 추가. 의존성 pino·pino-http·bowser
+  - 테스트: 옛 로그 파일 테스트(줄 형식·5만 줄·KST 계산 등)는 대상이 없어져 지우고, 활동 기록(`activity.test.ts`)·관리자(`admin.test.ts`) 테스트. "PIN 값이 기록에 없다"는 모든 값을 훑어 확인 (id·UUID 안에 우연히 같은 숫자가 있어 문자열 검색은 가끔 틀렸다)
+- 웹 `c0ccade`
+  - 관리자 화면 `/admin` (새로): 마스터 PIN 4칸 로그인(틀리면 "(3/10)", 막히면 남은 분) → 요약·활동 기록·설정(마스터 PIN 바꾸기), 방문자를 누르면 그 방문자. 관리자 코드는 `/admin`일 때만 불러온다 (별도 파일 26kB)
+  - 웹을 열 때 한 번 방문 기록, 푸터에 활동 기록 알림 한 줄
+- 진행 중 알게 된 것: 사용자가 켜 둔 `pnpm dev:server`(운영 DB)가 B-7 서버 코드로 다시 켜졌다 (Claude는 요청을 보내지 않음). 그 서버를 쓰면 운영 DB에 `activities` 컬렉션과 그 인덱스가 생기고 기록이 "development"로 쌓인다. 옛 서버에는 영향 없음
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 웹 235 + 서버 153 / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅ (JS 846kB, 관리자 26kB 따로)
 
 ## 남은 일
 

@@ -39,12 +39,13 @@ apps/web/
     │   ├── teams/           팀 목록, 팀 정보·추가·수정 Drawer, 소모임 정보, 팀 고정
     │   ├── notes/           날적이 카드, 남기기·삭제 Drawer
     │   ├── notices/         공지 카드, 공지 Drawer
-    │   └── settings/        설정 Drawer, 다크 모드
+    │   ├── settings/        설정 Drawer, 다크 모드
+    │   └── admin/           관리자 화면 (/admin: 마스터 PIN 로그인, 요약·활동 기록·방문자·마스터 PIN 바꾸기. 따로 불러옴)
     ├── components/          여러 기능이 같이 쓰는 화면 부품
     │   ├── ui/              기본 부품 (shadcn: button, drawer, popover, sonner …)
     │   ├── sheet/           Drawer 공용 부품 (틀·입력 부품·PIN 단계·키보드 처리)
     │   └── layout/          헤더, 푸터, 아이폰 도구 막대 색
-    ├── api/                 서버 요청 함수 (리소스별: team·ensemble·note·notice)
+    ├── api/                 서버 요청 함수 (리소스별: team·ensemble·note·notice, pin: PIN 확인 결과, visit: 방문, admin: 관리자)
     ├── queries/             TanStack Query 훅 (조회·변경, 다시 불러오기)
     ├── lib/                 화면과 관계없는 계산 (날짜·합주판 배치·변환 등)
     ├── stores/              여러 기능이 쓰는 전역 상태 (Zustand: 열린 Drawer, 보고 있는 팀·합주)
@@ -74,11 +75,11 @@ apps/server/
 │   ├── main.ts              시작: 설정 검사 → DB 연결 → HTTP(S) 실행 → 종료 신호 처리
 │   ├── app.ts               Express 앱 조립: createApp({ masterPin, logFile }) (테스트는 이것만 가져다 씀)
 │   ├── config.ts            환경변수 읽기·검사 (MONGO_DB·MASTER_PIN 필수, PORT·LOG_FILE·TLS_*)
-│   ├── models/              MongoDB 스키마 (team·ensemble·note·notice·setting(마스터 PIN), 예정 B-7 activity)
-│   ├── routes/              API (teams·ensembles·notes·notices·health·admin)
+│   ├── models/              MongoDB 스키마 (team·ensemble·note·notice·setting(마스터 PIN)·activity(활동 기록))
+│   ├── routes/              API (teams·ensembles·notes·notices·visits·health·admin)
 │   ├── middleware/          모든 요청이 라우트 전에 거치는 처리 (cors: 다른 주소의 웹 허락, visitor: 방문자 쿠키)
 │   ├── jobs/                (예정 B-9) 정해진 시간에 도는 일 (날짜 지난 팀·합주 정리)
-│   ├── lib/                 라우트가 불러 쓰는 함수 (log·time: 활동 로그 파일, pin: 해시·비교, pin-auth: PIN 확인 규칙, pin-guard: 틀린 횟수, pin-migration: 평문 → 해시)
+│   ├── lib/                 라우트가 불러 쓰는 함수 (activity·device: 활동 기록, admin-session: 관리자 로그인, pin·pin-auth·pin-guard·pin-check: PIN, pin-migration: 평문 → 해시)
 │   └── types/               Express에 붙이는 타입 (req.visitorId)
 └── test/                    API 테스트 (메모리 MongoDB, 실제 DB·포트 없음)
     ├── setup.ts · helpers.ts  DB 켜기·비우기, 임시 로그 파일, 요청·데이터 도우미
@@ -148,7 +149,8 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
   ③ express.json    본문(JSON 글자)을 객체로 바꿔 req.body에 둔다
   ④ cors            다른 주소의 웹이면 허락 헤더 (허락 목록에 있을 때만)
   ⑤ visitor         방문자 쿠키를 읽거나 새로 만들어 req.visitorId에 둔다
-  ⑥ 라우터들         teams·ensembles·notes·notices·admin 중 메서드·주소가 맞는 핸들러 하나가 처리하고 응답
+  ⓪ pino-http       (맨 앞) 요청마다 운영 로그 한 줄 (메서드·주소·상태·시간)
+  ⑥ 라우터들         visits·teams·ensembles·notes·notices·admin 중 메서드·주소가 맞는 핸들러 하나가 처리하고 응답
   ⑦ (아무것도 안 맞으면) Express 기본 404
   ▼
 핸들러 안 (예: PUT /team): 입력 확인 → DB에서 팀 읽기(models) → PIN 확인(lib/pin-guard·pin-auth) → 바꾸고 저장 → res.json(...)
@@ -183,6 +185,7 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
 | `note.ts` | notes | 날적이 글·PIN |
 | `notice.ts` | notices | 공지 글·올린 시각 |
 | `setting.ts` | settings | 서버 설정을 "이름 → 값" 문서로. 지금은 `masterPin`(마스터 PIN 해시) 하나 |
+| `activity.ts` | activities | 활동 기록 한 건: 언제·서버·방문자 id·IP·기기·동작·대상·바뀌기 전후·어떤 PIN(own/master, 값 없음)·결과. 1년 뒤 자동 삭제(TTL 인덱스) |
 
 모든 모델에 `createdAt`·`updatedAt`을 서버가 자동으로 채운다 (B-5부터 만들거나 고친 문서).
 
@@ -194,8 +197,9 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
 | `ensembles.ts` | `GET /ensembles`(지난 것 빼고), `POST·PUT·DELETE /ensemble` 잡기·수정·삭제(그 팀 PIN), `GET /ensemble/:id` |
 | `notes.ts` | 날적이 목록·남기기·삭제(PIN)·PIN 확인·있는지 |
 | `notices.ts` | 공지 목록·올리기·삭제(마스터 PIN)·PIN 확인·있는지 |
-| `admin.ts` | 관리자: `PUT /admin/master-pin` 마스터 PIN 바꾸기 (화면은 B-7) |
+| `admin.ts` | 관리자: 로그인·로그아웃·로그인 상태, 활동 기록 찾기, 방문자 한 명, 요약, 마스터 PIN 바꾸기 (로그인한 요청만 — 라우터 안의 `requireAdmin` 미들웨어) |
 | `health.ts` | `GET /health` 서버·DB가 살아 있는지 (배포 확인용) |
+| `visits.ts` | `POST /visits` 웹을 열 때 한 번 "방문" 기록 |
 
 **src/middleware/ — 모든 요청이 라우트 전에 거치는 처리**. 어떤 API든 똑같이 해야 하는 일만 둔다
 
@@ -214,7 +218,12 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
 | `pin-auth.ts` | PIN 확인 규칙: 마스터 PIN이 어디서 오는지(DB 우선, 없으면 `.env`), "마스터이거나 저장된 PIN과 맞는지", 새 PIN을 해시로 저장할지(`PIN_HASH`), 마스터 PIN 바꾸기 |
 | `pin-guard.ts` | PIN 틀린 횟수 세기·막기: 대상별(팀·날적이·마스터) 10번(맞추면 0), IP 전체 30번(맞춰도 그대로), 15분. 서버 메모리의 표. 미들웨어가 아니라 핸들러 안에서 부르는 이유: 합주는 DB에서 합주를 읽어야 어느 팀의 PIN인지 알 수 있다 |
 | `pin-migration.ts` | 기존 평문 PIN을 해시로 바꾸는 로직 (scripts/hash-pins.ts가 부르고, 테스트가 메모리 DB로 확인) |
-| `log.ts`·`time.ts` | 옛 활동 로그 파일(`log.txt`)에 한 줄 쓰기와 그 시각. B-7에서 DB 활동 기록으로 바뀐다 |
+| `pin-check.ts` | 변경 API의 PIN 확인 한곳: 막혔는지 → 비교 → 틀린 횟수 → 실패면 활동 기록과 429·403 |
+| `activity.ts` | 활동 기록 남기기: 라우트가 넘긴 "무엇을·대상·결과"에 요청의 방문자 id·IP·기기를 더해 저장. 실패해도 요청은 진행. PIN을 빼는 `withoutPin` |
+| `device.ts` | User-Agent 문자열을 "모바일 · iOS 18.1 · Safari 18"처럼 (bowser) |
+| `admin-session.ts` | 관리자 로그인 쿠키: "만료 시각.서명"(HMAC). 서명 비밀은 서버를 켤 때마다 새로 |
+
+옛 `log.ts`·`time.ts`(활동 로그 파일 `log.txt`)는 B-7에서 지웠다. 운영 로그(서버가 잘 도는지)는 `pino`가 표준 출력으로, 활동 기록(사용자가 무엇을 했는지)은 DB로 나눴다
 
 **src/jobs/ — (예정 B-9) 요청 없이 정해진 시간에 도는 일**. 예: 매일 새벽 날짜 지난 팀·합주 정리. 운영 서버에서만 돈다 (같은 DB를 쓰는 베타가 같은 일을 두 번 하지 않게)
 

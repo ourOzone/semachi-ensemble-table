@@ -164,6 +164,14 @@ describe('POST /check-team-pin', () => {
         ).toBe(400);
     });
 
+    test('본문 없이 보내도 400 (빈 본문으로 본다)', async () => {
+        const res = await api().post('/check-team-pin');
+        expect([res.status, res.body]).toEqual([
+            400,
+            { error: 'Both teamId and pin are required' },
+        ]);
+    });
+
     test('없는 팀이면 404', async () => {
         const res = await api().post('/check-team-pin').send({ teamId: missingId(), pin: '1234' });
         expect(res.status).toBe(404);

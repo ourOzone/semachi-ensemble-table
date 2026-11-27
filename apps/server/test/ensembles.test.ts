@@ -279,6 +279,16 @@ describe('PUT /ensemble?id=', () => {
         expect(await settledLog()).toBe('');
     });
 
+    test('본문 없이 보내면 모든 필드를 지운다 (빈 본문으로 본다)', async () => {
+        const id = await insert('ensembles', ensembleDoc());
+        expect((await api().put(`/ensemble?id=${id}`)).status).toBe(200);
+        expect(Object.keys((await findOne('ensembles', id)) ?? {}).sort()).toEqual([
+            '__v',
+            '_id',
+            'teamName',
+        ]);
+    });
+
     test('id가 없으면 400, 없는 합주면 404, 형식이 잘못되면 500 (JSON)', async () => {
         const noId = await api().put('/ensemble').send(body);
         expect([noId.status, noId.body]).toEqual([400, { error: 'Ensemble ID is required' }]);

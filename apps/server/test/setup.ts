@@ -1,5 +1,5 @@
 // 서버 테스트 공통 준비 (테스트 파일마다 한 번씩 실행된다)
-// - 로그 파일: 테스트 파일마다 임시 파일 (app.js가 처음 읽힐 때 LOG_FILE을 읽으므로 app.js를 가져오기 전에 정한다)
+// - 로그 파일: 테스트 파일마다 임시 파일 (helpers.ts가 이 경로로 앱을 만든다)
 // - DB: 테스트 파일마다 메모리 MongoDB를 켜고, 테스트마다 비운다. 실제 DB에는 연결하지 않는다
 import { randomUUID } from 'node:crypto';
 import { rmSync, writeFileSync } from 'node:fs';
@@ -11,7 +11,7 @@ import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 
 const logFile = join(tmpdir(), `semachi-test-log-${randomUUID()}.txt`);
 process.env.LOG_FILE = logFile;
-// 운영처럼 로그 파일이 이미 있는 상태로 시작한다 (app.js는 파일이 없으면 만들지 않는다)
+// 운영처럼 로그 파일이 이미 있는 상태로 시작한다 (서버는 파일이 없으면 만들지 않는다)
 writeFileSync(logFile, '');
 
 let mongod: MongoMemoryServer | undefined;

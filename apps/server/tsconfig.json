@@ -1,5 +1,5 @@
 {
-  // 지금(B-2)은 테스트(test/)만 TypeScript다. 서버 코드(app.js·main.js)는 B-3에서 TypeScript로 옮긴다
+  // B-3 ①: 서버 코드(src)는 아직 JavaScript. 다음 커밋에서 TypeScript로 옮긴다
   "compilerOptions": {
     "target": "ES2023",
     "lib": ["ES2023"],
@@ -10,7 +10,8 @@
     "noEmit": true,
     "isolatedModules": true,
     "skipLibCheck": true,
+    "allowJs": true,
     "types": ["node"]
   },
-  "include": ["test", "*.d.ts", "vitest.config.mts"]
+  "include": ["src", "test", "vitest.config.mts"]
 }

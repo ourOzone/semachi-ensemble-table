@@ -35,15 +35,16 @@
     "typescript/no-explicit-any": "error",
     "no-underscore-dangle": ["warn", { "allow": ["_id", "__v"] }]
   },
-  "ignorePatterns": [
-    "apps/server/app.js",
-    "apps/server/main.js",
-    "**/build/**",
-    "**/dist/**",
-    "**/node_modules/**",
-    "**/coverage/**"
-  ],
+  "ignorePatterns": ["**/build/**", "**/dist/**", "**/node_modules/**", "**/coverage/**"],
   "overrides": [
+    {
+      "files": ["apps/server/**"],
+      "env": { "node": true, "browser": false },
+      "rules": {
+        "no-console": "off",
+        "oxc/no-async-endpoint-handlers": "off"
+      }
+    },
     {
       "files": ["**/*.test.ts", "**/*.test.tsx"],
       "plugins": ["vitest"],

@@ -3,11 +3,15 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import { expect, vi } from 'vitest';
-import app from '../app.js';
+import { createApp } from '../src/app.js';
 
+/** 테스트용 마스터 PIN. 실제 값(루트 .env)은 읽지 않는다 */
 export const MASTER_PIN = '9999';
 
-/** app.js에 요청을 보낸다 (실제 포트를 열지 않고 메모리 안에서) */
+// 로그 파일은 setup.ts가 테스트 파일마다 만든 임시 파일
+const app = createApp({ masterPin: MASTER_PIN, logFile: process.env.LOG_FILE! });
+
+/** 앱에 요청을 보낸다 (실제 포트를 열지 않고 메모리 안에서) */
 export const api = () => request(app);
 
 /** DB 컬렉션에 직접 넣는다. 실제 데이터처럼 스키마와 다른 모양(빠진 필드, null 등)도 넣을 수 있다. undefined인 필드는 넣지 않는다 */

@@ -159,8 +159,38 @@ describe('POST /ensemble', () => {
         repeat: true,
     };
 
-    test('저장하고 { id }', async () => {
-        const res = await api().post('/ensemble').send(body);
+    test('그 팀의 PIN이 맞으면 저장하고 { id }. 저장된 값에 PIN은 없다', async () => {
+        const teamId = await insert('teams', teamDoc({ pin: '1234' }));
+        const res = await api()
+            .post('/ensemble')
+            .send({ ...body, teamId, pin: '1234' });
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ id: expect.stringMatching(/^[0-9a-f]{24}$/) });
+        const saved = await findOne('ensembles', res.body.id);
+        expect(saved).toMatchObject({
+            ...body,
+            teamId,
+            due: new Date(body.due),
+            nextDate: new Date(body.nextDate),
+        });
+        expect(saved).not.toHaveProperty('pin');
+    });
+
+    test('PIN이 없거나 틀리면 403, 저장하지 않는다 (B-6 뒤 사용자 결정)', async () => {
+        const teamId = await insert('teams', teamDoc({ pin: '1234' }));
+        for (const pin of [undefined, '0000']) {
+            const res = await api()
+                .post('/ensemble')
+                .send({ ...body, teamId, pin });
+            expect([res.status, res.body]).toEqual([403, { error: 'Wrong PIN' }]);
+        }
+        expect(await findAll('ensembles')).toHaveLength(0);
+    });
+
+    test('마스터 PIN이면 저장 (팀이 없어도: ISSUES B4는 마스터 PIN일 때만 남는다)', async () => {
+        const res = await api()
+            .post('/ensemble')
+            .send({ ...body, pin: MASTER_PIN });
         expect(res.status).toBe(200);
         expect(res.body).toEqual({ id: expect.stringMatching(/^[0-9a-f]{24}$/) });
         expect(await findOne('ensembles', res.body.id)).toMatchObject({
@@ -170,16 +200,24 @@ describe('POST /ensemble', () => {
         });
     });
 
-    test('현재 동작: 팀이 있는지 확인하지 않는다 (ISSUES B4), 범위·겹침 검사도 없다 (S5)', async () => {
+    test('없는 팀이면 마스터 PIN만 통과한다. 현재 동작: 범위·겹침 검사는 없다 (S5)', async () => {
+        const badRange = { ...body, teamId: missingId(), startTime: 99, endTime: -1, day: 9 };
+        expect(
+            (
+                await api()
+                    .post('/ensemble')
+                    .send({ ...badRange, pin: '1234' })
+            ).status,
+        ).toBe(403);
         const res = await api()
             .post('/ensemble')
-            .send({ ...body, teamId: missingId(), startTime: 99, endTime: -1, day: 9 });
+            .send({ ...badRange, pin: MASTER_PIN });
         expect(res.status).toBe(200);
         expect(await findAll('ensembles')).toHaveLength(1);
     });
 
-    test('현재 동작: 빈 본문도 저장한다', async () => {
-        const res = await api().post('/ensemble').send({});
+    test('현재 동작: 마스터 PIN만 있는 빈 본문도 저장한다', async () => {
+        const res = await api().post('/ensemble').send({ pin: MASTER_PIN });
         expect(res.status).toBe(200);
         expect(Object.keys((await findOne('ensembles', res.body.id)) ?? {}).sort()).toEqual([
             '__v',
@@ -192,14 +230,17 @@ describe('POST /ensemble', () => {
     test('숫자 칸에 숫자가 아닌 값이면 500 (텍스트)', async () => {
         const res = await api()
             .post('/ensemble')
-            .send({ ...body, startTime: 'abc' });
+            .send({ ...body, startTime: 'abc', pin: MASTER_PIN });
         expect(res.status).toBe(500);
         expect(res.text).toBe('Internal Server Error');
     });
 
     test('addensemble_팀이름을 로그에 남긴다 (본문의 teamName)', async () => {
         await resetLog();
-        await api().post('/ensemble').set('Cookie', `semachi_vid=${VID}`).send(body);
+        await api()
+            .post('/ensemble')
+            .set('Cookie', `semachi_vid=${VID}`)
+            .send({ ...body, pin: MASTER_PIN });
         await waitForLog(logLine('addensemble_테스트밴드'));
     });
 });

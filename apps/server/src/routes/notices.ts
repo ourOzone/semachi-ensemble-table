@@ -1,16 +1,16 @@
 // 공지 API: POST /notice, GET /notices, DELETE /notice, POST /check-notice-pin, GET /notice/:id
 // 올리기·삭제는 요청 본문의 pin(마스터 PIN)을 서버가 확인한다. 틀리면 403 (B-6 B1)
-// 마스터 PIN은 대상이 따로 없어 IP로만 센다
+// 틀린 횟수는 "마스터" 하나로 센다 (관리자 화면과 같이)
 import express from 'express';
 import { WRONG_PIN, type PinAuth } from '../lib/pin-auth.ts';
-import { markPin, type PinLimit } from '../middleware/pin-limit.ts';
+import { pinTarget, type PinGuard } from '../lib/pin-guard.ts';
 import { Notice } from '../models/notice.ts';
 
-export function noticesRouter({ pins, pinLimit }: { pins: PinAuth; pinLimit: PinLimit }) {
+export function noticesRouter({ pins, guard }: { pins: PinAuth; guard: PinGuard }) {
     const router = express.Router();
 
     // 올리기 (올린 시각은 서버의 지금)
-    router.post('/notice', ...pinLimit(), async (req, res) => {
+    router.post('/notice', async (req, res) => {
         try {
             const { content, pin } = req.body;
 
@@ -18,8 +18,9 @@ export function noticesRouter({ pins, pinLimit }: { pins: PinAuth; pinLimit: Pin
                 return res.status(400).json({ error: 'Content are required' });
             }
 
+            if (guard.rejectIfBlocked(req, res, pinTarget.master)) return;
             const ok = await pins.isMaster(pin);
-            markPin(req, res, ok);
+            guard.record(req, res, pinTarget.master, ok);
             if (!ok) return res.status(403).json(WRONG_PIN);
 
             const publishDate = new Date();
@@ -47,7 +48,7 @@ export function noticesRouter({ pins, pinLimit }: { pins: PinAuth; pinLimit: Pin
     });
 
     // 삭제
-    router.delete('/notice', ...pinLimit(), async (req, res) => {
+    router.delete('/notice', async (req, res) => {
         try {
             const { id } = req.query;
 
@@ -55,8 +56,9 @@ export function noticesRouter({ pins, pinLimit }: { pins: PinAuth; pinLimit: Pin
                 return res.status(400).json({ error: 'Notice ID is required' });
             }
 
+            if (guard.rejectIfBlocked(req, res, pinTarget.master)) return;
             const ok = await pins.isMaster(req.body.pin);
-            markPin(req, res, ok);
+            guard.record(req, res, pinTarget.master, ok);
             if (!ok) return res.status(403).json(WRONG_PIN);
 
             const deleted = await Notice.findByIdAndDelete(id);
@@ -73,7 +75,7 @@ export function noticesRouter({ pins, pinLimit }: { pins: PinAuth; pinLimit: Pin
     });
 
     // 마스터 PIN 대조
-    router.post('/check-notice-pin', ...pinLimit(), async (req, res) => {
+    router.post('/check-notice-pin', async (req, res) => {
         try {
             const { pin } = req.body;
 
@@ -81,8 +83,9 @@ export function noticesRouter({ pins, pinLimit }: { pins: PinAuth; pinLimit: Pin
                 return res.status(400).json({ error: 'Pin is required' });
             }
 
+            if (guard.rejectIfBlocked(req, res, pinTarget.master)) return;
             const ok = await pins.isMaster(pin);
-            markPin(req, res, ok);
+            guard.record(req, res, pinTarget.master, ok);
             res.json(ok);
         } catch (error) {
             console.error(error);

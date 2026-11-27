@@ -1,30 +1,40 @@
 // 합주 API: GET /ensembles, POST /ensemble, DELETE /ensemble, GET /ensemble/:id, PUT /ensemble
-// 현재 동작: 변경 API가 PIN을 확인하지 않는다 (B1, B-6). 합주를 만들 때 팀이 있는지 보지 않는다 (B4)
+// 잡기·수정·삭제는 요청 본문의 pin(그 합주 팀의 PIN 또는 마스터 PIN)을 서버가 확인한다. 틀리면 403 (B-6)
+// 틀린 횟수는 그 팀의 것으로 센다 (팀 PIN이므로)
 import express from 'express';
 import mongoose from 'mongoose';
 import type { Logger } from '../lib/log.ts';
 import { WRONG_PIN, type PinAuth } from '../lib/pin-auth.ts';
-import { markPin, type PinLimit } from '../middleware/pin-limit.ts';
+import { pinTarget, type PinGuard } from '../lib/pin-guard.ts';
 import { Ensemble } from '../models/ensemble.ts';
 import { Team } from '../models/team.ts';
 
 export function ensemblesRouter({
     log,
     pins,
-    pinLimit,
+    guard,
 }: {
     log: Logger;
     pins: PinAuth;
-    pinLimit: PinLimit;
+    guard: PinGuard;
 }) {
     const router = express.Router();
-    const limitEnsemble = pinLimit((req) => `ensemble:${req.query.id}`);
 
     /** 합주 팀의 PIN. 팀이 없거나(삭제된 팀의 합주) id 형식이 아니면 없음 → 마스터 PIN만 통과 */
-    const teamPinOf = async (teamId: string | null | undefined) =>
-        teamId && mongoose.isValidObjectId(teamId)
+    const teamPinOf = async (teamId: unknown) =>
+        typeof teamId === 'string' && mongoose.isValidObjectId(teamId)
             ? (await Team.findById(teamId).select('+pin'))?.pin
             : undefined;
+
+    /** 그 팀 PIN이 맞는지 확인하고 횟수를 센다. 막혔으면 429, 틀리면 403을 보내고 false */
+    const checkTeamPin = async (req: express.Request, res: express.Response, teamId: unknown) => {
+        const target = pinTarget.team(teamId);
+        if (guard.rejectIfBlocked(req, res, target)) return false;
+        const ok = await pins.matches(req.body.pin, await teamPinOf(teamId));
+        guard.record(req, res, target, ok);
+        if (!ok) res.status(403).json(WRONG_PIN);
+        return ok;
+    };
 
     // 전체 합주
     router.get('/ensembles', async (req, res) => {
@@ -52,10 +62,11 @@ export function ensemblesRouter({
         }
     });
 
-    // 합주 추가
+    // 합주 잡기 (B-6 뒤 사용자 결정: 잡을 때도 그 팀의 PIN. 팀이 없으면 마스터 PIN만, ISSUES B4)
     router.post('/ensemble', async (req, res) => {
         try {
             const data = req.body;
+            if (!(await checkTeamPin(req, res, data.teamId))) return;
             log(req.visitorId, `addensemble_${data.teamName}`);
 
             const newEnsemble = new Ensemble({
@@ -78,7 +89,7 @@ export function ensemblesRouter({
     });
 
     // 합주 삭제
-    router.delete('/ensemble', ...limitEnsemble, async (req, res) => {
+    router.delete('/ensemble', async (req, res) => {
         const ensembleId = req.query.id;
 
         // id가 없으면 바로 404 (조건 없이 찾거나 지우지 않게)
@@ -93,9 +104,7 @@ export function ensemblesRouter({
                 return res.status(404).json({ id: -1 });
             }
 
-            const ok = await pins.matches(req.body.pin, await teamPinOf(existingEnsemble.teamId));
-            markPin(req, res, ok);
-            if (!ok) return res.status(403).json(WRONG_PIN);
+            if (!(await checkTeamPin(req, res, existingEnsemble.teamId))) return;
 
             await Ensemble.findByIdAndDelete(ensembleId);
             log(req.visitorId, `deleteensemble_${existingEnsemble.teamName}`);
@@ -123,7 +132,7 @@ export function ensemblesRouter({
     });
 
     // 합주 수정. teamName은 바꾸지 않는다. 현재 동작: 본문에 빠진 필드는 지워진다
-    router.put('/ensemble', ...limitEnsemble, async (req, res) => {
+    router.put('/ensemble', async (req, res) => {
         const { teamId, startTime, endTime, day, type, due, nextDate, repeat } = req.body;
         const ensembleId = req.query.id;
 
@@ -139,9 +148,7 @@ export function ensemblesRouter({
             }
 
             // 지금 합주의 팀 PIN으로 확인한다 (본문의 teamId로 바꾸기 전)
-            const ok = await pins.matches(req.body.pin, await teamPinOf(existingEnsemble.teamId));
-            markPin(req, res, ok);
-            if (!ok) return res.status(403).json(WRONG_PIN);
+            if (!(await checkTeamPin(req, res, existingEnsemble.teamId))) return;
 
             existingEnsemble.teamId = teamId;
             existingEnsemble.startTime = startTime;

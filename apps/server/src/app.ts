@@ -3,8 +3,8 @@ import express from 'express';
 import helmet from 'helmet';
 import { createLogger } from './lib/log.ts';
 import { createPinAuth } from './lib/pin-auth.ts';
+import { createPinGuard, type PinLimitOptions } from './lib/pin-guard.ts';
 import { cors } from './middleware/cors.ts';
-import { createPinLimiters, type PinLimitOptions } from './middleware/pin-limit.ts';
 import { visitor } from './middleware/visitor.ts';
 import { adminRouter } from './routes/admin.ts';
 import { ensemblesRouter } from './routes/ensembles.ts';
@@ -39,7 +39,7 @@ export function createApp({
     const app = express();
     app.set('trust proxy', trustProxy);
     const log = createLogger(logFile);
-    const pinLimit = createPinLimiters(pinLimits);
+    const guard = createPinGuard(pinLimits);
     const pins = createPinAuth({ envMasterPin: masterPin, hashNewPins: hashPins });
 
     // 보안 헤더 (O6): 브라우저가 응답을 다른 형식으로 짐작하지 않게, 다른 사이트의 iframe에 넣지 못하게, HTTPS만 쓰게 등.
@@ -59,11 +59,11 @@ export function createApp({
     app.use(cors(corsOrigins));
     app.use(visitor);
 
-    app.use(teamsRouter({ log, pins, pinLimit }));
-    app.use(ensemblesRouter({ log, pins, pinLimit }));
-    app.use(notesRouter({ log, pins, pinLimit }));
-    app.use(noticesRouter({ pins, pinLimit }));
-    app.use(adminRouter({ log, pins, pinLimit }));
+    app.use(teamsRouter({ log, pins, guard }));
+    app.use(ensemblesRouter({ log, pins, guard }));
+    app.use(notesRouter({ log, pins, guard }));
+    app.use(noticesRouter({ pins, guard }));
+    app.use(adminRouter({ log, pins, guard }));
 
     return app;
 }

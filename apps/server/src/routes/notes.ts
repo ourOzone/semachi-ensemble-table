@@ -1,21 +1,14 @@
 // 날적이 API: GET /notes, DELETE /note, POST /note, GET /note/:id, POST /check-note-pin
 // 삭제는 요청 본문의 pin(글 PIN 또는 마스터 PIN)을 서버가 확인한다. 틀리면 403 (B-6 B1)
+// 틀린 횟수는 날적이 전체를 하나로 센다 (글이 자주 생기고 지워져서, 사용자 결정)
 // 목록에는 PIN을 넣지 않는다 (모델의 select: false, B-6 B3)
 import express from 'express';
 import type { Logger } from '../lib/log.ts';
 import { WRONG_PIN, type PinAuth } from '../lib/pin-auth.ts';
-import { markPin, type PinLimit } from '../middleware/pin-limit.ts';
+import { pinTarget, type PinGuard } from '../lib/pin-guard.ts';
 import { Note } from '../models/note.ts';
 
-export function notesRouter({
-    log,
-    pins,
-    pinLimit,
-}: {
-    log: Logger;
-    pins: PinAuth;
-    pinLimit: PinLimit;
-}) {
+export function notesRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; guard: PinGuard }) {
     const router = express.Router();
 
     // 목록 (최근 것부터)
@@ -30,7 +23,7 @@ export function notesRouter({
     });
 
     // 삭제
-    router.delete('/note', ...pinLimit((req) => `note:${req.query.id}`), async (req, res) => {
+    router.delete('/note', async (req, res) => {
         const noteId = req.query.id;
 
         // id가 없으면 바로 404 (조건 없이 찾거나 지우지 않게)
@@ -45,8 +38,9 @@ export function notesRouter({
                 return res.status(404).json({ id: -1 });
             }
 
+            if (guard.rejectIfBlocked(req, res, pinTarget.note)) return;
             const ok = await pins.matches(req.body.pin, note.pin);
-            markPin(req, res, ok);
+            guard.record(req, res, pinTarget.note, ok);
             if (!ok) return res.status(403).json(WRONG_PIN);
 
             await Note.findByIdAndDelete(noteId);
@@ -92,38 +86,38 @@ export function notesRouter({
         }
     });
 
-    // PIN 대조 (삭제와 같은 글이면 함께 센다)
-    router.post(
-        '/check-note-pin',
-        ...pinLimit((req) => `note:${req.body.noteId}`),
-        async (req, res) => {
-            try {
-                const { noteId, pin } = req.body;
+    // PIN 대조
+    router.post('/check-note-pin', async (req, res) => {
+        try {
+            const { noteId, pin } = req.body;
 
-                if (!noteId || !pin) {
-                    return res.status(400).json({ error: 'Both noteId and pin are required' });
-                }
-
-                if (await pins.isMaster(pin)) {
-                    markPin(req, res, true);
-                    return res.json(true);
-                }
-
-                const note = await Note.findById(noteId).select('+pin');
-
-                if (!note) {
-                    return res.status(404).json({ error: 'Note not found' });
-                }
-
-                const ok = await pins.matches(pin, note.pin);
-                markPin(req, res, ok);
-                res.json(ok);
-            } catch (error) {
-                console.error(error);
-                res.status(500).json({ error: 'Internal Server Error' });
+            if (!noteId || !pin) {
+                return res.status(400).json({ error: 'Both noteId and pin are required' });
             }
-        },
-    );
+
+            if (guard.rejectIfBlocked(req, res, pinTarget.note)) return;
+
+            if (await pins.isMaster(pin)) {
+                guard.record(req, res, pinTarget.note, true);
+                return res.json(true);
+            }
+
+            const note = await Note.findById(noteId).select('+pin');
+
+            if (!note) {
+                // 마스터 PIN도 아니었으니 틀린 시도로 센다
+                guard.record(req, res, pinTarget.note, false);
+                return res.status(404).json({ error: 'Note not found' });
+            }
+
+            const ok = await pins.matches(pin, note.pin);
+            guard.record(req, res, pinTarget.note, ok);
+            res.json(ok);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    });
 
     return router;
 }

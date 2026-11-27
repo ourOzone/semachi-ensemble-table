@@ -5,23 +5,12 @@
 import express from 'express';
 import type { Logger } from '../lib/log.ts';
 import { WRONG_PIN, type PinAuth } from '../lib/pin-auth.ts';
-import { markPin, type PinLimit } from '../middleware/pin-limit.ts';
+import { pinTarget, type PinGuard } from '../lib/pin-guard.ts';
 import { Ensemble } from '../models/ensemble.ts';
 import { Team } from '../models/team.ts';
 
-export function teamsRouter({
-    log,
-    pins,
-    pinLimit,
-}: {
-    log: Logger;
-    pins: PinAuth;
-    pinLimit: PinLimit;
-}) {
+export function teamsRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; guard: PinGuard }) {
     const router = express.Router();
-    // 확인 API와 수정·삭제가 같은 팀이면 함께 센다
-    const limitTeamFromBody = pinLimit((req) => `team:${req.body.teamId}`);
-    const limitTeamFromQuery = pinLimit((req) => `team:${req.query.id}`);
 
     // 전체팀
     router.get('/teams', async (req, res) => {
@@ -55,8 +44,8 @@ export function teamsRouter({
         }
     });
 
-    // PIN 확인 (웹의 PIN 칸이 4자리를 다 넣으면 바로 부른다). 틀린 시도는 횟수 제한 (S2)
-    router.post('/check-team-pin', ...limitTeamFromBody, async (req, res) => {
+    // PIN 확인 (웹의 PIN 칸이 4자리를 다 넣으면 바로 부른다). 틀린 횟수는 팀별로 (lib/pin-guard)
+    router.post('/check-team-pin', async (req, res) => {
         try {
             const { teamId, pin } = req.body;
 
@@ -64,19 +53,24 @@ export function teamsRouter({
                 return res.status(400).json({ error: 'Both teamId and pin are required' });
             }
 
+            const target = pinTarget.team(teamId);
+            if (guard.rejectIfBlocked(req, res, target)) return;
+
             if (await pins.isMaster(pin)) {
-                markPin(req, res, true);
+                guard.record(req, res, target, true);
                 return res.json(true);
             }
 
             const team = await Team.findById(teamId).select('+pin');
 
             if (!team) {
+                // 마스터 PIN도 아니었으니 틀린 시도로 센다 (없는 팀 id로 마스터 PIN을 찾지 못하게)
+                guard.record(req, res, target, false);
                 return res.status(404).json({ error: 'Team not found' });
             }
 
             const ok = await pins.matches(pin, team.pin);
-            markPin(req, res, ok);
+            guard.record(req, res, target, ok);
             return res.json(ok);
         } catch (error) {
             console.error(error);
@@ -85,7 +79,7 @@ export function teamsRouter({
     });
 
     // 팀 삭제 (그 팀의 합주도 함께)
-    router.delete('/team', ...limitTeamFromQuery, async (req, res) => {
+    router.delete('/team', async (req, res) => {
         const teamId = req.query.id as string | undefined; // 현재 동작: 형식 검사 없음 (B-8)
 
         // id가 없으면 바로 404 (조건 없이 찾거나 지우지 않게)
@@ -101,8 +95,10 @@ export function teamsRouter({
                 return res.status(404).json({ id: -1 });
             }
 
+            const target = pinTarget.team(teamId);
+            if (guard.rejectIfBlocked(req, res, target)) return;
             const ok = await pins.matches(req.body.pin, team.pin);
-            markPin(req, res, ok);
+            guard.record(req, res, target, ok);
             if (!ok) return res.status(403).json(WRONG_PIN);
 
             // 팀을 먼저 지운다: 합주 삭제가 실패해도 팀만 남는 일은 없다
@@ -116,7 +112,7 @@ export function teamsRouter({
     });
 
     // 팀 수정 (그 팀 합주의 teamName도 함께). 현재 동작: 본문에 빠진 필드는 지워진다. PIN은 바꾸지 않는다
-    router.put('/team', ...limitTeamFromQuery, async (req, res) => {
+    router.put('/team', async (req, res) => {
         try {
             const teamId = req.query.id as string | undefined; // 현재 동작: 형식 검사 없음 (B-8)
             const existingTeam = await Team.findById(teamId).select('+pin');
@@ -125,8 +121,10 @@ export function teamsRouter({
                 return res.status(404).json({ error: 'Team not found' });
             }
 
+            const target = pinTarget.team(teamId);
+            if (guard.rejectIfBlocked(req, res, target)) return;
             const ok = await pins.matches(req.body.pin, existingTeam.pin);
-            markPin(req, res, ok);
+            guard.record(req, res, target, ok);
             if (!ok) return res.status(403).json(WRONG_PIN);
 
             log(req.visitorId, `modifyteam_${existingTeam.name}`);

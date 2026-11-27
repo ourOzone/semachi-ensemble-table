@@ -190,9 +190,6 @@ importers:
       express:
         specifier: ^5.3.0
         version: 5.3.0(supports-color@7.2.0)
-      express-rate-limit:
-        specifier: ^8.7.5
-        version: 8.7.5(express@5.3.0(supports-color@7.2.0))(supports-color@7.2.0)
       helmet:
         specifier: ^8.3.0
         version: 8.3.0
@@ -2444,12 +2441,6 @@ packages:
   expect-type@1.4.0:
     resolution: {integrity: sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA==}
     engines: {node: '>=12.0.0'}
-
-  express-rate-limit@8.7.5:
-    resolution: {integrity: sha512-wi+v38cx2EqD0JnhE/e74o5tFqKWUOAPFJIgyEiqJ8v2MNpoOAA3kI2hXYOI+YM+HE5yqbdAlVxm2GqOIeYOgA==}
-    engines: {node: '>= 16'}
-    peerDependencies:
-      express: '>= 4.11'
 
   express@5.3.0:
     resolution: {integrity: sha512-qCqy1xSoaugxOD4IVHb1ZWdkvCF2W3aE2okKouWj8VwJ+ztskSiXoBnCSJqfKT+cVPJhuJqe9YLbY425+Zh00g==}
@@ -6030,14 +6021,6 @@ snapshots:
       yoctocolors: 2.2.0
 
   expect-type@1.4.0: {}
-
-  express-rate-limit@8.7.5(express@5.3.0(supports-color@7.2.0))(supports-color@7.2.0):
-    dependencies:
-      debug: 4.4.3(supports-color@7.2.0)
-      express: 5.3.0(supports-color@7.2.0)
-      ip-address: 10.7.6
-    transitivePeerDependencies:
-      - supports-color
 
   express@5.3.0(supports-color@7.2.0):
     dependencies:

@@ -11,7 +11,6 @@ import {
     freshApi,
     insert,
     MASTER_PIN,
-    missingId,
     teamDoc,
 } from './helpers.ts';
 
@@ -138,17 +137,9 @@ describe('틀린 횟수 알려 주기 (Pin-Attempts 헤더, 웹의 "(7/10)")', (
         expect(res.headers['pin-attempts']).toBeUndefined();
     });
 
-    test('대상이 없는 마스터 PIN(공지)은 IP 한도(30)로', async () => {
+    test('공지(마스터 PIN)는 "마스터"의 횟수로', async () => {
         const res = await freshApi()().post('/check-notice-pin').send({ pin: '0000' });
-        expect(res.headers['pin-attempts']).toBe('1/30');
-    });
-
-    test('IP 전체 한도가 더 빠듯하면 그쪽을 보여준다', async () => {
-        const fresh = freshApi({ pinLimits: { perIp: 3 } });
-        await fresh().post('/check-team-pin').send({ teamId: missingId(), pin: '0000' });
-        const teamId = await insert('teams', teamDoc({ pin: '1234' }));
-        const res = await fresh().post('/check-team-pin').send({ teamId, pin: '0000' });
-        expect(res.headers['pin-attempts']).toBe('2/3');
+        expect(res.headers['pin-attempts']).toBe('1/10');
     });
 
     test('다른 주소의 웹(개발)도 읽을 수 있게 헤더를 연다 (CORS)', async () => {

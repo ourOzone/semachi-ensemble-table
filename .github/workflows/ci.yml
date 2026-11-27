@@ -1,0 +1,62 @@
+# CI: 푸시·PR마다 GitHub의 컴퓨터가 저장소 전체를 검사한다 (백엔드 개편 B-4)
+# 내 PC에서 하는 검사와 같다: 린트 → 포맷 → 타입 → 테스트(웹·서버) → 빌드
+# 결과: GitHub 저장소의 Actions 탭, PR의 Checks 탭. 하나라도 실패하면 빨간 X
+name: CI
+
+on:
+  push:
+    branches: ['**'] # 모든 브랜치
+  pull_request: # PR을 열거나 새 커밋을 올릴 때
+
+# 같은 브랜치에 새로 푸시하면 아직 도는 이전 검사는 멈춘다
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# 저장소를 읽기만 한다 (검사에는 쓰기 권한이 필요 없다)
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: 검사
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 코드 받기
+        uses: actions/checkout@v7
+
+      - name: pnpm 설치 (package.json의 packageManager 버전)
+        uses: pnpm/action-setup@v6
+
+      - name: Node 설치 (.nvmrc 버전, pnpm 내려받기 캐시)
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: 의존성 설치 (잠금 파일 그대로)
+        run: pnpm install --frozen-lockfile
+
+      - name: 린트
+        run: pnpm lint
+
+      - name: 포맷 검사
+        run: pnpm format:check
+
+      - name: 타입 검사 (웹·서버)
+        run: pnpm typecheck
+
+      # 서버 테스트의 메모리 MongoDB 실행 파일(약 100MB)을 다음 실행에 다시 쓴다
+      - name: MongoDB 실행 파일 캐시
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: mongodb-binaries-${{ runner.os }}-
+
+      - name: 테스트 (웹·서버)
+        run: pnpm test:run
+
+      - name: 빌드
+        run: pnpm build

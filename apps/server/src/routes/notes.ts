@@ -31,22 +31,21 @@ export function notesRouter({
     router.delete('/note', async (req, res) => {
         const noteId = req.query.id;
 
-        try {
-            const existingNote = await Note.findById(noteId);
+        // id가 없으면 바로 404. findByIdAndDelete(undefined)가 무엇을 하는지(지금 Mongoose 9는 아무것도 지우지 않음)에 기대지 않는다
+        if (noteId === undefined) {
+            return res.status(404).json({ id: -1 });
+        }
 
-            if (!existingNote) {
+        try {
+            // 조회 없이 바로 지운다 (O5)
+            const deletedNote = await Note.findByIdAndDelete(noteId);
+
+            if (!deletedNote) {
                 return res.status(404).json({ id: -1 });
             }
 
-            log(req.visitorId, `deletenote_${existingNote.text}`);
-
-            const deletedNote = await Note.findByIdAndDelete(noteId);
-
-            if (deletedNote) {
-                res.json({ id: noteId });
-            } else {
-                res.status(500).send('Internal Server Error');
-            }
+            log(req.visitorId, `deletenote_${deletedNote.text}`);
+            res.json({ id: noteId });
         } catch {
             res.status(500).send('Internal Server Error');
         }

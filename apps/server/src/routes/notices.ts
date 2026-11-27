@@ -49,13 +49,12 @@ export function noticesRouter({ masterPin, pinLimit }: { masterPin: string; pinL
                 return res.status(400).json({ error: 'Notice ID is required' });
             }
 
-            const notice = await Notice.findById(id);
+            // 조회 없이 바로 지운다 (O5)
+            const deleted = await Notice.findByIdAndDelete(id);
 
-            if (!notice) {
+            if (!deleted) {
                 return res.status(404).json({ error: 'Notice not found' });
             }
-
-            await Notice.deleteOne({ _id: id });
 
             res.status(200).json({ message: 'Notice deleted successfully' });
         } catch (error) {

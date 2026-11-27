@@ -85,22 +85,22 @@ export function teamsRouter({
     router.delete('/team', async (req, res) => {
         const teamId = req.query.id as string | undefined; // 현재 동작: 형식 검사 없음 (B-8)
 
-        try {
-            const existingTeam = await Team.findById(teamId);
+        // id가 없으면 바로 404. findByIdAndDelete(undefined)가 무엇을 하는지(지금 Mongoose 9는 아무것도 지우지 않음)에 기대지 않는다
+        if (teamId === undefined) {
+            return res.status(404).json({ id: -1 });
+        }
 
-            if (!existingTeam) {
+        try {
+            // 조회 없이 바로 지우고(O5), 팀을 먼저 지운다: 합주 삭제가 실패해도 팀만 남는 일은 없다
+            const deletedTeam = await Team.findByIdAndDelete(teamId);
+
+            if (!deletedTeam) {
                 return res.status(404).json({ id: -1 });
             }
 
-            log(req.visitorId, `deleteteam_${existingTeam.name}`);
+            log(req.visitorId, `deleteteam_${deletedTeam.name}`);
             await Ensemble.deleteMany({ teamId });
-            const deletedTeam = await Team.findByIdAndDelete(teamId);
-
-            if (deletedTeam) {
-                res.json({ id: teamId });
-            } else {
-                res.status(500).send('Internal Server Error');
-            }
+            res.json({ id: teamId });
         } catch {
             res.status(500).send('Internal Server Error');
         }

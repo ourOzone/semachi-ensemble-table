@@ -62,22 +62,21 @@ export function ensemblesRouter({ log }: { log: Logger }) {
     router.delete('/ensemble', async (req, res) => {
         const ensembleId = req.query.id;
 
-        try {
-            const existingEnsemble = await Ensemble.findById(ensembleId);
+        // id가 없으면 바로 404. findByIdAndDelete(undefined)가 무엇을 하는지(지금 Mongoose 9는 아무것도 지우지 않음)에 기대지 않는다
+        if (ensembleId === undefined) {
+            return res.status(404).json({ id: -1 });
+        }
 
-            if (!existingEnsemble) {
+        try {
+            // 조회 없이 바로 지운다 (O5)
+            const deletedEnsemble = await Ensemble.findByIdAndDelete(ensembleId);
+
+            if (!deletedEnsemble) {
                 return res.status(404).json({ id: -1 });
             }
 
-            log(req.visitorId, `deleteensemble_${existingEnsemble.teamName}`);
-
-            const deletedEnsemble = await Ensemble.findByIdAndDelete(ensembleId);
-
-            if (deletedEnsemble) {
-                res.json({ id: ensembleId });
-            } else {
-                res.status(500).send('Internal Server Error');
-            }
+            log(req.visitorId, `deleteensemble_${deletedEnsemble.teamName}`);
+            res.json({ id: ensembleId });
         } catch {
             res.status(500).send('Internal Server Error');
         }

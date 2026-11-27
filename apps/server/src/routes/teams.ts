@@ -70,7 +70,7 @@ export function teamsRouter({ log, masterPin }: { log: Logger; masterPin: string
 
     // 팀 삭제 (그 팀의 합주도 함께)
     router.delete('/team', async (req, res) => {
-        const teamId = req.query.id;
+        const teamId = req.query.id as string | undefined; // 현재 동작: 형식 검사 없음 (B-8)
 
         try {
             const existingTeam = await Team.findById(teamId);
@@ -109,7 +109,7 @@ export function teamsRouter({ log, masterPin }: { log: Logger; masterPin: string
     // 팀 수정 (그 팀 합주의 teamName도 함께). 현재 동작: 본문에 빠진 필드는 지워진다
     router.put('/team', async (req, res) => {
         try {
-            const teamId = req.query.id;
+            const teamId = req.query.id as string | undefined; // 현재 동작: 형식 검사 없음 (B-8)
             const existingTeam = await Team.findById(teamId);
 
             if (!existingTeam) {

@@ -23,6 +23,11 @@ export function createApp({ masterPin, logFile }: AppOptions) {
     // 요청 본문 (api.js에는 JSON 해석기가 두 개였다: body-parser와 express.json. 하나만 남김, B-3)
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
+    // Express 5는 본문이 없으면 req.body가 undefined다. Express 4처럼 빈 객체로 둔다 (본문 없는 요청이 400 대신 500이 되지 않게)
+    app.use((req, _res, next) => {
+        req.body ??= {};
+        next();
+    });
     app.use(cors);
     app.use(visitor);
 

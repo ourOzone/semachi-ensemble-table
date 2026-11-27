@@ -3,10 +3,19 @@
 // 현재 동작: 변경 API가 PIN을 확인하지 않는다 (B1, B-6). 응답에 PIN이 들어 있다 (B3)
 import express from 'express';
 import type { Logger } from '../lib/log.ts';
+import type { PinLimit } from '../middleware/pin-limit.ts';
 import { Ensemble } from '../models/ensemble.ts';
 import { Team } from '../models/team.ts';
 
-export function teamsRouter({ log, masterPin }: { log: Logger; masterPin: string }) {
+export function teamsRouter({
+    log,
+    masterPin,
+    pinLimit,
+}: {
+    log: Logger;
+    masterPin: string;
+    pinLimit: PinLimit;
+}) {
     const router = express.Router();
 
     // 전체팀
@@ -41,7 +50,8 @@ export function teamsRouter({ log, masterPin }: { log: Logger; masterPin: string
         }
     });
 
-    router.post('/check-team-pin', async (req, res) => {
+    // 틀린 시도는 횟수 제한 (S2)
+    router.post('/check-team-pin', ...pinLimit('teamId'), async (req, res) => {
         try {
             const { teamId, pin } = req.body;
 
@@ -51,6 +61,7 @@ export function teamsRouter({ log, masterPin }: { log: Logger; masterPin: string
             }
 
             if (pin === masterPin) {
+                res.locals.pinOk = true;
                 return res.json(true);
             }
 
@@ -62,7 +73,8 @@ export function teamsRouter({ log, masterPin }: { log: Logger; masterPin: string
             }
 
             // 팀의 pin과 제공된 pin이 일치하는지 확인
-            return res.json(team.pin === pin);
+            res.locals.pinOk = team.pin === pin;
+            return res.json(res.locals.pinOk);
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });

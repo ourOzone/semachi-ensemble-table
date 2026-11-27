@@ -13,6 +13,11 @@ export interface Config {
     /** CORS로 허락할 웹 주소 (CORS_ORIGINS, 쉼표로 여러 개. 기본 없음: 웹과 API가 같은 주소) */
     corsOrigins: string[];
     /**
+     * 프록시 뒤에서 진짜 사용자 IP를 읽기 위한 Express trust proxy (TRUST_PROXY, 기본 false).
+     * 숫자면 앞에 있는 프록시 수(Caddy 하나면 1), true/false, 또는 주소 목록. PIN 시도 제한이 IP로 세므로 B-11에서 꼭 정한다
+     */
+    trustProxy: boolean | number | string;
+    /**
      * HTTPS 인증서 파일 (TLS_KEY_FILE·TLS_CERT_FILE, 둘 다 있을 때만). 없으면 HTTP로 실행한다.
      * api.js는 /etc/letsencrypt/live/semachi.net/ 의 파일을 늘 직접 읽었다. 운영은 B-11부터 Caddy가 HTTPS를 맡는다
      */
@@ -44,6 +49,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
             .split(',')
             .map((origin) => origin.trim())
             .filter(Boolean),
+        trustProxy: parseTrustProxy(env.TRUST_PROXY),
         tls: keyFile && certFile ? { keyFile, certFile } : undefined,
     };
+}
+
+function parseTrustProxy(value: string | undefined): boolean | number | string {
+    if (!value || value === 'false') return false;
+    if (value === 'true') return true;
+    return /^\d+$/.test(value) ? Number(value) : value;
 }

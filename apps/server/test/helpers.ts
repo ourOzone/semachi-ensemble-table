@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import { expect, vi } from 'vitest';
-import { createApp } from '../src/app.ts';
+import { createApp, type AppOptions } from '../src/app.ts';
 
 /** 테스트용 마스터 PIN. 실제 값(루트 .env)은 읽지 않는다 */
 export const MASTER_PIN = '9999';
@@ -12,14 +12,21 @@ export const MASTER_PIN = '9999';
 /** 테스트에서 CORS로 허락한 웹 주소 */
 export const ALLOWED_ORIGIN = 'https://semachi.net';
 
-const app = createApp({
+const appOptions = {
     masterPin: MASTER_PIN,
     logFile: process.env.LOG_FILE!,
     corsOrigins: [ALLOWED_ORIGIN, 'http://localhost:3000'],
-});
+};
+const app = createApp(appOptions);
 
 /** 앱에 요청을 보낸다 (실제 포트를 열지 않고 메모리 안에서) */
 export const api = () => request(app);
+
+/** 새 앱 (PIN 시도 횟수처럼 앱이 기억하는 상태를 처음부터 보고 싶을 때) */
+export function freshApi(options: Partial<AppOptions> = {}) {
+    const fresh = createApp({ ...appOptions, ...options });
+    return () => request(fresh);
+}
 
 /** DB 컬렉션에 직접 넣는다. 실제 데이터처럼 스키마와 다른 모양(빠진 필드, null 등)도 넣을 수 있다. undefined인 필드는 넣지 않는다 */
 export async function insert(

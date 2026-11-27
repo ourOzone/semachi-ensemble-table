@@ -2,9 +2,18 @@
 // 현재 동작: 삭제가 PIN을 확인하지 않는다 (B1, B-6). 응답에 PIN이 들어 있다 (B3)
 import express from 'express';
 import type { Logger } from '../lib/log.ts';
+import type { PinLimit } from '../middleware/pin-limit.ts';
 import { Note } from '../models/note.ts';
 
-export function notesRouter({ log, masterPin }: { log: Logger; masterPin: string }) {
+export function notesRouter({
+    log,
+    masterPin,
+    pinLimit,
+}: {
+    log: Logger;
+    masterPin: string;
+    pinLimit: PinLimit;
+}) {
     const router = express.Router();
 
     // 목록 (최근 것부터)
@@ -79,7 +88,7 @@ export function notesRouter({ log, masterPin }: { log: Logger; masterPin: string
     });
 
     // PIN 대조
-    router.post('/check-note-pin', async (req, res) => {
+    router.post('/check-note-pin', ...pinLimit('noteId'), async (req, res) => {
         try {
             const { noteId, pin } = req.body;
 
@@ -88,6 +97,7 @@ export function notesRouter({ log, masterPin }: { log: Logger; masterPin: string
             }
 
             if (pin === masterPin) {
+                res.locals.pinOk = true;
                 return res.json(true);
             }
 
@@ -97,7 +107,8 @@ export function notesRouter({ log, masterPin }: { log: Logger; masterPin: string
                 return res.status(404).json({ error: 'Note not found' });
             }
 
-            res.json(note.pin === pin);
+            res.locals.pinOk = note.pin === pin;
+            res.json(res.locals.pinOk);
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });

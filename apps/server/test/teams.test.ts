@@ -184,18 +184,10 @@ describe('POST /check-team-pin', () => {
         expect(res.body).toEqual({ error: 'Internal Server Error' });
     });
 
-    test('현재 동작: 시도 횟수 제한 없음 (S2), 로그에 남기지 않음', async () => {
+    test('로그에 남기지 않는다 (시도 횟수 제한은 pin-limit.test.ts)', async () => {
         const id = await insert('teams', teamDoc({ pin: '1234' }));
         await resetLog();
-        for (let i = 0; i < 20; i++) {
-            expect(
-                (
-                    await api()
-                        .post('/check-team-pin')
-                        .send({ teamId: id, pin: String(i) })
-                ).status,
-            ).toBe(200);
-        }
+        await api().post('/check-team-pin').send({ teamId: id, pin: '0000' });
         expect(await settledLog()).toBe('');
     });
 });

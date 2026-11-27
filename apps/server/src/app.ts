@@ -2,6 +2,7 @@
 import express from 'express';
 import { createLogger } from './lib/log.ts';
 import { cors } from './middleware/cors.ts';
+import { createPinLimiters, type PinLimitOptions } from './middleware/pin-limit.ts';
 import { visitor } from './middleware/visitor.ts';
 import { ensemblesRouter } from './routes/ensembles.ts';
 import { healthRouter } from './routes/health.ts';
@@ -16,11 +17,23 @@ export interface AppOptions {
     logFile: string;
     /** 다른 주소에서 이 서버를 부를 수 있게 허락할 웹 주소 (CORS). 없으면 허락하지 않음 */
     corsOrigins?: readonly string[];
+    /** PIN 확인 시도 제한 (기본 15분에 대상별 10번·IP별 30번) */
+    pinLimits?: PinLimitOptions;
+    /** 프록시 뒤에서 진짜 사용자 IP를 읽기 위한 Express trust proxy 값 (기본 false) */
+    trustProxy?: boolean | number | string;
 }
 
-export function createApp({ masterPin, logFile, corsOrigins = [] }: AppOptions) {
+export function createApp({
+    masterPin,
+    logFile,
+    corsOrigins = [],
+    pinLimits,
+    trustProxy = false,
+}: AppOptions) {
     const app = express();
+    app.set('trust proxy', trustProxy);
     const log = createLogger(logFile);
+    const pinLimit = createPinLimiters(pinLimits);
 
     app.use(healthRouter());
 
@@ -35,10 +48,10 @@ export function createApp({ masterPin, logFile, corsOrigins = [] }: AppOptions) 
     app.use(cors(corsOrigins));
     app.use(visitor);
 
-    app.use(teamsRouter({ log, masterPin }));
+    app.use(teamsRouter({ log, masterPin, pinLimit }));
     app.use(ensemblesRouter({ log }));
-    app.use(notesRouter({ log, masterPin }));
-    app.use(noticesRouter({ masterPin }));
+    app.use(notesRouter({ log, masterPin, pinLimit }));
+    app.use(noticesRouter({ masterPin, pinLimit }));
 
     return app;
 }

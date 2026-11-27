@@ -1,9 +1,10 @@
 // 공지 API: POST /notice, GET /notices, DELETE /notice, POST /check-notice-pin, GET /notice/:id
 // 현재 동작: 올리기·삭제가 마스터 PIN을 확인하지 않는다 (B1, B-6)
 import express from 'express';
+import type { PinLimit } from '../middleware/pin-limit.ts';
 import { Notice } from '../models/notice.ts';
 
-export function noticesRouter({ masterPin }: { masterPin: string }) {
+export function noticesRouter({ masterPin, pinLimit }: { masterPin: string; pinLimit: PinLimit }) {
     const router = express.Router();
 
     // 올리기 (올린 시각은 서버의 지금)
@@ -64,7 +65,8 @@ export function noticesRouter({ masterPin }: { masterPin: string }) {
     });
 
     // 마스터 PIN 대조
-    router.post('/check-notice-pin', async (req, res) => {
+    // 대상이 없어 IP로만 센다
+    router.post('/check-notice-pin', ...pinLimit(), async (req, res) => {
         try {
             const { pin } = req.body;
 
@@ -72,7 +74,8 @@ export function noticesRouter({ masterPin }: { masterPin: string }) {
                 return res.status(400).json({ error: 'Pin is required' });
             }
 
-            res.json(pin === masterPin);
+            res.locals.pinOk = pin === masterPin;
+            res.json(res.locals.pinOk);
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });

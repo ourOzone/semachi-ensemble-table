@@ -31,6 +31,15 @@ describe('loadConfig', () => {
         });
     });
 
+    test('TRUST_PROXY: 없으면 false, 숫자는 프록시 수, true/false, 그 밖은 주소 목록 그대로', () => {
+        const trust = (TRUST_PROXY?: string) => loadConfig({ ...required, TRUST_PROXY }).trustProxy;
+        expect(trust()).toBe(false);
+        expect(trust('false')).toBe(false);
+        expect(trust('true')).toBe(true);
+        expect(trust('1')).toBe(1);
+        expect(trust('loopback, uniquelocal')).toBe('loopback, uniquelocal');
+    });
+
     test('CORS_ORIGINS: 쉼표로 여러 주소, 앞뒤 공백·빈 칸은 버림. 없으면 빈 목록', () => {
         expect(loadConfig(required).corsOrigins).toEqual([]);
         expect(

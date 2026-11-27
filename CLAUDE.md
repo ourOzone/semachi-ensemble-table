@@ -1,14 +1,21 @@
 # semachi-ensemble-table
 
-레거시 CRA 프로젝트를 Vite + TypeScript로 옮기고(1~3단계) 화면을 새로 만든(View 개편) React 프론트엔드. 마이그레이션은 모두 끝났다 (2026-11-26).
+밴드 동아리 세마치의 합주판. pnpm workspace 모노레포다 (백엔드 개편 B-1, 2026-11-27):
+- `apps/web`: React 웹 (레거시 CRA를 Vite + TypeScript로 옮기고 화면을 새로 만듦, 2026-11-26 완료)
+- `apps/server`: Express 백엔드 (`api.js`, 백엔드 개편 중 → `docs/BACKEND_PLAN.md`)
+- `packages/shared`: 웹·서버 공유 스키마·타입·상수
+
+이 문서의 웹 경로(`src/...`, `vite.config.mts`, `env/`)는 `apps/web/` 기준이다. 파일을 둘 곳은 `docs/DIRECTORY_STRUCTURE.md`.
 
 ## 명령어
 패키지 매니저는 pnpm이다 (`package.json`의 `packageManager`로 버전 고정). npm/yarn을 쓰지 않는다.
-- 의존성 설치: `pnpm install`
+저장소 루트에서 실행하면 모든 패키지에 돈다. 하나만: `pnpm --filter @semachi/web <스크립트>` (`@semachi/server`·`@semachi/shared`).
+- 의존성 설치: `pnpm install` (패키지 추가는 `pnpm --filter <패키지> add <이름>`)
+- 웹 개발 서버: `pnpm dev`
 - 타입 체크: `pnpm typecheck`
 - 빌드: `pnpm build`
-- 린트: `pnpm lint` (Oxlint, 설정은 `.oxlintrc.json`)
-- 포맷: `pnpm format` / 검사만: `pnpm format:check` (Prettier)
+- 린트: `pnpm lint` (Oxlint, 설정은 루트 `.oxlintrc.json`)
+- 포맷: `pnpm format` / 검사만: `pnpm format:check` (Prettier, 설정은 루트)
 - 테스트: `pnpm test:run` (watch 모드: `pnpm test`)
 
 ## 테스트
@@ -17,7 +24,7 @@
 - API는 실제 서버로 보내지 않는다. 각 테스트에서 `server.use(http.get(...))`로 모킹한다 (`src/test/server.ts`). 핸들러 없는 요청은 에러가 난다.
 - 컴포넌트는 `src/test/render.tsx`의 `renderWithProviders`(QueryClient·알림), 앱 전체는 `renderApp`으로 렌더링한다. Drawer는 `src/test/queries.ts`의 `findDialog`(제목)로 찾는다.
 - Zustand store는 모듈 전역이라 테스트끼리 상태가 이어진다. 새 store를 만들면 `src/test/setup.ts`의 afterEach에 초기화를 추가한다.
-- 테스트는 `pnpm test:run` 또는 `pnpm exec vitest run <경로>`로 실행한다. `npx vitest`(와 메인 저장소에서 `node node_modules/vitest/vitest.mjs` 직접 실행)는 이 환경에서 runner를 찾지 못해 원본에서도 항상 실패한다.
+- 테스트는 `pnpm test:run` 또는 `pnpm --filter @semachi/web exec vitest run <apps/web 기준 경로>`로 실행한다. `npx vitest`(와 메인 저장소에서 `node node_modules/vitest/vitest.mjs` 직접 실행)는 이 환경에서 runner를 찾지 못해 원본에서도 항상 실패한다.
 - 뮤테이션 검사 등 스크립트로 테스트 결과를 판정할 때는 원본이 통과하는지(기준선)를 먼저 확인하고, 종료 코드가 아니라 출력의 `Tests N failed`로 판정한다.
 
 ## 작업 범위
@@ -25,7 +32,7 @@
 - 서버 데이터를 확인할 때는 값을 출력하지 않는다 (PIN 등). 테스트는 실제 서버·DB로 보내지 않는다.
 - 서버(OCI)·GitHub 설정은 사용자가 직접 한다. 명령과 화면 위치를 단계마다 안내한다.
 - **안내 규칙 (사용자 결정):** 사용자는 프론트엔드만 해 봤고 백엔드·Docker·CI/CD·서버 운영은 처음이라, 따라가며 배우는 것이 목표다. 새 개념은 처음 나올 때 "무엇·왜·안 쓰면 어떻게 되는지"를 짧게 먼저 설명하고, 서버 명령은 한 번에 하나씩 (하는 일·예상 출력·성공 확인·되돌리기와 함께) 준다. 단계가 끝나면 `docs/LEARNING_NOTES.md`에 배운 것을 남긴다 (`docs/BACKEND_PLAN.md` "안내 방식").
-- 루트 `.env`는 백엔드 전용(비밀값 포함)이다. 프론트엔드 환경변수는 `env/.env`에 `VITE_` 접두사로 두고, 타입은 `src/vite-env.d.ts`에 추가한다.
+- 저장소 루트 `.env`는 백엔드 전용(비밀값 포함, 커밋하지 않음)이다. 웹 환경변수는 `apps/web/env/.env`에 `VITE_` 접두사로 두고, 타입은 `apps/web/src/vite-env.d.ts`에 추가한다.
 
 ## 마이그레이션 단계
 1. CRA → Vite: 완료. CRA 잔여물(react-scripts 관련 설정, 서비스워커, 사용하지 않는 템플릿 파일)을 발견하면 삭제를 제안한다.
@@ -47,7 +54,7 @@
 - `src` 내부 모듈은 `@/` alias로 import한다 (`@/components/...`). 같은 폴더·하위 폴더는 `./` 상대 경로를 허용한다.
 
 ## 디렉터리
-- 구조와 새 파일을 둘 곳은 `docs/DIRECTORY_STRUCTURE.md`를 따른다 (V-6): 기능별 화면은 `src/features/<기능>/`, 여러 기능이 쓰는 부품은 `src/components/`(`ui`·`sheet`·`layout`), 로직 층은 `src/api`·`queries`·`lib`·`types`·`stores`.
+- 구조와 새 파일을 둘 곳은 `docs/DIRECTORY_STRUCTURE.md`를 따른다. 웹: 기능별 화면은 `src/features/<기능>/`, 여러 기능이 쓰는 부품은 `src/components/`(`ui`·`sheet`·`layout`), 로직 층은 `src/api`·`queries`·`lib`·`types`·`stores`. 웹·서버가 함께 쓰는 것은 `packages/shared`.
 - 파일 이름은 케밥 표기(`team-info-drawer.tsx`, `use-today.ts`). 폴더마다 `index.ts` 다시 내보내기는 만들지 않는다.
 
 ## 로직 vs 뷰

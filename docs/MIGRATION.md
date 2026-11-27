@@ -1,6 +1,6 @@
 # 마이그레이션 진행 기록
 
-> 단계 정의와 규칙은 `CLAUDE.md`, 추가 최신화 항목의 근거는 `docs/MODERNIZATION.md` 참고.
+> 단계 정의와 규칙은 `CLAUDE.md`, 추가 최신화 항목의 근거는 `docs/archive/MODERNIZATION.md` 참고.
 
 ## 현황
 
@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). 다음은 B-1 모노레포 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
+| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅, 다음은 B-2 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
 | View 개편 | ✅ **완료 (2026-11-26, V-0 ~ V-7)**: V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, V-4 날적이 ✅, V-5 공지 ✅, **V-6 일괄 정리 ✅**, **V-7 마무리 ✅ (2026-11-26)** (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
@@ -331,7 +331,7 @@
 
 - `docs/archive/LOGIC_IMPROVEMENT_PLAN.md` 작성. View 개편 때 Drawer가 단일 Drawer로 바뀌는 것을 전제로, 개편 후에도 남는 층(api·queries·lib·notify·stores)에 집중
 - 사전 결정 8개 모두 추천안으로 확정
-- team·ensemble Context는 Zustand로 옮기지 않고 View 개편 때 폼 로컬 상태로 흡수 → `docs/MODERNIZATION.md`에 "View 개편 체크리스트" 추가
+- team·ensemble Context는 Zustand로 옮기지 않고 View 개편 때 폼 로컬 상태로 흡수 → `docs/archive/MODERNIZATION.md`에 "View 개편 체크리스트" 추가
 - `docs/ISSUES.md`: B1·B2 전달 완료, B4 추가, 항목별 처리 단계 연결
 - `docs/archive/BACKEND_SUGGESTIONS.md`: 백엔드 개발자 전달용 개선 제안
 
@@ -1291,6 +1291,20 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 계획 수정 (같은 날, 사용자 요청): 저장소를 모노레포(`apps/web`·`apps/server`·`packages/shared`)로, 안내 방식(사용자가 배우며 따라가기, `docs/LEARNING_NOTES.md`)을 규칙으로 (`CLAUDE.md`), 단계 추가 — B-1 모노레포 + 검색 엔진 차단(noindex), B-6 베타 환경(`dev` 푸시 → `beta.semachi.net`, 별도 DB·테스터 암호), B-9 활동 기록 고도화(방문자·IP·기기·사용한 PIN 종류·바뀌기 전후, 관리자 보기), B-11 팀 자동 삭제 상시 적용(`TEAM_DUE_ENABLED` 제거) + 날짜 지난 팀·합주 정리 작업. 단계는 B-0~B-13
 - 순서 수정 (같은 날, 사용자 요청): 급히 운영에 내는 것 없이 모든 단계를 마친 뒤 한 번에 올린다. OCI·DB 접근을 아직 받지 못해, 서버 없이 할 수 있는 코드 작업(B-1 모노레포 ~ B-11 배포 준비물)을 먼저 하고, 서버가 열리면 B-12 조사·백업 → B-13 베타 배포·확인 → B-14 운영 전환 → B-15 마무리. 긴급 수정(옛 B-0.5)은 삭제. 문서 맨 위에 요약 추가
 
+### 2026-11-27 — 백엔드 개편 B-1: 모노레포 재구성, 검색 엔진 차단
+
+- 사전 결정 전부 확정 (추천안). 추가 결정 10: 운영·베타가 같은 DB를 쓴다 (비용, 베타 테스트를 운영 데이터 그대로). 같은 DB를 쓸 때 지킬 것(베타 기간엔 옛 서버가 읽을 수 있는 모양으로만 저장, 정리 작업은 운영에서만)을 계획 문서에
+- 사용자 수정 커밋 (`6b94ef1`): `.claude/settings.json`·`settings-fe.json`, `MODERNIZATION.md`를 archive로, 옛 `DIRECTORY_STRUCTURE.md` 삭제
+- 지금 → 바꾼 후 (동작 변화는 검색 엔진 차단뿐)
+  - 저장소: 루트 = 웹, `api.js`만 따로 → pnpm workspace 모노레포. `apps/web`(웹 전체 `git mv`: `src`·`public`·`env`·`index.html`·Vite·TS·shadcn 설정), `apps/server`(`api.js` + `package.json`: express 4·mongoose 8·dotenv·body-parser, 서버의 실제 버전은 B-12에서 확인), `packages/shared`(빈 패키지)
+  - 루트 `package.json`: 웹 의존성 → `apps/web/package.json`. 루트는 린트·포맷 도구와 모든 패키지에 넘기는 스크립트(`pnpm -r --if-present`)만. 명령은 그대로 (`pnpm typecheck`·`test:run`·`lint`·`build`·`dev`)
+  - 검색 엔진: 차단 없음 → `index.html`에 `noindex, nofollow` (`robots.txt`는 막지 않음: 막으면 noindex를 못 읽는다)
+  - 설정: `.gitignore`(웹 env 경로), `.oxlintrc.json`(무시 경로를 모든 깊이로), `.prettierignore` 설명
+- 문서: `docs/DIRECTORY_STRUCTURE.md`(웹·서버·공유 전체 구조와 둘 곳, 새로), `docs/LEARNING_NOTES.md`(B-1에서 배운 것, 새로), `CLAUDE.md`(모노레포 설명·명령·경로), 옮긴 `MODERNIZATION.md` 참조 경로
+- 확인: 개발 서버는 이제 루트에서 `pnpm dev` (웹 폴더가 옮겨져 이전에 켜 둔 개발 서버는 다시 켜야 한다)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 223/223 / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅ (JS 835kB, 그대로) / `node --check apps/server/api.js` ✅
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -1316,7 +1330,7 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 - ✅ 폰트 TTF → woff2, `@font-face` `src` 중복
 - ✅ 디버그용 `console.log`
 
-### 적용 예정 (상세는 `docs/MODERNIZATION.md`)
+### 적용 예정 (상세는 `docs/archive/MODERNIZATION.md`)
 
 | 항목 | 대체 대상 | 시점 |
 |---|---|---|

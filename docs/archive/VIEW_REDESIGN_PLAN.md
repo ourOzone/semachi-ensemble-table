@@ -520,7 +520,7 @@
 | `docs/MIGRATION.md` | 매 작업 | 작업 로그에 날짜·변경 내용·**동작 차이**·검증 결과. 상단 "현황"의 View 개편 상태 |
 | `docs/archive/VIEW_REDESIGN_PLAN.md` (이 문서) | 매 작업 | 단계·체크리스트 ✅, 사전 결정 확정 내용, 진행 중 바뀐 계획 |
 | `docs/ISSUES.md` | 처리하거나 새로 발견할 때 | 처리한 ID에 ✅와 날짜·방법, 새 문제는 ID를 붙여 추가 (심각도·확인 방법·처리 시점), 린트 현황 표 |
-| `docs/MODERNIZATION.md` | 상태가 바뀔 때 | 8·9·10번 항목의 상태 표시(📌 → 🔄 → ✅), "진행 순서" |
+| `docs/archive/MODERNIZATION.md` | 상태가 바뀔 때 | 8·9·10번 항목의 상태 표시(📌 → 🔄 → ✅), "진행 순서" |
 | `CLAUDE.md` | 작업 규칙이 바뀔 때 | 예: 새 컴포넌트 위치, styled-components 사용 금지 시점, 테스트 규칙, 명령어 |
 | `docs/archive/LOGIC_IMPROVEMENT_PLAN.md` | 3단계 결과(훅·구조)를 바꿀 때만 | 바뀐 내용과 이유 (원칙적으로 로직 층은 바꾸지 않는다) |
 

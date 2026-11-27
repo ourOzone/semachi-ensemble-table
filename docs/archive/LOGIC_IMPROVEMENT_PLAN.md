@@ -1,9 +1,9 @@
 # 3단계: 내부 로직 개선 계획 ✅ 완료 (2026-11-23)
 
 > 작업 규칙은 `CLAUDE.md`(로직 vs 뷰, 동작이 바뀌는 수정은 승인 후), 진행 기록은 `docs/MIGRATION.md`를 따른다.
-> 문제는 `docs/ISSUES.md`의 ID(`F1`, `P2` 등)로 참조한다. 도입 라이브러리의 근거는 `docs/MODERNIZATION.md` 5~7번.
+> 문제는 `docs/ISSUES.md`의 ID(`F1`, `P2` 등)로 참조한다. 도입 라이브러리의 근거는 `docs/archive/MODERNIZATION.md` 5~7번.
 > 이 문서는 **어떤 순서로, 어떤 단위로 작업을 지시할지**를 정리한 실행 계획이다. (작성: 2026-11-20)
-> 3단계는 2026-11-23에 끝났다 (3-6은 폐기하고 알림 기능을 삭제). 단계별 결과는 `docs/MIGRATION.md`, 남은 일은 "View 개편 때 넘겨주는 것"과 `docs/MODERNIZATION.md`의 View 개편 체크리스트.
+> 3단계는 2026-11-23에 끝났다 (3-6은 폐기하고 알림 기능을 삭제). 단계별 결과는 `docs/MIGRATION.md`, 남은 일은 "View 개편 때 넘겨주는 것"과 `docs/archive/MODERNIZATION.md`의 View 개편 체크리스트.
 
 ## 전제
 

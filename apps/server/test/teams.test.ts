@@ -246,19 +246,12 @@ describe('DELETE /team?id=', () => {
     });
 });
 
-describe('DELETE /teams', () => {
-    test('현재 동작: 인증 없이 모든 팀을 지운다 (B2). 합주는 남는다', async () => {
+describe('DELETE /teams (B-5 B2에서 삭제)', () => {
+    test('없는 경로라 404이고, 팀을 지우지 않는다', async () => {
         await insert('teams', teamDoc());
-        await insert('teams', teamDoc());
-        await insert('ensembles', ensembleDoc());
-        await resetLog();
-
-        const res = await api().delete('/teams').set('Cookie', `semachi_vid=${VID}`);
-        expect(res.status).toBe(200);
-        expect(res.body).toEqual({ message: 'All teams (2) have been successfully deleted.' });
-        expect(await findAll('teams')).toHaveLength(0);
-        expect(await findAll('ensembles')).toHaveLength(1);
-        await waitForLog(logLine('전체팀을삭제했습니다.엄벌을내리십시오_'));
+        const res = await api().delete('/teams');
+        expect(res.status).toBe(404);
+        expect(await findAll('teams')).toHaveLength(1);
     });
 });
 

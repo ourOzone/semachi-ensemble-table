@@ -1,4 +1,5 @@
-// 팀 API: GET /teams, POST /team, POST /check-team-pin, DELETE /team, DELETE /teams, PUT /team, GET /team/:id
+// 팀 API: GET /teams, POST /team, POST /check-team-pin, DELETE /team, PUT /team, GET /team/:id
+// (모든 팀을 지우던 DELETE /teams는 B-5에서 삭제: B2)
 // 현재 동작: 변경 API가 PIN을 확인하지 않는다 (B1, B-6). 응답에 PIN이 들어 있다 (B3)
 import express from 'express';
 import type { Logger } from '../lib/log.ts';
@@ -90,19 +91,6 @@ export function teamsRouter({ log, masterPin }: { log: Logger; masterPin: string
             }
         } catch {
             res.status(500).send('Internal Server Error');
-        }
-    });
-
-    // 전체팀 삭제. 현재 동작: 인증 없이 모든 팀을 지운다 (B2, B-5에서 삭제)
-    router.delete('/teams', async (req, res) => {
-        log(req.visitorId, '전체팀을삭제했습니다.엄벌을내리십시오_');
-        try {
-            const result = await Team.deleteMany({});
-            res.json({
-                message: `All teams (${result.deletedCount}) have been successfully deleted.`,
-            });
-        } catch {
-            res.status(500).json({ error: 'Internal Server Error' });
         }
     });
 

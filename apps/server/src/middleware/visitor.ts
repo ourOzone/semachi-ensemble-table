@@ -34,10 +34,11 @@ export const visitor: RequestHandler = (req, res, next) => {
         visitorId = crypto.randomUUID();
     }
 
-    // 요청마다 만료 기간을 연장한다
+    // 요청마다 만료 기간을 연장한다. SameSite=Lax: 같은 사이트(semachi.net·그 하위 주소, localhost끼리)의 요청에만 보낸다
+    // (api.js는 None: 다른 사이트에서 부를 때도 보냈다. 웹과 API가 같은 주소가 되므로 필요 없다, B-5)
     res.setHeader(
         'Set-Cookie',
-        `${VISITOR_COOKIE}=${visitorId}; Max-Age=${VISITOR_COOKIE_MAX_AGE}; Path=/; HttpOnly; Secure; SameSite=None`,
+        `${VISITOR_COOKIE}=${visitorId}; Max-Age=${VISITOR_COOKIE_MAX_AGE}; Path=/; HttpOnly; Secure; SameSite=Lax`,
     );
 
     req.visitorId = visitorId;

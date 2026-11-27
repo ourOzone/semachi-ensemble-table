@@ -14,7 +14,7 @@ import {
 
 const VID = '0b8a5c7e-1f2d-4c3b-9a8e-7d6c5b4a3f21';
 const COOKIE_RE =
-    /^semachi_vid=([0-9a-f-]{36}); Max-Age=31536000; Path=\/; HttpOnly; Secure; SameSite=None$/;
+    /^semachi_vid=([0-9a-f-]{36}); Max-Age=31536000; Path=\/; HttpOnly; Secure; SameSite=Lax$/;
 
 describe('CORS (B-5 S3: 허락한 주소만)', () => {
     test('허락한 주소면 그 주소를 쿠키와 함께 허락한다', async () => {
@@ -47,7 +47,7 @@ describe('CORS (B-5 S3: 허락한 주소만)', () => {
     });
 });
 
-describe('방문자 쿠키 (semachi_vid)', () => {
+describe('방문자 쿠키 (semachi_vid, B-5에서 SameSite=Lax)', () => {
     test('없으면 새 UUID를 1년짜리 쿠키로 준다', async () => {
         const res = await api().get('/notices');
         const cookie = res.headers['set-cookie']?.[0] ?? '';
@@ -57,7 +57,7 @@ describe('방문자 쿠키 (semachi_vid)', () => {
     test('올바른 UUID가 있으면 그 값을 그대로 다시 준다 (만료 연장)', async () => {
         const res = await api().get('/notices').set('Cookie', `other=1; semachi_vid=${VID}`);
         expect(res.headers['set-cookie']?.[0]).toBe(
-            `semachi_vid=${VID}; Max-Age=31536000; Path=/; HttpOnly; Secure; SameSite=None`,
+            `semachi_vid=${VID}; Max-Age=31536000; Path=/; HttpOnly; Secure; SameSite=Lax`,
         );
     });
 

@@ -1,11 +1,10 @@
-// Express 앱 조립: 미들웨어 → API. 서버 시작(DB 연결·포트)은 main.js, 테스트는 이것만 가져다 쓴다
+// Express 앱 조립: 미들웨어 → API. 서버 시작(DB 연결·포트)은 main.ts, 테스트는 이것만 가져다 쓴다
 import express from 'express';
 import { createLogger } from './lib/log.ts';
 import { cors } from './middleware/cors.ts';
 import { visitor } from './middleware/visitor.ts';
 import { ensemblesRouter } from './routes/ensembles.ts';
 import { healthRouter } from './routes/health.ts';
-import { logViewRouter } from './routes/log-view.ts';
 import { notesRouter } from './routes/notes.ts';
 import { noticesRouter } from './routes/notices.ts';
 import { teamsRouter } from './routes/teams.ts';
@@ -34,7 +33,6 @@ export function createApp({ masterPin, logFile }: AppOptions) {
     app.use(cors);
     app.use(visitor);
 
-    app.use(logViewRouter({ logFile }));
     app.use(teamsRouter({ log, masterPin }));
     app.use(ensemblesRouter({ log }));
     app.use(notesRouter({ log, masterPin }));

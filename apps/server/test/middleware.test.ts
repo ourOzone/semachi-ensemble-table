@@ -155,25 +155,12 @@ describe('로그 파일 (append_log)', () => {
     });
 });
 
-describe('GET / (로그 보기)', () => {
-    test('현재 동작: 로그 전체를 누구에게나 줄마다 <br>로 이어 HTML로 보여준다 (S1)', async () => {
-        await resetLog('a_1_pageload\n<script>x</script>');
+describe('GET / (로그 보기, B-5 S1에서 삭제)', () => {
+    test('없는 경로라 404이고, 로그 내용을 보여주지 않는다', async () => {
+        await resetLog('a_1_pageload');
         const res = await api().get('/');
-        expect(res.status).toBe(200);
-        expect(res.headers['content-type']).toContain('text/html');
-        expect(res.text).toBe('a_1_pageload<br><script>x</script>');
-    });
-
-    test('로그 파일이 없으면 500', async () => {
-        vi.spyOn(console, 'error').mockImplementation(() => {});
-        rmSync(process.env.LOG_FILE!);
-        try {
-            const res = await api().get('/');
-            expect(res.status).toBe(500);
-            expect(res.text).toBe('Internal Server Error');
-        } finally {
-            await resetLog();
-        }
+        expect(res.status).toBe(404);
+        expect(res.text).not.toContain('a_1_pageload');
     });
 });
 

@@ -1,60 +1,108 @@
-# 백엔드 개편 계획 (api.js → TypeScript 서버 + 자동 배포)
+# 백엔드 개편 계획 (모노레포 + TypeScript 서버 + 자동 배포)
 
-> 작성: 2026-11-27, 브랜치 `api3.0` (`ui3.0`에서 갈라짐). 백엔드 작업을 지시받을 때마다 이 문서를 기준으로 한다.
+> 작성: 2026-11-27, 브랜치 `api3.0` (`ui3.0`에서 갈라짐). 백엔드·배포 작업을 지시받을 때마다 이 문서를 기준으로 한다.
 > 고칠 문제의 상세 설명은 `docs/archive/BACKEND_SUGGESTIONS.md`(S·D·A·O·T 항목)와 `docs/ISSUES.md`(B1~B4)에 있다.
 > 프론트 개편 기록은 `docs/archive/VIEW_REDESIGN_PLAN.md`, 진행 기록은 `docs/MIGRATION.md`.
 
 ## 목표
 
-1. **`main`에 푸시하면 자동으로 서버에 배포된다** (GitHub Actions, 지금은 사람이 서버에서 직접 옮겨 실행하는 것으로 보임)
-2. 한 파일(`api.js`, 652줄)을 역할별 파일로 나누고 **TypeScript**로 옮긴다. Node·Express·Mongoose는 최신으로
+1. **`main`에 푸시하면 자동으로 운영 서버에 배포**, **`dev`에 푸시하면 베타 서버에 배포** (GitHub Actions)
+2. 저장소를 **모노레포**(`apps/web`·`apps/server`·`packages/shared`)로 나누고, 서버를 **TypeScript**로. Node·Express·Mongoose는 최신으로
 3. 알려진 문제(B1~B4, S·D·A·O 항목) **대부분을 고친다**. 보안 문제부터
+4. **활동 기록(로그) 고도화**: 익명이지만, 행동을 보고 어느 정도 누구인지 짐작할 수 있게
+5. **팀 자동 삭제**(팀 `due`)를 실제로 켜고, 검색 엔진에 사이트가 나오지 않게
 
-크게 벌이지 않는다: Express + Mongoose는 그대로 쓰고(프레임워크 교체 없음), 화면 쪽은 꼭 필요한 곳만 맞춘다.
+크게 벌이지 않는다: Express + Mongoose는 그대로 쓰고(프레임워크 교체 없음), 화면은 꼭 필요한 곳만 맞춘다.
+
+## 안내 방식 (사용자가 배우면서 따라가기)
+
+사용자는 프론트엔드 경험만 있고, 백엔드·Docker·CI/CD·서버 운영은 이번이 처음이다. 이번 기회에 배우는 것이 목표 중 하나다. 그래서:
+
+- **새 개념이 처음 나올 때** "이게 뭔지 → 왜 필요한지 → 안 쓰면 어떻게 되는지"를 짧게 먼저 설명한다. 다른 선택지가 있으면 한 줄로 비교
+- **서버·GitHub 화면에서 하는 일은 사용자가 직접 한다.** 명령은 한 번에 하나씩: 무엇을 하는 명령인지, 예상 출력, 성공 확인 방법, 잘못됐을 때 되돌리는 방법을 함께 준다
+- **단계가 끝날 때마다** `docs/LEARNING_NOTES.md`에 "이번 단계에서 배운 것"을 남긴다 (개념, 자주 쓰는 명령, 실수하기 쉬운 곳). 나중에 혼자 운영할 때 찾아보는 용도
+- 코드 변경은 커밋을 작게 나눠, 커밋 하나를 읽으면 그 단계에서 무엇을 했는지 보이게 한다
+- 원하면 작은 부분을 사용자가 직접 짜 보게 제안한다 (강요하지 않음)
 
 ## 지금 상태 (코드로 확인한 것)
 
-- `api.js` 한 파일: DB 연결, 스키마 4개, 미들웨어(CORS·방문자 쿠키·로그), API 26개, HTTPS 실행(포트 8081, Let's Encrypt 인증서 파일을 직접 읽음)
+- `api.js` 한 파일(652줄): DB 연결, 스키마 4개, 미들웨어(CORS·방문자 쿠키·로그), API 26개, HTTPS 실행(포트 8081, Let's Encrypt 인증서 파일을 직접 읽음)
 - 저장소의 `package.json`에 express·mongoose·dotenv가 없다 → 서버에서 저장소를 받은 뒤 `api.js`만 따로 옮겨 실행하는 것으로 보인다 (사용자 추측, 확인 필요)
 - 비밀값(`MONGO_DB`, `MASTER_PIN`)은 서버의 `.env` (루트 `.env`는 저장소에 올리지 않는다)
 - 프론트는 `https://semachi.net:8081`로 요청한다 (`env/.env`의 `VITE_API_URL`)
-- 테스트 없음, CI/CD 없음 (`.github/` 없음)
-- 모르는 것: 서버의 Node·Express·Mongoose 버전, 실행 방식(그냥 `node`인지 pm2·systemd인지), 서버 시간대, DB 위치(같은 서버인지 MongoDB Atlas인지), **프론트가 어디서 서비스되는지**, 서버 CPU 종류(OCI 무료 서버는 ARM인 경우가 많다) → B-0에서 확인
+- 로그: 요청마다 `log.txt`(최대 5만 줄)를 통째로 읽고 다시 씀. 한 줄 형식 `방문자id_시각_동작_내용`. 기록하는 동작은 페이지 열기(`GET /teams`), 팀·합주·한마디·공지의 추가·수정·삭제 정도. PIN 확인 실패·마스터 PIN 사용·IP·기기는 기록하지 않음
+- 팀 `due`(자동 삭제 날짜): 프론트는 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 둠(V-3 10차). 서버 팀 스키마에는 `due`가 없음
+- 테스트 없음, CI/CD 없음 (`.github/` 없음), 검색 엔진 차단 없음
+- 모르는 것 (B-0에서 확인): 서버의 Node·Express·Mongoose 버전, 실행 방식(`node`·pm2·systemd), 서버 시간대, DB 위치(같은 서버인지 MongoDB Atlas인지), **프론트가 어디서 서비스되는지**, 서버 CPU 종류(OCI 무료 서버는 ARM이 많다), `semachi.net` 도메인 DNS를 누가 관리하는지(베타 주소에 필요)
 
 ## 사전 결정 (추천안, 사용자 확인 필요)
 
 | # | 무엇 | 추천 | 이유 |
 |---|---|---|---|
-| 1 | 저장소 구조 | 같은 저장소에 `server/` 폴더(pnpm workspace)를 추가. 프론트는 지금 자리 그대로 | 프론트·백엔드를 한 번에 배포하고, API가 바뀔 때 한 커밋에서 같이 고친다. 프론트 폴더를 옮기지 않아 기존 기록·설정이 그대로 |
-| 2 | 런타임 | Node 최신 LTS(B-0 시점에 확인, 프론트 `.nvmrc`와 같게), Express 5, Mongoose 최신, Zod 4 | 사용자 결정(최신으로). Express 5는 async 오류를 자동으로 넘겨 `try/catch` 반복이 사라진다 |
-| 3 | TypeScript 실행 | 빌드 없이 Node가 `.ts`를 바로 실행(type stripping), 타입 검사는 `tsc --noEmit` | 빌드 단계·출력 폴더가 없어 단순하다. 조건: `enum`·`namespace` 같은 문법을 안 쓴다(`erasableSyntaxOnly`), import에 `.ts` 확장자 |
-| 4 | 배포 방식 | **Docker 이미지 + docker compose + Caddy** (아래 "배포 구조") | 서버에는 Docker만 있으면 되고, 같은 이미지를 어디서나 똑같이 실행한다. 이전 버전으로 되돌리기도 이미지 이름 하나로 끝난다 |
-| 5 | 주소 | 프론트 `https://semachi.net`, API `https://semachi.net/api/...` (같은 주소, 포트 없음) | 같은 주소라 CORS 자체가 필요 없어진다(S3). `:8081`·인증서 직접 읽기(O3)가 사라진다. 옮기는 동안 `:8081`도 잠깐 살려 둔다 |
-| 6 | 테스트 | Vitest + supertest + 메모리 MongoDB(`mongodb-memory-server`) | 프론트와 같은 도구. 실제 DB를 건드리지 않는다 |
-| 7 | 비밀값 | 서버의 `.env` 파일에만 둔다 (GitHub에는 서버 접속용 SSH 키만) | 비밀값이 GitHub로 나가지 않는다. 바꿀 일이 거의 없다 |
-| 8 | 데이터 변경 | 바꾸기 전에 항상 DB 백업(`mongodump`), 변경은 한 번만 실행하는 스크립트로 | PIN 해시(S4)·날짜 형식(D1)은 기존 데이터를 바꾼다 |
+| 1 | 저장소 구조 | **모노레포**: `apps/web`(프론트), `apps/server`(백엔드), `packages/shared`(공유 Zod 스키마·타입·상수). pnpm workspace | 아래 "저장소 구조" |
+| 2 | 런타임 | Node 최신 LTS(B-0 시점 확인, 웹·서버 같게), Express 5, Mongoose 최신, Zod 4 | 사용자 결정(최신으로). Express 5는 async 오류를 자동으로 넘겨 `try/catch` 반복이 사라진다 |
+| 3 | 서버 TypeScript 실행 | 개발: Node가 `.ts`를 바로 실행(type stripping, `node --watch`). 운영 이미지: 서버 + `shared`를 JS 한 파일로 묶음(`tsdown`) | 개발은 빌드 없이 단순하게. 운영은 묶어 두면 이미지가 작고, Node가 `node_modules` 안의 `.ts`(공유 패키지)를 실행하지 못하는 제약을 피한다 (B-3에서 확인) |
+| 4 | 배포 방식 | **Docker 이미지 + docker compose + Caddy** | 서버에는 Docker만 있으면 되고, 같은 이미지를 어디서나 똑같이 실행한다. 되돌리기도 이미지 이름 하나 |
+| 5 | 주소 | 운영 `https://semachi.net`(API는 `/api`), 베타 `https://beta.semachi.net`(DNS를 못 바꾸면 `https://semachi.net:8443`) | 같은 주소라 CORS가 필요 없다(S3). `:8081`·인증서 직접 읽기(O3) 사라짐. 옮기는 동안 `:8081`도 잠깐 살림 |
+| 6 | 브랜치 | 작업 브랜치 → PR → `dev`(베타 자동 배포) → PR → `main`(운영 자동 배포) | 베타 테스터가 먼저 써 보고, 문제없으면 운영으로 |
+| 7 | 테스트 | Vitest + supertest + 메모리 MongoDB(`mongodb-memory-server`) | 웹과 같은 도구. 실제 DB를 건드리지 않는다 |
+| 8 | 비밀값 | 서버의 `.env`에만 (운영·베타 따로). GitHub에는 서버 접속용 SSH 키만 | 비밀값이 GitHub로 나가지 않는다 |
+| 9 | 데이터 변경 | 바꾸기 전에 항상 DB 백업(`mongodump`), 변경은 한 번만 실행하는 스크립트로, 실행 직전 확인 | PIN 해시(S4)·날짜 형식(D1)·필드 정리(D3)는 기존 데이터를 바꾼다 |
 
-## 배포 구조 (처음 보는 분을 위한 설명)
+## 저장소 구조 (사전 결정 1)
 
 ```
-개발자 PC ──push──▶ GitHub (main)
-                       │  GitHub Actions: 검사(타입·린트·테스트) → 이미지 만들기 → GHCR에 올리기
-                       ▼
-                OCI 서버 (SSH로 접속해 "새 이미지 받아서 다시 켜기")
-                 ├─ caddy  : 443 포트. HTTPS 인증서 자동 발급·갱신, 프론트 파일 제공, /api 요청을 api로 전달
-                 ├─ api    : Node 서버 (외부에 직접 열지 않음)
-                 └─ (DB)   : 지금 쓰는 MongoDB 그대로 (위치는 B-0에서 확인)
+repo/
+├── apps/
+│   ├── web/            프론트 (지금 루트의 src·public·index.html·vite 설정·env/를 그대로 옮김)
+│   └── server/         백엔드 (api.js를 나눠서 TypeScript로)
+├── packages/
+│   └── shared/         공유: 요청·응답 Zod 스키마, 타입, 상수(시간칸·요일 등)
+├── deploy/             compose.yaml, Caddyfile (서버에 올라가는 배포 설정)
+├── .github/workflows/  CI·CD
+├── pnpm-workspace.yaml
+└── package.json        루트 스크립트 (전체 검사·테스트를 한 번에)
 ```
 
+이 구조로 하는 이유 (처음 제안한 "프론트는 루트에 두고 `server/`만 추가"보다 나은 점):
+- **타입 공유**: 응답 스키마가 `packages/shared` 한 곳에만 있다. 서버가 보내는 모양과 웹이 받는 모양이 어긋나면 타입 검사에서 바로 걸린다 (지금은 웹의 `src/types/response.ts`가 서버 코드를 읽고 손으로 맞춘 것)
+- **경계가 분명하다**: 루트에 웹이 있으면 루트 설정(tsconfig·vite·린트)이 "웹 설정"인지 "전체 설정"인지 헷갈린다. 앱마다 자기 폴더에 자기 설정
+- **배포 단위 = 폴더**: CI에서 "`apps/server`가 바뀌었을 때만 서버 이미지 만들기" 같은 규칙을 쓰기 쉽다
+- 작은 팀의 TS 풀스택에서 가장 흔한 구조라, 나중에 찾아보는 자료도 이 구조 기준이 많다
+
+옮길 때 비용 (B-1에서 처리):
+- 웹 파일 전체를 `git mv`로 옮긴다 (기록은 이어진다). 바뀌는 설정: `vite.config.mts`(`envDir`·출력 폴더), `tsconfig.json`, `components.json`(shadcn), 린트·포맷 설정 위치, `.gitignore`
+- 명령이 바뀐다: 루트의 `pnpm test:run` 등은 루트 스크립트가 각 앱에 넘기게 해 그대로 쓸 수 있게 한다. 앱 하나만: `pnpm --filter web test:run`
+- 문서의 경로(`src/...` → `apps/web/src/...`): `CLAUDE.md`, `docs/DIRECTORY_STRUCTURE.md`
+- Turborepo·Nx 같은 모노레포 도구는 쓰지 않는다 (앱 2개 + 패키지 1개라 pnpm workspace로 충분)
+
+## 배포 구조
+
+```
+개발자 PC ──push──▶ GitHub
+                     │  GitHub Actions
+                     │   ① 검사: 타입·린트·테스트·빌드 (모든 PR·푸시)
+                     │   ② 이미지 만들기 → GHCR에 올리기 (dev·main 푸시)
+                     │   ③ SSH로 서버 접속 → 새 이미지 받아 다시 켜기 → /health 확인
+                     ▼
+              OCI 서버 (Docker)
+               ├─ caddy        : 80·443. HTTPS 인증서 자동 발급·갱신, 주소별로 나눠 줌
+               │     semachi.net       → 운영 웹 파일, /api → api
+               │     beta.semachi.net  → 베타 웹 파일, /api → api-beta (암호 걸기)
+               ├─ api          : 운영 Node 서버 (외부에 직접 열지 않음)
+               ├─ api-beta     : 베타 Node 서버 (별도 DB)
+               └─ (DB)         : 지금 쓰는 MongoDB (위치는 B-0에서 확인). 운영·베타는 DB 이름부터 다르게
+```
+
+용어 (처음 나올 때 다시 설명한다):
 - **Docker 이미지**: 프로그램과 실행에 필요한 것(Node, 패키지, 코드)을 통째로 묶은 파일. 어느 서버에서든 똑같이 실행된다
 - **컨테이너**: 이미지를 실행한 것. 서버에 Node를 따로 설치할 필요가 없다
-- **docker compose**: 컨테이너 여러 개(caddy·api)를 `compose.yaml` 파일 하나로 함께 켜고 끄는 도구
+- **docker compose**: 컨테이너 여러 개를 `compose.yaml` 파일 하나로 함께 켜고 끄는 도구
 - **GHCR**(GitHub Container Registry): 이미지를 올려 두는 GitHub의 저장소. Actions가 올리고 서버가 받아 간다
-- **Caddy**: 웹 서버. HTTPS 인증서를 알아서 받고 갱신한다(O3 해결). 설정 파일(`Caddyfile`)이 몇 줄이다
+- **Caddy**: 웹 서버. HTTPS 인증서를 알아서 받고 갱신한다(O3 해결). 설정 파일(`Caddyfile`)이 몇 줄
 - **GitHub Actions**: 저장소의 `.github/workflows/*.yml`에 적은 일을 GitHub의 컴퓨터가 대신 해 준다 (푸시·PR 때 자동으로)
-  - PR·푸시마다: 프론트·백엔드 타입 검사·린트·테스트·빌드 (CI)
-  - `main` 푸시 때만: 이미지 만들어 올리기 → 서버에 SSH로 접속해 `docker compose pull && docker compose up -d` (CD)
-- 되돌리기: 이미지마다 커밋 해시 태그를 붙여 둔다. 문제가 생기면 이전 태그로 다시 켠다 (방법은 문서화)
+- **GitHub Environments**: 배포 대상(운영·베타)마다 비밀값·승인 규칙을 따로 두는 기능. 예: 운영 배포는 사용자가 버튼을 눌러야 진행
+- **되돌리기**: 이미지마다 커밋 해시 태그를 붙여 둔다. 문제가 생기면 이전 태그로 다시 켠다
 
 ## 단계
 
@@ -62,152 +110,237 @@
 |---|---|---|---|
 | B-0 | **조사·사전 결정** (OCI 계정 받은 뒤): 서버 상태 확인, DB 백업, 사전 결정 확정 | 없음 | – |
 | B-0.5 | (선택) **긴급 보안 수정**: 지금 `api.js`에 S1·B2·S3만 고쳐 지금 방식대로 서버에 반영 | 있음 | S1, B2, S3 |
-| B-1 | **현재 동작 고정**: `api.js`를 `server/`로 옮기고 실행 부분만 떼어 테스트 가능하게, API 26개의 지금 동작을 테스트로 고정 | 없음 | – |
-| B-2 | **파일 나누기 + TypeScript + 최신 버전**: routes·models·middleware·lib, Express 5, Mongoose 최신, Node LTS | 없음 | T1, O6 일부 |
-| B-3 | **CI**: GitHub Actions로 PR·푸시마다 프론트·백엔드 검사 | 없음 | – |
-| B-4 | **CD + 첫 자동 배포**: Dockerfile, compose, Caddy, 헬스 체크, `main` 푸시 → 배포. 프론트도 함께 | 주소만 | O3, O4, S3(같은 주소) |
-| B-5 | **보안·운영 수정** | 있음 | S1, B2, S2, S3 마무리, O1, O2, O5, O6 |
-| B-6 | **PIN**: 변경 API가 서버에서 PIN 확인, 응답에서 PIN 제거, PIN 해시 저장 (+ 프론트 PIN 흐름 정리) | 있음 | B1, B3, S4 |
-| B-7 | **입력 검증·데이터 정리**: 프론트와 같은 Zod 스키마로 검증, 시간대, 레거시 필드 | 있음 | S5, B4, D1, D3 |
-| B-8 | **API 형태 정리**: 응답 형식 통일, 경로 정리 (프론트 `src/api/` 함께) | 있음 | A1, A2 |
-| B-9 | **마무리**: 문서, 정리, 운영 안내 | 없음 | – |
+| B-1 | **모노레포 재구성 + 검색 엔진 차단**: `apps/web`·`apps/server`·`packages/shared`, 웹에 noindex | 차단만 | – |
+| B-2 | **현재 동작 고정**: 서버를 실행 없이 불러올 수 있게만 나누고, API 26개의 지금 동작을 테스트로 고정 | 없음 | – |
+| B-3 | **파일 나누기 + TypeScript + 최신 버전** | 없음 | T1, O6 일부 |
+| B-4 | **CI**: PR·푸시마다 웹·서버 검사 | 없음 | – |
+| B-5 | **CD + 첫 운영 배포**: Dockerfile, compose, Caddy, 헬스 체크, `main` 푸시 → 배포 | 주소만 | O3, O4, S3(같은 주소) |
+| B-6 | **베타 환경**: `dev` 푸시 → 베타 서버 배포, 베타 DB, 테스터 암호 | 없음(새 주소) | – |
+| B-7 | **보안·운영 수정** | 있음 | S1, B2, S2, S3 마무리, O5, O6 |
+| B-8 | **PIN**: 변경 API가 서버에서 PIN 확인, 응답에서 PIN 제거, PIN 해시 저장 (+ 웹 PIN 흐름 정리) | 있음 | B1, B3, S4 |
+| B-9 | **활동 기록 고도화**: 구조화된 기록, 관리자 보기 | 있음 | O1, O2 |
+| B-10 | **입력 검증·데이터 정리**: `shared` Zod 스키마로 검증, 시간대, 레거시 필드 | 있음 | S5, B4, D1, D3 |
+| B-11 | **팀 자동 삭제 상시 적용 + 정리 작업**: 팀 `due`, `TEAM_DUE_ENABLED` 제거, 날짜 지난 팀·합주를 서버가 지움 | 있음 | (V-3 10차 적용 예정분) |
+| B-12 | **API 형태 정리**: 응답 형식 통일, 경로 정리 (웹 `src/api/` 함께) | 있음 | A1, A2 |
+| B-13 | **마무리**: 문서, 정리, 운영 안내 | 없음 | – |
 
 순서의 이유:
-- 테스트(B-1)를 먼저 만들어야 나누기·TS·버전 올리기(B-2)가 동작을 바꾸지 않았는지 알 수 있다 (프론트 3단계와 같은 방식)
-- 보안 수정을 바로 하고 싶지만, 지금은 서버에 반영할 방법이 사람 손뿐이다. 그래서 자동 배포(B-4)를 먼저 만들고, 급한 3개만 B-0.5로 따로 낸다
-- PIN(B-6)·API 형태(B-8)는 프론트도 같이 바뀐다. 한 저장소·한 번의 배포로 함께 낸다
-- 처리하지 않는 것: **D2**(반복 합주의 다음 날짜를 서버가 계산, 건너뛸 날짜 목록) — 데이터 모델이 바뀌고 프론트 합주판 계산을 다시 짜야 해서 이번 범위에서 뺀다 (ISSUES V9와 함께 나중에)
+- 모노레포(B-1)를 먼저: 이후 모든 파일이 처음부터 제자리에 생긴다. 옮기기만 하는 단계라 웹 테스트 223개로 확인할 수 있다
+- 테스트(B-2)를 먼저 만들어야 나누기·TS·버전 올리기(B-3)가 동작을 바꾸지 않았는지 알 수 있다 (웹 3단계와 같은 방식)
+- 보안 수정을 바로 하고 싶지만, 지금은 서버에 반영할 방법이 사람 손뿐이다. 그래서 자동 배포(B-5)를 먼저 만들고, 급한 3개만 B-0.5로 따로 낸다
+- 베타(B-6)를 보안·PIN·로그 변경보다 앞에: 동작이 바뀌는 단계(B-7~)를 베타에서 먼저 확인하고 운영에 낸다
+- 활동 기록(B-9)은 PIN(B-8) 뒤: "누가 어떤 PIN(자기 팀 PIN·마스터 PIN)으로 무엇을 바꿨는지"를 기록하려면 서버가 PIN을 직접 확인해야 한다
+- 팀 자동 삭제(B-11)는 입력 검증(B-10) 뒤: 새 필드를 처음부터 검증과 함께 넣는다. 급하면 B-6 뒤로 당길 수 있다
+- 처리하지 않는 것: **D2**(서버가 다음 합주 날짜 계산, 건너뛸 날짜 목록) — 데이터 모델과 합주판 계산을 다시 짜야 해서 이번 범위에서 뺀다 (ISSUES V9와 함께 나중에)
 - 이미 해결된 것: **D4**·**D5**(사용자가 날적이 자동 삭제·100개 제한을 지움, 2026-11-26. 공지 문구도 V-5에서 바뀜)
 
 ### B-0 조사·사전 결정 (OCI 계정 받은 뒤)
 
 서버에서 확인할 것 (값은 기록하지 않고 "있음/없음·버전"만):
-- 서버: CPU 종류(`uname -m`: `aarch64`면 ARM → 이미지를 ARM용으로 만든다), OS, 남은 디스크
-- 지금 실행 방식: `ps aux | grep node`, `pm2 ls`, `systemctl list-units | grep -i node`, `crontab -l` → 무엇이 `api.js`를 켜고 있는지
-- 버전: `node -v`, 실행 폴더의 `node_modules`에 있는 express·mongoose 버전
+- 서버: CPU 종류(`uname -m`: `aarch64`면 ARM → 이미지를 ARM용으로 만든다), OS, 남은 디스크·메모리
+- 지금 실행 방식: 무엇이 `api.js`를 켜고 있는지 (`ps`, `pm2`, `systemctl`, `crontab`)
+- 버전: `node -v`, 실행 폴더의 express·mongoose 버전
 - 시간대: `timedatectl` (D1)
 - 인증서: `/etc/letsencrypt/` 갱신 설정(certbot 타이머)
-- DB: `.env`의 `MONGO_DB`가 가리키는 곳(같은 서버의 MongoDB인지 Atlas인지). 값은 출력하지 않는다
-- 프론트: `semachi.net`(443)을 누가 서비스하는지 (nginx·Apache·다른 호스팅)
-- 열린 포트: 서버 방화벽과 OCI 콘솔의 Security List(443·8081·80)
-- 로그 파일 `log.txt` 위치·크기 (옮길 때 보관)
+- DB: `.env`의 `MONGO_DB`가 가리키는 곳(같은 서버인지 Atlas인지). 값은 출력하지 않는다
+- 웹: `semachi.net`(443)을 누가 서비스하는지 (nginx·Apache·다른 호스팅)
+- 도메인: `semachi.net`의 DNS를 어디서 관리하는지 (베타 `beta.semachi.net`을 만들 수 있는지)
+- 열린 포트: 서버 방화벽과 OCI 콘솔의 Security List(80·443·8081)
+- 로그 파일 `log.txt` 위치·크기 (보관)
 - Docker 설치 여부
 
 그 다음:
 - **DB 백업** (`mongodump`) → 백업 파일을 서버 밖에도 한 부
-- 사전 결정 1~8 확정, 이 문서의 "OCI 작업 안내"를 실제 값으로 채움
+- 사전 결정 1~9 확정, 아래 "OCI 작업 안내"를 실제 값으로 채움
 
 ### B-0.5 (선택) 긴급 보안 수정
 
 `main`의 `api.js`에 3개만 고쳐, 지금 하던 방식(서버에서 받아 옮겨 실행)으로 반영:
 - S1: `GET /` 로그 공개 → 삭제
-- B2: `DELETE /teams` → 삭제 (프론트가 쓰지 않음)
+- B2: `DELETE /teams` → 삭제 (웹이 쓰지 않음)
 - S3: CORS → 허용 주소 목록(`https://semachi.net`, 개발용 `http://localhost:5173`)
 
 자동 배포까지 기다릴 수 없을 만큼 급하다고 판단하면 한다. 사용자 결정.
 
-### B-1 현재 동작 고정
+### B-1 모노레포 재구성 + 검색 엔진 차단
 
-- `api.js` → `server/src/app.js`(앱 조립, 테스트가 가져다 씀) + `server/src/main.js`(DB 연결·HTTPS 실행). 코드는 그대로 옮기기만
-- `server/package.json`: 서버의 지금 버전과 같은 express·mongoose (B-0에서 확인한 버전)
-- 테스트 (`server/src/**/*.test.js`): API 26개의 정상·없는 대상(404)·잘못된 ID 등 **지금 동작 그대로** (이상한 동작도 "현재 동작"으로 표시해 고정)
-- 루트에 `pnpm-workspace.yaml`, 루트 스크립트로 프론트·백엔드 검사를 한 번에
+- `apps/web`: 지금 웹 전체를 `git mv` (설정 경로만 고침). 웹 테스트·빌드가 그대로 통과해야 한다
+- `apps/server`: `api.js`를 옮기기만 (`package.json`에 서버의 지금 버전과 같은 express·mongoose, B-0에서 확인)
+- `packages/shared`: 빈 패키지로 시작 (B-10에서 채움)
+- 루트: `pnpm-workspace.yaml`, 루트 스크립트(`pnpm typecheck`·`test:run`·`lint` 등이 모든 앱에)
+- **검색 엔진 차단** (사용자 요청): 구글 등에 사이트가 나오지 않게
+  - `index.html`에 `<meta name="robots" content="noindex, nofollow">`
+  - B-5에서 Caddy가 모든 응답에 `X-Robots-Tag: noindex, nofollow` 헤더 (웹 파일·API 모두)
+  - `robots.txt`로 막기만 하면 안 된다: 검색 엔진이 페이지를 아예 읽지 않아 "색인하지 말라"는 표시를 못 보고, 주소만 검색 결과에 남을 수 있다. 읽게 두고 noindex로 거절하는 것이 맞다
+  - 이미 검색에 나오고 있다면 Google Search Console의 "삭제" 기능으로 빨리 뺄 수 있다 (도메인 소유 확인 필요, 사용자 작업으로 안내)
+- `CLAUDE.md`·`docs/DIRECTORY_STRUCTURE.md` 경로 갱신
 
-### B-2 파일 나누기 + TypeScript + 최신 버전
+### B-2 현재 동작 고정
+
+- `apps/server`: `app.js`(앱 조립, 테스트가 가져다 씀) + `main.js`(DB 연결·HTTPS 실행)로만 나눔. 코드는 그대로
+- 테스트: API 26개의 정상·없는 대상(404)·잘못된 ID 등 **지금 동작 그대로** (이상한 동작도 "현재 동작"으로 표시해 고정)
+
+### B-3 파일 나누기 + TypeScript + 최신 버전
 
 ```
-server/
-  package.json · tsconfig.json · Dockerfile(B-4)
+apps/server/
+  package.json · tsconfig.json · Dockerfile(B-5)
   src/
     main.ts          DB 연결 → 서버 실행 (실패하면 종료, O4)
     app.ts           express 앱 조립
     config.ts        환경변수 읽기·검사 (없으면 시작하지 않음)
-    models/          team · ensemble · note · notice
+    models/          team · ensemble · note · notice (+ B-9 activity)
     routes/          teams · ensembles · notes · notices · health
     middleware/      cors · visitor(쿠키) · errors
     lib/             log · time
-shared/              프론트·백엔드가 같이 쓰는 Zod 스키마 (B-7에서 채움)
 ```
-- 커밋을 나눈다: ① JS 그대로 파일 나누기 ② TypeScript ③ Express 5·Mongoose·Node 최신 (버전 올리면서 바뀐 API만 고침)
-- 단계마다 B-1 테스트가 그대로 통과해야 한다
+- 커밋을 나눈다: ① JS 그대로 파일 나누기 ② TypeScript ③ Express 5·Mongoose·Node 최신 (버전을 올리며 바뀐 API만 고침)
+- 단계마다 B-2 테스트가 그대로 통과해야 한다
 - 같이 정리 (동작 동일): 중복 `bodyParser`, `PORT` 상수(O6)
+- `packages/shared`를 서버가 개발 중 바로 실행할 수 있는지 확인 (사전 결정 3)
 
-### B-3 CI (GitHub Actions)
+### B-4 CI (GitHub Actions)
 
 - `.github/workflows/ci.yml`: PR과 모든 브랜치 푸시 때
-  - pnpm 설치(캐시) → 프론트 `typecheck`·`lint`·`format:check`·`test:run`·`build` → 백엔드 `typecheck`·`test`
-- `main` 브랜치 보호: CI가 통과해야 병합 (GitHub 설정, 사용자가 화면에서 켜는 방법 안내)
-- 처음 쓰는 분을 위한 안내: 결과 보는 곳(PR의 Checks 탭), 실패했을 때 로그 보는 법
+  - pnpm 설치(캐시) → 웹 `typecheck`·`lint`·`format:check`·`test:run`·`build` → 서버 `typecheck`·`test`
+- `main`·`dev` 브랜치 보호: CI가 통과해야 병합 (GitHub 설정 화면에서 사용자가 켬, 위치 안내)
+- 배울 것: 워크플로 파일 읽는 법, 결과 보는 곳(PR의 Checks 탭), 실패 로그 보는 법, 일부러 테스트를 하나 깨뜨려 빨간불 보기
 
-### B-4 CD + 첫 자동 배포
+### B-5 CD + 첫 운영 배포
 
-- `server/Dockerfile`: Node LTS 이미지 + 운영 의존성만 + `src/`
-- 프론트 이미지: Actions에서 `pnpm build`한 `build/` 폴더 + Caddy (또는 Caddy가 서버의 폴더를 제공, B-0 결과로 정함)
+- `apps/server/Dockerfile`: Node LTS 이미지 + 운영 의존성 + 묶은 서버 파일
+- 웹: Actions에서 `pnpm build` → Caddy 이미지에 넣거나 서버 폴더로 복사 (B-0 결과로 정함)
 - `deploy/compose.yaml`(caddy·api), `deploy/Caddyfile`:
-  - `semachi.net` → 프론트 파일, `semachi.net/api/*` → api 컨테이너 (경로 앞 `/api`를 떼고 전달)
-  - 옮기는 동안 `semachi.net:8081` → api (예전 프론트가 남아 있는 브라우저를 위해, 한동안 뒤 삭제)
-- `GET /health`(O4): DB 연결까지 확인. compose와 배포 스크립트가 이것으로 성공 여부를 본다
-- `.github/workflows/deploy.yml`: `main` 푸시 → CI 통과 → 이미지 만들기(서버가 ARM이면 ARM용) → GHCR 올리기 → SSH로 서버에서 새 이미지 받아 다시 켜기 → `/health` 확인, 실패하면 이전 이미지로
-- 프론트 `VITE_API_URL` → `https://semachi.net/api`
-- **처음 옮기는 날 (cutover)**: 아래 "OCI 작업 안내"의 순서대로. 기존 `api.js` 실행을 끄기 전에 새 컨테이너를 다른 포트로 띄워 확인 → Caddy로 전환 → 기존 실행 중지. 되돌리는 방법을 먼저 적어 둔다
+  - `semachi.net` → 웹 파일, `semachi.net/api/*` → api 컨테이너 (앞의 `/api`를 떼고 전달)
+  - 옮기는 동안 `semachi.net:8081` → api (예전 웹이 남아 있는 브라우저를 위해, 한동안 뒤 삭제)
+  - 모든 응답에 `X-Robots-Tag: noindex, nofollow` (B-1)
+- `GET /health`(O4): DB 연결까지 확인. 배포 스크립트가 이것으로 성공 여부를 본다
+- `.github/workflows/deploy.yml`: `main` 푸시 → CI 통과 → 이미지(서버가 ARM이면 ARM용) → GHCR → SSH로 서버에서 새 이미지 받아 다시 켜기 → `/health` 확인, 실패하면 이전 이미지로. GitHub Environment `production`
+- 웹 `VITE_API_URL` → `https://semachi.net/api`
+- **처음 옮기는 날 (cutover)**: 아래 "OCI 작업 안내"의 순서대로. 기존 `api.js` 실행을 끄기 전에 새 컨테이너를 띄워 확인 → Caddy로 전환 → 기존 실행 중지. 되돌리는 방법을 먼저 적어 둔다
 - 이때 `ui3.0`(새 화면)·`api3.0`이 `main`에 처음 들어간다 → 첫 자동 배포가 곧 새 화면 공개
 
-### B-5 보안·운영 수정 (항목마다 승인)
+### B-6 베타 환경 (사용자 요청: 베타 테스터용 개발 서버)
 
-- S1: `GET /` 로그 보기 삭제 (필요하면 서버에서 직접 보는 방법 안내)
+가능하다. CI/CD 관점에서는 "배포 대상을 하나 더 두는 것"이라 B-5의 구조를 그대로 복제하면 된다.
+
+- 흐름: 작업 브랜치 → PR → `dev` 병합 → **베타 자동 배포** → 테스터 확인 → `dev` → `main` PR → **운영 자동 배포**
+- 주소: `beta.semachi.net` (DNS에 A 레코드 하나 추가. DNS를 못 바꾸면 `semachi.net:8443`). Caddy가 인증서까지 알아서
+- 서버: 같은 OCI 서버에 `api-beta` 컨테이너를 하나 더 (OCI 무료 ARM 서버는 메모리가 넉넉해 충분, B-0에서 확인)
+- **DB는 반드시 분리**: 베타가 운영 데이터를 바꾸면 안 된다. 같은 MongoDB 안의 다른 데이터베이스 이름(예: `semachi_beta`)
+  - 테스트 데이터: 필요할 때 운영 DB를 베타로 복사하는 수동 실행 워크플로(`workflow_dispatch`). PIN은 B-8 이후 해시라 복사해도 안전. 그 전에는 복사하지 않는다
+- 테스터만 들어오게: Caddy 기본 인증(아이디·암호 하나를 테스터에게 공유) + noindex
+- 화면: 베타 빌드는 헤더에 "베타" 표시와 건의사항 링크 (`VITE_APP_ENV=beta`). 운영과 헷갈리지 않게
+- 활동 기록도 베타·운영을 따로 (B-9)
+- GitHub Environment `beta`(승인 없이 자동), `production`(원하면 사용자 승인 후 배포)
+
+### B-7 보안·운영 수정 (항목마다 승인, 베타에서 먼저)
+
+- S1: `GET /` 로그 보기 삭제 (관리자 보기는 B-9)
 - B2: `DELETE /teams` 삭제
-- S3: 같은 주소가 됐으므로 CORS는 개발용 주소만 허용 (운영은 필요 없음)
+- S3: 같은 주소가 됐으므로 CORS는 개발용 주소만 허용
 - S2: PIN 확인 API에 시도 횟수 제한 (`express-rate-limit`, IP·방문자 쿠키 기준). 마스터 PIN을 길게 바꾸는 것은 사용자 작업으로 안내
-- O1: 로그를 `pino`(JSON 한 줄)로, 파일 통째로 다시 쓰기 → 이어 쓰기. 기존 `log.txt`는 보관
-- O2: 방문 기록을 `GET /teams`에서 떼어 `POST /visits`로 (프론트는 처음 열 때 한 번 호출)
 - O5: 삭제 API를 조회 한 번으로, 팀 삭제는 팀 먼저
 - O6: `helmet`(보안 헤더), `ensembles.teamId` 인덱스, 생성 시각을 서버가(`timestamps`)
 - 방문자 쿠키: 같은 주소가 됐으니 `SameSite=None` → `Lax`
 
-### B-6 PIN (프론트와 함께)
+### B-8 PIN (웹과 함께)
 
-- B1: 변경 API(팀 수정·삭제, 합주 추가·수정·삭제, 날적이 삭제, 공지 올리기·삭제)가 요청 본문의 PIN을 서버에서 확인, 틀리면 403. 마스터 PIN도 그대로 통과
-- 프론트: 지금은 "PIN 확인 API → 맞으면 변경 API" 두 번 호출. PIN을 변경 요청에 함께 보내도록 (`src/api/`·mutation 훅). PIN 칸의 "입력하자마자 맞는지 표시"는 확인 API를 그대로 써서 유지
+- B1: 변경 API(팀 수정·삭제, 합주 추가·수정·삭제, 날적이 삭제, 공지 올리기·삭제)가 요청 본문의 PIN을 서버에서 확인, 틀리면 403. 마스터 PIN도 통과
+- 웹: 지금은 "PIN 확인 API → 맞으면 변경 API" 두 번 호출 → PIN을 변경 요청에 함께 보냄 (`src/api/`·mutation 훅). PIN 칸의 "입력하자마자 맞는지 표시"는 확인 API를 그대로 써서 유지
 - B3: 목록 응답에서 PIN 제거 (`select: false`)
-- S4: PIN을 해시로 저장 (`argon2` 또는 `bcrypt`), 비교는 해시 비교·마스터 PIN은 `timingSafeEqual`. **기존 평문 PIN을 해시로 바꾸는 1회 스크립트** (백업 후, 되돌릴 수 없음 → 실행 전 확인)
+- S4: PIN을 해시로 저장 (`argon2` 또는 `bcrypt`), 마스터 PIN 비교는 `timingSafeEqual`. **기존 평문 PIN을 해시로 바꾸는 1회 스크립트** (백업 후, 되돌릴 수 없음 → 실행 전 확인. 베타에서 먼저)
 
-### B-7 입력 검증·데이터 정리
+### B-9 활동 기록 고도화 (사용자 요청)
 
-- S5: `shared/`에 요청·응답 Zod 스키마(프론트 `src/types/`의 응답 스키마를 옮김), 서버 라우트 앞에서 검증 → 잘못된 요청은 400. 잘못된 ID 형식도 500 대신 400
-- B4: 합주 추가 때 팀이 있는지 서버가 확인 (프론트의 사전 확인 요청을 없앨 수 있다)
-- D1: 시간대를 `Asia/Seoul`로 코드·컨테이너(`TZ`)에 명시, "오늘" 계산 통일. 날짜 저장 형식을 바꿀지는 B-0 결과(서버 시간대)를 보고 결정
-- D3: 레거시 필드 정리 — `type`(반복 여부에서 나옴), `day`(날짜에서 나옴), `teamName`(팀 id로 채움). **`due`는 이제 반복 종료 날짜라 남긴다** (V-2 23차). 필드 제거는 프론트가 더 이상 읽지 않는 것을 확인한 뒤
+목표: 실명은 몰라도, 기록을 보고 "이 행동을 한 사람이 누구일지" 어느 정도 짐작할 수 있게. 모두 오프라인에서 서로 아는 사이라, 익명 뒤에 숨는 행동을 줄이는 것이 목적이다.
 
-### B-8 API 형태 정리 (프론트 `src/api/` 함께)
+두 가지 로그를 나눈다:
+- **운영 로그**: 서버가 잘 돌고 있는지 (요청·오류·응답 시간). `pino`로 JSON 한 줄씩 표준 출력 → `docker logs`로 본다. 며칠 보관
+- **활동 기록**(감사 로그): 사용자가 무엇을 했는지. MongoDB `activities` 컬렉션. 아래 내용
+
+활동 기록 한 건에 남길 것:
+- 언제: 시각 (보기는 KST)
+- 누가 (짐작용 단서): 방문자 id(쿠키, 1년), IP, 기기(User-Agent를 기기·OS·브라우저로 풀어서), 처음 본 날
+- 무엇을: 동작 종류(페이지 열기, 팀·합주·날적이·공지의 추가·수정·삭제, 미루기, PIN 확인 성공·실패)
+- 대상: 팀·합주 id와 이름, 날적이·공지는 글 내용
+- 바뀐 내용: 수정이면 바뀌기 전·후 (예: 팀 이름 A → B), 삭제면 지운 내용 전체 (지워져도 무엇이었는지 남게)
+- **어떤 PIN으로**: 그 팀의 PIN인지 마스터 PIN인지 (PIN 값 자체는 절대 남기지 않음). 팀 PIN을 아는 사람 = 대개 그 팀원이라 가장 강한 단서
+- 결과: 성공·실패(PIN 틀림·이미 삭제됨 등)
+
+짐작을 돕는 보기 (관리자만):
+- 방문자별 타임라인: 한 방문자 id의 모든 행동, 같은 IP·같은 기기에서 온 다른 방문자 id (쿠키를 지운 같은 사람일 가능성)
+- 대상별 이력: 한 팀·날적이를 누가 만들고 고치고 지웠는지
+- PIN 실패가 많은 방문자, 마스터 PIN 사용 내역
+- 보는 방법: 관리자 페이지(`/admin`, Caddy 기본 인증 + 마스터 PIN). 처음에는 표 하나와 검색 몇 개로 단순하게
+
+같이 할 것:
+- O1: 기존 `log.txt` 통째로 다시 쓰기 → 없앰 (기존 파일은 보관, 원하면 새 기록으로 옮겨 넣기)
+- O2: 페이지 열기 기록을 `GET /teams`에서 떼어 `POST /visits`로 (웹은 처음 열 때 한 번)
+- 보관 기간: TTL 인덱스로 자동 삭제 (예: 1년, 사용자 결정)
+- **알리기 (권장)**: IP·기기 정보처럼 사람을 짐작할 수 있는 정보를 모으는 것이라, 설정 화면이나 푸터에 "운영을 위해 활동 기록(접속 정보 포함)을 ○개월 보관하고, 관리자만 열람해요" 정도를 적어 두기를 권한다. 숨기지 않고 알리는 편이 목적(익명 뒤에 숨는 행동 줄이기)에도 맞다
+- 비밀값·PIN 값은 어떤 로그에도 남기지 않는다
+
+### B-10 입력 검증·데이터 정리
+
+- S5: `packages/shared`에 요청·응답 Zod 스키마(웹 `src/types/`의 응답 스키마를 옮김), 서버 라우트 앞에서 검증 → 잘못된 요청은 400. 잘못된 ID 형식도 500 대신 400
+- B4: 합주 추가 때 팀이 있는지 서버가 확인 (웹의 사전 확인 요청을 없앨 수 있다)
+- D1: 시간대를 `Asia/Seoul`로 코드·컨테이너(`TZ`)에 명시, "오늘" 계산 통일. 날짜 저장 형식을 바꿀지는 B-0 결과를 보고 결정
+- D3: 레거시 필드 정리 — `type`(반복 여부에서 나옴), `day`(날짜에서 나옴), `teamName`(팀 id로 채움). **합주 `due`는 반복 종료 날짜라 남긴다** (V-2 23차). 필드 제거는 웹이 더 이상 읽지 않는 것을 확인한 뒤
+
+### B-11 팀 자동 삭제 상시 적용 + 정리 작업 (사용자 요청)
+
+V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 둔 기능 (상세: `docs/archive/VIEW_REDESIGN_PLAN.md` "적용 예정: 팀 자동 삭제"). 이번에 켜는 것이 아니라 **꺼 두는 장치 자체를 없애고 늘 적용**한다.
+
+- 서버
+  - 팀 스키마에 `due` (합주 `due`와 같은 형식: `'YYYY-MM-DD'`, 계속 유지는 `'2099-12-31'`. B-10의 날짜 결정을 따름)
+  - 팀 추가·수정 API가 `due`를 받고 검증(오늘 이후 날짜), 목록 응답에 포함
+  - **정리 작업**: 매일 새벽(예: 04:00 KST) 서버가 직접 실행 + 서버 시작 때 한 번
+    - 삭제 날짜가 지난 팀과 그 팀의 합주 삭제
+    - 반복 종료 날짜가 지난 반복 합주, 날짜가 지난 일회성 합주 삭제 (지금은 목록에서 숨기기만 하고 DB에 남음, MIGRATION "남은 것")
+    - 지운 내용은 활동 기록(B-9)에 "시스템" 동작으로 남김
+- 웹
+  - `apps/web/src/features/teams/team-due.ts`의 `TEAM_DUE_ENABLED`와 그 분기를 모두 삭제 → 팀 추가·수정 Drawer에 "팀 자동 삭제" 칸이 늘 보이고 `due`를 늘 보냄
+  - 읽는 쪽(팀 정보 "…까지", 합주 잡기의 매주 반복 제한)은 이미 켜져 있어 그대로
+- 테스트
+  - 서버: `due` 저장·검증(지난 날짜 거절)·목록 응답, 정리 작업(가짜 시각으로 어제 날짜 팀·합주가 지워지고 오늘 날짜는 남는지)
+  - 웹: `teams.test`의 "아직 보내지 않는다"(`not.toHaveProperty('due')`)를 보낸 값 확인으로, 계속 유지·날짜 지정 두 경우, 수정 Drawer에서 `due` 바꾸기
+  - 베타에서 실제로 내일 날짜 팀을 만들어 다음 날 지워지는지 확인
+- 기존 팀: `due`가 없으면 계속 유지로 본다 (데이터 변경 없음)
+
+### B-12 API 형태 정리 (웹 `src/api/` 함께)
 
 - A1: 오류 응답 `{ error: { code, message } }`로 통일, 생성 201·삭제 204
 - A2: `/teams/:id`처럼 복수형·경로 id로 (`PUT /team?id=` → `PUT /teams/:id`), 존재 확인 전용 API는 대상 조회로
-- 프론트는 `src/api/` 파일만 바꾸면 된다 (3단계에서 모아 둠). 같은 배포로 함께
+- 웹은 `src/api/` 파일만 바꾸면 된다 (3단계에서 모아 둠). 같은 배포로 함께
 
-### B-9 마무리
+### B-13 마무리
 
-- `BACKEND_SUGGESTIONS.md`·ISSUES의 B 항목 상태, MIGRATION, `CLAUDE.md`(서버 작업 규칙), 운영 안내(배포 확인·되돌리기·로그 보기·백업)
-- 옛 `:8081` 주소 정리 시점 안내
+- `BACKEND_SUGGESTIONS.md`·ISSUES의 B 항목 상태, MIGRATION, `CLAUDE.md`(서버 작업 규칙), 운영 안내(배포 확인·되돌리기·로그 보기·백업·베타 운영)
+- 옛 `:8081` 주소 정리
+- `docs/LEARNING_NOTES.md` 정리
 
 ## OCI 작업 안내 (계정을 받은 뒤 채운다)
 
-> 지금은 접근할 수 없어 순서만 적어 둔다. 실제 명령은 B-0 조사 결과를 보고 단계마다 하나씩 안내한다.
+> 지금은 접근할 수 없어 순서만 적어 둔다. 실제 명령은 B-0 조사 결과를 보고 단계마다 하나씩 안내한다 (안내 방식 참고).
 
-1. **접속 확인**: OCI 콘솔에서 인스턴스(서버) 찾기 → 공인 IP, 접속 사용자(`ubuntu`/`opc`), SSH 키 확인 → 내 PC에서 `ssh`로 접속
-2. **조사**: 위 B-0 목록 (명령은 그때 하나씩 드린다)
+1. **접속**: OCI 콘솔에서 인스턴스(서버) 찾기 → 공인 IP, 접속 사용자(`ubuntu`/`opc`), SSH 키 확인 → 내 PC에서 `ssh`로 접속
+2. **조사**: 위 B-0 목록
 3. **백업**: `mongodump` → 서버 밖에도 보관
 4. **Docker 설치**: 서버 OS에 맞는 공식 방법 (`docker`, `docker compose`)
-5. **배포용 계정·키**: GitHub Actions가 접속할 전용 SSH 키 만들기 → 공개키는 서버에, 비밀키는 GitHub 저장소 Secrets(`DEPLOY_SSH_KEY`)에. 서버 주소·사용자도 Secrets로
-6. **서버 폴더**: 예) `/srv/semachi/` 아래 `compose.yaml`·`Caddyfile`·`.env`(기존 `.env`의 `MONGO_DB`·`MASTER_PIN`을 옮김)
-7. **방화벽**: OCI Security List와 서버 방화벽에서 80·443 열기 (Caddy 인증서 발급에 80 필요), 8081은 옮기는 동안만
-8. **첫 배포(cutover)**: 새 컨테이너를 켜서 `/health` 확인 → 기존 `api.js` 실행·기존 웹 서버 중지 → Caddy 켜기 → 화면에서 확인. 문제 시 되돌리는 명령을 미리 준비
-9. **확인 후**: GitHub에서 `main` 보호 규칙 켜기, 자동 배포를 한 번 일부러 돌려 보기
+5. **배포용 키**: GitHub Actions가 접속할 전용 SSH 키 만들기 → 공개키는 서버에, 비밀키는 GitHub Environment Secrets에. 서버 주소·사용자도 Secrets로
+6. **서버 폴더**: 예) `/srv/semachi/` 아래 `compose.yaml`·`Caddyfile`·`.env`(운영)·`.env.beta`(베타). 기존 `.env`의 값을 옮김
+7. **방화벽**: OCI Security List와 서버 방화벽에서 80·443 열기 (Caddy 인증서 발급에 80 필요), 8081은 옮기는 동안만, 베타를 포트로 하면 8443
+8. **DNS**: `beta.semachi.net` A 레코드를 서버 IP로 (관리하는 곳에서)
+9. **첫 배포(cutover)**: 새 컨테이너를 켜서 `/health` 확인 → 기존 `api.js`·기존 웹 서버 중지 → Caddy 켜기 → 화면에서 확인. 되돌리는 명령을 미리 준비
+10. **확인 후**: GitHub에서 `main`·`dev` 보호 규칙, Environments 설정, 자동 배포를 한 번 일부러 돌려 보기
 
 ## 멈추고 보고할 조건
 
-- B-1 테스트가 B-2 이후 깨진다 (나누기·버전 올리기가 동작을 바꿨다는 뜻)
+- B-2 테스트가 B-3 이후 깨진다 (나누기·버전 올리기가 동작을 바꿨다는 뜻)
+- 웹 테스트가 B-1 이후 깨진다 (옮기기가 무언가를 바꿨다는 뜻)
 - 서버의 실제 데이터가 테스트의 가정과 다르다 (예: 스키마에 없는 필드, 형식이 다른 날짜)
-- 기존 데이터를 바꾸는 작업(PIN 해시, 필드 제거, 날짜 형식) 직전 — 항상 확인받는다
+- 기존 데이터를 바꾸는 작업(PIN 해시, 필드 제거, 날짜 형식, 정리 작업의 첫 실행) 직전 — 항상 확인받는다
 - 서버에서 지금 서비스를 멈춰야 하는 작업 직전 — 시간과 되돌리기 방법을 먼저 안내
 - 비밀값을 화면·로그·커밋에 내보내야만 진행할 수 있는 경우 (그렇게 하지 않고 보고)
 
@@ -216,13 +349,15 @@ shared/              프론트·백엔드가 같이 쓰는 Zod 스키마 (B-7에
 | 문서 | 무엇을 |
 |---|---|
 | 이 문서 | 단계 ✅, 사전 결정 확정 내용, B-0 조사 결과, 바뀐 계획 |
+| `docs/LEARNING_NOTES.md` | 이번 단계에서 배운 것 (B-0부터) |
 | `docs/MIGRATION.md` | 작업 로그 (지금 → 바꾼 후, 검증 결과) |
 | `docs/ISSUES.md` | B 항목 상태. 새로 발견한 서버 문제는 B5부터 |
 | `docs/archive/BACKEND_SUGGESTIONS.md` | 처리한 S·D·A·O·T 항목 표시 |
-| `CLAUDE.md` | 서버 작업 규칙(B-1에서 `api.js` 수정 금지 규칙을 바꿈), 명령어 |
+| `CLAUDE.md` | 작업 규칙·명령어·경로 (B-1에서 모노레포 경로로) |
 
 ## 공통 검증 (작업마다)
 
-- 프론트: `pnpm typecheck` / `pnpm test:run` / `pnpm lint` / `pnpm format:check` / `pnpm build`
-- 백엔드(B-1부터): `server`의 타입 검사·테스트
+- 웹: 타입 검사·테스트·린트·포맷·빌드 (B-1 이후 루트 명령 하나로)
+- 서버(B-2부터): 타입 검사·테스트
 - 실제 서버·DB에는 테스트를 보내지 않는다. 서버 데이터를 확인할 때는 값을 출력하지 않는다 (PIN 등)
+- 동작이 바뀌는 단계(B-7~)는 베타(B-6 이후)에서 먼저 확인하고 운영에 낸다

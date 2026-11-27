@@ -2,7 +2,7 @@
 // "현재 동작:"은 이상해 보이지만 그대로 고정한 것. 고치는 단계는 docs/BACKEND_PLAN.md
 import { rmSync } from 'node:fs';
 import { describe, expect, test, vi } from 'vitest';
-import { api, freezeTime, readLog, settledLog, waitForLog, resetLog } from './helpers';
+import { api, freezeTime, readLog, settledLog, waitForLog, resetLog } from './helpers.ts';
 
 const VID = '0b8a5c7e-1f2d-4c3b-9a8e-7d6c5b4a3f21';
 const COOKIE_RE =

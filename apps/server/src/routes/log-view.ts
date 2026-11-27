@@ -3,7 +3,7 @@
 import express from 'express';
 import fs from 'node:fs';
 
-export function logViewRouter({ logFile }) {
+export function logViewRouter({ logFile }: { logFile: string }) {
     const router = express.Router();
 
     router.get('/', (req, res) => {

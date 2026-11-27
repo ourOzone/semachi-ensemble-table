@@ -11,7 +11,7 @@ import {
     missingId,
     settledLog,
     resetLog,
-} from './helpers';
+} from './helpers.ts';
 
 const noticeDoc = (over: Record<string, unknown> = {}) => ({
     content: '공지',

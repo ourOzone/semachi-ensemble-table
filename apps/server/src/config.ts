@@ -1,7 +1,13 @@
 // 환경변수 읽기. 서버 시작(main.js)에서 한 번 읽는다
 import { fileURLToPath } from 'node:url';
 
-export function loadConfig(env = process.env) {
+export interface Config {
+    mongoUri: string | undefined;
+    masterPin: string | undefined;
+    logFile: string;
+}
+
+export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     return {
         /** MongoDB 연결 주소 */
         mongoUri: env.MONGO_DB,

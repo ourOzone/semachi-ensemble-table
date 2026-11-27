@@ -11,7 +11,7 @@ import {
     settledLog,
     waitForLog,
     resetLog,
-} from './helpers';
+} from './helpers.ts';
 
 const VID = '0b8a5c7e-1f2d-4c3b-9a8e-7d6c5b4a3f21';
 const logLine = (action: string) =>

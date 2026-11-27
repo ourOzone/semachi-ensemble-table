@@ -1,9 +1,9 @@
 // 공지 API: POST /notice, GET /notices, DELETE /notice, POST /check-notice-pin, GET /notice/:id
 // 현재 동작: 올리기·삭제가 마스터 PIN을 확인하지 않는다 (B1, B-6)
 import express from 'express';
-import { Notice } from '../models/notice.js';
+import { Notice } from '../models/notice.ts';
 
-export function noticesRouter({ masterPin }) {
+export function noticesRouter({ masterPin }: { masterPin: string | undefined }) {
     const router = express.Router();
 
     // 올리기 (올린 시각은 서버의 지금)

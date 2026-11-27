@@ -1,12 +1,13 @@
 // 방문자 쿠키 (활동 추적용). 요청마다 req.visitorId를 정한다
 import crypto from 'node:crypto';
+import type { RequestHandler } from 'express';
 
 const VISITOR_COOKIE = 'semachi_vid';
 const VISITOR_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1년 (초)
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function parseCookies(header) {
-    const cookies = {};
+function parseCookies(header: string | undefined) {
+    const cookies: Record<string, string> = {};
     if (!header) return cookies;
 
     for (const part of header.split(';')) {
@@ -23,7 +24,7 @@ function parseCookies(header) {
     return cookies;
 }
 
-export function visitor(req, res, next) {
+export const visitor: RequestHandler = (req, res, next) => {
     if (req.method === 'OPTIONS') return next();
 
     let visitorId = parseCookies(req.headers.cookie)[VISITOR_COOKIE];
@@ -41,4 +42,4 @@ export function visitor(req, res, next) {
 
     req.visitorId = visitorId;
     next();
-}
+};

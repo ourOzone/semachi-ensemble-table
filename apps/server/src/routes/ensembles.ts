@@ -1,9 +1,10 @@
 // 합주 API: GET /ensembles, POST /ensemble, DELETE /ensemble, GET /ensemble/:id, PUT /ensemble
 // 현재 동작: 변경 API가 PIN을 확인하지 않는다 (B1, B-6). 합주를 만들 때 팀이 있는지 보지 않는다 (B4)
 import express from 'express';
-import { Ensemble } from '../models/ensemble.js';
+import type { Logger } from '../lib/log.ts';
+import { Ensemble } from '../models/ensemble.ts';
 
-export function ensemblesRouter({ log }) {
+export function ensemblesRouter({ log }: { log: Logger }) {
     const router = express.Router();
 
     // 전체 합주

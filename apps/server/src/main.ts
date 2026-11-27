@@ -3,15 +3,15 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import https from 'node:https';
 import mongoose from 'mongoose';
-import { createApp } from './app.js';
-import { loadConfig } from './config.js';
+import { createApp } from './app.ts';
+import { loadConfig } from './config.ts';
 
 const config = loadConfig();
 const app = createApp(config);
 
 // 현재 동작: 연결에 실패해도 서버는 그대로 뜬다 (O4)
 mongoose
-    .connect(config.mongoUri)
+    .connect(config.mongoUri ?? '') // 없으면 연결이 실패한다 (api.js와 같음)
     .then(() => console.log('connected'))
     .catch(() => console.log('failed'));
 

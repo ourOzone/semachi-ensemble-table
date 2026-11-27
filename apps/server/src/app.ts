@@ -1,19 +1,22 @@
 // Express 앱 조립: 미들웨어 → API. 서버 시작(DB 연결·포트)은 main.js, 테스트는 이것만 가져다 쓴다
 import express from 'express';
-import { createLogger } from './lib/log.js';
-import { cors } from './middleware/cors.js';
-import { visitor } from './middleware/visitor.js';
-import { ensemblesRouter } from './routes/ensembles.js';
-import { logViewRouter } from './routes/log-view.js';
-import { notesRouter } from './routes/notes.js';
-import { noticesRouter } from './routes/notices.js';
-import { teamsRouter } from './routes/teams.js';
+import { createLogger } from './lib/log.ts';
+import { cors } from './middleware/cors.ts';
+import { visitor } from './middleware/visitor.ts';
+import { ensemblesRouter } from './routes/ensembles.ts';
+import { logViewRouter } from './routes/log-view.ts';
+import { notesRouter } from './routes/notes.ts';
+import { noticesRouter } from './routes/notices.ts';
+import { teamsRouter } from './routes/teams.ts';
 
-/**
- * @param {{ masterPin: string | undefined, logFile: string }} options
- *   masterPin: 모든 PIN 확인에서 통과하는 관리자 PIN, logFile: 활동 로그 파일 경로
- */
-export function createApp({ masterPin, logFile }) {
+export interface AppOptions {
+    /** 모든 PIN 확인에서 통과하는 관리자 PIN */
+    masterPin: string | undefined;
+    /** 활동 로그 파일 경로 */
+    logFile: string;
+}
+
+export function createApp({ masterPin, logFile }: AppOptions) {
     const app = express();
     const log = createLogger(logFile);
 

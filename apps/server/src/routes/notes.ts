@@ -1,9 +1,10 @@
 // 날적이 API: GET /notes, DELETE /note, POST /note, GET /note/:id, POST /check-note-pin
 // 현재 동작: 삭제가 PIN을 확인하지 않는다 (B1, B-6). 응답에 PIN이 들어 있다 (B3)
 import express from 'express';
-import { Note } from '../models/note.js';
+import type { Logger } from '../lib/log.ts';
+import { Note } from '../models/note.ts';
 
-export function notesRouter({ log, masterPin }) {
+export function notesRouter({ log, masterPin }: { log: Logger; masterPin: string | undefined }) {
     const router = express.Router();
 
     // 목록 (최근 것부터)

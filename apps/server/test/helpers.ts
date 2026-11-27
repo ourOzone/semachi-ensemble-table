@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import { expect, vi } from 'vitest';
-import { createApp } from '../src/app.js';
+import { createApp } from '../src/app.ts';
 
 /** 테스트용 마스터 PIN. 실제 값(루트 .env)은 읽지 않는다 */
 export const MASTER_PIN = '9999';

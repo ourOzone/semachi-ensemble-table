@@ -1,10 +1,11 @@
 // 팀 API: GET /teams, POST /team, POST /check-team-pin, DELETE /team, DELETE /teams, PUT /team, GET /team/:id
 // 현재 동작: 변경 API가 PIN을 확인하지 않는다 (B1, B-6). 응답에 PIN이 들어 있다 (B3)
 import express from 'express';
-import { Ensemble } from '../models/ensemble.js';
-import { Team } from '../models/team.js';
+import type { Logger } from '../lib/log.ts';
+import { Ensemble } from '../models/ensemble.ts';
+import { Team } from '../models/team.ts';
 
-export function teamsRouter({ log, masterPin }) {
+export function teamsRouter({ log, masterPin }: { log: Logger; masterPin: string | undefined }) {
     const router = express.Router();
 
     // 전체팀

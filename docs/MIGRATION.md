@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅, 다음은 B-2 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
+| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅, 다음은 B-3 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
 | View 개편 | ✅ **완료 (2026-11-26, V-0 ~ V-7)**: V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, V-4 날적이 ✅, V-5 공지 ✅, **V-6 일괄 정리 ✅**, **V-7 마무리 ✅ (2026-11-26)** (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
@@ -1304,6 +1304,23 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 확인: 개발 서버는 이제 루트에서 `pnpm dev` (웹 폴더가 옮겨져 이전에 켜 둔 개발 서버는 다시 켜야 한다)
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 223/223 / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅ (JS 835kB, 그대로) / `node --check apps/server/api.js` ✅
+
+### 2026-11-27 — 백엔드 개편 B-2: 지금 서버 동작을 테스트로 고정
+
+- 사용자 수정 커밋 (`73ef918`): `.claude/settings.json`에 `git push` 금지 규칙 다시 추가
+- 지금 → 바꾼 후 (서버 동작은 그대로)
+  - `apps/server/api.js` 한 파일 → `app.js`(앱 조립: 스키마·미들웨어·API, `module.exports = app`) + `main.js`(`.env` → 앱 → DB 연결 → HTTPS 8081). `git mv`로 기록 이어짐. 실행은 `node main.js` (`pnpm --filter @semachi/server start`)
+  - 로그 파일 위치: `__dirname/log.txt` 고정 → `LOG_FILE` 환경변수가 있으면 그곳 (운영은 그대로, 테스트는 임시 파일)
+  - `body-parser` ^2.4 → ^1.20 (B-1에서 넣은 버전의 문제). `app.js`는 `bodyParser.json()`과 `express.json()`을 둘 다 쓰는데, 2.x가 본문을 읽은 뒤 Express 4 안의 1.x가 다시 읽으려다 "stream is not readable"로 **JSON 본문이 있는 요청이 모두 500**이었다. 운영이 동작하므로 운영도 1.x로 판단 (B-12에서 확인)
+- 테스트 (`apps/server/test/`, Vitest + supertest + mongodb-memory-server, 실제 DB·포트 없음)
+  - `teams`·`ensembles`·`notes`·`notices`·`middleware` 5개 파일, **96개**. API 23개(계획 문서의 "26개"는 잘못 센 것) 각각 정상·없는 대상·id 없음·잘못된 id·로그 줄, 모든 요청의 CORS·방문자 쿠키·요청 본문(JSON·form·깨진 JSON)·로그 파일(형식·5만 줄·파일 없음)·`GET /`
+  - "현재 동작:"으로 고정한 이상한 동작: 어떤 Origin이든 쿠키와 함께 허용(S3), 로그 공개(S1), PIN 응답 포함(B3)·평문(S4)·시도 제한 없음(S2), 변경 API에 PIN 없음(B1), `DELETE /teams`(B2), 팀 없는 합주(B4), 검사 없는 저장(S5), PUT에서 빠진 필드는 지워짐(팀 name·desc·type, 합주 teamName 빼고 전부), 서버 시간대가 KST면 로그 시각에 9시간을 더 더함·UTC면 KST 오전 9시 전 시작 오늘 일회성 합주가 9시부터 빠짐(D1), 날적이 줄바꿈이 로그 줄을 나눔
+  - 시간은 `Date`만 가짜로 (DB 타이머는 그대로), 서버 시간대 UTC 고정 (`vitest.config.mts`), 테스트용 마스터 PIN `9999` (루트 `.env`는 읽지 않음)
+  - 로그는 응답 뒤 비동기로 파일을 읽고 다시 쓴다 → 앞 테스트의 덜 끝난 쓰기가 다음 테스트의 로그를 덮어써 가끔(10번에 1번쯤) 실패 → 로그를 비우기 전에 잠시 기다림(`resetLog`). 운영에서도 동시 요청이면 줄이 사라질 수 있다(O1)
+  - 변형 검사 24/24 (별도 복사본 `.mutant/app.js`를 별칭으로 바꿔 끼움, 원본은 건드리지 않음): CORS·쿠키·로그 5만 줄·KST·목록 조건(`$lt`·`$gte`·0시)·연쇄 삭제·teamName 갱신·마스터 PIN·정렬·상태 코드·느슨한 비교 등
+- 설정: `apps/server`의 `tsconfig.json`(지금은 테스트만 TS, `app.d.ts`로 `app.js` 타입), `vitest.config.mts`, 스크립트 `typecheck`·`test`·`test:run`(루트 `pnpm test:run`에 포함). `pnpm-workspace.yaml`의 `allowBuilds`(mongodb-memory-server 설치 스크립트 끔: 처음 테스트할 때 MongoDB 실행 파일 약 100MB를 받는다). 린트·포맷 제외 대상 `api.js` → `app.js`·`main.js`(B-3까지). 린트: 테스트의 `waitForLog`를 검사 함수로, `_id`·`__v` 허용
+
+**검증:** `pnpm typecheck` ✅ (웹·서버) / `pnpm test:run` ✅ 웹 223 + 서버 96 (서버 10회 반복) / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅ / `node --check` `app.js`·`main.js` ✅
 
 ## 남은 일
 

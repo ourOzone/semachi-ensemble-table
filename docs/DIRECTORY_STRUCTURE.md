@@ -58,7 +58,17 @@ apps/web/
 
 ## apps/server — 서버
 
-지금 (B-1): `api.js` 한 파일 + `package.json`(express·mongoose·dotenv).
+지금 (B-2):
+```
+apps/server/
+├── app.js                   앱 조립: 스키마·미들웨어·API (옛 api.js, 코드는 그대로)
+├── main.js                  시작: .env → 앱 → DB 연결 → HTTPS 8081
+├── app.d.ts                 테스트(TS)가 app.js를 가져다 쓰기 위한 타입 (B-3에서 삭제)
+├── vitest.config.mts        테스트 설정 (서버 시간대 UTC, 테스트용 마스터 PIN)
+└── test/                    지금 동작을 고정한 테스트 (메모리 MongoDB, 실제 DB·포트 없음)
+    ├── setup.ts · helpers.ts  DB 켜기·비우기, 임시 로그 파일, 요청·데이터 도우미
+    └── *.test.ts            팀·합주·날적이·공지·공통 처리(middleware)
+```
 
 예정 (B-3 이후):
 ```
@@ -76,6 +86,7 @@ apps/server/
     ├── jobs/                정해진 시간에 도는 일 (날짜 지난 팀·합주 정리)
     └── lib/                 로그·시간 등 공용 함수
 ```
+- 테스트는 `apps/server/test/<리소스>.test.ts` (API를 요청으로 검사하므로 코드 옆이 아니라 한곳에). 순수 함수 단위 테스트가 생기면 웹처럼 그 파일 옆에
 
 ## packages/shared — 공유
 

@@ -92,7 +92,13 @@ describe('POST /team', () => {
         const res = await api().post('/team').send({});
         expect(res.status).toBe(200);
         const saved = await findOne('teams', res.body.id);
-        expect(Object.keys(saved ?? {}).sort()).toEqual(['__v', '_id', 'desc']);
+        expect(Object.keys(saved ?? {}).sort()).toEqual([
+            '__v',
+            '_id',
+            'createdAt',
+            'desc',
+            'updatedAt',
+        ]);
         expect(saved?.desc).toEqual([]);
     });
 
@@ -281,7 +287,13 @@ describe('PUT /team?id=', () => {
         const e = await insert('ensembles', ensembleDoc({ teamId: id }));
         await api().put(`/team?id=${id}`).send({});
         const saved = await findOne('teams', id);
-        expect(Object.keys(saved ?? {}).sort()).toEqual(['__v', '_id', 'pin', 'publishDate']);
+        expect(Object.keys(saved ?? {}).sort()).toEqual([
+            '__v',
+            '_id',
+            'pin',
+            'publishDate',
+            'updatedAt',
+        ]);
         // 합주의 teamName은 그대로 (Mongoose가 $set의 undefined를 버린다)
         expect((await findOne('ensembles', e))?.teamName).toBe('테스트밴드');
     });

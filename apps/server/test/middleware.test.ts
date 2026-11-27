@@ -47,6 +47,19 @@ describe('CORS (B-5 S3: 허락한 주소만)', () => {
     });
 });
 
+describe('보안 헤더 (B-5 O6, helmet)', () => {
+    test('모든 응답에 보안 헤더, 서버 종류(X-Powered-By)는 숨긴다', async () => {
+        const res = await api().get('/notices');
+        expect(res.headers['x-content-type-options']).toBe('nosniff');
+        expect(res.headers['x-frame-options']).toBe('SAMEORIGIN');
+        expect(res.headers['strict-transport-security']).toContain('max-age=');
+        expect(res.headers['content-security-policy']).toContain("default-src 'self'");
+        // 같은 사이트(semachi.net:8081, localhost끼리)는 응답을 가져다 쓸 수 있게
+        expect(res.headers['cross-origin-resource-policy']).toBe('same-site');
+        expect(res.headers['x-powered-by']).toBeUndefined();
+    });
+});
+
 describe('방문자 쿠키 (semachi_vid, B-5에서 SameSite=Lax)', () => {
     test('없으면 새 UUID를 1년짜리 쿠키로 준다', async () => {
         const res = await api().get('/notices');

@@ -1,5 +1,6 @@
 // Express 앱 조립: 미들웨어 → API. 서버 시작(DB 연결·포트)은 main.ts, 테스트는 이것만 가져다 쓴다
 import express from 'express';
+import helmet from 'helmet';
 import { createLogger } from './lib/log.ts';
 import { cors } from './middleware/cors.ts';
 import { createPinLimiters, type PinLimitOptions } from './middleware/pin-limit.ts';
@@ -34,6 +35,10 @@ export function createApp({
     app.set('trust proxy', trustProxy);
     const log = createLogger(logFile);
     const pinLimit = createPinLimiters(pinLimits);
+
+    // 보안 헤더 (O6): 브라우저가 응답을 다른 형식으로 짐작하지 않게, 다른 사이트의 iframe에 넣지 못하게, HTTPS만 쓰게 등.
+    // 다른 사이트가 이 응답을 가져다 쓰는 것은 막되, 같은 사이트(semachi.net:8081, localhost끼리)는 허락한다
+    app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
 
     app.use(healthRouter());
 

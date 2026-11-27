@@ -182,6 +182,8 @@ describe('POST /ensemble', () => {
         expect(Object.keys((await findOne('ensembles', res.body.id)) ?? {}).sort()).toEqual([
             '__v',
             '_id',
+            'createdAt',
+            'updatedAt',
         ]);
     });
 
@@ -269,7 +271,7 @@ describe('PUT /ensemble?id=', () => {
         const id = await insert('ensembles', ensembleDoc());
         await api().put(`/ensemble?id=${id}`).send({});
         const saved = await findOne('ensembles', id);
-        expect(Object.keys(saved ?? {}).sort()).toEqual(['__v', '_id', 'teamName']);
+        expect(Object.keys(saved ?? {}).sort()).toEqual(['__v', '_id', 'teamName', 'updatedAt']);
     });
 
     test('현재 동작: PIN 없이 바꾼다 (B1), 로그에 남기지 않는다', async () => {
@@ -286,6 +288,7 @@ describe('PUT /ensemble?id=', () => {
             '__v',
             '_id',
             'teamName',
+            'updatedAt',
         ]);
     });
 

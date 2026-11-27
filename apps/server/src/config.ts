@@ -1,19 +1,43 @@
-// 환경변수 읽기. 서버 시작(main.js)에서 한 번 읽는다
+// 환경변수 읽기·검사. 서버 시작(main.ts)에서 한 번 읽고, 꼭 필요한 값이 없으면 시작하지 않는다
 import { fileURLToPath } from 'node:url';
 
 export interface Config {
-    mongoUri: string | undefined;
-    masterPin: string | undefined;
+    /** MongoDB 연결 주소 (MONGO_DB, 필수) */
+    mongoUri: string;
+    /** 모든 PIN 확인에서 통과하는 관리자 PIN (MASTER_PIN, 필수) */
+    masterPin: string;
+    /** 서버 포트 (PORT, 기본 8081) */
+    port: number;
+    /** 활동 로그 파일 (LOG_FILE, 기본 apps/server/log.txt: api.js 시절과 같은 서버 폴더) */
     logFile: string;
+    /**
+     * HTTPS 인증서 파일 (TLS_KEY_FILE·TLS_CERT_FILE, 둘 다 있을 때만). 없으면 HTTP로 실행한다.
+     * api.js는 /etc/letsencrypt/live/semachi.net/ 의 파일을 늘 직접 읽었다. 운영은 B-11부터 Caddy가 HTTPS를 맡는다
+     */
+    tls?: { keyFile: string; certFile: string };
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
+    const missing = ['MONGO_DB', 'MASTER_PIN'].filter((key) => !env[key]);
+    if (missing.length > 0) {
+        throw new Error(`환경변수가 없습니다: ${missing.join(', ')}`);
+    }
+
+    const port = Number(env.PORT ?? 8081);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+        throw new Error(`PORT가 올바른 포트 번호가 아닙니다: ${env.PORT}`);
+    }
+
+    const { TLS_KEY_FILE: keyFile, TLS_CERT_FILE: certFile } = env;
+    if (Boolean(keyFile) !== Boolean(certFile)) {
+        throw new Error('TLS_KEY_FILE과 TLS_CERT_FILE은 함께 정해야 합니다');
+    }
+
     return {
-        /** MongoDB 연결 주소 */
-        mongoUri: env.MONGO_DB,
-        /** 모든 PIN 확인에서 통과하는 관리자 PIN */
-        masterPin: env.MASTER_PIN,
-        /** 활동 로그 파일. 없으면 apps/server/log.txt (api.js 시절과 같은 위치: 서버 폴더) */
+        mongoUri: env.MONGO_DB!,
+        masterPin: env.MASTER_PIN!,
+        port,
         logFile: env.LOG_FILE || fileURLToPath(new URL('../log.txt', import.meta.url)),
+        tls: keyFile && certFile ? { keyFile, certFile } : undefined,
     };
 }

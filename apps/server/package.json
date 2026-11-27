@@ -6,6 +6,8 @@
   "main": "src/main.ts",
   "scripts": {
     "start": "node src/main.ts",
+    "dev": "node scripts/dev.ts",
+    "dev:reset": "node -e \"require('node:fs').rmSync('.dev-db', { recursive: true, force: true })\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run"

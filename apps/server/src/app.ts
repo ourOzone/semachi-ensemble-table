@@ -4,6 +4,7 @@ import { createLogger } from './lib/log.ts';
 import { cors } from './middleware/cors.ts';
 import { visitor } from './middleware/visitor.ts';
 import { ensemblesRouter } from './routes/ensembles.ts';
+import { healthRouter } from './routes/health.ts';
 import { logViewRouter } from './routes/log-view.ts';
 import { notesRouter } from './routes/notes.ts';
 import { noticesRouter } from './routes/notices.ts';
@@ -11,7 +12,7 @@ import { teamsRouter } from './routes/teams.ts';
 
 export interface AppOptions {
     /** 모든 PIN 확인에서 통과하는 관리자 PIN */
-    masterPin: string | undefined;
+    masterPin: string;
     /** 활동 로그 파일 경로 */
     logFile: string;
 }
@@ -19,6 +20,8 @@ export interface AppOptions {
 export function createApp({ masterPin, logFile }: AppOptions) {
     const app = express();
     const log = createLogger(logFile);
+
+    app.use(healthRouter());
 
     // 요청 본문 (api.js에는 JSON 해석기가 두 개였다: body-parser와 express.json. 하나만 남김, B-3)
     app.use(express.json());

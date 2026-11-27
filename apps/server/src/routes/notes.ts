@@ -4,7 +4,7 @@ import express from 'express';
 import type { Logger } from '../lib/log.ts';
 import { Note } from '../models/note.ts';
 
-export function notesRouter({ log, masterPin }: { log: Logger; masterPin: string | undefined }) {
+export function notesRouter({ log, masterPin }: { log: Logger; masterPin: string }) {
     const router = express.Router();
 
     // 목록 (최근 것부터)

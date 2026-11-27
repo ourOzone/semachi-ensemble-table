@@ -5,7 +5,7 @@ import type { Logger } from '../lib/log.ts';
 import { Ensemble } from '../models/ensemble.ts';
 import { Team } from '../models/team.ts';
 
-export function teamsRouter({ log, masterPin }: { log: Logger; masterPin: string | undefined }) {
+export function teamsRouter({ log, masterPin }: { log: Logger; masterPin: string }) {
     const router = express.Router();
 
     // 전체팀

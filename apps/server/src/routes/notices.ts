@@ -3,7 +3,7 @@
 import express from 'express';
 import { Notice } from '../models/notice.ts';
 
-export function noticesRouter({ masterPin }: { masterPin: string | undefined }) {
+export function noticesRouter({ masterPin }: { masterPin: string }) {
     const router = express.Router();
 
     // 올리기 (올린 시각은 서버의 지금)

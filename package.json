@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "pnpm --filter @semachi/web dev",
+    "dev:server": "pnpm --filter @semachi/server dev",
+    "dev:local": "pnpm --filter @semachi/web dev:local",
     "build": "pnpm -r --if-present build",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm --filter @semachi/web test",

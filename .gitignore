@@ -18,6 +18,7 @@ coverage
 !apps/web/env/.env.development
 !apps/web/env/.env.production
 !apps/web/env/.env.test
+!apps/web/env/.env.localserver
 
 # 로그
 *.log
@@ -29,3 +30,7 @@ Thumbs.db
 # Claude Code 로컬 설정
 .claude/settings.local.json
 CLAUDE.local.md
+
+# 서버: 개발용 메모리 DB 데이터(pnpm dev:server), 활동 로그 파일
+apps/server/.dev-db/
+apps/server/log.txt

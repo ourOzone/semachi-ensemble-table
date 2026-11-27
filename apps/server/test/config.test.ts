@@ -31,6 +31,16 @@ describe('loadConfig', () => {
         });
     });
 
+    test('CORS_ORIGINS: 쉼표로 여러 주소, 앞뒤 공백·빈 칸은 버림. 없으면 빈 목록', () => {
+        expect(loadConfig(required).corsOrigins).toEqual([]);
+        expect(
+            loadConfig({
+                ...required,
+                CORS_ORIGINS: ' https://semachi.net, http://localhost:3000 ,',
+            }).corsOrigins,
+        ).toEqual(['https://semachi.net', 'http://localhost:3000']);
+    });
+
     test('PORT가 포트 번호가 아니면 시작하지 않는다', () => {
         for (const PORT of ['abc', '0', '70000', '80.5']) {
             expect(() => loadConfig({ ...required, PORT })).toThrow(

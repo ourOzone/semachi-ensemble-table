@@ -33,7 +33,14 @@ console.log(`
 const server = spawn(process.execPath, ['--watch', 'src/main.ts'], {
     cwd: SERVER_DIR,
     stdio: 'inherit',
-    env: { ...env, PORT: String(PORT), LOG_FILE, TLS_KEY_FILE: '', TLS_CERT_FILE: '' },
+    env: {
+        ...env,
+        PORT: String(PORT),
+        LOG_FILE,
+        TLS_KEY_FILE: '',
+        TLS_CERT_FILE: '',
+        CORS_ORIGINS: 'http://localhost:3000',
+    },
 });
 server.on('exit', (code) => process.exit(code ?? 0));
 process.on('SIGINT', () => server.kill());

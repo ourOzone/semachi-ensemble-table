@@ -14,9 +14,11 @@ export interface AppOptions {
     masterPin: string;
     /** 활동 로그 파일 경로 */
     logFile: string;
+    /** 다른 주소에서 이 서버를 부를 수 있게 허락할 웹 주소 (CORS). 없으면 허락하지 않음 */
+    corsOrigins?: readonly string[];
 }
 
-export function createApp({ masterPin, logFile }: AppOptions) {
+export function createApp({ masterPin, logFile, corsOrigins = [] }: AppOptions) {
     const app = express();
     const log = createLogger(logFile);
 
@@ -30,7 +32,7 @@ export function createApp({ masterPin, logFile }: AppOptions) {
         req.body ??= {};
         next();
     });
-    app.use(cors);
+    app.use(cors(corsOrigins));
     app.use(visitor);
 
     app.use(teamsRouter({ log, masterPin }));

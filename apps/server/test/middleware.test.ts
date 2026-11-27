@@ -2,33 +2,47 @@
 // "현재 동작:"은 이상해 보이지만 그대로 고정한 것. 고치는 단계는 docs/BACKEND_PLAN.md
 import { rmSync } from 'node:fs';
 import { describe, expect, test, vi } from 'vitest';
-import { api, freezeTime, readLog, settledLog, waitForLog, resetLog } from './helpers.ts';
+import {
+    ALLOWED_ORIGIN,
+    api,
+    freezeTime,
+    readLog,
+    settledLog,
+    waitForLog,
+    resetLog,
+} from './helpers.ts';
 
 const VID = '0b8a5c7e-1f2d-4c3b-9a8e-7d6c5b4a3f21';
 const COOKIE_RE =
     /^semachi_vid=([0-9a-f-]{36}); Max-Age=31536000; Path=\/; HttpOnly; Secure; SameSite=None$/;
 
-describe('CORS', () => {
-    test('Origin이 있으면 그 Origin을 쿠키와 함께 허용한다 (현재 동작: 어떤 Origin이든, S3)', async () => {
-        const res = await api().get('/notices').set('Origin', 'https://evil.example');
-        expect(res.headers['access-control-allow-origin']).toBe('https://evil.example');
+describe('CORS (B-5 S3: 허락한 주소만)', () => {
+    test('허락한 주소면 그 주소를 쿠키와 함께 허락한다', async () => {
+        const res = await api().get('/notices').set('Origin', ALLOWED_ORIGIN);
+        expect(res.headers['access-control-allow-origin']).toBe(ALLOWED_ORIGIN);
         expect(res.headers['access-control-allow-credentials']).toBe('true');
         expect(res.headers['vary']).toContain('Origin');
         expect(res.headers['access-control-allow-methods']).toBe('GET,PUT,POST,DELETE');
         expect(res.headers['access-control-allow-headers']).toBe('Content-Type');
     });
 
-    test('Origin이 없으면 허용 Origin 헤더 없음, 메서드·헤더 목록은 있음', async () => {
-        const res = await api().get('/notices');
+    test('허락하지 않은 주소면 허락 헤더가 없다 (브라우저가 응답을 막는다)', async () => {
+        const res = await api().get('/notices').set('Origin', 'https://evil.example');
         expect(res.headers['access-control-allow-origin']).toBeUndefined();
         expect(res.headers['access-control-allow-credentials']).toBeUndefined();
+        expect(res.headers['vary']).toContain('Origin');
+    });
+
+    test('Origin이 없으면(같은 주소·서버끼리) 허락 헤더 없음, 메서드·헤더 목록은 있음', async () => {
+        const res = await api().get('/notices');
+        expect(res.headers['access-control-allow-origin']).toBeUndefined();
         expect(res.headers['access-control-allow-methods']).toBe('GET,PUT,POST,DELETE');
     });
 
     test('사전 요청(OPTIONS)은 Express가 200으로 답하고, 방문자 쿠키를 주지 않는다', async () => {
-        const res = await api().options('/team').set('Origin', 'https://semachi.net');
+        const res = await api().options('/team').set('Origin', 'http://localhost:3000');
         expect(res.status).toBe(200);
-        expect(res.headers['access-control-allow-origin']).toBe('https://semachi.net');
+        expect(res.headers['access-control-allow-origin']).toBe('http://localhost:3000');
         expect(res.headers['set-cookie']).toBeUndefined();
     });
 });

@@ -10,6 +10,8 @@ export interface Config {
     port: number;
     /** 활동 로그 파일 (LOG_FILE, 기본 apps/server/log.txt: api.js 시절과 같은 서버 폴더) */
     logFile: string;
+    /** CORS로 허락할 웹 주소 (CORS_ORIGINS, 쉼표로 여러 개. 기본 없음: 웹과 API가 같은 주소) */
+    corsOrigins: string[];
     /**
      * HTTPS 인증서 파일 (TLS_KEY_FILE·TLS_CERT_FILE, 둘 다 있을 때만). 없으면 HTTP로 실행한다.
      * api.js는 /etc/letsencrypt/live/semachi.net/ 의 파일을 늘 직접 읽었다. 운영은 B-11부터 Caddy가 HTTPS를 맡는다
@@ -38,6 +40,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         masterPin: env.MASTER_PIN!,
         port,
         logFile: env.LOG_FILE || fileURLToPath(new URL('../log.txt', import.meta.url)),
+        corsOrigins: (env.CORS_ORIGINS ?? '')
+            .split(',')
+            .map((origin) => origin.trim())
+            .filter(Boolean),
         tls: keyFile && certFile ? { keyFile, certFile } : undefined,
     };
 }

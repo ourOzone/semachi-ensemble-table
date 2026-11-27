@@ -39,6 +39,8 @@ const server = spawn(process.execPath, ['--watch', 'src/main.ts'], {
         LOG_FILE,
         TLS_KEY_FILE: '',
         TLS_CERT_FILE: '',
+        // 웹 개발 서버(pnpm dev:local)의 주소. 휴대폰으로 볼 때는 그 주소(http://PC의IP:3000)를 쉼표로 더한다
+        CORS_ORIGINS: 'http://localhost:3000',
     },
 });
 

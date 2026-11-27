@@ -9,7 +9,14 @@ import { createApp } from '../src/app.ts';
 export const MASTER_PIN = '9999';
 
 // 로그 파일은 setup.ts가 테스트 파일마다 만든 임시 파일
-const app = createApp({ masterPin: MASTER_PIN, logFile: process.env.LOG_FILE! });
+/** 테스트에서 CORS로 허락한 웹 주소 */
+export const ALLOWED_ORIGIN = 'https://semachi.net';
+
+const app = createApp({
+    masterPin: MASTER_PIN,
+    logFile: process.env.LOG_FILE!,
+    corsOrigins: [ALLOWED_ORIGIN, 'http://localhost:3000'],
+});
 
 /** 앱에 요청을 보낸다 (실제 포트를 열지 않고 메모리 안에서) */
 export const api = () => request(app);

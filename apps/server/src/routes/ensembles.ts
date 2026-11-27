@@ -1,22 +1,32 @@
 // 합주 API: GET /ensembles, POST /ensemble, DELETE /ensemble, GET /ensemble/:id, PUT /ensemble
 // 잡기·수정·삭제는 요청 본문의 pin(그 합주 팀의 PIN 또는 마스터 PIN)을 서버가 확인한다. 틀리면 403 (B-6)
-// 틀린 횟수는 그 팀의 것으로 센다 (팀 PIN이므로)
+// 틀린 횟수는 그 팀의 것으로 센다 (팀 PIN이므로). 하는 일마다 활동 기록 (B-7)
 import express from 'express';
 import mongoose from 'mongoose';
-import type { Logger } from '../lib/log.ts';
-import { WRONG_PIN, type PinAuth } from '../lib/pin-auth.ts';
-import { pinTarget, type PinGuard } from '../lib/pin-guard.ts';
+import { withoutPin, type RecordActivity } from '../lib/activity.ts';
+import type { PinCheck } from '../lib/pin-check.ts';
+import { pinTarget } from '../lib/pin-guard.ts';
 import { Ensemble } from '../models/ensemble.ts';
 import { Team } from '../models/team.ts';
 
+/** 활동 기록에 남길 합주 내용 (바뀌기 전·후 비교용) */
+const ensembleFields = (e: Record<string, unknown>) => ({
+    teamId: e.teamId,
+    day: e.day,
+    startTime: e.startTime,
+    endTime: e.endTime,
+    repeat: e.repeat,
+    nextDate: e.nextDate,
+    due: e.due,
+    type: e.type,
+});
+
 export function ensemblesRouter({
-    log,
-    pins,
-    guard,
+    pinCheck,
+    activity,
 }: {
-    log: Logger;
-    pins: PinAuth;
-    guard: PinGuard;
+    pinCheck: PinCheck;
+    activity: RecordActivity;
 }) {
     const router = express.Router();
 
@@ -26,20 +36,10 @@ export function ensemblesRouter({
             ? (await Team.findById(teamId).select('+pin'))?.pin
             : undefined;
 
-    /** 그 팀 PIN이 맞는지 확인하고 횟수를 센다. 막혔으면 429, 틀리면 403을 보내고 false */
-    const checkTeamPin = async (req: express.Request, res: express.Response, teamId: unknown) => {
-        const target = pinTarget.team(teamId);
-        if (guard.rejectIfBlocked(req, res, target)) return false;
-        const ok = await pins.matches(req.body.pin, await teamPinOf(teamId));
-        guard.record(req, res, target, ok);
-        if (!ok) res.status(403).json(WRONG_PIN);
-        return ok;
-    };
-
     // 전체 합주
-    router.get('/ensembles', async (req, res) => {
+    router.get('/ensembles', async (_req, res) => {
         try {
-            // 현재 동작: "오늘"은 서버 시간대의 0시 (D1, B-5)
+            // 현재 동작: "오늘"은 서버 시간대의 0시 (D1)
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
@@ -66,8 +66,16 @@ export function ensemblesRouter({
     router.post('/ensemble', async (req, res) => {
         try {
             const data = req.body;
-            if (!(await checkTeamPin(req, res, data.teamId))) return;
-            log(req.visitorId, `addensemble_${data.teamName}`);
+            const target = {
+                kind: 'ensemble',
+                name: typeof data.teamName === 'string' ? data.teamName : undefined,
+            };
+            const via = await pinCheck.require(req, res, {
+                guardTarget: pinTarget.team(data.teamId),
+                stored: await teamPinOf(data.teamId),
+                entry: { action: 'ensemble.create', target },
+            });
+            if (!via) return;
 
             const newEnsemble = new Ensemble({
                 teamId: data.teamId,
@@ -82,6 +90,13 @@ export function ensemblesRouter({
             });
 
             await newEnsemble.save();
+            await activity(req, {
+                action: 'ensemble.create',
+                target: { ...target, id: newEnsemble.id },
+                after: ensembleFields(newEnsemble.toObject()),
+                pin: via,
+                result: 'ok',
+            });
             res.send({ id: newEnsemble._id });
         } catch {
             res.status(500).send('Internal Server Error');
@@ -104,10 +119,26 @@ export function ensemblesRouter({
                 return res.status(404).json({ id: -1 });
             }
 
-            if (!(await checkTeamPin(req, res, existingEnsemble.teamId))) return;
+            const target = {
+                kind: 'ensemble',
+                id: existingEnsemble.id,
+                name: existingEnsemble.teamName ?? undefined,
+            };
+            const via = await pinCheck.require(req, res, {
+                guardTarget: pinTarget.team(existingEnsemble.teamId),
+                stored: await teamPinOf(existingEnsemble.teamId),
+                entry: { action: 'ensemble.delete', target },
+            });
+            if (!via) return;
 
             await Ensemble.findByIdAndDelete(ensembleId);
-            log(req.visitorId, `deleteensemble_${existingEnsemble.teamName}`);
+            await activity(req, {
+                action: 'ensemble.delete',
+                target,
+                before: withoutPin(existingEnsemble),
+                pin: via,
+                result: 'ok',
+            });
             res.json({ id: ensembleId });
         } catch {
             res.status(500).send('Internal Server Error');
@@ -131,7 +162,7 @@ export function ensemblesRouter({
         }
     });
 
-    // 합주 수정. teamName은 바꾸지 않는다. 현재 동작: 본문에 빠진 필드는 지워진다
+    // 합주 수정 (미루기·바로 하기·반복으로 바꾸기도 이 요청). teamName은 바꾸지 않는다. 현재 동작: 본문에 빠진 필드는 지워진다
     router.put('/ensemble', async (req, res) => {
         const { teamId, startTime, endTime, day, type, due, nextDate, repeat } = req.body;
         const ensembleId = req.query.id;
@@ -148,8 +179,19 @@ export function ensemblesRouter({
             }
 
             // 지금 합주의 팀 PIN으로 확인한다 (본문의 teamId로 바꾸기 전)
-            if (!(await checkTeamPin(req, res, existingEnsemble.teamId))) return;
+            const target = {
+                kind: 'ensemble',
+                id: existingEnsemble.id,
+                name: existingEnsemble.teamName ?? undefined,
+            };
+            const via = await pinCheck.require(req, res, {
+                guardTarget: pinTarget.team(existingEnsemble.teamId),
+                stored: await teamPinOf(existingEnsemble.teamId),
+                entry: { action: 'ensemble.update', target },
+            });
+            if (!via) return;
 
+            const before = ensembleFields(existingEnsemble.toObject());
             existingEnsemble.teamId = teamId;
             existingEnsemble.startTime = startTime;
             existingEnsemble.endTime = endTime;
@@ -160,6 +202,14 @@ export function ensemblesRouter({
             existingEnsemble.repeat = repeat;
 
             await existingEnsemble.save();
+            await activity(req, {
+                action: 'ensemble.update',
+                target,
+                before,
+                after: ensembleFields(existingEnsemble.toObject()),
+                pin: via,
+                result: 'ok',
+            });
 
             res.json({ message: 'Ensemble updated successfully', id: existingEnsemble._id });
         } catch (error) {

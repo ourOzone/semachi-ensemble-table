@@ -1,21 +1,8 @@
 // 날적이(note) API의 지금 동작 (GET /notes, DELETE /note, POST /note, GET /note/:id, POST /check-note-pin)
 // "현재 동작:"은 이상해 보이지만 그대로 고정한 것. 고치는 단계는 docs/BACKEND_PLAN.md
 import { describe, expect, test } from 'vitest';
-import {
-    api,
-    findAll,
-    findOne,
-    insert,
-    MASTER_PIN,
-    missingId,
-    settledLog,
-    waitForLog,
-    resetLog,
-} from './helpers.ts';
+import { api, findAll, findOne, insert, MASTER_PIN, missingId } from './helpers.ts';
 
-const VID = '0b8a5c7e-1f2d-4c3b-9a8e-7d6c5b4a3f21';
-const logLine = (action: string) =>
-    new RegExp(`^${VID}_\\d{4}\\.\\d{2}\\.\\d{2}:\\d{2}:\\d{2}_${action}$`, 'm');
 const noteDoc = (over: Record<string, unknown> = {}) => ({
     text: '안녕',
     pin: '1234',
@@ -35,13 +22,11 @@ describe('GET /notes', () => {
         ]);
     });
 
-    test('개수 제한·자동 삭제 없음 (D4·D5 해결 후), 조회는 로그에 남기지 않는다', async () => {
+    test('개수 제한·자동 삭제 없음 (D4·D5 해결 후), 조회는', async () => {
         for (let i = 0; i < 120; i++) await insert('notes', noteDoc({ text: String(i) }));
-        await resetLog();
         const res = await api().get('/notes');
         expect(res.body).toHaveLength(120);
         expect(await findAll('notes')).toHaveLength(120);
-        expect(await settledLog()).toBe('');
     });
 });
 
@@ -63,24 +48,6 @@ describe('POST /note', () => {
             ).status,
         ).toBe(200);
         expect(await findAll('notes')).toHaveLength(2);
-    });
-
-    test('addnote_글 내용을 로그에 남긴다', async () => {
-        await resetLog();
-        await api()
-            .post('/note')
-            .set('Cookie', `semachi_vid=${VID}`)
-            .send({ text: '남길 글', pin: '4321' });
-        await waitForLog(logLine('addnote_남길 글'));
-    });
-
-    test('현재 동작: 글에 줄바꿈이 있으면 로그 한 줄이 여러 줄로 나뉜다', async () => {
-        await resetLog();
-        await api()
-            .post('/note')
-            .set('Cookie', `semachi_vid=${VID}`)
-            .send({ text: '첫째\n둘째', pin: '1' });
-        await waitForLog(new RegExp(`_addnote_첫째\\n둘째$`));
     });
 });
 
@@ -108,16 +75,6 @@ describe('DELETE /note?id=', () => {
         expect((await api().delete('/note')).status).toBe(404);
         const bad = await api().delete('/note?id=abc');
         expect([bad.status, bad.text]).toEqual([500, 'Internal Server Error']);
-    });
-
-    test('deletenote_글 내용을 로그에 남긴다', async () => {
-        const id = await insert('notes', noteDoc({ text: '지울 글' }));
-        await resetLog();
-        await api()
-            .delete(`/note?id=${id}`)
-            .set('Cookie', `semachi_vid=${VID}`)
-            .send({ pin: '1234' });
-        await waitForLog(logLine('deletenote_지울 글'));
     });
 });
 

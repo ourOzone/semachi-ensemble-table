@@ -11,6 +11,7 @@ import {
     freshApi,
     insert,
     MASTER_PIN,
+    adminCookie,
     teamDoc,
 } from './helpers.ts';
 
@@ -76,10 +77,11 @@ describe('새 PIN 저장', () => {
     });
 });
 
-describe('마스터 PIN 바꾸기 (PUT /admin/master-pin, 관리자 화면은 B-7)', () => {
+describe('마스터 PIN 바꾸기 (PUT /admin/master-pin, 관리자로 로그인한 뒤)', () => {
     test('지금 마스터 PIN이 맞으면 바꾼다. DB에 해시로 남고, 이후 모든 PIN 확인이 새 PIN을 따른다', async () => {
         const res = await api()
             .put('/admin/master-pin')
+            .set('Cookie', await adminCookie())
             .send({ currentPin: MASTER_PIN, newPin: '2580' });
         expect([res.status, res.body]).toEqual([200, { message: 'Master PIN changed' }]);
 
@@ -94,8 +96,12 @@ describe('마스터 PIN 바꾸기 (PUT /admin/master-pin, 관리자 화면은 B-
         expect((await api().post('/check-notice-pin').send({ pin: MASTER_PIN })).body).toBe(false);
         // 다시 바꿀 때는 새 PIN으로
         expect(
-            (await api().put('/admin/master-pin').send({ currentPin: '2580', newPin: '1357' }))
-                .status,
+            (
+                await api()
+                    .put('/admin/master-pin')
+                    .set('Cookie', await adminCookie(api, '2580'))
+                    .send({ currentPin: '2580', newPin: '1357' })
+            ).status,
         ).toBe(200);
         expect((await api().post('/check-notice-pin').send({ pin: '1357' })).body).toBe(true);
     });
@@ -103,6 +109,7 @@ describe('마스터 PIN 바꾸기 (PUT /admin/master-pin, 관리자 화면은 B-
     test('지금 마스터 PIN이 틀리면 403, 바꾸지 않는다', async () => {
         const res = await api()
             .put('/admin/master-pin')
+            .set('Cookie', await adminCookie())
             .send({ currentPin: '0000', newPin: '2580' });
         expect([res.status, res.body]).toEqual([403, { error: 'Wrong PIN' }]);
         expect(await findAll('settings')).toHaveLength(0);
@@ -113,6 +120,7 @@ describe('마스터 PIN 바꾸기 (PUT /admin/master-pin, 관리자 화면은 B-
         for (const newPin of ['123', '12345', 'abcd', 1234, undefined]) {
             const res = await api()
                 .put('/admin/master-pin')
+                .set('Cookie', await adminCookie())
                 .send({ currentPin: MASTER_PIN, newPin });
             expect([res.status, res.body]).toEqual([400, { error: 'newPin must be 4 digits' }]);
         }

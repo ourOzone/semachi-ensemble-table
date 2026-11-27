@@ -2,6 +2,7 @@
 // - 마스터 PIN: DB(settings의 masterPin, 관리자가 바꾼 것)가 있으면 그것, 없으면 환경변수 MASTER_PIN
 //   서버 여러 대(운영·베타)가 같은 DB를 보므로, 한쪽에서 바꾸면 다른 쪽도 바로 따른다 (매번 DB에서 읽음)
 // - 마스터 PIN은 어느 팀·날적이 PIN 자리에서든 통과한다 (api.js와 같음)
+import type { PinKind } from '../models/activity.ts';
 import { Setting } from '../models/setting.ts';
 import { hashPin, verifyPin } from './pin.ts';
 
@@ -18,6 +19,8 @@ export interface PinAuth {
     isMaster(pin: unknown): Promise<boolean>;
     /** 마스터 PIN이거나 저장된 PIN(해시·평문)과 맞는지 */
     matches(pin: unknown, stored: string | null | undefined): Promise<boolean>;
+    /** 어떤 PIN으로 맞았는지 (활동 기록용: 마스터·그 대상의 PIN). 틀리면 null */
+    which(pin: unknown, stored: string | null | undefined): Promise<PinKind | null>;
     /** 새로 저장할 PIN 값. 해시 저장을 켰으면 해시, 아니면 받은 그대로 (전환 기간: 옛 서버가 평문으로 비교) */
     forStorage(pin: unknown): Promise<unknown>;
     /** 마스터 PIN을 바꾼다 (DB에 해시로) */
@@ -43,6 +46,10 @@ export function createPinAuth({
         isMaster,
         async matches(pin, stored) {
             return (await isMaster(pin)) || verifyPin(pin, stored);
+        },
+        async which(pin, stored) {
+            if (await isMaster(pin)) return 'master';
+            return (await verifyPin(pin, stored)) ? 'own' : null;
         },
         async forStorage(pin) {
             // 숫자로 와도 문자열로 저장 (api.js 때 Mongoose가 하던 것과 같음)

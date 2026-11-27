@@ -1,6 +1,4 @@
 // 환경변수 읽기·검사. 서버 시작(main.ts)에서 한 번 읽고, 꼭 필요한 값이 없으면 시작하지 않는다
-import { fileURLToPath } from 'node:url';
-
 export interface Config {
     /** MongoDB 연결 주소 (MONGO_DB, 필수) */
     mongoUri: string;
@@ -8,8 +6,10 @@ export interface Config {
     masterPin: string;
     /** 서버 포트 (PORT, 기본 8081) */
     port: number;
-    /** 활동 로그 파일 (LOG_FILE, 기본 apps/server/log.txt: api.js 시절과 같은 서버 폴더) */
-    logFile: string;
+    /** 이 서버가 어디인지 (APP_ENV: production·beta·development, 기본 development). 활동 기록에 남긴다 */
+    appEnv: string;
+    /** 운영 로그 수준 (LOG_LEVEL: fatal·error·warn·info·debug·silent, 기본 info) */
+    logLevel: string;
     /** CORS로 허락할 웹 주소 (CORS_ORIGINS, 쉼표로 여러 개. 기본 없음: 웹과 API가 같은 주소) */
     corsOrigins: string[];
     /**
@@ -51,7 +51,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         mongoUri: env.MONGO_DB!,
         masterPin: env.MASTER_PIN!,
         port,
-        logFile: env.LOG_FILE || fileURLToPath(new URL('../log.txt', import.meta.url)),
+        appEnv: env.APP_ENV || 'development',
+        logLevel: env.LOG_LEVEL || 'info',
         corsOrigins: (env.CORS_ORIGINS ?? '')
             .split(',')
             .map((origin) => origin.trim())

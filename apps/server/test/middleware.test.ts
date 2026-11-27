@@ -1,16 +1,7 @@
-// 모든 요청에 걸리는 처리 (CORS·방문자 쿠키·요청 본문·로그 파일·GET /)의 지금 동작
-// "현재 동작:"은 이상해 보이지만 그대로 고정한 것. 고치는 단계는 docs/BACKEND_PLAN.md
-import { rmSync } from 'node:fs';
-import { describe, expect, test, vi } from 'vitest';
-import {
-    ALLOWED_ORIGIN,
-    api,
-    freezeTime,
-    readLog,
-    settledLog,
-    waitForLog,
-    resetLog,
-} from './helpers.ts';
+// 모든 요청에 걸리는 처리 (CORS·보안 헤더·방문자 쿠키·요청 본문·GET /)
+// 옛 로그 파일(log.txt) 테스트는 B-7에서 활동 기록으로 바꾸며 지웠다 (activity.test.ts)
+import { describe, expect, test } from 'vitest';
+import { ALLOWED_ORIGIN, api } from './helpers.ts';
 
 const VID = '0b8a5c7e-1f2d-4c3b-9a8e-7d6c5b4a3f21';
 const COOKIE_RE =
@@ -93,12 +84,6 @@ describe('방문자 쿠키 (semachi_vid, B-5에서 SameSite=Lax)', () => {
             .set('Cookie', `semachi_vid=${encodeURIComponent(VID)}`);
         expect(res.headers['set-cookie']?.[0]).toContain(`semachi_vid=${VID};`);
     });
-
-    test('방문자 id가 로그에 남는다', async () => {
-        await resetLog();
-        await api().get('/teams').set('Cookie', `semachi_vid=${VID}`);
-        await vi.waitFor(() => expect(readLog()).toContain(`${VID}_`));
-    });
 });
 
 describe('요청 본문', () => {
@@ -119,72 +104,8 @@ describe('요청 본문', () => {
     });
 });
 
-describe('로그 파일 (append_log)', () => {
-    test('한 줄 형식: 방문자id_KST시각(YYYY.MM.DD:HH:mm)_동작 (서버 시간대 UTC 기준)', async () => {
-        await resetLog();
-        freezeTime('2026-11-27T15:04:59Z'); // KST 11/28 00:04
-        await api().get('/teams').set('Cookie', `semachi_vid=${VID}`);
-        await waitForLog(`${VID}_2026.11.28:00:04_pageload`);
-    });
-
-    test('현재 동작: 서버 시간대가 이미 KST면 9시간을 한 번 더 더한다 (D1)', async () => {
-        // getTime()은 UTC에 9시간을 더한 뒤 "서버 시간대"로 읽는다. 시간대는 실행 중에 바꿀 수 있다
-        const tz = process.env.TZ;
-        process.env.TZ = 'Asia/Seoul';
-        try {
-            await resetLog();
-            freezeTime('2026-11-27T03:00:00Z'); // 실제 KST 12:00
-            await api().get('/teams').set('Cookie', `semachi_vid=${VID}`);
-            await waitForLog(`${VID}_2026.11.27:21:00_pageload`);
-        } finally {
-            process.env.TZ = tz;
-        }
-    });
-
-    test('기존 내용 뒤에 줄을 붙인다 (빈 파일이면 첫 줄은 빈 줄)', async () => {
-        await resetLog();
-        await api().get('/teams').set('Cookie', `semachi_vid=${VID}`);
-        await vi.waitFor(() =>
-            expect(readLog()).toMatch(new RegExp(`^\\n${VID}_[0-9.:]+_pageload$`)),
-        );
-
-        await resetLog('첫 줄\n둘째 줄');
-        await api().get('/teams').set('Cookie', `semachi_vid=${VID}`);
-        await vi.waitFor(() =>
-            expect(readLog()).toMatch(new RegExp(`^첫 줄\\n둘째 줄\\n${VID}_[0-9.:]+_pageload$`)),
-        );
-    });
-
-    test('5만 줄이 차면 맨 앞 한 줄을 지우고 붙인다 (5만 줄 유지)', async () => {
-        const lines = Array.from({ length: 50_000 }, (_, i) => `line${i}`);
-        await resetLog(lines.join('\n'));
-        await api().get('/teams').set('Cookie', `semachi_vid=${VID}`);
-        await vi.waitFor(() => expect(readLog()).toContain('_pageload'));
-        const after = readLog().split('\n');
-        expect(after).toHaveLength(50_000);
-        expect(after[0]).toBe('line1');
-        expect(after.at(-2)).toBe('line49999');
-    });
-
-    test('로그 파일이 없으면 만들지 않고 콘솔에 오류만 남긴다 (요청은 성공)', async () => {
-        const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-        rmSync(process.env.LOG_FILE!);
-        try {
-            const res = await api().get('/teams');
-            expect(res.status).toBe(200);
-            await vi.waitFor(() =>
-                expect(error).toHaveBeenCalledWith('파일을 읽을 수 없습니다:', expect.anything()),
-            );
-            expect(() => readLog()).toThrow('ENOENT');
-        } finally {
-            await resetLog();
-        }
-    });
-});
-
 describe('GET / (로그 보기, B-5 S1에서 삭제)', () => {
     test('없는 경로라 404이고, 로그 내용을 보여주지 않는다', async () => {
-        await resetLog('a_1_pageload');
         const res = await api().get('/');
         expect(res.status).toBe(404);
         expect(res.text).not.toContain('a_1_pageload');
@@ -196,11 +117,5 @@ describe('없는 경로', () => {
         const res = await api().get('/nope');
         expect(res.status).toBe(404);
         expect(res.headers['content-type']).toContain('text/html');
-    });
-
-    test('기록하지 않는 요청은 로그에 남지 않는다', async () => {
-        await resetLog();
-        await api().get('/notices');
-        expect(await settledLog()).toBe('');
     });
 });

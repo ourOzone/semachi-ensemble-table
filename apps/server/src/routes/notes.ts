@@ -1,18 +1,29 @@
 // 날적이 API: GET /notes, DELETE /note, POST /note, GET /note/:id, POST /check-note-pin
 // 삭제는 요청 본문의 pin(글 PIN 또는 마스터 PIN)을 서버가 확인한다. 틀리면 403 (B-6 B1)
 // 틀린 횟수는 날적이 전체를 하나로 센다 (글이 자주 생기고 지워져서, 사용자 결정)
-// 목록에는 PIN을 넣지 않는다 (모델의 select: false, B-6 B3)
+// 목록에는 PIN을 넣지 않는다 (모델의 select: false, B-6 B3). 하는 일마다 활동 기록 (B-7)
 import express from 'express';
-import type { Logger } from '../lib/log.ts';
-import { WRONG_PIN, type PinAuth } from '../lib/pin-auth.ts';
+import { preview, type RecordActivity } from '../lib/activity.ts';
+import type { PinAuth } from '../lib/pin-auth.ts';
+import type { PinCheck } from '../lib/pin-check.ts';
 import { pinTarget, type PinGuard } from '../lib/pin-guard.ts';
 import { Note } from '../models/note.ts';
 
-export function notesRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; guard: PinGuard }) {
+export function notesRouter({
+    pins,
+    guard,
+    pinCheck,
+    activity,
+}: {
+    pins: PinAuth;
+    guard: PinGuard;
+    pinCheck: PinCheck;
+    activity: RecordActivity;
+}) {
     const router = express.Router();
 
     // 목록 (최근 것부터)
-    router.get('/notes', async (req, res) => {
+    router.get('/notes', async (_req, res) => {
         try {
             const notes = await Note.find();
             res.json(notes.reverse());
@@ -38,13 +49,22 @@ export function notesRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; 
                 return res.status(404).json({ id: -1 });
             }
 
-            if (guard.rejectIfBlocked(req, res, pinTarget.note)) return;
-            const ok = await pins.matches(req.body.pin, note.pin);
-            guard.record(req, res, pinTarget.note, ok);
-            if (!ok) return res.status(403).json(WRONG_PIN);
+            const target = { kind: 'note', id: note.id, name: preview(note.text) };
+            const via = await pinCheck.require(req, res, {
+                guardTarget: pinTarget.note,
+                stored: note.pin,
+                entry: { action: 'note.delete', target },
+            });
+            if (!via) return;
 
             await Note.findByIdAndDelete(noteId);
-            log(req.visitorId, `deletenote_${note.text}`);
+            await activity(req, {
+                action: 'note.delete',
+                target,
+                before: { text: note.text },
+                pin: via,
+                result: 'ok',
+            });
             res.json({ id: noteId });
         } catch {
             res.status(500).send('Internal Server Error');
@@ -55,7 +75,6 @@ export function notesRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; 
     router.post('/note', async (req, res) => {
         try {
             const data = req.body;
-            log(req.visitorId, `addnote_${data.text}`);
 
             const newNote = new Note({
                 text: data.text,
@@ -63,6 +82,12 @@ export function notesRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; 
             });
 
             await newNote.save();
+            await activity(req, {
+                action: 'note.create',
+                target: { kind: 'note', id: newNote.id, name: preview(newNote.text) },
+                after: { text: newNote.text },
+                result: 'ok',
+            });
             res.send({ id: newNote._id });
         } catch {
             res.status(500).send('Internal Server Error');
@@ -95,10 +120,18 @@ export function notesRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; 
                 return res.status(400).json({ error: 'Both noteId and pin are required' });
             }
 
-            if (guard.rejectIfBlocked(req, res, pinTarget.note)) return;
+            const entry = {
+                action: 'pin.check',
+                target: { kind: 'note', id: String(noteId) },
+            } as const;
+            if (guard.rejectIfBlocked(req, res, pinTarget.note)) {
+                await activity(req, { ...entry, result: 'blocked' });
+                return;
+            }
 
             if (await pins.isMaster(pin)) {
                 guard.record(req, res, pinTarget.note, true);
+                await activity(req, { ...entry, pin: 'master', result: 'ok' });
                 return res.json(true);
             }
 
@@ -107,12 +140,19 @@ export function notesRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; 
             if (!note) {
                 // 마스터 PIN도 아니었으니 틀린 시도로 센다
                 guard.record(req, res, pinTarget.note, false);
+                await activity(req, { ...entry, result: 'not-found' });
                 return res.status(404).json({ error: 'Note not found' });
             }
 
-            const ok = await pins.matches(pin, note.pin);
-            guard.record(req, res, pinTarget.note, ok);
-            res.json(ok);
+            const via = await pins.which(pin, note.pin);
+            guard.record(req, res, pinTarget.note, via !== null);
+            await activity(req, {
+                action: 'pin.check',
+                target: { kind: 'note', id: note.id, name: preview(note.text) },
+                ...(via && { pin: via }),
+                result: via ? 'ok' : 'wrong-pin',
+            });
+            res.json(via !== null);
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });

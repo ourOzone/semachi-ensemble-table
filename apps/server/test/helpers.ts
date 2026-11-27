@@ -1,21 +1,22 @@
 // 서버 테스트 도우미
-import { readFileSync, writeFileSync } from 'node:fs';
 import mongoose from 'mongoose';
+import { pino } from 'pino';
 import request from 'supertest';
-import { expect, vi } from 'vitest';
+import { vi } from 'vitest';
 import { createApp, type AppOptions } from '../src/app.ts';
 
 /** 테스트용 마스터 PIN. 실제 값(루트 .env)은 읽지 않는다 */
 export const MASTER_PIN = '9999';
 
-// 로그 파일은 setup.ts가 테스트 파일마다 만든 임시 파일
 /** 테스트에서 CORS로 허락한 웹 주소 */
 export const ALLOWED_ORIGIN = 'https://semachi.net';
 
 const appOptions = {
     masterPin: MASTER_PIN,
-    logFile: process.env.LOG_FILE!,
     corsOrigins: [ALLOWED_ORIGIN, 'http://localhost:3000'],
+    appEnv: 'test',
+    // 운영 로그는 테스트 출력에 남기지 않는다
+    logger: pino({ level: 'silent' }),
 };
 const app = createApp(appOptions);
 
@@ -28,7 +29,19 @@ export function freshApi(options: Partial<AppOptions> = {}) {
     return () => request(fresh);
 }
 
-type Collection = 'teams' | 'ensembles' | 'notes' | 'notices' | 'settings';
+type Collection = 'teams' | 'ensembles' | 'notes' | 'notices' | 'settings' | 'activities';
+
+/** 관리자로 로그인해 쿠키("이름=값")를 돌려준다. 요청에 .set('Cookie', cookie) (B-7) */
+export async function adminCookie(
+    send: () => request.Agent | ReturnType<typeof request> = api,
+    pin = MASTER_PIN,
+) {
+    const res = await send().post('/admin/login').send({ pin });
+    const cookies = ([] as string[]).concat(res.headers['set-cookie'] ?? []);
+    const admin = cookies.find((c) => c.startsWith('semachi_admin='));
+    if (!admin) throw new Error(`관리자 로그인 실패: ${res.status}`);
+    return admin.split(';')[0]!;
+}
 
 /** DB 컬렉션에 직접 넣는다. 실제 데이터처럼 스키마와 다른 모양(빠진 필드, null 등)도 넣을 수 있다. undefined인 필드는 넣지 않는다 */
 export async function insert(collection: Collection, doc: Record<string, unknown>) {
@@ -81,31 +94,14 @@ export const ensembleDoc = (over: Record<string, unknown> = {}) => ({
     ...over,
 });
 
-// --- 로그 (app.js의 append_log: 응답을 보낸 뒤 파일을 읽고 다시 쓴다) ---
+// --- 활동 기록 (B-7, models/activity.ts) ---
 
-const logFile = () => process.env.LOG_FILE!;
-
-export const readLog = () => readFileSync(logFile(), 'utf8');
-export const writeLog = (content: string) => writeFileSync(logFile(), content);
-
-/**
- * 로그를 비우고(또는 content로) 시작한다. 앞 테스트의 요청이 남긴 로그 쓰기가 끝나기를 먼저 기다린다:
- * append_log는 파일을 읽은 뒤 다시 쓰므로, 덜 끝난 쓰기가 있으면 비운 내용을 덮어쓰고 이번 줄도 사라질 수 있다 (O1)
- */
-export async function resetLog(content = '') {
-    await new Promise((r) => setTimeout(r, 50));
-    writeLog(content);
+/** 활동 기록 전체 (오래된 것부터) */
+export async function activities(filter: Record<string, unknown> = {}) {
+    return mongoose.connection.collection('activities').find(filter).sort({ at: 1 }).toArray();
 }
 
-/** 로그에 그 줄이 쓰일 때까지 기다린다 (응답 뒤에 비동기로 쓰인다). 문자열은 한 줄 전체, 정규식은 일부 */
-export async function waitForLog(line: string | RegExp) {
-    if (typeof line === 'string')
-        await vi.waitFor(() => expect(readLog().split('\n')).toContain(line));
-    else await vi.waitFor(() => expect(readLog()).toMatch(line));
-}
-
-/** 요청 뒤 로그 쓰기가 끝났을 만한 시간을 기다린 뒤 지금 로그를 돌려준다 (기록하지 않는 동작 확인용) */
-export async function settledLog() {
-    await new Promise((r) => setTimeout(r, 100));
-    return readLog();
+/** 가장 최근 활동 기록 하나 */
+export async function lastActivity() {
+    return (await activities()).at(-1);
 }

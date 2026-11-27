@@ -1,19 +1,18 @@
 // 환경변수 검사 (src/config.ts). 서버 시작(main.ts)이 이 결과로 시작하거나 바로 끝낸다
-import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 import { loadConfig } from '../src/config.ts';
 
 const required = { MONGO_DB: 'mongodb://db/semachi', MASTER_PIN: '9999' };
 
 describe('loadConfig', () => {
-    test('필수 값만 있으면 나머지는 기본값: 포트 8081, 서버 폴더의 log.txt, HTTP', () => {
+    test('필수 값만 있으면 나머지는 기본값: 포트 8081, 개발(development), 로그 info, HTTP', () => {
         const config = loadConfig(required);
         expect(config).toMatchObject({
             mongoUri: 'mongodb://db/semachi',
             masterPin: '9999',
             port: 8081,
         });
-        expect(config.logFile).toBe(fileURLToPath(new URL('../log.txt', import.meta.url)));
+        expect(config).toMatchObject({ appEnv: 'development', logLevel: 'info' });
         expect(config.tls).toBeUndefined();
     });
 
@@ -24,11 +23,10 @@ describe('loadConfig', () => {
         );
     });
 
-    test('PORT·LOG_FILE을 바꿀 수 있다', () => {
-        expect(loadConfig({ ...required, PORT: '3001', LOG_FILE: '/tmp/a.txt' })).toMatchObject({
-            port: 3001,
-            logFile: '/tmp/a.txt',
-        });
+    test('PORT·APP_ENV·LOG_LEVEL을 바꿀 수 있다', () => {
+        expect(
+            loadConfig({ ...required, PORT: '3001', APP_ENV: 'beta', LOG_LEVEL: 'warn' }),
+        ).toMatchObject({ port: 3001, appEnv: 'beta', logLevel: 'warn' });
     });
 
     test('TRUST_PROXY: 없으면 false, 숫자는 프록시 수, true/false, 그 밖은 주소 목록 그대로', () => {

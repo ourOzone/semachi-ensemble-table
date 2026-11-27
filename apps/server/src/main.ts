@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
 import mongoose from 'mongoose';
+import { pino } from 'pino';
 import { createApp } from './app.ts';
 import { loadConfig } from './config.ts';
 
@@ -27,7 +28,9 @@ try {
     process.exit(1);
 }
 
-const app = createApp(config);
+// 운영 로그: 표준 출력에 JSON 한 줄씩 (Docker가 모아 둔다: docker logs)
+const logger = pino({ level: config.logLevel });
+const app = createApp({ ...config, logger });
 const server = config.tls
     ? https.createServer(
           { key: fs.readFileSync(config.tls.keyFile), cert: fs.readFileSync(config.tls.certFile) },

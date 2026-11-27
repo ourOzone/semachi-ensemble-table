@@ -4,7 +4,7 @@
 // 3. 서버(src/main.ts)를 http://localhost:8081 로 켠다. 코드를 고치면 서버만 다시 시작한다(node --watch)
 // 데이터를 처음으로 되돌리기: pnpm --filter @semachi/server dev:sample:reset
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
@@ -13,7 +13,6 @@ import { exitIfPortsBusy } from './port-check.ts';
 const SERVER_DIR = fileURLToPath(new URL('..', import.meta.url));
 const DATA_DIR = fileURLToPath(new URL('../.dev-db', import.meta.url));
 const DB_DIR = `${DATA_DIR}/mongo`;
-const LOG_FILE = `${DATA_DIR}/log.txt`;
 const DB_PORT = 27018;
 const PORT = 8081;
 /** 개발용 PIN. 실제 PIN(루트 .env)과 관계없다 */
@@ -23,7 +22,6 @@ const DEV_TEAM_PIN = '1234';
 await exitIfPortsBusy({ DB: DB_PORT, 서버: PORT });
 
 mkdirSync(DB_DIR, { recursive: true });
-if (!existsSync(LOG_FILE)) writeFileSync(LOG_FILE, '');
 
 const mongod = await MongoMemoryServer.create({
     instance: { port: DB_PORT, dbPath: DB_DIR, storageEngine: 'wiredTiger' },
@@ -39,7 +37,9 @@ const server = spawn(process.execPath, ['--watch', 'src/main.ts'], {
         MONGO_DB: mongoUri,
         MASTER_PIN: DEV_MASTER_PIN,
         PORT: String(PORT),
-        LOG_FILE,
+        // 활동 기록에 "개발"로 남긴다. 운영 로그는 경고 이상만 (요청마다 JSON 한 줄이 터미널을 덮지 않게)
+        APP_ENV: 'development',
+        LOG_LEVEL: 'warn',
         TLS_KEY_FILE: '',
         TLS_CERT_FILE: '',
         // 웹 개발 서버(pnpm dev:local)의 주소. 휴대폰으로 볼 때는 그 주소(http://PC의IP:3000)를 쉼표로 더한다

@@ -9,15 +9,8 @@ import {
     insert,
     MASTER_PIN,
     missingId,
-    settledLog,
     teamDoc,
-    waitForLog,
-    resetLog,
 } from './helpers.ts';
-
-const VID = '0b8a5c7e-1f2d-4c3b-9a8e-7d6c5b4a3f21';
-const logLine = (action: string) =>
-    new RegExp(`^${VID}_\\d{4}\\.\\d{2}\\.\\d{2}:\\d{2}:\\d{2}_${action}$`, 'm');
 
 describe('GET /teams', () => {
     test('모든 팀을 넣은 순서대로, PIN만 빼고 저장된 필드 그대로 (B-6 B3)', async () => {
@@ -48,12 +41,6 @@ describe('GET /teams', () => {
         await insert('teams', teamDoc({ due: new Date('2026-12-31T00:00:00Z'), extra: 1 }));
         const res = await api().get('/teams');
         expect(res.body[0]).toMatchObject({ due: '2026-12-31T00:00:00.000Z', extra: 1 });
-    });
-
-    test('방문할 때마다 pageload를 로그에 남긴다 (O2)', async () => {
-        await resetLog();
-        await api().get('/teams').set('Cookie', `semachi_vid=${VID}`);
-        await waitForLog(logLine('pageload'));
     });
 });
 
@@ -111,12 +98,6 @@ describe('POST /team', () => {
             .post('/team')
             .send({ ...body, pin: 1234 });
         expect((await findOne('teams', res.body.id))?.pin).toBe('1234');
-    });
-
-    test('addteam_팀이름을 로그에 남긴다', async () => {
-        await resetLog();
-        await api().post('/team').set('Cookie', `semachi_vid=${VID}`).send(body);
-        await waitForLog(logLine('addteam_새 팀'));
     });
 });
 
@@ -184,13 +165,6 @@ describe('POST /check-team-pin', () => {
         expect(res.status).toBe(500);
         expect(res.body).toEqual({ error: 'Internal Server Error' });
     });
-
-    test('로그에 남기지 않는다 (시도 횟수 제한은 pin-limit.test.ts)', async () => {
-        const id = await insert('teams', teamDoc({ pin: '1234' }));
-        await resetLog();
-        await api().post('/check-team-pin').send({ teamId: id, pin: '0000' });
-        expect(await settledLog()).toBe('');
-    });
 });
 
 describe('DELETE /team?id=', () => {
@@ -234,16 +208,6 @@ describe('DELETE /team?id=', () => {
         const res = await api().delete('/team?id=abc');
         expect(res.status).toBe(500);
         expect(res.text).toBe('Internal Server Error');
-    });
-
-    test('deleteteam_팀이름을 로그에 남긴다', async () => {
-        const id = await insert('teams', teamDoc({ name: '지울 팀' }));
-        await resetLog();
-        await api()
-            .delete(`/team?id=${id}`)
-            .set('Cookie', `semachi_vid=${VID}`)
-            .send({ pin: '1234' });
-        await waitForLog(logLine('deleteteam_지울 팀'));
     });
 });
 
@@ -320,16 +284,6 @@ describe('PUT /team?id=', () => {
         const bad = await api().put('/team?id=abc').send({ name: 'x' });
         expect(bad.status).toBe(500);
         expect(bad.body).toEqual({ error: 'Internal Server Error' });
-    });
-
-    test('modifyteam_바꾸기 전 이름을 로그에 남긴다', async () => {
-        const id = await insert('teams', teamDoc({ name: '옛 이름' }));
-        await resetLog();
-        await api()
-            .put(`/team?id=${id}`)
-            .set('Cookie', `semachi_vid=${VID}`)
-            .send({ name: '새 이름', pin: '1234' });
-        await waitForLog(logLine('modifyteam_옛 이름'));
     });
 });
 

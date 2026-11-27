@@ -1,17 +1,7 @@
 // 공지 API의 지금 동작 (POST /notice, GET /notices, DELETE /notice, POST /check-notice-pin, GET /notice/:id)
 // "현재 동작:"은 이상해 보이지만 그대로 고정한 것. 고치는 단계는 docs/BACKEND_PLAN.md
 import { describe, expect, test } from 'vitest';
-import {
-    api,
-    findAll,
-    findOne,
-    freezeTime,
-    insert,
-    MASTER_PIN,
-    missingId,
-    settledLog,
-    resetLog,
-} from './helpers.ts';
+import { api, findAll, findOne, freezeTime, insert, MASTER_PIN, missingId } from './helpers.ts';
 
 const noticeDoc = (over: Record<string, unknown> = {}) => ({
     content: '공지',
@@ -37,14 +27,12 @@ describe('POST /notice', () => {
         });
     });
 
-    test('마스터 PIN이 없거나 틀리면 403, 올리지 않는다 (B-6 B1). 로그에 남기지 않는다', async () => {
-        await resetLog();
+    test('마스터 PIN이 없거나 틀리면 403, 올리지 않는다 (B-6 B1)', async () => {
         for (const body of [{ content: '누구나' }, { content: '누구나', pin: '0000' }]) {
             const res = await api().post('/notice').send(body);
             expect([res.status, res.body]).toEqual([403, { error: 'Wrong PIN' }]);
         }
         expect(await findAll('notices')).toHaveLength(0);
-        expect(await settledLog()).toBe('');
     });
 
     test('내용이 없거나 빈 문자열이면 400 (공백만 있는 글은 통과)', async () => {
@@ -78,13 +66,11 @@ describe('DELETE /notice?id=', () => {
         expect(await findAll('notices')).toHaveLength(0);
     });
 
-    test('마스터 PIN이 없거나 틀리면 403, 지우지 않는다 (B-6 B1). 로그에 남기지 않는다', async () => {
+    test('마스터 PIN이 없거나 틀리면 403, 지우지 않는다 (B-6 B1)', async () => {
         const id = await insert('notices', noticeDoc());
-        await resetLog();
         expect((await api().delete(`/notice?id=${id}`)).status).toBe(403);
         expect((await api().delete(`/notice?id=${id}`).send({ pin: '0000' })).status).toBe(403);
         expect(await findAll('notices')).toHaveLength(1);
-        expect(await settledLog()).toBe('');
     });
 
     test('id가 없으면 400, 없는 공지면 404, 형식이 잘못되면 500 (JSON)', async () => {

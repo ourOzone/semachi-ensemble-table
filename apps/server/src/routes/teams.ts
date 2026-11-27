@@ -1,20 +1,37 @@
 // 팀 API: GET /teams, POST /team, POST /check-team-pin, DELETE /team, PUT /team, GET /team/:id
 // (모든 팀을 지우던 DELETE /teams는 B-5에서 삭제: B2)
 // 수정·삭제는 요청 본문의 pin(팀 PIN 또는 마스터 PIN)을 서버가 확인한다. 틀리면 403 (B-6 B1)
-// 목록에는 PIN을 넣지 않는다 (모델의 select: false, B-6 B3)
+// 목록에는 PIN을 넣지 않는다 (모델의 select: false, B-6 B3). 하는 일마다 활동 기록 (B-7)
 import express from 'express';
-import type { Logger } from '../lib/log.ts';
-import { WRONG_PIN, type PinAuth } from '../lib/pin-auth.ts';
+import { withoutPin, type RecordActivity } from '../lib/activity.ts';
+import type { PinAuth } from '../lib/pin-auth.ts';
+import type { PinCheck } from '../lib/pin-check.ts';
 import { pinTarget, type PinGuard } from '../lib/pin-guard.ts';
 import { Ensemble } from '../models/ensemble.ts';
 import { Team } from '../models/team.ts';
 
-export function teamsRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; guard: PinGuard }) {
+/** 활동 기록에 남길 팀 내용 (바뀌기 전·후 비교용) */
+const teamFields = (team: { name?: unknown; type?: unknown; desc?: unknown }) => ({
+    name: team.name,
+    type: team.type,
+    desc: team.desc,
+});
+
+export function teamsRouter({
+    pins,
+    guard,
+    pinCheck,
+    activity,
+}: {
+    pins: PinAuth;
+    guard: PinGuard;
+    pinCheck: PinCheck;
+    activity: RecordActivity;
+}) {
     const router = express.Router();
 
-    // 전체팀
-    router.get('/teams', async (req, res) => {
-        log(req.visitorId, 'pageload');
+    // 전체팀 (페이지 열기 기록은 POST /visits로 옮겼다: O2, B-7)
+    router.get('/teams', async (_req, res) => {
         try {
             const teams = await Team.find();
             res.json(teams);
@@ -27,7 +44,6 @@ export function teamsRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; 
     router.post('/team', async (req, res) => {
         try {
             const data = req.body;
-            log(req.visitorId, `addteam_${data.name}`);
 
             const newTeam = new Team({
                 name: data.name,
@@ -38,6 +54,12 @@ export function teamsRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; 
             });
 
             await newTeam.save();
+            await activity(req, {
+                action: 'team.create',
+                target: { kind: 'team', id: newTeam.id, name: newTeam.name ?? undefined },
+                after: teamFields(newTeam),
+                result: 'ok',
+            });
             res.send({ id: newTeam._id });
         } catch {
             res.status(500).send('Internal Server Error');
@@ -54,10 +76,18 @@ export function teamsRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; 
             }
 
             const target = pinTarget.team(teamId);
-            if (guard.rejectIfBlocked(req, res, target)) return;
+            const entry = {
+                action: 'pin.check',
+                target: { kind: 'team', id: String(teamId) },
+            } as const;
+            if (guard.rejectIfBlocked(req, res, target)) {
+                await activity(req, { ...entry, result: 'blocked' });
+                return;
+            }
 
             if (await pins.isMaster(pin)) {
                 guard.record(req, res, target, true);
+                await activity(req, { ...entry, pin: 'master', result: 'ok' });
                 return res.json(true);
             }
 
@@ -66,12 +96,19 @@ export function teamsRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; 
             if (!team) {
                 // 마스터 PIN도 아니었으니 틀린 시도로 센다 (없는 팀 id로 마스터 PIN을 찾지 못하게)
                 guard.record(req, res, target, false);
+                await activity(req, { ...entry, result: 'not-found' });
                 return res.status(404).json({ error: 'Team not found' });
             }
 
-            const ok = await pins.matches(pin, team.pin);
-            guard.record(req, res, target, ok);
-            return res.json(ok);
+            const via = await pins.which(pin, team.pin);
+            guard.record(req, res, target, via !== null);
+            await activity(req, {
+                action: 'pin.check',
+                target: { kind: 'team', id: team.id, name: team.name ?? undefined },
+                ...(via && { pin: via }),
+                result: via ? 'ok' : 'wrong-pin',
+            });
+            return res.json(via !== null);
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });
@@ -95,16 +132,25 @@ export function teamsRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; 
                 return res.status(404).json({ id: -1 });
             }
 
-            const target = pinTarget.team(teamId);
-            if (guard.rejectIfBlocked(req, res, target)) return;
-            const ok = await pins.matches(req.body.pin, team.pin);
-            guard.record(req, res, target, ok);
-            if (!ok) return res.status(403).json(WRONG_PIN);
+            const target = { kind: 'team', id: teamId, name: team.name ?? undefined };
+            const via = await pinCheck.require(req, res, {
+                guardTarget: pinTarget.team(teamId),
+                stored: team.pin,
+                entry: { action: 'team.delete', target },
+            });
+            if (!via) return;
 
-            // 팀을 먼저 지운다: 합주 삭제가 실패해도 팀만 남는 일은 없다
+            // 팀을 먼저 지운다: 합주 삭제가 실패해도 팀만 남는 일은 없다. 지운 합주도 기록에 남긴다
             await Team.findByIdAndDelete(teamId);
-            log(req.visitorId, `deleteteam_${team.name}`);
+            const ensembles = await Ensemble.find({ teamId });
             await Ensemble.deleteMany({ teamId });
+            await activity(req, {
+                action: 'team.delete',
+                target,
+                before: { ...withoutPin(team), ensembles: ensembles.map((e) => withoutPin(e)) },
+                pin: via,
+                result: 'ok',
+            });
             res.json({ id: teamId });
         } catch {
             res.status(500).send('Internal Server Error');
@@ -121,20 +167,33 @@ export function teamsRouter({ log, pins, guard }: { log: Logger; pins: PinAuth; 
                 return res.status(404).json({ error: 'Team not found' });
             }
 
-            const target = pinTarget.team(teamId);
-            if (guard.rejectIfBlocked(req, res, target)) return;
-            const ok = await pins.matches(req.body.pin, existingTeam.pin);
-            guard.record(req, res, target, ok);
-            if (!ok) return res.status(403).json(WRONG_PIN);
+            const target = {
+                kind: 'team',
+                id: existingTeam.id,
+                name: existingTeam.name ?? undefined,
+            };
+            const via = await pinCheck.require(req, res, {
+                guardTarget: pinTarget.team(teamId),
+                stored: existingTeam.pin,
+                entry: { action: 'team.update', target },
+            });
+            if (!via) return;
 
-            log(req.visitorId, `modifyteam_${existingTeam.name}`);
-
+            const before = teamFields(existingTeam);
             existingTeam.name = req.body.name;
             existingTeam.desc = req.body.desc;
             existingTeam.type = req.body.type;
 
             await existingTeam.save();
             await Ensemble.updateMany({ teamId }, { $set: { teamName: req.body.name } });
+            await activity(req, {
+                action: 'team.update',
+                target,
+                before,
+                after: teamFields(existingTeam),
+                pin: via,
+                result: 'ok',
+            });
 
             res.json({ id: teamId });
         } catch (error) {

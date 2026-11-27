@@ -106,9 +106,7 @@ describe('날적이는 전체를 하나로, 공지·관리자는 마스터로 �
     test('공지·관리자 화면은 "마스터"로 함께 센다 (10번)', async () => {
         const api = freshApi();
         for (let i = 0; i < 9; i++) await api().post('/check-notice-pin').send({ pin: '0000' });
-        const admin = await api()
-            .put('/admin/master-pin')
-            .send({ currentPin: '0000', newPin: '1111' });
+        const admin = await api().post('/admin/login').send({ pin: '0000' });
         expect([admin.status, admin.headers['pin-attempts']]).toEqual([403, '10/10']);
         expect((await api().post('/check-notice-pin').send({ pin: MASTER_PIN })).status).toBe(429);
     });

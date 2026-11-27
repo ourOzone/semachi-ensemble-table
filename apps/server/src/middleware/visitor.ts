@@ -6,7 +6,7 @@ const VISITOR_COOKIE = 'semachi_vid';
 const VISITOR_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1년 (초)
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function parseCookies(header: string | undefined) {
+export function parseCookies(header: string | undefined) {
     const cookies: Record<string, string> = {};
     if (!header) return cookies;
 

@@ -9,16 +9,9 @@ import {
     freezeTime,
     insert,
     missingId,
-    settledLog,
-    waitForLog,
-    resetLog,
     MASTER_PIN,
     teamDoc,
 } from './helpers.ts';
-
-const VID = '0b8a5c7e-1f2d-4c3b-9a8e-7d6c5b4a3f21';
-const logLine = (action: string) =>
-    new RegExp(`^${VID}_\\d{4}\\.\\d{2}\\.\\d{2}:\\d{2}:\\d{2}_${action}$`, 'm');
 
 describe('GET /ensembles', () => {
     // 서버 시간대 UTC(vitest 설정). "오늘"은 서버 시간대의 0시 = 2026-11-27T00:00Z (KST 09:00)
@@ -138,12 +131,6 @@ describe('GET /ensembles', () => {
         const res = await api().get('/ensembles');
         expect(res.body[0]).toMatchObject({ startTime: 26, endTime: null });
     });
-
-    test('로그에 남기지 않는다', async () => {
-        await resetLog();
-        await api().get('/ensembles');
-        expect(await settledLog()).toBe('');
-    });
 });
 
 describe('POST /ensemble', () => {
@@ -234,15 +221,6 @@ describe('POST /ensemble', () => {
         expect(res.status).toBe(500);
         expect(res.text).toBe('Internal Server Error');
     });
-
-    test('addensemble_팀이름을 로그에 남긴다 (본문의 teamName)', async () => {
-        await resetLog();
-        await api()
-            .post('/ensemble')
-            .set('Cookie', `semachi_vid=${VID}`)
-            .send({ ...body, pin: MASTER_PIN });
-        await waitForLog(logLine('addensemble_테스트밴드'));
-    });
 });
 
 describe('DELETE /ensemble?id=', () => {
@@ -281,16 +259,6 @@ describe('DELETE /ensemble?id=', () => {
         expect((await api().delete('/ensemble')).status).toBe(404);
         const bad = await api().delete('/ensemble?id=abc');
         expect([bad.status, bad.text]).toEqual([500, 'Internal Server Error']);
-    });
-
-    test('deleteensemble_팀이름을 로그에 남긴다', async () => {
-        const id = await insert('ensembles', ensembleDoc({ teamName: '지울 팀' }));
-        await resetLog();
-        await api()
-            .delete(`/ensemble?id=${id}`)
-            .set('Cookie', `semachi_vid=${VID}`)
-            .send({ pin: MASTER_PIN });
-        await waitForLog(logLine('deleteensemble_지울 팀'));
     });
 });
 
@@ -340,10 +308,9 @@ describe('PUT /ensemble?id=', () => {
         expect(Object.keys(saved ?? {}).sort()).toEqual(['__v', '_id', 'teamName', 'updatedAt']);
     });
 
-    test('그 합주 팀의 PIN이 맞아야 바꾼다. 없거나 틀리면 403 (B-6 B1). 로그에 남기지 않는다', async () => {
+    test('그 합주 팀의 PIN이 맞아야 바꾼다. 없거나 틀리면 403 (B-6 B1)', async () => {
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
         const id = await insert('ensembles', ensembleDoc({ teamId, startTime: 10 }));
-        await resetLog();
         expect((await api().put(`/ensemble?id=${id}`).send(body)).status).toBe(403);
         expect(
             (
@@ -360,7 +327,6 @@ describe('PUT /ensemble?id=', () => {
                     .send({ ...body, pin: '1234' })
             ).status,
         ).toBe(200);
-        expect(await settledLog()).toBe('');
     });
 
     test('본문 없이 보내면 PIN이 없어 403 (빈 본문으로 본다)', async () => {

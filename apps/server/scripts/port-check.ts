@@ -24,7 +24,7 @@ export async function exitIfPortsBusy(ports: Record<string, number>) {
     if (busy.length > 0) {
         console.error(
             `이미 쓰고 있는 포트가 있습니다: ${busy.join(', ')}\n` +
-                '다른 터미널에 켜 둔 개발 서버(pnpm dev:server·dev:server:prod)가 있으면 그 터미널에서 Ctrl+C로 끈 뒤 다시 실행하세요.',
+                '다른 터미널에 켜 둔 개발 서버(pnpm dev:server·dev:server:sample)가 있으면 그 터미널에서 Ctrl+C로 끈 뒤 다시 실행하세요.',
         );
         process.exit(1);
     }

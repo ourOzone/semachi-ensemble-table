@@ -1,4 +1,4 @@
-// 내 PC에서 서버를 운영 DB에 연결해 띄우기: pnpm dev:server:prod (저장소 루트)
+// 내 PC에서 서버를 운영 DB에 연결해 띄우기: pnpm dev:server (저장소 루트). 예시 데이터로는 pnpm dev:server:sample
 // - 저장소 루트 .env(MONGO_DB·MASTER_PIN)를 읽는다. 값은 화면에 출력하지 않는다
 // - 여기서 바꾸면 실제 데이터가 바뀐다 (운영·베타와 같은 DB, BACKEND_PLAN 사전 결정 10의 "같은 DB를 쓸 때 지킬 것"이 그대로 적용)
 // - 활동 로그는 운영 log.txt가 아니라 apps/server/.dev-db/log-prod-db.txt에 쓴다

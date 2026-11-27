@@ -6,9 +6,9 @@
   "main": "src/main.ts",
   "scripts": {
     "start": "node src/main.ts",
-    "dev": "node scripts/dev.ts",
-    "dev:prod-db": "node scripts/dev-prod-db.ts",
-    "dev:reset": "node -e \"require('node:fs').rmSync('.dev-db', { recursive: true, force: true })\"",
+    "dev": "node scripts/dev-prod-db.ts",
+    "dev:sample": "node scripts/dev-sample.ts",
+    "dev:sample:reset": "node -e \"require('node:fs').rmSync('.dev-db', { recursive: true, force: true })\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run"

@@ -1366,6 +1366,13 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 웹 223 + 서버 124 / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅
 
+### 2026-11-27 — 내 PC 개발 서버 명령 이름 바꿈 (사용자 요청)
+
+- 사용자는 내 PC에서도 운영 DB의 실제 데이터를 보려 했는데 `pnpm dev:server`(예시 데이터)를 켜 "예시밴드"가 보였다 → 기본을 운영 DB로
+- `pnpm dev:server`: 메모리 DB + 예시 데이터 → **운영 DB** (`scripts/dev-prod-db.ts`, 옛 `dev:server:prod`)
+- 예시 데이터: `pnpm dev:server:sample` (`scripts/dev.ts` → `dev-sample.ts`), 지우기 `pnpm --filter @semachi/server dev:sample:reset`
+- Claude는 운영 DB에 닿는 `dev:server`를 실행하지 않는다 (`CLAUDE.md`)
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.

@@ -89,10 +89,10 @@
 
 | 하고 싶은 것 | 명령 (저장소 루트) |
 |---|---|
-| 내 PC에서 서버 띄우기 (메모리 DB + 예시 데이터) | `pnpm dev:server` → http://localhost:8081 |
+| 내 PC에서 서버 띄우기 (메모리 DB + 예시 데이터) | `pnpm dev:server:sample` → http://localhost:8081 (B-5 뒤 이름 바꿈: `dev:server`는 운영 DB) |
 | 웹을 그 서버에 연결 | 다른 터미널에서 `pnpm dev:local` → http://localhost:3000 |
 | 서버 살아 있나 | 브라우저에서 http://localhost:8081/health |
-| 개발 데이터 처음으로 | 서버를 끄고 `pnpm --filter @semachi/server dev:reset` |
+| 예시 데이터 처음으로 | 서버를 끄고 `pnpm --filter @semachi/server dev:sample:reset` |
 | 웹을 운영 서버에 연결 (이전과 같음) | `pnpm dev` |
 
 **실수하기 쉬운 곳**
@@ -127,7 +127,7 @@
 |---|---|
 | CI 돌리기 | 푸시하면 자동 (`git push origin api3.0`) |
 | CI와 같은 검사를 내 PC에서 | `pnpm install --frozen-lockfile; pnpm lint; pnpm format:check; pnpm typecheck; pnpm test:run; pnpm build` |
-| 내 PC 서버를 운영 DB에 | `pnpm dev:server:prod` (+ `pnpm dev:local`) ⚠️ 실제 데이터가 바뀐다 |
+| 내 PC 서버를 운영 DB에 | `pnpm dev:server` (+ `pnpm dev:local`) ⚠️ 실제 데이터가 바뀐다 (B-5 뒤 이름 바꿈) |
 
 **실수하기 쉬운 곳**
 - `--frozen-lockfile`: 잠금 파일(`pnpm-lock.yaml`)과 `package.json`이 맞지 않으면 설치를 멈춘다. 패키지를 추가했으면 잠금 파일도 함께 커밋한다

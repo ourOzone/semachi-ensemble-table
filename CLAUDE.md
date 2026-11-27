@@ -12,8 +12,9 @@
 저장소 루트에서 실행하면 모든 패키지에 돈다. 하나만: `pnpm --filter @semachi/web <스크립트>` (`@semachi/server`·`@semachi/shared`).
 - 의존성 설치: `pnpm install` (패키지 추가는 `pnpm --filter <패키지> add <이름>`)
 - 웹 개발 서버: `pnpm dev` (운영 API에 연결)
-- 내 PC 서버: `pnpm dev:server` (메모리 MongoDB + 예시 데이터, http://localhost:8081, 마스터 PIN `0000`) + 다른 터미널에서 `pnpm dev:local` (웹을 이 서버에 연결). 데이터 지우기: `pnpm --filter @semachi/server dev:reset`
-- 내 PC 서버를 운영 DB에: `pnpm dev:server:prod` (루트 `.env`, 실제 데이터가 바뀐다. 사용자가 직접 실행하고, Claude는 실행하지 않는다)
+- 내 PC 서버 (http://localhost:8081) + 다른 터미널에서 `pnpm dev:local` (웹을 이 서버에 연결):
+  - `pnpm dev:server`: **운영 DB** (루트 `.env`, 실제 데이터가 바뀐다, 사용자 결정 2026-11-27). 사용자가 직접 실행하고, Claude는 실행하지 않는다
+  - `pnpm dev:server:sample`: 메모리 MongoDB + 예시 데이터 (마스터 PIN `0000`). Claude가 확인할 때는 이것만. 데이터 지우기: `pnpm --filter @semachi/server dev:sample:reset`
 - CI: `.github/workflows/ci.yml` (푸시·PR마다 린트·포맷·타입·테스트·빌드). Node 버전은 `.nvmrc`
 - 타입 체크: `pnpm typecheck`
 - 빌드: `pnpm build`

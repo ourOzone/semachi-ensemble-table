@@ -64,10 +64,10 @@ apps/server/
 ├── package.json · tsconfig.json
 ├── vitest.config.mts        테스트 설정 (서버 시간대 UTC)
 ├── Dockerfile               (예정 B-11) 운영 이미지
-├── .dev-db/                 개발 서버의 메모리 DB 데이터·로그 (커밋 안 함, pnpm dev:server가 만듦)
+├── .dev-db/                 개발 서버의 메모리 DB 데이터·로그 (커밋 안 함, pnpm dev:server·dev:server:sample이 만듦)
 ├── scripts/
-│   ├── dev.ts               내 PC 개발 서버: 메모리 MongoDB + 예시 데이터 + 서버 (pnpm dev:server)
-│   ├── dev-prod-db.ts       내 PC 서버를 운영 DB에 연결 (pnpm dev:server:prod, 루트 .env)
+│   ├── dev-prod-db.ts       내 PC 서버를 운영 DB에 연결 (pnpm dev:server, 루트 .env)
+│   ├── dev-sample.ts        내 PC 서버를 메모리 MongoDB + 예시 데이터로 (pnpm dev:server:sample)
 │   ├── port-check.ts        개발 서버를 켜기 전 포트 확인 (이미 켜 둔 서버가 있으면 알림)
 │                            (예정) 한 번만 실행하는 데이터 변경 스크립트 (PIN 해시 등, 미리 세어 보기부터)
 ├── src/

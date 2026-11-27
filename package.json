@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "pnpm --filter @semachi/web dev",
     "dev:server": "pnpm --filter @semachi/server dev",
-    "dev:server:prod": "pnpm --filter @semachi/server dev:prod-db",
+    "dev:server:sample": "pnpm --filter @semachi/server dev:sample",
     "dev:local": "pnpm --filter @semachi/web dev:local",
     "build": "pnpm -r --if-present build",
     "typecheck": "pnpm -r --if-present typecheck",

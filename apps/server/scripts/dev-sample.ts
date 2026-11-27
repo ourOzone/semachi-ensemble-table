@@ -1,8 +1,8 @@
-// 내 PC에서 서버 띄워 보기 (실제 DB 없이): pnpm dev:server (저장소 루트)
+// 내 PC에서 서버 띄워 보기 (실제 DB 없이, 예시 데이터): pnpm dev:server:sample (저장소 루트). 운영 DB로는 pnpm dev:server
 // 1. 메모리 MongoDB를 켠다 (포트 27018). 데이터는 apps/server/.dev-db/에 남아 다시 켜도 그대로다
 // 2. 처음이면 예시 데이터(팀·합주·날적이·공지)를 넣는다
 // 3. 서버(src/main.ts)를 http://localhost:8081 로 켠다. 코드를 고치면 서버만 다시 시작한다(node --watch)
-// 데이터를 처음으로 되돌리기: pnpm --filter @semachi/server dev:reset
+// 데이터를 처음으로 되돌리기: pnpm --filter @semachi/server dev:sample:reset
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

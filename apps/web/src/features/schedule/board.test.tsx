@@ -492,9 +492,11 @@ describe('합주표', () => {
 
     it('PIN이 맞으면 합주를 삭제하고 알림을 띄운다', async () => {
         let deletedUrl = '';
+        let deletedBody: unknown;
         server.use(
-            http.delete(`${url}/ensemble`, ({ request }) => {
+            http.delete(`${url}/ensemble`, async ({ request }) => {
                 deletedUrl = request.url;
+                deletedBody = await request.json();
                 return HttpResponse.json({ id: 'ensemble-1' });
             }),
         );
@@ -506,6 +508,8 @@ describe('합주표', () => {
 
         await waitFor(() => expect(deletedUrl).not.toBe(''));
         expect(new URL(deletedUrl).searchParams.get('id')).toBe('ensemble-1');
+        // PIN 단계에서 맞은 PIN을 삭제 요청에도 담는다 (서버가 다시 확인, 백엔드 개편 B-6)
+        expect(deletedBody).toEqual({ pin: '1234' });
         expect(await screen.findByText('삭제했어요.')).toBeInTheDocument();
         await waitFor(() => expect(useDrawerStore.getState().openedDrawers).toEqual([]));
     });

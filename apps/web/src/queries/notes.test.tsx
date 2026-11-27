@@ -85,14 +85,14 @@ describe('한마디·공지 mutation 훅', () => {
         const { result, requests } = await renderScreen();
 
         await expect(
-            act(() => result.current.deleteNote.mutateAsync('note-1')),
+            act(() => result.current.deleteNote.mutateAsync({ id: 'note-1', pin: '1234' })),
         ).rejects.toMatchObject({ response: { status: 404 } });
 
         await waitFor(() => expect(countOf(requests, 'GET /notes')).toBe(2));
         expect(countOf(requests, 'GET /teams')).toBe(1);
     });
 
-    it('공지 추가: POST /notice({ content }) 후 공지 목록만 다시 불러온다', async () => {
+    it('공지 추가: POST /notice({ content, pin }) 후 공지 목록만 다시 불러온다', async () => {
         let body: unknown;
         server.use(
             http.post(`${url}/notice`, async ({ request }) => {
@@ -102,9 +102,9 @@ describe('한마디·공지 mutation 훅', () => {
         );
         const { result, requests } = await renderScreen();
 
-        await act(() => result.current.addNotice.mutateAsync('새 공지'));
+        await act(() => result.current.addNotice.mutateAsync({ text: '새 공지', pin: '9999' }));
 
-        expect(body).toEqual({ content: '새 공지' });
+        expect(body).toEqual({ content: '새 공지', pin: '9999' });
         await waitFor(() => expect(countOf(requests, 'GET /notices')).toBe(2));
         expect(countOf(requests, 'GET /notes')).toBe(1);
     });
@@ -117,12 +117,12 @@ describe('한마디·공지 mutation 훅', () => {
         );
         const { result, requests } = await renderScreen();
 
-        await act(() => result.current.deleteNotice.mutateAsync('notice-1'));
+        await act(() => result.current.deleteNotice.mutateAsync({ id: 'notice-1', pin: '9999' }));
         await waitFor(() => expect(countOf(requests, 'GET /notices')).toBe(2));
 
         status = 404;
         await expect(
-            act(() => result.current.deleteNotice.mutateAsync('notice-1')),
+            act(() => result.current.deleteNotice.mutateAsync({ id: 'notice-1', pin: '9999' })),
         ).rejects.toMatchObject({ response: { status: 404 } });
         await waitFor(() => expect(countOf(requests, 'GET /notices')).toBe(3));
         expect(countOf(requests, 'GET /notes')).toBe(1);

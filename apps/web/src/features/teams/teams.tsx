@@ -130,9 +130,16 @@ const Teams = () => {
     // 팀 수정 Drawer의 저장 (V-3 13차, 이전: 옛 Drawer 5단계, 알림 없음). 성공하면 고친 값으로 팀 정보 Drawer로 돌아가며 알림.
     // 이미 삭제됐으면 서버가 404를 준다 → 이미 삭제된 팀 처리 (이전에는 수정 전에 존재 확인 요청을 한 번 더 보냈다: 사전 결정 5)
     const handleUpdateTeam = useCallback(
-        async (id: string, { type, name, desc, due }: UpdateTeamInput) => {
+        async (id: string, { type, name, desc, due }: UpdateTeamInput, pin: string) => {
             try {
-                await updateTeamAsync({ id, type, name, desc, ...(due !== undefined && { due }) });
+                await updateTeamAsync({
+                    id,
+                    pin,
+                    type,
+                    name,
+                    desc,
+                    ...(due !== undefined && { due }),
+                });
                 setTeamStates(id, type, name, desc); // 팀 정보 Drawer가 고친 값으로
                 setOpenedDrawers(['teamInfo']);
                 toast.success('팀을 수정했어요.');
@@ -152,9 +159,9 @@ const Teams = () => {
 
     // 팀 정보 Drawer의 팀 삭제 PIN 단계에서 (V-3 9차: 알림 추가, 합주 삭제와 같은 문구)
     const handleDeleteTeam = useCallback(
-        async (id: string) => {
+        async (id: string, pin: string) => {
             try {
-                await deleteTeamAsync(id);
+                await deleteTeamAsync({ id, pin });
                 toast.success('삭제했어요.');
             } catch (err) {
                 // 이미 삭제됐으면(404) 결과는 같다

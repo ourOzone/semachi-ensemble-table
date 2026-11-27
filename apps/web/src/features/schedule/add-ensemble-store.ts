@@ -31,6 +31,8 @@ export interface EditTarget {
     endTime: TimeSlot;
     /** 반복 종료 날짜. 일회성이거나 계속 반복이면 null */
     repeatEnd: Dayjs | null;
+    /** 합주 정보의 PIN 단계에서 맞은 팀 PIN. 저장할 때 서버가 다시 확인한다 (백엔드 개편 B-6) */
+    pin: string;
 }
 
 interface AddEnsembleState {

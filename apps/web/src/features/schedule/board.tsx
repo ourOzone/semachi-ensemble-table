@@ -165,6 +165,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
             nextDate: Dayjs | null,
             startTime: TimeSlot | null,
             endTime: TimeSlot | null,
+            pin: string,
         ) => {
             try {
                 // 반복 종료 날짜는 그대로 둔다 (반복 → 반복일 때만. 일회성을 반복으로 바꾸면 계속 반복, 23차).
@@ -175,6 +176,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
                 // 정보 Drawer가 열려 있는 동안 호출되어 null이 아님 (null이면 nextDate.day()에서 TypeError → catch, 기존 동작)
                 await updateEnsembleAsync({
                     id,
+                    pin,
                     ...toEnsembleRequest(
                         teamId,
                         repeat,
@@ -215,6 +217,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
             }
             await updateEnsembleAsync({
                 id: target.id,
+                pin: target.pin,
                 ...toEnsembleRequest(
                     team.id,
                     repeat,
@@ -243,9 +246,9 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
     };
 
     const handleDeleteEnsemble = useCallback(
-        async (id: string) => {
+        async (id: string, pin: string) => {
             try {
-                await deleteEnsembleAsync(id);
+                await deleteEnsembleAsync({ id, pin });
                 toast.success('삭제했어요.');
             } catch (err) {
                 // 이미 삭제됐으면(404) 결과는 같다
@@ -269,6 +272,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
             nextDate: Dayjs | null,
             startTime: TimeSlot | null,
             endTime: TimeSlot | null,
+            pin: string,
         ) => {
             const skipTo = dayjs(nextDate).add(7, 'day');
             const saved = await handleUpdateEnsemble(
@@ -278,6 +282,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
                 skipTo,
                 startTime,
                 endTime,
+                pin,
             );
             if (saved) {
                 setNextDate((prev) => dayjs(prev).add(7, 'day'));
@@ -298,6 +303,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
             nextDate: Dayjs | null,
             startTime: TimeSlot | null,
             endTime: TimeSlot | null,
+            pin: string,
         ) => {
             // 정보 Drawer가 열려 있는 동안 호출되어 null이 아님
             const regular = getRegularNextDate(
@@ -311,6 +317,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
                 regular,
                 startTime,
                 endTime,
+                pin,
             );
             if (saved) {
                 setNextDate(regular);
@@ -330,6 +337,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
             nextDate: Dayjs | null,
             startTime: TimeSlot | null,
             endTime: TimeSlot | null,
+            pin: string,
         ) => {
             const saved = await handleUpdateEnsemble(
                 id,
@@ -338,6 +346,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
                 nextDate,
                 startTime,
                 endTime,
+                pin,
             );
             if (saved) {
                 setRepeat(true);

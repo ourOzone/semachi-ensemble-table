@@ -30,7 +30,8 @@ interface DeleteNoteDrawerProps {
     /** 삭제할 날적이. 닫혀도 그대로 둔다 (내려가는 동안 내용 유지) */
     note: Note | null;
     /** 삭제. 성공하면 true (Drawer는 삭제하는 쪽이 닫는다), 실패하면 false → PIN부터 다시 */
-    onDelete: (id: string) => Promise<boolean>;
+    /** pin: PIN 단계에서 맞은 PIN (서버가 다시 확인, 백엔드 개편 B-6) */
+    onDelete: (id: string, pin: string) => Promise<boolean>;
 }
 
 const DeleteNoteDrawer = ({ note, onDelete }: DeleteNoteDrawerProps) => {
@@ -95,7 +96,7 @@ const DeleteNoteDrawer = ({ note, onDelete }: DeleteNoteDrawerProps) => {
                                     checkPin={(pin) => checkNotePin(note.id, pin)}
                                     confirmLabel="삭제하기"
                                     danger
-                                    onConfirm={() => onDelete(note.id)}
+                                    onConfirm={(pin) => onDelete(note.id, pin)}
                                 />
                             </div>
                         </div>

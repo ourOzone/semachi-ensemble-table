@@ -260,13 +260,15 @@ describe('팀', () => {
     it('팀 삭제: 팀 정보 Drawer 안의 PIN 단계에서 PIN이 맞으면 삭제하고 모두 닫으며 알린다', async () => {
         let pinBody: unknown;
         let deletedUrl = '';
+        let deletedBody: unknown;
         server.use(
             http.post(`${url}/check-team-pin`, async ({ request }) => {
                 pinBody = await request.json();
                 return HttpResponse.json(true);
             }),
-            http.delete(`${url}/team`, ({ request }) => {
+            http.delete(`${url}/team`, async ({ request }) => {
                 deletedUrl = request.url;
+                deletedBody = await request.json();
                 return HttpResponse.json({ id: 'team-1' });
             }),
         );
@@ -283,6 +285,8 @@ describe('팀', () => {
         expect(await screen.findByText('삭제했어요.')).toBeInTheDocument();
         expect(pinBody).toEqual({ teamId: 'team-1', pin: '1234' });
         expect(new URL(deletedUrl).searchParams.get('id')).toBe('team-1');
+        // PIN 단계에서 맞은 PIN을 삭제 요청에도 담는다 (서버가 다시 확인, 백엔드 개편 B-6)
+        expect(deletedBody).toEqual({ pin: '1234' });
         expect(useDrawerStore.getState().openedDrawers).toEqual([]);
     });
 
@@ -328,10 +332,12 @@ describe('팀', () => {
 
         expect(await screen.findByText('팀을 수정했어요.')).toBeInTheDocument();
         expect(new URL(putUrl).searchParams.get('id')).toBe('team-1');
+        // 팀 정보에서 맞은 PIN을 함께 보낸다 (서버가 다시 확인, 백엔드 개편 B-6)
         expect(putBody).toEqual({
             type: '외부 공연',
             name: '새이름',
             desc: ['보컬A', '기타B', '베이스C', '드럼D', '키보드E', '매니저F', '셋리스트'],
+            pin: '1234',
         });
         // 팀 정보로 돌아오고, 고친 값이 보인다
         expect(useDrawerStore.getState().openedDrawers).toEqual(['teamInfo']);

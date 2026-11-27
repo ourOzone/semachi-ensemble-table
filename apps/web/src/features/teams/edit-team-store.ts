@@ -14,6 +14,8 @@ export interface EditTeamTarget {
     desc: string[];
     /** 팀 자동 삭제 날짜. 계속 유지면 null (적용 예정: teamDue.ts) */
     due: Dayjs | null;
+    /** 팀 정보의 PIN 단계에서 맞은 PIN. 저장할 때 서버가 다시 확인한다 (백엔드 개편 B-6) */
+    pin: string;
 }
 
 export const useEditTeamStore = create<{ target: EditTeamTarget | null }>()(() => ({

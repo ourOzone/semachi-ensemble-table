@@ -175,11 +175,11 @@ const TeamInfoDrawer = ({ checkTeamExists, handleDeleteTeam }: TeamInfoDrawerPro
                                 // 확인 버튼은 되돌릴 수 없는 삭제만. 수정은 PIN이 맞는 즉시 팀 수정 Drawer로
                                 confirmLabel={deleting ? '삭제하기' : undefined}
                                 danger={deleting}
-                                onConfirm={async () => {
+                                onConfirm={async (pin) => {
                                     if (deleting) {
-                                        await handleDeleteTeam(team.id); // Drawer를 모두 닫는다
+                                        await handleDeleteTeam(team.id, pin); // Drawer를 모두 닫는다
                                     } else {
-                                        openUpdateTeam({ ...team, due });
+                                        openUpdateTeam({ ...team, due, pin });
                                     }
                                     return true;
                                 }}

@@ -23,7 +23,12 @@ export type HandleAddTeam = (input: AddTeamInput) => Promise<boolean>;
 /** 팀 수정 Drawer에서 고친 것 (V-3 13차, PIN 없음: 팀 정보에서 확인했다) */
 export type UpdateTeamInput = Omit<AddTeamInput, 'pin'>;
 
-/** 저장에 성공하면 true (실패하면 Drawer에 머문다) */
-export type HandleUpdateTeam = (id: string, input: UpdateTeamInput) => Promise<boolean>;
+/** 저장에 성공하면 true (실패하면 Drawer에 머문다). pin: 팀 정보에서 맞은 PIN (서버가 다시 확인, 백엔드 개편 B-6) */
+export type HandleUpdateTeam = (
+    id: string,
+    input: UpdateTeamInput,
+    pin: string,
+) => Promise<boolean>;
 
-export type HandleDeleteTeam = (id: string) => Promise<void>;
+/** pin: 삭제 PIN 단계에서 맞은 PIN (서버가 다시 확인) */
+export type HandleDeleteTeam = (id: string, pin: string) => Promise<void>;

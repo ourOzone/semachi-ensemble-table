@@ -28,9 +28,9 @@ const Notice = () => {
     const { mutateAsync: deleteNoticeAsync } = useDeleteNotice();
     const openDrawer = useDrawerStore((state) => state.openDrawer);
 
-    const handleAddNotice = async (text: string) => {
+    const handleAddNotice = async (text: string, pin: string) => {
         try {
-            await addNoticeAsync(text);
+            await addNoticeAsync({ text, pin });
         } catch {
             toast.error('저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
             return false;
@@ -57,9 +57,9 @@ const Notice = () => {
     };
 
     // 삭제: 그새 삭제됐어도(404) 결과는 같아 "삭제했어요." 실패하면 알리고 PIN부터 다시
-    const handleDeleteNotice = async (id: string) => {
+    const handleDeleteNotice = async (id: string, pin: string) => {
         try {
-            await deleteNoticeAsync(id);
+            await deleteNoticeAsync({ id, pin });
         } catch (err) {
             if (!isNotFound(err)) {
                 toast.error('삭제하지 못했어요. 잠시 후 다시 시도해 주세요.');

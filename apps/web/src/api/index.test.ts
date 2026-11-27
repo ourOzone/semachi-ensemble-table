@@ -77,17 +77,21 @@ describe('합주 수정·삭제 경로', () => {
         );
         const nextDate = dayjs('2026-11-20');
 
-        await updateEnsemble('e1', {
-            teamId: 't1',
-            repeat: true,
-            nextDate,
-            startTime: 2,
-            endTime: 3,
-            day: 4,
-            type: '무기한',
-            due: '2099-12-31',
-        });
-        await deleteEnsemble('e1');
+        await updateEnsemble(
+            'e1',
+            {
+                teamId: 't1',
+                repeat: true,
+                nextDate,
+                startTime: 2,
+                endTime: 3,
+                day: 4,
+                type: '무기한',
+                due: '2099-12-31',
+            },
+            '1234',
+        );
+        await deleteEnsemble('e1', '1234');
 
         expect(requested).toEqual([`PUT ${url}/ensemble?id=e1`, `DELETE ${url}/ensemble?id=e1`]);
     });

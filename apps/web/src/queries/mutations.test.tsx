@@ -101,6 +101,7 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
 
         await act(() =>
             result.current.updateTeam.mutateAsync({
+                pin: '1234',
                 id: 'team-1',
                 type: '기타 등등',
                 name: '바뀐밴드',
@@ -113,6 +114,7 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
             type: '기타 등등',
             name: '바뀐밴드',
             desc: ['', '', '', '', '', '', ''],
+            pin: '1234',
         });
         await waitFor(() => expect(loads(requests)).toEqual({ teams: 2, ensembles: 2, notes: 1 }));
     });
@@ -125,7 +127,7 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
         const { result, requests } = await renderScreen();
 
         await expect(
-            act(() => result.current.deleteTeam.mutateAsync('team-1')),
+            act(() => result.current.deleteTeam.mutateAsync({ id: 'team-1', pin: '1234' })),
         ).rejects.toMatchObject({ response: { status: 404 } });
 
         await waitFor(() => expect(loads(requests)).toEqual({ teams: 2, ensembles: 2, notes: 1 }));
@@ -166,7 +168,11 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
         const { result, requests } = await renderScreen();
 
         await act(() =>
-            result.current.updateEnsemble.mutateAsync({ id: 'ensemble-1', ...ensembleRequest }),
+            result.current.updateEnsemble.mutateAsync({
+                id: 'ensemble-1',
+                pin: '1234',
+                ...ensembleRequest,
+            }),
         );
 
         expect(new URL(putUrl).searchParams.get('id')).toBe('ensemble-1');
@@ -182,7 +188,7 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
         const { result, requests } = await renderScreen();
 
         await expect(
-            act(() => result.current.deleteEnsemble.mutateAsync('ensemble-1')),
+            act(() => result.current.deleteEnsemble.mutateAsync({ id: 'ensemble-1', pin: '1234' })),
         ).rejects.toMatchObject({ response: { status: 404 } });
 
         await waitFor(() => expect(loads(requests).ensembles).toBe(2));

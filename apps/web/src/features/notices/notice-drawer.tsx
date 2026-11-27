@@ -35,11 +35,12 @@ type Step = 'list' | 'addPin' | 'write' | 'delete';
 interface NoticeDrawerProps {
     notices: Notice[];
     /** 올리기. 성공하면 true (알림은 부르는 쪽에서) */
-    onAdd: (text: string) => Promise<boolean>;
+    /** pin: 먼저 확인한 마스터 PIN (서버가 다시 확인, 백엔드 개편 B-6) */
+    onAdd: (text: string, pin: string) => Promise<boolean>;
     /** 삭제할 공지가 아직 있는지. 없거나 확인하지 못하면 false (알림은 부르는 쪽에서) */
     checkExists: (id: string) => Promise<boolean>;
     /** 삭제. 성공하면 true, 실패하면 false → PIN부터 다시 */
-    onDelete: (id: string) => Promise<boolean>;
+    onDelete: (id: string, pin: string) => Promise<boolean>;
 }
 
 /** "2026.11.26" (올린 날짜) */
@@ -65,6 +66,8 @@ const NoticeDrawer = ({ notices, onAdd, checkExists, onDelete }: NoticeDrawerPro
     const [editing, setEditing] = useState(false);
     // PIN 단계를 열 때마다 PIN을 새로 받는다
     const [pinKey, setPinKey] = useState(0);
+    // 올리기: 먼저 맞은 마스터 PIN을 글을 쓰는 동안 들고 있다가 올릴 때 함께 보낸다
+    const [masterPin, setMasterPin] = useState('');
     // 열 때마다 목록부터
     const [wasOpen, setWasOpen] = useState(false);
     if (open !== wasOpen) {
@@ -72,6 +75,7 @@ const NoticeDrawer = ({ notices, onAdd, checkExists, onDelete }: NoticeDrawerPro
         if (open) {
             setStep('list');
             setText('');
+            setMasterPin('');
         }
     }
 
@@ -92,7 +96,7 @@ const NoticeDrawer = ({ notices, onAdd, checkExists, onDelete }: NoticeDrawerPro
     const submit = async () => {
         if (!trimmed || saving) return;
         setSaving(true);
-        const ok = await onAdd(trimmed);
+        const ok = await onAdd(trimmed, masterPin);
         setSaving(false);
         if (ok) {
             setText('');
@@ -252,13 +256,14 @@ const NoticeDrawer = ({ notices, onAdd, checkExists, onDelete }: NoticeDrawerPro
                             // 삭제만 확인 버튼. 올리기는 PIN이 맞으면 바로 글쓰기로
                             confirmLabel={deleting ? '삭제하기' : undefined}
                             danger={deleting}
-                            onConfirm={async () => {
+                            onConfirm={async (pin) => {
                                 if (!deleting) {
+                                    setMasterPin(pin);
                                     setStep('write');
                                     return true;
                                 }
                                 if (!target) return false;
-                                const ok = await onDelete(target.id);
+                                const ok = await onDelete(target.id, pin);
                                 if (ok) setStep('list');
                                 return ok;
                             }}

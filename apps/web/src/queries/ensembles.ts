@@ -47,12 +47,16 @@ export function useAddEnsemble() {
     return useMutation({ mutationFn: addEnsemble, onSuccess: refreshEnsembles });
 }
 
-/** 합주 수정·미루기 */
+/** 합주 수정·미루기. pin: 서버가 확인할 팀 PIN (PIN 단계에서 맞은 것, 백엔드 개편 B-6) */
 export function useUpdateEnsemble() {
     const refreshEnsembles = useRefreshEnsembles();
     return useMutation({
-        mutationFn: ({ id, ...ensemble }: EnsembleUpdateRequest & { id: string }) =>
-            updateEnsemble(id, ensemble),
+        mutationFn: ({
+            id,
+            pin,
+            ...ensemble
+        }: EnsembleUpdateRequest & { id: string; pin: string }) =>
+            updateEnsemble(id, ensemble, pin),
         onSuccess: refreshEnsembles,
     });
 }
@@ -60,5 +64,8 @@ export function useUpdateEnsemble() {
 /** 성공·실패(404 = 이미 삭제됨 포함) 모두 다시 불러온다 (이전 handleDeleteEnsemble의 finally와 같음) */
 export function useDeleteEnsemble() {
     const refreshEnsembles = useRefreshEnsembles();
-    return useMutation({ mutationFn: deleteEnsemble, onSettled: refreshEnsembles });
+    return useMutation({
+        mutationFn: ({ id, pin }: { id: string; pin: string }) => deleteEnsemble(id, pin),
+        onSettled: refreshEnsembles,
+    });
 }

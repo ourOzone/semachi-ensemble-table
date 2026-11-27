@@ -219,12 +219,16 @@ const AddTeamForm = ({
     const update = async () => {
         if (!edit || !onUpdate || missing !== null || unchanged || submitting) return;
         setSubmitting(true);
-        const saved = await onUpdate(edit.id, {
-            type: type!, // missing === null
-            name: name.trim(),
-            desc,
-            ...(TEAM_DUE_ENABLED && { due: dueValue }),
-        });
+        const saved = await onUpdate(
+            edit.id,
+            {
+                type: type!, // missing === null
+                name: name.trim(),
+                desc,
+                ...(TEAM_DUE_ENABLED && { due: dueValue }),
+            },
+            edit.pin,
+        );
         if (!saved) setSubmitting(false);
     };
 

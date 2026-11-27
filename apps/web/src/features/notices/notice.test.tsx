@@ -30,7 +30,7 @@ describe('공지', () => {
         expect(drawer.getByText(/첫 공지\s+둘째 줄/)).toBeInTheDocument();
     });
 
-    it('올리기: 관리자 PIN이 맞으면 글쓰기로, 올리면 서버에 내용(content)만 보내고 알린 뒤 목록으로', async () => {
+    it('올리기: 관리자 PIN이 맞으면 글쓰기로, 올리면 서버에 내용(content)과 그 PIN을 보내고 알린 뒤 목록으로', async () => {
         let posted: unknown;
         let pinBody: unknown;
         server.use(
@@ -55,7 +55,7 @@ describe('공지', () => {
 
         expect(await screen.findByText('공지를 올렸어요.')).toBeInTheDocument();
         expect(pinBody).toEqual({ pin: '1234' });
-        expect(posted).toEqual({ content: '새 공지' });
+        expect(posted).toEqual({ content: '새 공지', pin: '1234' });
         expect(await findDialog('공지')).toBeInTheDocument();
     });
 
@@ -98,11 +98,13 @@ describe('공지', () => {
 
     it('삭제: X → 관리자 PIN → 삭제하기, 알리고 목록으로. 공지 목록만 다시 불러온다', async () => {
         let deletedUrl = '';
+        let deletedBody: unknown;
         server.use(
             http.get(`${url}/notice/:id`, () => HttpResponse.json(true)),
             http.post(`${url}/check-notice-pin`, () => HttpResponse.json(true)),
-            http.delete(`${url}/notice`, ({ request }) => {
+            http.delete(`${url}/notice`, async ({ request }) => {
                 deletedUrl = request.url;
+                deletedBody = await request.json();
                 return HttpResponse.json({ message: 'Notice deleted successfully' });
             }),
         );
@@ -119,6 +121,8 @@ describe('공지', () => {
 
         expect(await screen.findByText('삭제했어요.')).toBeInTheDocument();
         expect(new URL(deletedUrl).searchParams.get('id')).toBe('notice-1');
+        // PIN 단계에서 맞은 PIN을 삭제 요청에도 담는다 (서버가 다시 확인, 백엔드 개편 B-6)
+        expect(deletedBody).toEqual({ pin: '1234' });
         expect(await findDialog('공지')).toBeInTheDocument();
         // 존재 확인은 X를 누를 때 한 번
         expect(countOf(requests, 'GET /notice/notice-1')).toBe(1);

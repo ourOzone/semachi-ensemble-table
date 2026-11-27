@@ -187,9 +187,12 @@ const EnsembleInfoDrawer = ({
 
     // PIN이 맞은 뒤 실행 (삭제는 확인 버튼을 누른 뒤). 삭제는 Drawer가 모두 닫힌다.
     // 저장에 성공하면 값(날짜·반복)이 바뀌어 위의 붙잡기에서 정보 단계로 돌아가고, 실패하면 false → PIN을 다시 넣는다
-    const runAction = async (action: Exclude<Step, 'info' | 'update'>): Promise<boolean> => {
+    const runAction = async (
+        action: Exclude<Step, 'info' | 'update'>,
+        pin: string,
+    ): Promise<boolean> => {
         if (action === 'delete') {
-            await handleDeleteEnsemble(id);
+            await handleDeleteEnsemble(id, pin);
             return true;
         }
         const handler = {
@@ -197,7 +200,7 @@ const EnsembleInfoDrawer = ({
             unskip: handleUnskipEnsemble,
             repeat: handleRepeatEnsemble,
         }[action];
-        return handler(id, teamId, repeat, nextDate, startTime, endTime);
+        return handler(id, teamId, repeat, nextDate, startTime, endTime, pin);
     };
 
     // PIN 단계의 키보드 처리 (키보드 위로 올리기·뒤 페이지 고정·키보드 쪽 흰 판: keyboardSheet, 16~20차)
@@ -234,7 +237,7 @@ const EnsembleInfoDrawer = ({
         const bookFull = isSlotFull(ensembleList ?? [], bookDate, ensemble.startTime);
         // 수정: PIN이 맞으면 지금 값을 채운 합주 수정 Drawer로 (31차, 이전: 옛 Drawer 반복 여부 → 날짜 → 시간).
         // context는 그대로 둔다: 저장하지 않고 닫으면 이 Drawer가 같은 내용으로 다시 열린다
-        const startUpdate = () =>
+        const startUpdate = (pin: string) =>
             openUpdateEnsemble({
                 id: ensemble.id,
                 team: { id: ensemble.teamId, name: ensemble.name, color, isEvent },
@@ -243,6 +246,7 @@ const EnsembleInfoDrawer = ({
                 startTime: ensemble.startTime,
                 endTime: ensemble.endTime,
                 repeatEnd,
+                pin,
             });
 
         if (step !== 'info') {
@@ -305,8 +309,8 @@ const EnsembleInfoDrawer = ({
                                 teamId={ensemble.teamId}
                                 confirmLabel={pinStep.label}
                                 danger={step === 'delete'}
-                                onConfirm={() =>
-                                    step === 'update' ? startUpdate() : runAction(step)
+                                onConfirm={(pin) =>
+                                    step === 'update' ? startUpdate(pin) : runAction(step, pin)
                                 }
                             />
                         </div>

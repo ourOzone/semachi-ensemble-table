@@ -1,12 +1,12 @@
 import {
     existsResponseSchema,
-    pinCheckResponseSchema,
     teamResponseSchema,
     type IdResponse,
     type TeamCreateRequest,
     type TeamUpdateRequest,
 } from '@/types';
 import { get, getList, post, put, del } from '.';
+import { checkPin } from './pin';
 
 /*
 공부: getTeams등 에는 async/await 안해도 되는 이유
@@ -30,10 +30,11 @@ export const getTeams = async () => {
 
 export const getTeams = () => getList('/teams', teamResponseSchema);
 export const addTeam = (team: TeamCreateRequest) => post<IdResponse>('/team', team);
-export const updateTeam = (id: string, team: TeamUpdateRequest) =>
-    put<IdResponse>(`/team?id=${id}`, team);
-export const deleteTeam = (id: string) => del<IdResponse>(`/team?id=${id}`);
+// 수정·삭제는 서버가 PIN(팀 PIN 또는 마스터 PIN)을 확인한다. 틀리면 403 (백엔드 개편 B-6)
+export const updateTeam = (id: string, team: TeamUpdateRequest, pin: string) =>
+    put<IdResponse>(`/team?id=${id}`, { ...team, pin });
+export const deleteTeam = (id: string, pin: string) => del<IdResponse>(`/team?id=${id}`, { pin });
 export const teamExists = async (id: string) =>
     existsResponseSchema.parse(await get(`/team/${id}`));
-export const checkTeamPin = async (teamId: string, pin: string) =>
-    pinCheckResponseSchema.parse(await post('/check-team-pin', { teamId, pin }));
+export const checkTeamPin = (teamId: string, pin: string) =>
+    checkPin('/check-team-pin', { teamId, pin });

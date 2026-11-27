@@ -34,7 +34,9 @@ export function useAddTeam() {
 export function useUpdateTeam() {
     const refresh = useRefreshTeamsAndEnsembles();
     return useMutation({
-        mutationFn: ({ id, ...team }: TeamUpdateRequest & { id: string }) => updateTeam(id, team),
+        // pin: 서버가 확인할 팀 PIN (PIN 단계에서 맞은 것, 백엔드 개편 B-6)
+        mutationFn: ({ id, pin, ...team }: TeamUpdateRequest & { id: string; pin: string }) =>
+            updateTeam(id, team, pin),
         onSuccess: refresh,
     });
 }
@@ -42,5 +44,8 @@ export function useUpdateTeam() {
 /** 성공·실패(404 = 이미 삭제됨 포함) 모두 다시 불러온다 (이전 handleDeleteTeam의 finally와 같음) */
 export function useDeleteTeam() {
     const refresh = useRefreshTeamsAndEnsembles();
-    return useMutation({ mutationFn: deleteTeam, onSettled: refresh });
+    return useMutation({
+        mutationFn: ({ id, pin }: { id: string; pin: string }) => deleteTeam(id, pin),
+        onSettled: refresh,
+    });
 }

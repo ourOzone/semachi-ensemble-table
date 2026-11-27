@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { Check, LoaderCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { pinBlockedSeconds, type PinAttempts, type PinCheckResult } from '@/api/pin';
 import { checkTeamPin } from '@/api/team';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { cn } from '@/lib/utils';
@@ -14,24 +15,26 @@ import { pressable } from './drawer-parts';
 // - 맞으면: 확인 버튼이 없는 동작은 바로 실행, 있는 동작(삭제)은 버튼을 눌러 실행 (16차)
 // - 틀리면: 흔든 뒤 칸을 비워 첫 칸부터 다시 넣는다 (16차)
 // - 실행에 실패하면(onConfirm이 false) 칸을 비워 PIN부터 다시 (실패 알림은 실행한 쪽에서)
+// - 백엔드 개편 B-6: 맞은 PIN을 onConfirm에 넘긴다 (변경 요청에 담아 서버가 다시 확인). 틀리면 몇 번째인지 "(7/10)",
+//   너무 많이 틀려 막히면(429) 다시 해도 되는 때까지 남은 시간을 보인다 (갑자기 막히지 않게)
 
 export const PIN_LENGTH = 4;
 /** 틀린 PIN을 비우기까지 (흔들기 애니메이션 0.36초가 끝난 뒤) */
 const CLEAR_DELAY_MS = 450;
 
-type Status = 'typing' | 'checking' | 'valid' | 'invalid' | 'submitting';
+type Status = 'typing' | 'checking' | 'valid' | 'invalid' | 'blocked' | 'submitting';
 
 interface PinStepProps {
     /** 팀 PIN으로 확인할 팀 (합주·팀). checkPin을 주면 쓰지 않는다 */
     teamId?: string;
     /** 팀 PIN이 아닌 것의 PIN 확인 (한마디, V-4). 없으면 팀 PIN(checkTeamPin) */
-    checkPin?: (pin: string) => Promise<boolean>;
+    checkPin?: (pin: string) => Promise<PinCheckResult>;
     /** 확인 버튼 문구. 없으면 PIN이 맞는 즉시 onConfirm */
     confirmLabel?: string;
     /** 되돌릴 수 없는 동작(삭제): 빨간 버튼 */
     danger?: boolean;
-    /** PIN이 맞은 뒤 실행. false를 돌려주면(실패) PIN부터 다시 넣게 한다 */
-    onConfirm: () => Promise<boolean | void> | boolean | void;
+    /** PIN이 맞은 뒤 실행 (맞은 PIN을 받는다). false를 돌려주면(실패) PIN부터 다시 넣게 한다 */
+    onConfirm: (pin: string) => Promise<boolean | void> | boolean | void;
 }
 
 const PinStep = ({ teamId, checkPin, confirmLabel, danger = false, onConfirm }: PinStepProps) => {
@@ -39,6 +42,11 @@ const PinStep = ({ teamId, checkPin, confirmLabel, danger = false, onConfirm }: 
     const [status, setStatus] = useState<Status>('typing');
     // 틀릴 때마다 흔들기 애니메이션을 다시 시작한다
     const [attempt, setAttempt] = useState(0);
+    // 서버가 알려 준 틀린 횟수 (예: 7/10), 막혔으면 다시 해도 되기까지 남은 분
+    const [attempts, setAttempts] = useState<PinAttempts>();
+    const [blockedMinutes, setBlockedMinutes] = useState(0);
+    // 맞은 PIN (확인 버튼을 누를 때 넘긴다)
+    const verifiedPin = useRef('');
     // 마지막으로 입력한 PIN. 늦게 온 응답이 지금 PIN의 것인지 확인한다
     const latestPin = useRef('');
 
@@ -51,7 +59,7 @@ const PinStep = ({ teamId, checkPin, confirmLabel, danger = false, onConfirm }: 
         setStatus('submitting');
         let ok: boolean | void = false;
         try {
-            ok = await onConfirm();
+            ok = await onConfirm(verifiedPin.current);
         } catch {
             ok = false;
         }
@@ -72,9 +80,10 @@ const PinStep = ({ teamId, checkPin, confirmLabel, danger = false, onConfirm }: 
         }
         setStatus('checking');
         try {
-            const ok = await (checkPin ? checkPin(value) : checkTeamPin(teamId ?? '', value));
+            const result = await (checkPin ? checkPin(value) : checkTeamPin(teamId ?? '', value));
             if (latestPin.current !== value) return; // 그새 PIN을 고쳤다
-            if (!ok) {
+            if (!result.ok) {
+                setAttempts(result.attempts);
                 setStatus('invalid');
                 setAttempt((n) => n + 1);
                 // 흔들기가 끝나면 비운다 (그새 다시 넣기 시작했으면 두기)
@@ -83,17 +92,24 @@ const PinStep = ({ teamId, checkPin, confirmLabel, danger = false, onConfirm }: 
                 }, CLEAR_DELAY_MS);
                 return;
             }
+            verifiedPin.current = value;
             setStatus('valid');
             if (!confirmLabel) await confirm();
-        } catch {
+        } catch (err) {
             if (latestPin.current !== value) return;
             reset();
+            const blockedSeconds = pinBlockedSeconds(err);
+            if (blockedSeconds !== null) {
+                setBlockedMinutes(Math.max(1, Math.ceil(blockedSeconds / 60)));
+                setStatus('blocked');
+                return;
+            }
             setStatus('typing');
             toast.error('PIN을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.');
         }
     };
 
-    const invalid = status === 'invalid';
+    const invalid = status === 'invalid' || status === 'blocked';
     const ready = status === 'valid' || status === 'submitting';
 
     // 확인 버튼이 있는 단계(삭제)는 PIN이 맞으면 Enter로도 실행한다 (24차, PC). 입력칸에서 Enter = 폼 제출
@@ -126,7 +142,10 @@ const PinStep = ({ teamId, checkPin, confirmLabel, danger = false, onConfirm }: 
                         확인하는 중…
                     </>
                 )}
-                {invalid && 'PIN이 맞지 않아요. 다시 입력해 주세요'}
+                {status === 'invalid' &&
+                    `PIN이 맞지 않아요. 다시 입력해 주세요${attempts ? ` (${attempts.used}/${attempts.limit})` : ''}`}
+                {status === 'blocked' &&
+                    `너무 많이 틀렸어요. ${blockedMinutes}분 뒤에 다시 입력해 주세요`}
                 {status === 'submitting' && !confirmLabel ? (
                     <>
                         <LoaderCircle className="size-4 animate-spin" aria-hidden />

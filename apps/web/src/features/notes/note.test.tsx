@@ -89,14 +89,16 @@ describe('날적이', () => {
     it('X → PIN이 맞으면 삭제하기: 서버에 삭제를 보내고 알린다', async () => {
         let pinBody: unknown;
         let deletedUrl = '';
+        let deletedBody: unknown;
         server.use(
             http.get(`${url}/note/:id`, () => HttpResponse.json(true)),
             http.post(`${url}/check-note-pin`, async ({ request }) => {
                 pinBody = await request.json();
                 return HttpResponse.json(true);
             }),
-            http.delete(`${url}/note`, ({ request }) => {
+            http.delete(`${url}/note`, async ({ request }) => {
                 deletedUrl = request.url;
+                deletedBody = await request.json();
                 return HttpResponse.json({ id: 'note-1' });
             }),
         );
@@ -115,6 +117,8 @@ describe('날적이', () => {
         expect(await screen.findByText('삭제했어요.')).toBeInTheDocument();
         expect(pinBody).toEqual({ noteId: 'note-1', pin: '1234' });
         expect(new URL(deletedUrl).searchParams.get('id')).toBe('note-1');
+        // PIN 단계에서 맞은 PIN을 삭제 요청에도 담는다 (서버가 다시 확인, 백엔드 개편 B-6)
+        expect(deletedBody).toEqual({ pin: '1234' });
         // 존재 확인은 X를 누를 때 한 번
         expect(countOf(requests, 'GET /note/note-1')).toBe(1);
         // 삭제 후에는 날적이 목록만 다시 불러온다

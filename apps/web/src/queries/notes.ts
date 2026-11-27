@@ -62,16 +62,25 @@ export function useAddNote() {
 /** 성공·실패(404 = 이미 삭제됨 포함) 모두 목록을 다시 불러온다 (이전 handleDeleteNote의 finally와 같음) */
 export function useDeleteNote() {
     const refreshNotes = useRefreshNotes();
-    return useMutation({ mutationFn: deleteNote, onSettled: refreshNotes });
+    return useMutation({
+        mutationFn: ({ id, pin }: { id: string; pin: string }) => deleteNote(id, pin),
+        onSettled: refreshNotes,
+    });
 }
 
 export function useAddNotice() {
     const refreshNotices = useRefreshNotices();
-    return useMutation({ mutationFn: addNotice, onSuccess: refreshNotices });
+    return useMutation({
+        mutationFn: ({ text, pin }: { text: string; pin: string }) => addNotice(text, pin),
+        onSuccess: refreshNotices,
+    });
 }
 
 /** 성공·실패(404 = 이미 삭제됨 포함) 모두 목록을 다시 불러온다 (이전 handleDeleteNotice의 finally와 같음) */
 export function useDeleteNotice() {
     const refreshNotices = useRefreshNotices();
-    return useMutation({ mutationFn: deleteNotice, onSettled: refreshNotices });
+    return useMutation({
+        mutationFn: ({ id, pin }: { id: string; pin: string }) => deleteNotice(id, pin),
+        onSettled: refreshNotices,
+    });
 }

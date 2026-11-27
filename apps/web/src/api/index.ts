@@ -40,6 +40,17 @@ export const post = async <T>(endpoint: string, body: object = {}): Promise<T> =
     }
 };
 
+/** POST인데 응답 헤더도 필요할 때 (PIN 확인의 틀린 횟수: api/pin.ts) */
+export const postWithHeaders = async <T>(endpoint: string, body: object = {}) => {
+    try {
+        const { data, headers } = await apiClient.post<T>(endpoint, body);
+        return { data, headers };
+    } catch (err) {
+        console.error(`POST ${endpoint} 실패:`, err);
+        throw err;
+    }
+};
+
 export const put = async <T>(endpoint: string, body: object = {}): Promise<T> => {
     try {
         const { data } = await apiClient.put<T>(endpoint, body);
@@ -50,9 +61,10 @@ export const put = async <T>(endpoint: string, body: object = {}): Promise<T> =>
     }
 };
 
-export const del = async <T>(endpoint: string): Promise<T> => {
+/** body: 서버가 확인할 PIN 등 (백엔드 개편 B-6: 삭제도 본문에 pin을 담는다) */
+export const del = async <T>(endpoint: string, body?: object): Promise<T> => {
     try {
-        const { data } = await apiClient.delete<T>(endpoint);
+        const { data } = await apiClient.delete<T>(endpoint, { data: body });
         return data;
     } catch (err) {
         console.error(`DELETE ${endpoint} 실패:`, err);

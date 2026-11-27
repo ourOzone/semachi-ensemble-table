@@ -159,3 +159,5 @@
 **실수하기 쉬운 곳**
 - 개발 서버를 두 번 켜면 포트가 겹친다 → 이제 "이미 쓰고 있는 포트" 안내가 나온다. 켜 둔 터미널을 찾아 Ctrl+C
 - PIN 시도 제한은 서버 메모리에 있다. 개발 중에 많이 틀려 막혔으면 개발 서버를 다시 켜면 풀린다 (운영은 15분 기다림)
+
+**(B-5 뒤) `querySrv ECONNREFUSED`**: Atlas 주소(`mongodb+srv://…mongodb.net`)는 DNS에 "이 클러스터의 실제 DB 서버들"을 물어본(SRV 조회) 뒤 접속한다. 이 오류는 DB가 아니라 그 DNS 조회가 막혔다는 뜻이다. 이 PC의 Node가 응답 없는 DNS(127.0.0.1)를 쓰고 있었다 → `DNS_SERVERS`로 공용 DNS를 정하면 된다 (`pnpm dev:server`는 알아서 한다). 확인 명령: `nslookup -type=SRV _mongodb._tcp.<클러스터 주소>`

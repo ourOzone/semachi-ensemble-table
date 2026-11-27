@@ -1,6 +1,7 @@
 // 서버 시작: 환경변수(.env) 검사 → DB 연결 → 서버 실행. 앱 조립은 app.ts
 // 설정이 틀리거나 DB에 연결하지 못하면 바로 끝낸다 (api.js는 연결에 실패해도 떠 있었다: O4)
 import 'dotenv/config';
+import dns from 'node:dns';
 import fs from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
@@ -15,6 +16,8 @@ try {
     console.error(`설정 오류: ${(error as Error).message}`);
     process.exit(1);
 }
+
+if (config.dnsServers.length > 0) dns.setServers(config.dnsServers);
 
 try {
     await mongoose.connect(config.mongoUri);

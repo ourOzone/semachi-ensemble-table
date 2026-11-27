@@ -13,6 +13,11 @@ export interface Config {
     /** CORS로 허락할 웹 주소 (CORS_ORIGINS, 쉼표로 여러 개. 기본 없음: 웹과 API가 같은 주소) */
     corsOrigins: string[];
     /**
+     * DB 주소를 찾을 DNS 서버 (DNS_SERVERS, 쉼표로 여러 개. 기본 없음: 컴퓨터 설정).
+     * 윈도우에서 Node가 응답하지 않는 DNS(127.0.0.1)를 잡아 Atlas 주소(mongodb+srv)를 못 찾을 때 개발 서버가 정한다
+     */
+    dnsServers: string[];
+    /**
      * 프록시 뒤에서 진짜 사용자 IP를 읽기 위한 Express trust proxy (TRUST_PROXY, 기본 false).
      * 숫자면 앞에 있는 프록시 수(Caddy 하나면 1), true/false, 또는 주소 목록. PIN 시도 제한이 IP로 세므로 B-11에서 꼭 정한다
      */
@@ -50,6 +55,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
             .map((origin) => origin.trim())
             .filter(Boolean),
         trustProxy: parseTrustProxy(env.TRUST_PROXY),
+        dnsServers: (env.DNS_SERVERS ?? '')
+            .split(',')
+            .map((server) => server.trim())
+            .filter(Boolean),
         tls: keyFile && certFile ? { keyFile, certFile } : undefined,
     };
 }

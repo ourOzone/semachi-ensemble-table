@@ -40,6 +40,14 @@ describe('loadConfig', () => {
         expect(trust('loopback, uniquelocal')).toBe('loopback, uniquelocal');
     });
 
+    test('DNS_SERVERS: 쉼표로 여러 개, 없으면 빈 목록(컴퓨터 설정)', () => {
+        expect(loadConfig(required).dnsServers).toEqual([]);
+        expect(loadConfig({ ...required, DNS_SERVERS: '8.8.8.8, 1.1.1.1' }).dnsServers).toEqual([
+            '8.8.8.8',
+            '1.1.1.1',
+        ]);
+    });
+
     test('CORS_ORIGINS: 쉼표로 여러 주소, 앞뒤 공백·빈 칸은 버림. 없으면 빈 목록', () => {
         expect(loadConfig(required).corsOrigins).toEqual([]);
         expect(

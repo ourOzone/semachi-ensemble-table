@@ -1372,6 +1372,7 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - `pnpm dev:server`: 메모리 DB + 예시 데이터 → **운영 DB** (`scripts/dev-prod-db.ts`, 옛 `dev:server:prod`)
 - 예시 데이터: `pnpm dev:server:sample` (`scripts/dev.ts` → `dev-sample.ts`), 지우기 `pnpm --filter @semachi/server dev:sample:reset`
 - Claude는 운영 DB에 닿는 `dev:server`를 실행하지 않는다 (`CLAUDE.md`)
+- 사용자가 켜 보니 `DB에 연결하지 못했습니다: querySrv ECONNREFUSED`. 운영 DB는 MongoDB Atlas(`mongodb+srv://`, 인터넷에서 접속하는 클라우드 DB). DB가 아니라 DB 주소를 찾는 DNS 조회에서 실패했다: 이 PC의 Node는 DNS 서버를 `127.0.0.1`로 알고 있는데 응답이 없다(윈도우 자체 `nslookup`은 통신사 DNS로 성공, 공용 DNS 8.8.8.8로도 성공). → 서버에 `DNS_SERVERS` 설정(있으면 `dns.setServers`), `dev:server`는 이 PC의 DNS로 찾지 못할 때만 공용 DNS(8.8.8.8·1.1.1.1)로. DB에는 Claude가 접속하지 않고 DNS 조회만 확인
 
 ## 남은 일
 

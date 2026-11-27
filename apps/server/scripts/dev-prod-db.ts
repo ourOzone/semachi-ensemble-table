@@ -4,6 +4,7 @@
 // - 활동 로그는 운영 log.txt가 아니라 apps/server/.dev-db/log-prod-db.txt에 쓴다
 // - 운영 DB가 이 PC의 접속을 받지 않으면(서버 안에서만 열려 있는 등) "DB에 연결하지 못했습니다"로 끝난다
 import { spawn } from 'node:child_process';
+import dns from 'node:dns';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { exitIfPortsBusy } from './port-check.ts';
@@ -23,6 +24,21 @@ if (!existsSync(ROOT_ENV)) {
 const env: NodeJS.ProcessEnv = { ...process.env };
 process.loadEnvFile(ROOT_ENV);
 for (const key of ['MONGO_DB', 'MASTER_PIN']) env[key] = process.env[key];
+
+// Atlas 주소(mongodb+srv://)는 DNS로 실제 DB 주소를 찾는다. 이 PC의 Node가 응답하지 않는 DNS(127.0.0.1 등)를 쓰면
+// 찾지 못해 "querySrv ECONNREFUSED"로 끝나므로, 그때만 공용 DNS로 찾게 한다 (주소는 출력하지 않는다)
+const PUBLIC_DNS = '8.8.8.8,1.1.1.1';
+const srvHost = /^mongodb\+srv:\/\/(?:[^@/]*@)?([^/?]+)/.exec(env.MONGO_DB ?? '')?.[1];
+if (srvHost && !env.DNS_SERVERS) {
+    try {
+        await dns.promises.resolveSrv(`_mongodb._tcp.${srvHost}`);
+    } catch {
+        console.log(
+            `이 PC의 DNS(${dns.getServers().join(', ')})로 DB 주소를 찾지 못해 공용 DNS(${PUBLIC_DNS})로 찾습니다`,
+        );
+        env.DNS_SERVERS = PUBLIC_DNS;
+    }
+}
 
 mkdirSync(DATA_DIR, { recursive: true });
 if (!existsSync(LOG_FILE)) writeFileSync(LOG_FILE, '');

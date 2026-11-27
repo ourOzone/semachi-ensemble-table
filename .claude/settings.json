@@ -10,7 +10,6 @@
       "Bash(git mv *)",
       "Bash(git add *)",
       "Bash(git commit *)"
-    ],
-    "deny": ["Edit(/api.js)", "Bash(git push *)"]
+    ]
   }
 }

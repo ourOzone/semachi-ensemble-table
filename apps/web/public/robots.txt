@@ -1,0 +1,5 @@
+# https://www.robotstxt.org/robotstxt.html
+# 검색 엔진 차단은 index.html의 noindex 표시로 한다 (백엔드 개편 B-1).
+# 여기서 막으면(Disallow: /) 검색 엔진이 페이지를 읽지 못해 noindex를 못 보고, 주소만 검색 결과에 남을 수 있다.
+User-agent: *
+Disallow:

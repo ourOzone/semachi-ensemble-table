@@ -1,0 +1,7 @@
+# pnpm workspace: 이 저장소 안의 패키지 목록 (백엔드 개편 B-1, docs/BACKEND_PLAN.md)
+# - apps/web     : 프론트 (@semachi/web)
+# - apps/server  : 백엔드 (@semachi/server)
+# - packages/*   : 공유 패키지 (@semachi/shared)
+packages:
+  - apps/*
+  - packages/*

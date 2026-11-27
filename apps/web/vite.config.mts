@@ -4,7 +4,7 @@ import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import babel from '@rolldown/plugin-babel';
 import tailwindcss from '@tailwindcss/vite';
 
-// 프론트엔드 env는 env/ 에서만 읽는다. 루트 .env는 백엔드(api.js) 전용이다.
+// 웹 env는 apps/web/env/ 에서만 읽는다. 저장소 루트 .env는 백엔드(apps/server) 전용이다.
 const ENV_DIR = 'env';
 
 export default defineConfig(({ mode }) => {

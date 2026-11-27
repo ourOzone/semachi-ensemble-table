@@ -9,15 +9,15 @@ dist
 coverage
 
 # 환경변수
-# - 루트 .env: 백엔드(api.js) 전용, 비밀값 포함 → 커밋 금지
-# - env/.env: 프론트엔드 공개 설정 → 커밋
+# - 루트 .env: 백엔드(apps/server) 전용, 비밀값 포함 → 커밋 금지
+# - apps/web/env/.env: 웹 공개 설정 → 커밋
 # - *.local: 개인 설정 → 커밋 금지
 .env
 .env.*
-!env/.env
-!env/.env.development
-!env/.env.production
-!env/.env.test
+!apps/web/env/.env
+!apps/web/env/.env.development
+!apps/web/env/.env.production
+!apps/web/env/.env.test
 
 # 로그
 *.log

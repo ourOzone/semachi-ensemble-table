@@ -34,7 +34,13 @@
     "import/no-named-as-default-member": "off",
     "typescript/no-explicit-any": "error"
   },
-  "ignorePatterns": ["api.js", "build/**", "dist/**", "node_modules/**"],
+  "ignorePatterns": [
+    "**/api.js",
+    "**/build/**",
+    "**/dist/**",
+    "**/node_modules/**",
+    "**/coverage/**"
+  ],
   "overrides": [
     {
       "files": ["**/*.test.ts", "**/*.test.tsx"],

@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅ · B-3 ✅, 다음은 B-4 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
+| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅ · B-3 ✅ · B-4 🔄(파일 완료, 첫 실행·브랜치 보호는 사용자), 다음은 B-5 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
 | View 개편 | ✅ **완료 (2026-11-26, V-0 ~ V-7)**: V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, V-4 날적이 ✅, V-5 공지 ✅, **V-6 일괄 정리 ✅**, **V-7 마무리 ✅ (2026-11-26)** (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
@@ -1339,6 +1339,16 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ (웹·서버) / `pnpm test:run` ✅ 웹 223 + 서버 105 (서버 5회 반복) / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅
 
+### 2026-11-27 — 백엔드 개편 B-4: CI (GitHub Actions), 내 PC 서버를 운영 DB에
+
+- CI: `.github/workflows/ci.yml` (새로). 모든 브랜치 푸시·PR마다 작업 "검사": pnpm 설치(`packageManager`) → Node(`.nvmrc`) → `pnpm install --frozen-lockfile` → 린트 → 포맷 → 타입 → 테스트(웹 223 + 서버 105) → 빌드. pnpm 내려받기와 MongoDB 실행 파일(서버 테스트용)은 캐시. 같은 브랜치에 새로 푸시하면 이전 실행은 멈춤, 권한은 읽기만
+- Node: `.nvmrc` 24 → 26 (최신 LTS 26.13, 사전 결정 2). 이 PC는 아직 24.14 → 사용자가 설치 (CI가 Node 26에서 처음 확인한다. 임시 Node 26을 받아 미리 돌려 보려 했으나 권한 규칙에 막혀 하지 않음)
+- 리눅스(CI)는 파일 이름 대소문자를 구분한다: git의 파일 188개 이름이 디스크와 대소문자까지 같고, 글꼴 경로도 맞음을 확인
+- 내 PC 서버를 운영 DB에 (사용자 허용): `pnpm dev:server:prod` (`apps/server/scripts/dev-prod-db.ts`). 루트 `.env`의 MONGO_DB·MASTER_PIN만 읽어(값은 출력하지 않음) `http://localhost:8081`로 켠다. 활동 로그는 `apps/server/.dev-db/log-prod-db.txt`. 웹은 `pnpm dev:local`. Claude는 실행하지 않았다 (실제 DB 연결). 이 PC에서 운영 DB에 접속할 수 있는지는 모른다 (DB 위치는 B-12)
+- 남은 것 (사용자): `api3.0` 푸시 → Actions 탭에서 첫 결과, `main`·`dev` 브랜치 보호 (저장소 관리자 권한), PC의 Node 26 설치
+
+**검증:** 워크플로 YAML 읽기 ✅ / `pnpm typecheck` ✅ / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / 첫 CI 실행은 푸시 후
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -1377,7 +1387,7 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 | ~~React Compiler~~ | ~~수동 `useCallback`/`useMemo`~~ | ✅ V-1 (2026-11-23) |
 
 ### 환경
-- 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). Node 24 최신으로 업데이트 권장.
+- 로컬 Node가 24.14.0인데, jsdom 31의 일부 하위 의존성이 `^24.15.0`을 요구해 설치 시 engine 경고가 뜬다(동작에는 문제 없음). → B-4에서 `.nvmrc`를 26(최신 LTS)으로. PC의 Node를 26으로 바꾸면 경고도 사라진다
 
 ### 다음 순서
 1. ~~2단계 TS 전환~~ ✅ 완료

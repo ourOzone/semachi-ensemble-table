@@ -13,7 +13,7 @@
 ├── packages/
 │   └── shared/              웹·서버가 함께 쓰는 Zod 스키마·타입·상수
 ├── deploy/                  (예정 B-11) 서버에 올라가는 배포 설정: compose.yaml, Caddyfile
-├── .github/workflows/       (예정 B-4) GitHub Actions: CI(검사)·CD(배포)
+├── .github/workflows/       GitHub Actions: ci.yml(푸시·PR마다 검사, B-4), (예정 B-11) deploy.yml(배포)
 ├── docs/                    문서 (계획·기록·문제 목록). 끝난 계획은 docs/archive/
 ├── package.json             루트 스크립트: 모든 패키지의 검사·테스트·빌드를 한 번에
 ├── pnpm-workspace.yaml      workspace에 들어가는 패키지 목록
@@ -66,7 +66,8 @@ apps/server/
 ├── Dockerfile               (예정 B-11) 운영 이미지
 ├── .dev-db/                 개발 서버의 메모리 DB 데이터·로그 (커밋 안 함, pnpm dev:server가 만듦)
 ├── scripts/
-│   └── dev.ts               내 PC 개발 서버: 메모리 MongoDB + 예시 데이터 + 서버 (pnpm dev:server)
+│   ├── dev.ts               내 PC 개발 서버: 메모리 MongoDB + 예시 데이터 + 서버 (pnpm dev:server)
+│   ├── dev-prod-db.ts       내 PC 서버를 운영 DB에 연결 (pnpm dev:server:prod, 루트 .env)
 │                            (예정) 한 번만 실행하는 데이터 변경 스크립트 (PIN 해시 등, 미리 세어 보기부터)
 ├── src/
 │   ├── main.ts              시작: 설정 검사 → DB 연결 → HTTP(S) 실행 → 종료 신호 처리

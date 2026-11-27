@@ -99,3 +99,37 @@
 - `pnpm dev`(운영 API)와 `pnpm dev:local`(내 PC 서버)을 헷갈리지 않기. `dev`로 켠 화면에서 지우면 진짜 데이터가 지워진다
 - 개발 서버의 PIN은 개발용(마스터 `0000`, 예시 팀 `1234`)이다. 실제 PIN과 관계없다
 - 휴대폰으로 개발 서버를 보려면 `apps/web/env/.env.localserver`의 `localhost`를 PC의 IP로 바꿔야 한다 (휴대폰에서 `localhost`는 휴대폰 자신)
+
+## B-4 CI (GitHub Actions) (2026-11-27)
+
+**CI (지속적 통합)**: 푸시할 때마다 GitHub의 컴퓨터가 저장소를 새로 받아 내 PC에서 하던 검사(린트·포맷·타입·테스트·빌드)를 똑같이 돌린다
+- 왜: 내 PC에서 검사를 잊어도, 내 PC에만 있는 파일·설정 때문에 통과했어도 잡힌다. "깨끗한 컴퓨터에서도 통과한다"가 확인된다
+- 안 쓰면: 깨진 코드가 `main`에 들어가고, B-11부터는 그대로 운영에 배포된다 (CD는 CI가 통과해야만 배포하게 만든다)
+
+**워크플로 파일 읽는 법** (`.github/workflows/ci.yml`)
+- `on`: 언제 도는지 (모든 브랜치 푸시, PR)
+- `jobs.check`: 할 일 묶음 하나("검사"). `runs-on: ubuntu-latest` = GitHub가 빌려주는 리눅스 컴퓨터
+- `steps`: 위에서부터 차례로. `uses:`는 남이 만든 액션(예: `actions/checkout` = 코드 받기), `run:`은 터미널 명령
+- 한 단계가 실패하면 그 뒤 단계는 돌지 않고 빨간 X
+- 캐시: 매번 받는 것(pnpm 패키지, MongoDB 실행 파일)을 저장해 두고 다음 실행에 다시 쓴다 → 빨라진다
+
+**결과 보는 곳**
+- 저장소 → **Actions** 탭 → 실행 하나 → "검사" → 단계별 로그 (실패한 단계는 빨간 X, 펼치면 오류)
+- 커밋 옆의 ✓(통과)·✗(실패)·●(도는 중), PR 화면 아래와 **Checks** 탭
+
+**리눅스에서만 깨지는 것**: 리눅스는 파일 이름 대소문자를 구분한다(`Teams.tsx` ≠ `teams.tsx`). 윈도우는 구분하지 않아 내 PC에서는 통과해도 CI에서 깨질 수 있다. 이름만 대소문자를 바꿀 때는 `git mv` 두 단계 (`docs/DIRECTORY_STRUCTURE.md` 규칙)
+
+**브랜치 보호**: `main`·`dev`에 직접 푸시하지 못하게 하고, PR + CI 통과가 있어야 합치게 한다 (사전 결정 6의 흐름: 작업 브랜치 → PR → `dev` → PR → `main`)
+
+자주 쓰는 명령:
+
+| 하고 싶은 것 | 명령 |
+|---|---|
+| CI 돌리기 | 푸시하면 자동 (`git push origin api3.0`) |
+| CI와 같은 검사를 내 PC에서 | `pnpm install --frozen-lockfile; pnpm lint; pnpm format:check; pnpm typecheck; pnpm test:run; pnpm build` |
+| 내 PC 서버를 운영 DB에 | `pnpm dev:server:prod` (+ `pnpm dev:local`) ⚠️ 실제 데이터가 바뀐다 |
+
+**실수하기 쉬운 곳**
+- `--frozen-lockfile`: 잠금 파일(`pnpm-lock.yaml`)과 `package.json`이 맞지 않으면 설치를 멈춘다. 패키지를 추가했으면 잠금 파일도 함께 커밋한다
+- 브랜치 보호의 "필수 검사"는 CI가 한 번 돌고 나야 목록에 "검사"가 나타난다
+- Node 버전은 `.nvmrc` 한 곳에서 정한다 (CI가 읽는다). 내 PC의 Node도 같게 맞춘다

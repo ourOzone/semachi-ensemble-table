@@ -13,6 +13,8 @@
 - 의존성 설치: `pnpm install` (패키지 추가는 `pnpm --filter <패키지> add <이름>`)
 - 웹 개발 서버: `pnpm dev` (운영 API에 연결)
 - 내 PC 서버: `pnpm dev:server` (메모리 MongoDB + 예시 데이터, http://localhost:8081, 마스터 PIN `0000`) + 다른 터미널에서 `pnpm dev:local` (웹을 이 서버에 연결). 데이터 지우기: `pnpm --filter @semachi/server dev:reset`
+- 내 PC 서버를 운영 DB에: `pnpm dev:server:prod` (루트 `.env`, 실제 데이터가 바뀐다. 사용자가 직접 실행하고, Claude는 실행하지 않는다)
+- CI: `.github/workflows/ci.yml` (푸시·PR마다 린트·포맷·타입·테스트·빌드). Node 버전은 `.nvmrc`
 - 타입 체크: `pnpm typecheck`
 - 빌드: `pnpm build`
 - 린트: `pnpm lint` (Oxlint, 설정은 루트 `.oxlintrc.json`)

@@ -58,34 +58,32 @@ apps/web/
 
 ## apps/server — 서버
 
-지금 (B-2):
-```
-apps/server/
-├── app.js                   앱 조립: 스키마·미들웨어·API (옛 api.js, 코드는 그대로)
-├── main.js                  시작: .env → 앱 → DB 연결 → HTTPS 8081
-├── app.d.ts                 테스트(TS)가 app.js를 가져다 쓰기 위한 타입 (B-3에서 삭제)
-├── vitest.config.mts        테스트 설정 (서버 시간대 UTC, 테스트용 마스터 PIN)
-└── test/                    지금 동작을 고정한 테스트 (메모리 MongoDB, 실제 DB·포트 없음)
-    ├── setup.ts · helpers.ts  DB 켜기·비우기, 임시 로그 파일, 요청·데이터 도우미
-    └── *.test.ts            팀·합주·날적이·공지·공통 처리(middleware)
-```
-
-예정 (B-3 이후):
+TypeScript를 Node가 바로 실행한다 (빌드 없음, B-3). "예정"은 해당 단계에서 생긴다.
 ```
 apps/server/
 ├── package.json · tsconfig.json
+├── vitest.config.mts        테스트 설정 (서버 시간대 UTC)
 ├── Dockerfile               (예정 B-11) 운영 이미지
-├── scripts/                 (예정) 한 번만 실행하는 데이터 변경 스크립트 (PIN 해시 등, 미리 세어 보기부터)
-└── src/
-    ├── main.ts              시작: DB 연결 → 서버 실행
-    ├── app.ts               Express 앱 조립 (테스트는 이것만 가져다 씀)
-    ├── config.ts            환경변수 읽기·검사
-    ├── models/              MongoDB 스키마 (team·ensemble·note·notice·activity)
-    ├── routes/              API (teams·ensembles·notes·notices·visits·health·admin)
-    ├── middleware/          요청 앞뒤 처리 (CORS·방문자 쿠키·PIN 확인·오류 응답)
-    ├── jobs/                정해진 시간에 도는 일 (날짜 지난 팀·합주 정리)
-    └── lib/                 로그·시간 등 공용 함수
+├── .dev-db/                 개발 서버의 메모리 DB 데이터·로그 (커밋 안 함, pnpm dev:server가 만듦)
+├── scripts/
+│   └── dev.ts               내 PC 개발 서버: 메모리 MongoDB + 예시 데이터 + 서버 (pnpm dev:server)
+│                            (예정) 한 번만 실행하는 데이터 변경 스크립트 (PIN 해시 등, 미리 세어 보기부터)
+├── src/
+│   ├── main.ts              시작: 설정 검사 → DB 연결 → HTTP(S) 실행 → 종료 신호 처리
+│   ├── app.ts               Express 앱 조립: createApp({ masterPin, logFile }) (테스트는 이것만 가져다 씀)
+│   ├── config.ts            환경변수 읽기·검사 (MONGO_DB·MASTER_PIN 필수, PORT·LOG_FILE·TLS_*)
+│   ├── models/              MongoDB 스키마 (team·ensemble·note·notice, 예정 B-7 activity)
+│   ├── routes/              API (teams·ensembles·notes·notices·health·log-view, 예정 admin)
+│   ├── middleware/          모든 요청에 걸리는 처리 (cors·visitor 쿠키, 예정 PIN 확인·오류 응답)
+│   ├── jobs/                (예정 B-9) 정해진 시간에 도는 일 (날짜 지난 팀·합주 정리)
+│   ├── lib/                 공용 함수 (log: 활동 로그 파일, time: 로그 시각)
+│   └── types/               Express에 붙이는 타입 (req.visitorId)
+└── test/                    API 테스트 (메모리 MongoDB, 실제 DB·포트 없음)
+    ├── setup.ts · helpers.ts  DB 켜기·비우기, 임시 로그 파일, 요청·데이터 도우미
+    └── *.test.ts            팀·합주·날적이·공지·공통 처리(middleware)·설정(config)·health
 ```
+- 가져오기는 실제 파일 확장자로 (`./app.ts`), 타입만 가져올 때는 `import type`. enum·namespace처럼 타입만 지워서는 실행되지 않는 문법은 쓰지 않는다 (Node가 타입만 지우고 실행하므로)
+- 새 API: `routes/<리소스>.ts`에 `xxxRouter(의존성)` 함수를 만들고 `app.ts`에서 `app.use`
 - 테스트는 `apps/server/test/<리소스>.test.ts` (API를 요청으로 검사하므로 코드 옆이 아니라 한곳에). 순수 함수 단위 테스트가 생기면 웹처럼 그 파일 옆에
 
 ## packages/shared — 공유
@@ -105,7 +103,7 @@ packages/shared/
 | 두 기능 이상이 쓰는 상태 | `apps/web/src/stores/` |
 | 서버에 요청 보내기 | `apps/web/src/api/`(요청 함수) + `apps/web/src/queries/`(훅) |
 | 화면 없이 계산만 하는 함수 | `apps/web/src/lib/` (현재 시각 등은 인자로 받아 테스트하기 쉽게) |
-| 새 API | `apps/server/src/routes/` (+ 스키마는 `models/`) |
+| 새 API | `apps/server/src/routes/` (+ 스키마는 `models/`, 테스트는 `apps/server/test/`) |
 | 웹·서버가 둘 다 알아야 하는 모양(요청·응답)·상수 | `packages/shared/` |
 | 서버 비밀값 | 루트 `.env` (커밋하지 않음). 웹 공개 값은 `apps/web/env/.env` |
 | 배포 설정 | `deploy/`, `.github/workflows/` |

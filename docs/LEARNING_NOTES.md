@@ -63,3 +63,39 @@
 **실수하기 쉬운 곳**
 - 테스트가 `.env`(실제 비밀값)를 읽지 않게: 테스트용 값은 `vitest.config.mts`의 `env`에. `main.js`만 `.env`를 읽는다
 - `insertOne`에 `undefined`를 넣으면 MongoDB에는 `null`로 들어간다. "필드 없음"을 만들려면 키를 빼야 한다 (`helpers.ts`의 `insert`가 뺀다)
+
+## B-3 파일 나누기 + TypeScript + 최신 버전 (2026-11-27)
+
+**서버 코드의 층** (웹의 `features`·`lib`처럼 역할로 나눔)
+- `models/`: DB에 저장하는 모양 (Mongoose 스키마)
+- `routes/`: 주소별로 요청을 받아 답하는 곳 (`router.get('/teams', ...)`)
+- `middleware/`: 모든 요청이 라우트에 닿기 전에 거치는 처리 (CORS 헤더, 방문자 쿠키). `(req, res, next)`에서 `next()`를 불러야 다음으로 넘어간다
+- `app.ts`(조립) / `main.ts`(실행) / `config.ts`(환경변수): 테스트는 `app.ts`만 쓰고, 실제 서버는 `main.ts`가 DB에 연결한 뒤 연다
+- 의존성 넘기기: 라우터가 마스터 PIN·로그 함수를 직접 읽지 않고 인자로 받는다(`teamsRouter({ log, masterPin })`). 그래서 테스트가 환경변수를 건드리지 않고 원하는 값을 넣을 수 있다
+
+**Node가 TypeScript를 바로 실행 (type stripping)**: Node 24는 `.ts` 파일에서 타입 부분만 지우고 실행한다. 빌드 단계가 없어 `node src/main.ts`로 끝
+- 대신 규칙: 가져올 때 실제 확장자(`./app.ts`), 타입만 가져올 때는 `import type`, enum·namespace처럼 "지우기만 해서는 안 되는" 문법 금지 (`tsconfig.json`의 `erasableSyntaxOnly`가 막아 준다)
+- 타입 검사는 따로: `pnpm --filter @semachi/server typecheck` (Node는 타입이 틀려도 그냥 실행한다)
+
+**버전 올리기를 테스트로 확인하는 법**: 바뀔 만한 곳을 먼저 테스트로 고정하고(본문 없는 요청), 버전을 올린 뒤 깨진 테스트만 고친다. Express 5는 본문 없는 요청의 `req.body`를 `undefined`로 둬서 400이던 응답이 500이 됐다 → 테스트가 바로 잡았다
+
+**health check**: `GET /health`는 "서버가 살아 있고 DB에 연결돼 있나"만 답하는 주소. 배포 뒤(B-11) 새 서버가 제대로 떴는지 자동으로 확인하는 데 쓴다. 안 쓰면: 서버 프로세스는 떠 있는데 DB가 끊긴 상태를 알 수 없다
+
+**빨리 실패하기 (fail fast)**: 설정이 빠졌거나 DB에 연결하지 못하면 서버를 띄우지 않고 바로 끝낸다. 이전 서버는 떠 있으면서 요청마다 실패했다 → 배포가 "성공"으로 보여 문제를 늦게 안다
+
+**종료 신호 (SIGTERM·SIGINT)**: Docker가 컨테이너를 멈출 때·Ctrl+C를 누를 때 프로그램에 보내는 신호. 받으면 새 요청을 그만 받고 하던 요청을 마친 뒤 끝낸다 (안 하면 저장 중이던 요청이 중간에 끊길 수 있다)
+
+자주 쓰는 명령:
+
+| 하고 싶은 것 | 명령 (저장소 루트) |
+|---|---|
+| 내 PC에서 서버 띄우기 (메모리 DB + 예시 데이터) | `pnpm dev:server` → http://localhost:8081 |
+| 웹을 그 서버에 연결 | 다른 터미널에서 `pnpm dev:local` → http://localhost:3000 |
+| 서버 살아 있나 | 브라우저에서 http://localhost:8081/health |
+| 개발 데이터 처음으로 | 서버를 끄고 `pnpm --filter @semachi/server dev:reset` |
+| 웹을 운영 서버에 연결 (이전과 같음) | `pnpm dev` |
+
+**실수하기 쉬운 곳**
+- `pnpm dev`(운영 API)와 `pnpm dev:local`(내 PC 서버)을 헷갈리지 않기. `dev`로 켠 화면에서 지우면 진짜 데이터가 지워진다
+- 개발 서버의 PIN은 개발용(마스터 `0000`, 예시 팀 `1234`)이다. 실제 PIN과 관계없다
+- 휴대폰으로 개발 서버를 보려면 `apps/web/env/.env.localserver`의 `localhost`를 PC의 IP로 바꿔야 한다 (휴대폰에서 `localhost`는 휴대폰 자신)

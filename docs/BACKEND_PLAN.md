@@ -16,7 +16,7 @@
 |---|---|---|
 | B-1 ✅ | 모노레포 재구성 + 검색 엔진 차단 (2026-11-27) | – |
 | B-2 ✅ | 지금 서버 동작을 테스트로 고정 (2026-11-27, 테스트 96개) | – |
-| B-3 | 파일 나누기 + TypeScript + 최신 버전 | – |
+| B-3 ✅ | 파일 나누기 + TypeScript + 최신 버전 (2026-11-27, Express 5·Mongoose 9, 내 PC 개발 서버) | – |
 | B-4 | CI (PR·푸시마다 자동 검사) | – |
 | B-5 | 보안·운영 수정 | – |
 | B-6 | PIN (서버에서 확인, 응답에서 제거, 해시 저장) | – |
@@ -197,6 +197,10 @@ apps/server/
 - 같이 정리 (동작 동일): 중복 `bodyParser`, `PORT` 상수(O6), `GET /health`(O4: DB 연결까지 확인)
 - `packages/shared`를 서버가 개발 중 바로 실행할 수 있는지 확인 (사전 결정 3)
 - 개발용 실행: 내 PC에서 메모리 MongoDB로 서버를 띄워 웹과 연결해 보는 방법 (실제 DB 없이 화면까지 확인)
+- ✅ 결과 (2026-11-27): 커밋 넷 ① 파일 나누기(JS, ES 모듈) ② TypeScript ③ Express 5.3·Mongoose 9.13 ④ 시작 검사·`GET /health`·개발 서버. 테스트 105개(B-2 96 + 본문 없는 요청 2 + 설정 5 + health 2). 상세는 `docs/MIGRATION.md`
+  - 사전 결정 3 확인: `packages/shared`의 `.ts`를 서버가 Node로 바로 가져올 수 있다 (pnpm 링크가 실제 경로 `packages/shared/src`로 풀려 `node_modules` 안 `.ts` 제약에 걸리지 않음). 운영 이미지는 그대로 `tsdown`으로 묶는다(B-11)
+  - 동작이 바뀐 것: 설정(MONGO_DB·MASTER_PIN)이 없거나 DB에 연결하지 못하면 바로 끝남(O4, 이전엔 떠 있었다), HTTPS는 인증서 환경변수(`TLS_KEY_FILE`·`TLS_CERT_FILE`)가 있을 때만(없으면 HTTP, 운영은 B-11부터 Caddy가 HTTPS), 종료 신호에 하던 요청을 마치고 끝냄, Express 5의 쿼리 해석(`?id[a]=1` 같은 중첩 객체를 더 만들지 않음)
+  - 그대로 둔 것: 오류 응답 형식(`middleware/errors`는 응답 형식을 정하는 B-10에서), 로그 파일(B-7), Node 버전(PC는 24.14. 운영·CI의 Node는 B-4·B-11에서 정해 `.nvmrc`와 함께 맞춘다)
 
 ### B-4 CI (GitHub Actions)
 

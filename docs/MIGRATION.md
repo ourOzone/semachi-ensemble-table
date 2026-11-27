@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅, 다음은 B-3 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
+| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅ · B-3 ✅, 다음은 B-4 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
 | View 개편 | ✅ **완료 (2026-11-26, V-0 ~ V-7)**: V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, V-4 날적이 ✅, V-5 공지 ✅, **V-6 일괄 정리 ✅**, **V-7 마무리 ✅ (2026-11-26)** (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
@@ -1321,6 +1321,23 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 - 설정: `apps/server`의 `tsconfig.json`(지금은 테스트만 TS, `app.d.ts`로 `app.js` 타입), `vitest.config.mts`, 스크립트 `typecheck`·`test`·`test:run`(루트 `pnpm test:run`에 포함). `pnpm-workspace.yaml`의 `allowBuilds`(mongodb-memory-server 설치 스크립트 끔: 처음 테스트할 때 MongoDB 실행 파일 약 100MB를 받는다). 린트·포맷 제외 대상 `api.js` → `app.js`·`main.js`(B-3까지). 린트: 테스트의 `waitForLog`를 검사 함수로, `_id`·`__v` 허용
 
 **검증:** `pnpm typecheck` ✅ (웹·서버) / `pnpm test:run` ✅ 웹 223 + 서버 96 (서버 10회 반복) / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅ / `node --check` `app.js`·`main.js` ✅
+
+### 2026-11-27 — 백엔드 개편 B-3: 파일 나누기, TypeScript, Express 5·Mongoose 9, 내 PC 개발 서버
+
+커밋 넷. 단계마다 B-2 테스트가 그대로 통과하는지 확인했다
+- ① `d5fd304` 파일 나누기 (JavaScript 그대로): `src/app.js` 한 파일 → `app`(조립, `createApp({ masterPin, logFile })`)·`config`·`main`·`models/`(4)·`routes/`(teams·ensembles·notes·notices·log-view)·`middleware/`(cors·visitor)·`lib/`(log·time). CommonJS → ES 모듈. 중복 JSON 해석기 중 `express.json`만 남기고 `body-parser` 삭제. 테스트는 앱을 `createApp`으로 만들고 마스터 PIN을 직접 넘긴다(환경변수에 기대지 않음). 본문 없는 요청 테스트 2개 추가(버전 올리기 전에 고정)
+- ② `09b3038` TypeScript: `git mv`로 `.ts`, 타입만 추가. Node가 `.ts`를 바로 실행(type stripping): 가져오기에 `.ts` 확장자, 타입은 `import type`, `erasableSyntaxOnly`. `req.visitorId` 타입(`src/types/express.d.ts`). `packages/shared`의 `.ts`도 Node로 바로 가져올 수 있음을 임시로 확인 (사전 결정 3)
+- ③ `d89884b` Express 4.22 → 5.3, Mongoose 8.24 → 9.13. 바뀐 것을 테스트가 잡음: Express 5는 본문 없는 요청의 `req.body`가 `undefined`라 본문 없는 PIN 확인이 400 대신 500 → Express 4처럼 빈 객체로. Mongoose 9의 더 엄격한 타입에 쿼리의 팀 id를 문자열로
+- ④ 시작 검사·health·개발 서버
+  - 지금 → 바꾼 후: 설정이 없어도·DB 연결에 실패해도 서버가 뜸 → 설정 오류·DB 연결 실패면 메시지를 남기고 바로 끝남(O4). HTTPS(인증서 경로 고정) → `TLS_KEY_FILE`·`TLS_CERT_FILE`이 있으면 HTTPS, 없으면 HTTP. 포트 8081 고정 → `PORT`(기본 8081, O6). 종료 신호(Ctrl+C·Docker 정지)에 하던 요청을 마치고 DB 연결을 닫음
+  - `GET /health` (새로): DB에 연결돼 있으면 200 `{ status: 'ok' }`, 아니면 503. 방문자 쿠키·로그 없음 (다른 미들웨어보다 먼저)
+  - 내 PC 개발 서버 `pnpm dev:server` (`apps/server/scripts/dev.ts`): 메모리 MongoDB(포트 27018, 데이터는 `apps/server/.dev-db/`에 남음, 처음엔 예시 데이터) + 서버 `http://localhost:8081`(`node --watch`, 코드를 고치면 서버만 다시 시작). 개발용 마스터 PIN `0000`·예시 팀 PIN `1234`. 데이터 지우기 `pnpm --filter @semachi/server dev:reset`
+  - 웹을 개발 서버에 연결 `pnpm dev:local` (`vite --mode localserver`, `apps/web/env/.env.localserver`의 `VITE_API_URL=http://localhost:8081`)
+  - `.gitignore`: `apps/server/.dev-db/`, `apps/server/log.txt`
+- 확인: 개발 서버를 켜고 `/health`·`/teams`·`/ensembles`·마스터 PIN 확인·CORS 사전 요청(Origin `localhost:3000`, PUT)·날적이 남기기 → 다시 켜도 데이터 유지·예시 데이터 다시 넣지 않음, 코드 수정 시 서버만 다시 시작. `dev:local` 빌드 결과에 `localhost:8081`(운영 주소 없음). 설정 없이 실행 → "설정 오류" 종료 코드 1, 닿지 않는 DB → "DB에 연결하지 못했습니다" 종료 코드 1. 브라우저로 화면까지 본 것은 아님 (이 PC에 브라우저 자동화 도구가 없음) → 사용자 확인
+- 린트: 서버는 node 환경, `console` 허용, async 핸들러 규칙 끔 (Express 5가 async 오류를 넘겨 준다)
+
+**검증:** `pnpm typecheck` ✅ (웹·서버) / `pnpm test:run` ✅ 웹 223 + 서버 105 (서버 5회 반복) / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅
 
 ## 남은 일
 

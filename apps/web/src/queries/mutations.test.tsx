@@ -142,14 +142,22 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
         const { result, requests } = await renderScreen();
 
         await act(() =>
-            result.current.addEnsemble.mutateAsync({ ...ensembleRequest, teamName: '테스트밴드' }),
+            result.current.addEnsemble.mutateAsync({
+                ...ensembleRequest,
+                teamName: '테스트밴드',
+                pin: '1234',
+            }),
         );
         await waitFor(() => expect(loads(requests).ensembles).toBe(2));
 
         status = 500;
         await expect(
             act(() =>
-                result.current.addEnsemble.mutateAsync({ ...ensembleRequest, teamName: 'x' }),
+                result.current.addEnsemble.mutateAsync({
+                    ...ensembleRequest,
+                    teamName: 'x',
+                    pin: '1234',
+                }),
             ),
         ).rejects.toMatchObject({ response: { status: 500 } });
         // 다시 불러오기는 기다리지 않고 시작되므로, 잠시 뒤에도 요청이 없는지 본다

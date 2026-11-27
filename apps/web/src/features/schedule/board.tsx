@@ -206,6 +206,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
     const handleEditEnsemble = async (
         { team, repeat, date, startTime, endTime, repeatEnd }: AddEnsembleInput,
         target: EditTarget | null,
+        pin: string,
     ) => {
         if (!target) return false;
         try {
@@ -217,7 +218,7 @@ const Board = ({ days, today, view, direction }: BoardProps) => {
             }
             await updateEnsembleAsync({
                 id: target.id,
-                pin: target.pin,
+                pin,
                 ...toEnsembleRequest(
                     team.id,
                     repeat,

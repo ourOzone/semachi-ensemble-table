@@ -13,6 +13,7 @@ import {
     CalendarX2,
     Check,
     ChevronDown,
+    ChevronLeft,
     GripVertical,
     Infinity as InfinityIcon,
     Minus,
@@ -50,6 +51,8 @@ import { useDrawerStore } from '@/stores/drawer';
 import type { TimeSlot } from '@/types/index';
 import { useAddEnsembleStore, type AddEnsemblePreset, type EditTarget } from './add-ensemble-store';
 import { DatePicker, DateToggle, Hint, Section, Segmented } from '@/components/sheet/form-parts';
+import { useKeyboardSheet } from '@/components/sheet/keyboard-sheet';
+import PinStep from '@/components/sheet/pin-step';
 import {
     boxShape,
     formatDate,
@@ -63,7 +66,8 @@ import {
 
 // 합주 잡기 Drawer (View 개편 V-2 21차). 옛 합주 추가 4단계(반복 여부 → 달력 → 시간 → 완료 화면)를 Drawer 하나로 합쳤다.
 // 입력: 팀 → 반복 여부 → 날짜 → 시간(그날 동방 막대에서 끌어 고름)·소요 시간 → 반복 종료(매주 반복일 때, 고르지 않아도 됨).
-// PIN은 받지 않는다 (옛 흐름도 받지 않았다).
+// 그 팀의 PIN을 받는다 (백엔드 개편 B-6 뒤 사용자 결정, 이전: 받지 않음). 팀 정보·소모임 정보에서 열면 거기서 먼저 받아 팀이 고정되고,
+// 합주판에서 열면 다 고른 뒤 "합주 잡기"를 누르면 같은 Drawer 안에서 고른 팀의 PIN을 받는다.
 // - 팀 정보·소모임 정보에서 열면 팀이 골라져 있고 날짜를 고른다 (시간은 12:00부터 2시간으로 시작)
 // - 합주판(빈 시간·겹친 합주 목록·합주 정보)에서 열면 날짜·시작 시간이 채워져 있고 팀을 고른다
 // - 소요 시간은 2시간으로 시작한다 (30분·1시간·2시간·직접 입력)
@@ -102,9 +106,9 @@ interface AddEnsembleDrawerProps {
     events?: TeamOption[];
     /**
      * 저장. 성공하면 true (Drawer는 호출한 쪽이 닫는다), 실패하면 false (입력을 그대로 두고 다시 누를 수 있다).
-     * 수정이면 target이 그 합주
+     * 수정이면 target이 그 합주. pin: 그 팀의 PIN (서버가 다시 확인한다, 백엔드 개편 B-6)
      */
-    onSubmit: (input: AddEnsembleInput, target: EditTarget | null) => Promise<boolean>;
+    onSubmit: (input: AddEnsembleInput, target: EditTarget | null, pin: string) => Promise<boolean>;
 }
 
 /** 시간칸 수 (09:00 ~ 24:00, 30분 단위) */
@@ -139,6 +143,15 @@ const AddEnsembleDrawer = ({
         (mode === 'update' ? 'updateEnsemble' : 'addEnsemble');
     // 합주 잡기·수정 Drawer는 같은 store로 열린다. 이 Drawer의 모드로 연 것만 그린다
     const forThisMode = (edit !== null) === (mode === 'update');
+    // PIN 단계(합주판에서 연 합주 잡기의 마지막)의 키보드 처리 (팀 정보 Drawer와 같음: sheet/keyboard-sheet).
+    // 새로 열면 PIN 단계가 아닌 상태로
+    const [pinOpen, setPinOpen] = useState(false);
+    const [pinSession, setPinSession] = useState(session);
+    if (pinSession !== session) {
+        setPinSession(session);
+        setPinOpen(false);
+    }
+    const pinSheet = useKeyboardSheet(open && pinOpen);
 
     // 저장하지 않고 닫으면 연 곳(팀 정보 등)으로 돌아간다. 저장에 성공하면 호출한 쪽이 모두 닫는다
     const handleClose = () => {
@@ -147,9 +160,15 @@ const AddEnsembleDrawer = ({
     };
 
     return (
-        <Drawer open={open} onOpenChange={(next) => !next && handleClose()}>
+        <Drawer
+            open={open}
+            onOpenChange={(next) => !next && handleClose()}
+            // 키보드 위치 맞추기는 직접 한다 (keyboardSheet)
+            repositionInputs={false}
+        >
             <DrawerContent
                 className={sheetClassName}
+                style={pinSheet.style}
                 overlayClassName={overlayClassName}
                 handleClassName="absolute inset-x-0 top-2.5 z-10 mt-0 w-10 bg-neutral-300"
             >
@@ -162,9 +181,11 @@ const AddEnsembleDrawer = ({
                         teams={teams}
                         events={events}
                         onSubmit={onSubmit}
+                        onPinStepChange={setPinOpen}
                     />
                 )}
             </DrawerContent>
+            {pinSheet.cover}
         </Drawer>
     );
 };
@@ -175,14 +196,25 @@ interface AddEnsembleFormProps {
     teams: TeamOption[];
     events: TeamOption[];
     onSubmit: AddEnsembleDrawerProps['onSubmit'];
+    /** PIN 단계로 바뀌거나 돌아올 때 (Drawer의 키보드 처리) */
+    onPinStepChange: (open: boolean) => void;
 }
 
-const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleFormProps) => {
+const AddEnsembleForm = ({
+    preset,
+    edit,
+    teams,
+    events,
+    onSubmit,
+    onPinStepChange,
+}: AddEnsembleFormProps) => {
     const [teamId, setTeamId] = useState<string | null>(preset.teamId ?? null);
     const team = edit
         ? edit.team
         : ([...teams, ...events].find((option) => option.id === teamId) ?? null);
     const [teamOpen, setTeamOpen] = useState(team === null);
+    // 바꿀 수 없는 팀: 수정이거나, 팀 정보에서 그 팀의 PIN을 받고 열었을 때
+    const lockedTeam = edit?.team ?? (preset.pin ? team : null);
     // 수정이면 모두 지금 값으로 시작한다
     const [repeat, setRepeat] = useState<boolean | null>(edit?.repeat ?? null);
     const [date, setDate] = useState<Dayjs | null>(edit?.date ?? preset.date ?? null);
@@ -306,13 +338,89 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
             : edit.repeatEnd !== null && endDate.isSame(edit.repeatEnd, 'day'));
     const ready = missing === null && limitDate === null && !unchanged && !submitting;
 
+    // 저장 (그 팀의 PIN과 함께). 실패하면 입력을 그대로 두고 다시 누를 수 있게 한다 (성공하면 Drawer가 닫힌다)
+    const save = async (pin: string) => {
+        if (!team || repeat === null || !date) return false;
+        setSubmitting(true);
+        const saved = await onSubmit(
+            { team, repeat, date, ...range, repeatEnd: endDate },
+            edit,
+            pin,
+        );
+        if (!saved) setSubmitting(false);
+        return saved;
+    };
+
+    // PIN을 이미 받았으면(수정, 팀 정보에서 연 합주 잡기) 바로 저장, 아니면 고른 팀의 PIN 단계로
+    const [pinStep, setPinStep] = useState(false);
+    const showPinStep = (next: boolean) => {
+        setPinStep(next);
+        onPinStepChange(next);
+    };
+    const knownPin = edit?.pin ?? preset.pin;
     const submit = async () => {
         if (!ready || !team || repeat === null || !date) return;
-        setSubmitting(true);
-        // 실패하면 입력을 그대로 두고 다시 누를 수 있게 한다 (성공하면 Drawer가 닫힌다)
-        const saved = await onSubmit({ team, repeat, date, ...range, repeatEnd: endDate }, edit);
-        if (!saved) setSubmitting(false);
+        if (knownPin) await save(knownPin);
+        else showPinStep(true);
     };
+
+    // PIN 단계 (합주판에서 연 합주 잡기의 마지막): 고른 팀의 PIN이 맞으면 바로 저장.
+    // 저장에 실패하면(그새 4개가 겹침 등) 입력 화면으로 돌아가 이유를 보인다. 다시 누르면 PIN부터
+    if (pinStep && team) {
+        return (
+            <div ref={scrollFadeRef} className={cn(scrollAreaClassName, 'flex-1')}>
+                <div className="px-5 pt-[26px] pb-[calc(24px+env(safe-area-inset-bottom))] duration-200 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-4 md:px-7">
+                    <div className="flex items-center justify-between">
+                        <button
+                            type="button"
+                            aria-label="뒤로"
+                            className={`${pressable} -ml-2 inline-flex size-10 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100`}
+                            onClick={() => showPinStep(false)}
+                        >
+                            <ChevronLeft className="size-6" aria-hidden />
+                        </button>
+                        <DrawerClose asChild>
+                            <button
+                                type="button"
+                                aria-label="닫기"
+                                className={`${pressable} -mr-2 inline-flex size-10 items-center justify-center rounded-full text-neutral-700 hover:bg-neutral-100`}
+                            >
+                                <X className="size-6" aria-hidden />
+                            </button>
+                        </DrawerClose>
+                    </div>
+                    {/* 어떤 합주인지 */}
+                    <p className="mt-3 flex min-w-0 items-center gap-1.5 text-[14px] text-neutral-500">
+                        <span
+                            className="size-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: team.color }}
+                        />
+                        <span className="truncate">
+                            {team.name}
+                            {date &&
+                                ` · ${formatDate(date)} ${formatTimeRange(range.startTime, range.endTime)}`}
+                        </span>
+                    </p>
+                    <DrawerTitle className="mt-1.5 text-[24px] leading-tight font-bold text-ink md:text-[26px]">
+                        {team.isEvent ? '일정을' : '합주를'} 잡을까요?
+                    </DrawerTitle>
+                    <DrawerDescription className="mt-1.5 text-[15px] break-keep text-neutral-500">
+                        {team.isEvent ? '일정' : '팀'} PIN 4자리를 입력해 주세요
+                    </DrawerDescription>
+                    <div className="mt-7">
+                        <PinStep
+                            teamId={team.id}
+                            onConfirm={async (pin) => {
+                                const saved = await save(pin);
+                                if (!saved) showPinStep(false);
+                                return saved;
+                            }}
+                        />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>
@@ -354,14 +462,14 @@ const AddEnsembleForm = ({ preset, edit, teams, events, onSubmit }: AddEnsembleF
                     {/* 팀 */}
                     {/* 소모임·회의 등 일정이면 "일정" (V-3 8차) */}
                     <Section label={team?.isEvent ? '일정' : '팀'} sectionRef={sectionRef('team')}>
-                        {edit ? (
-                            // 수정: 팀은 바꿀 수 없다
+                        {lockedTeam ? (
+                            // 수정, 팀 정보에서 PIN을 받고 연 합주 잡기: 팀은 바꿀 수 없다 (그 팀의 PIN이라)
                             <div
                                 className={`${boxShape} flex h-14 w-full items-center justify-between gap-3 border border-neutral-200 bg-surface pr-4 pl-2`}
                             >
-                                <TeamBadge team={edit.team} />
+                                <TeamBadge team={lockedTeam} />
                                 <span className="shrink-0 text-[13px] text-neutral-400">
-                                    {edit.team.isEvent ? '일정은' : '팀은'} 바꿀 수 없어요
+                                    {lockedTeam.isEvent ? '일정은' : '팀은'} 바꿀 수 없어요
                                 </span>
                             </div>
                         ) : team && !teamOpen ? (

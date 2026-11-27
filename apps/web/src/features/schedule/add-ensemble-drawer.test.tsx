@@ -31,6 +31,12 @@ function mockSaturday(list: [name: string, startTime: number, endTime: number][]
 }
 
 /** 빈 시간칸을 눌러 합주 잡기 Drawer까지 연다 */
+/** 합주판에서 연 합주 잡기: "합주 잡기"를 누른 뒤 고른 팀의 PIN 단계 (팀 PIN 1234, 백엔드 개편 B-6 뒤) */
+async function enterBookingPin(user: ReturnType<typeof userEvent.setup>) {
+    const pinStep = within(await findDialog('합주를 잡을까요?'));
+    await user.type(pinStep.getByLabelText('PIN 4자리'), '1234');
+}
+
 async function openFromEmptySlot(user: ReturnType<typeof userEvent.setup>, slotName: string) {
     await user.click(await screen.findByRole('button', { name: slotName }));
     const slot = within(await findDialog(/^토 /));
@@ -47,6 +53,7 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
         requests = recordRequests();
         mockInitialData();
         server.use(http.get(`${url}/team/:id`, () => HttpResponse.json(true)));
+        server.use(http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)));
     });
 
     afterEach(() => {
@@ -92,9 +99,11 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
         expect(drawer.queryByText('이 날짜 이후에 자동으로 삭제돼요')).not.toBeInTheDocument();
 
         await user.click(drawer.getByRole('button', { name: '합주 잡기' }));
+        await enterBookingPin(user);
 
         expect(await screen.findByText('합주를 잡았어요.')).toBeInTheDocument();
         expect(posted).toMatchObject({
+            pin: '1234', // 다 고른 뒤 받은 그 팀의 PIN
             teamId: 'team-1',
             teamName: '테스트밴드',
             repeat: true,
@@ -282,6 +291,7 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
             ['D팀', 6, 9],
         ]);
         await user.click(save);
+        await enterBookingPin(user);
 
         expect(
             await screen.findByText(
@@ -386,6 +396,7 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
         expect(drawer.getByRole('button', { name: '11월 28일 토요일까지' })).toBeInTheDocument();
 
         await user.click(drawer.getByRole('button', { name: '합주 잡기' }));
+        await enterBookingPin(user);
         // 알림은 한 문장만 (V-3 15차, 이전: 아래에 "(11/28(토)까지)"가 든 합주 요약)
         expect(await screen.findByText('합주를 잡았어요.')).toBeInTheDocument();
         expect(posted).toMatchObject({ repeat: true, type: '무기한', due: '2026-11-28' });
@@ -425,6 +436,7 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
         await user.click(drawer.getByRole('radio', { name: '계속 반복' }));
 
         await user.click(drawer.getByRole('button', { name: '합주 잡기' }));
+        await enterBookingPin(user);
         await waitFor(() => expect(posted).toMatchObject({ due: '2099-12-31' }));
     });
 
@@ -466,6 +478,7 @@ describe('합주 잡기 Drawer: 스크롤·막대 끌기', () => {
         vi.setSystemTime(new Date(2026, 10, 20, 10, 0));
         mockInitialData();
         server.use(http.get(`${url}/team/:id`, () => HttpResponse.json(true)));
+        server.use(http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)));
         scrollTo = vi.fn<(options: ScrollToOptions) => void>();
         Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
             configurable: true,
@@ -511,17 +524,22 @@ describe('합주 잡기 Drawer: 스크롤·막대 끌기', () => {
         expect(lastScroll()).toEqual({ top: 0, behavior: 'smooth' });
     });
 
-    it('팀 정보에서 열어도 맨 위에서 시작한다 (팀은 골라져 있음)', async () => {
+    it('팀 정보에서 열어도 맨 위에서 시작한다 (팀은 PIN을 받은 팀으로 고정)', async () => {
         const user = userEvent.setup();
         renderApp();
         const teamList = await screen.findByRole('group', { name: '팀 목록' });
         await user.click(await within(teamList).findByText('테스트밴드'));
         await user.click(await screen.findByRole('button', { name: '합주 잡기' }));
+        // 팀 정보에서는 그 팀의 PIN을 먼저 받는다 (백엔드 개편 B-6 뒤)
+        await user.type(
+            within(await findDialog('합주를 잡을까요?')).getByLabelText('PIN 4자리'),
+            '1234',
+        );
         const drawer = within(await findDialog('합주 잡기'));
 
         // V-3 8차: 22차의 "처음부터 반복을 맨 위로"를 되돌림
         expect(scrollTo).not.toHaveBeenCalled();
-        expect(drawer.getByRole('button', { name: /^테스트밴드\s*바꾸기$/ })).toBeInTheDocument();
+        expect(drawer.getByText('팀은 바꿀 수 없어요')).toBeInTheDocument();
     });
 
     it('그날 동방 막대: 창을 끌어 옮기고, 창 밖을 누르면 그 자리를 가운데로 (막대 안에서만)', async () => {

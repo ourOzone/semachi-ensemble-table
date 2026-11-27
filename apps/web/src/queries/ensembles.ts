@@ -4,7 +4,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { addEnsemble, deleteEnsemble, getEnsembles, updateEnsemble } from '@/api/ensemble';
 import { buildColorMap, toTeams } from '@/lib/board';
 import { toDaysSchedule, type CalendarEvent, type WithLane } from '@/lib/calendar';
-import type { EnsembleUpdateRequest } from '@/types';
+import type { EnsembleCreateRequest, EnsembleUpdateRequest } from '@/types';
 import { ENSEMBLES, ensemblesQueryKey, useRefresh } from './keys';
 import { teamsQueryOptions } from './teams';
 
@@ -41,10 +41,14 @@ export function useRefreshEnsembles() {
     return useRefresh(ENSEMBLES);
 }
 
-/** 서버가 팀 존재를 검사하지 않으므로(ISSUES B4) 호출부가 팀 존재 확인 후 호출한다 */
+/** 합주 잡기. pin: 그 팀의 PIN (서버가 확인한다). 호출부가 팀 존재를 먼저 확인한다 (ISSUES B4) */
 export function useAddEnsemble() {
     const refreshEnsembles = useRefreshEnsembles();
-    return useMutation({ mutationFn: addEnsemble, onSuccess: refreshEnsembles });
+    return useMutation({
+        mutationFn: ({ pin, ...ensemble }: EnsembleCreateRequest & { pin: string }) =>
+            addEnsemble(ensemble, pin),
+        onSuccess: refreshEnsembles,
+    });
 }
 
 /** 합주 수정·미루기. pin: 서버가 확인할 팀 PIN (PIN 단계에서 맞은 것, 백엔드 개편 B-6) */

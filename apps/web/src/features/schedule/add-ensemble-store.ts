@@ -17,6 +17,11 @@ export interface AddEnsemblePreset {
     startTime?: TimeSlot;
     /** 저장하지 않고 닫으면 돌아갈 Drawer (팀 정보·소모임 정보). 없으면 모두 닫는다 */
     returnTo?: DrawerId;
+    /**
+     * 팀 정보·소모임 정보에서 먼저 확인한 그 팀의 PIN (백엔드 개편 B-6 뒤 사용자 결정: 합주 잡기도 PIN).
+     * 있으면 팀을 바꿀 수 없고 저장 때 이 PIN을 보낸다. 없으면(합주판에서 열면) 저장을 누른 뒤 고른 팀의 PIN을 받는다
+     */
+    pin?: string;
 }
 
 /** 수정할 합주의 지금 값 (합주 정보 Drawer에서 PIN이 맞은 뒤 연다) */

@@ -1,0 +1,161 @@
+# 배포: dev에 푸시 → 베타(beta.semachi.net), main에 푸시 → 운영(semachi.net) (백엔드 개편 B-11)
+#   ① 검사: ci.yml 그대로 (린트·타입·테스트·빌드·이미지 확인). 실패하면 여기서 멈춘다
+#   ② 이미지 올리기: API·웹 이미지를 ARM·x86 둘 다 만들어 GHCR(GitHub의 이미지 저장소)에 올린다
+#   ③ 서버에 배포: SSH로 서버에 접속해 deploy/deploy.sh 실행 (새 이미지 받기 → 다시 켜기 → /health 확인, 실패하면 이전 것으로)
+# ③은 저장소 변수(Settings → Secrets and variables → Actions → Variables)를 켠 쪽만 돈다:
+#   DEPLOY_BETA=true (B-13부터), DEPLOY_PRODUCTION=true (B-14 전환 뒤부터). 그 전에는 ②까지만
+# 되돌리기: Actions 탭에서 이전 배포 실행을 열고 "Re-run jobs" → 그때 이미지로 다시 배포된다
+# 서버 정보는 GitHub Environments(beta·production)의 Secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS
+#   (만드는 법: docs/DEPLOY_RUNBOOK.md)
+name: 배포
+
+on:
+  push:
+    branches: [dev, main]
+  workflow_dispatch: # Actions 탭에서 손으로 (dev·main에서만 배포된다)
+
+# 같은 브랜치의 배포는 하나씩 차례로 (도는 중인 배포를 멈추지 않는다: 반쯤 바뀐 채로 남지 않게)
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: 검사
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: 이미지 올리기
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write # GHCR에 올리기
+    outputs:
+      target: ${{ steps.meta.outputs.target }}
+      api: ${{ steps.meta.outputs.api }}
+      web: ${{ steps.meta.outputs.web }}
+    steps:
+      - name: 코드 받기
+        uses: actions/checkout@v7
+
+      # 이미지 이름: ghcr.io/<저장소 주인>/semachi-api:<커밋 앞 7자리>, semachi-web:<beta|production>-<커밋>
+      # (GHCR 이름은 소문자만. API 이미지는 운영·베타가 같고 설정만 다르다. 웹은 베타 표시 때문에 따로 만든다)
+      - name: 이름 정하기
+        id: meta
+        run: |
+          prefix="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          target=$([[ $GITHUB_REF_NAME == main ]] && echo production || echo beta)
+          sha=${GITHUB_SHA::7}
+          {
+            echo "prefix=$prefix"
+            echo "target=$target"
+            echo "api=$prefix/semachi-api:$sha"
+            echo "web=$prefix/semachi-web:$target-$sha"
+          } >> "$GITHUB_OUTPUT"
+
+      # 서버 CPU(ARM·x86)를 아직 모른다 (B-12): 둘 다 만든다. 서버는 자기 CPU에 맞는 것을 받는다
+      - name: 다른 CPU용 빌드 준비 (QEMU)
+        uses: docker/setup-qemu-action@v4
+      - name: 이미지 빌드 도구 준비
+        uses: docker/setup-buildx-action@v4
+
+      - name: GHCR 로그인
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: API 이미지 올리기
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/server/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.api }}
+            ${{ steps.meta.outputs.prefix }}/semachi-api:${{ steps.meta.outputs.target }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+
+      - name: 웹 이미지 올리기
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          build-args: VITE_APP_ENV=${{ steps.meta.outputs.target }}
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.web }}
+            ${{ steps.meta.outputs.prefix }}/semachi-web:${{ steps.meta.outputs.target }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=web-${{ steps.meta.outputs.target }}
+          cache-to: type=gha,scope=web-${{ steps.meta.outputs.target }},mode=max
+
+  deploy:
+    name: 서버에 배포
+    needs: publish
+    if: >-
+      (github.ref_name == 'dev' && vars.DEPLOY_BETA == 'true') ||
+      (github.ref_name == 'main' && vars.DEPLOY_PRODUCTION == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Environment: 배포 기록이 남고, 그쪽 Secrets를 쓴다. production에 "승인 필요"를 켜면 누를 때까지 기다린다
+    environment:
+      name: ${{ needs.publish.outputs.target }}
+      url: ${{ needs.publish.outputs.target == 'production' && 'https://semachi.net' || 'https://beta.semachi.net' }}
+    permissions:
+      contents: read
+      packages: read # 서버가 GHCR에서 이미지를 받을 때 이 실행의 토큰을 잠깐 빌려 쓴다
+    env:
+      DEPLOY_DIR: /srv/semachi
+    steps:
+      - name: 코드 받기 (deploy/ 폴더만 쓴다)
+        uses: actions/checkout@v7
+
+      # 비밀키는 이 실행 동안만 파일로 둔다. known_hosts: 접속할 서버가 진짜 그 서버인지 확인 (중간에서 가로채기 방지)
+      - name: SSH 준비
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: 배포 설정 파일을 서버에 복사 (compose.yaml, caddy/, deploy.sh, backup.sh)
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          scp -i ~/.ssh/deploy_key -r \
+            deploy/compose.yaml deploy/caddy deploy/deploy.sh deploy/backup.sh \
+            "$SSH_USER@$HOST:$DEPLOY_DIR/"
+
+      - name: 서버에서 deploy.sh 실행
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_USER }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET: ${{ needs.publish.outputs.target }}
+          API_IMAGE: ${{ needs.publish.outputs.api }}
+          WEB_IMAGE: ${{ needs.publish.outputs.web }}
+        # 토큰은 명령 줄이 아니라 표준 입력으로 넘긴다 (서버의 프로세스 목록·기록에 남지 않게). 끝나면 로그아웃
+        run: |
+          printf '%s' "$TOKEN" | ssh -i ~/.ssh/deploy_key "$SSH_USER@$HOST" \
+            "docker login ghcr.io -u '$GITHUB_ACTOR' --password-stdin >/dev/null &&
+             bash '$DEPLOY_DIR/deploy.sh' '$TARGET' '$API_IMAGE' '$WEB_IMAGE';
+             status=\$?; docker logout ghcr.io >/dev/null; exit \$status"
+
+      - name: SSH 키 지우기
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

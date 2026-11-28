@@ -18,7 +18,7 @@
 인터넷 ──▶ OCI 서버 :80·:443
              └ caddy (HTTPS 인증서 자동)
                  semachi.net       → /api/* api      · 그 밖 web
-                 test.semachi.net  → /api/* api-beta · 그 밖 web-beta (기본 인증)
+                 test.158-180-85-102.sslip.io (베타, 무료 주소) → /api/* api-beta · 그 밖 web-beta (기본 인증)
            api·api-beta ──▶ MongoDB Atlas (같은 DB)
 
 /srv/semachi/
@@ -187,10 +187,13 @@
 
 ### 3. 베타 주소·방화벽 🔧 🌐
 
-1. DNS 관리 화면(**AWS Route 53**: AWS 콘솔 → Route 53 → Hosted zones → `semachi.net`)에서 A 레코드 `test` → 서버 Public IP (`semachi.net` 레코드와 같은 IP)
-   - 확인 🖥 `nslookup test.semachi.net`이 서버 IP (몇 분~몇 시간)
+1. 베타 주소: **`https://test.158-180-85-102.sslip.io`** (사용자 결정 2026-11-28). `semachi.net`의 DNS는 AWS Route 53인데 들어갈 수 없어서, 이름 안의 숫자를 IP로 알려 주는 무료 주소(sslip.io)를 쓴다. DNS 작업이 없다
+   - 🌐 `caddy.env`에 `BETA_SITE=test.158-180-85-102.sslip.io` (틀에 들어 있다)
+   - 🔧 GitHub Variables에 `BETA_URL` = `https://test.158-180-85-102.sslip.io` (Actions 배포 기록의 링크)
+   - 확인 🖥 `nslookup test.158-180-85-102.sslip.io 8.8.8.8` → `158.180.85.102`
+   - 나중에 Route 53에 들어갈 수 있게 되면 A 레코드 `test` → 서버 IP를 만들고 `BETA_SITE` 줄을 지운다 (`test.semachi.net`)
 2. 바깥 방화벽(OCI Security List): 80·443은 지금 nginx가 서비스 중이라 이미 열려 있다 (B-12). OCI 콘솔에 들어갈 수 없어도 된다
-3. 서버 방화벽: Caddy 컨테이너가 서버 자신의 8080(옛 웹)에 닿아야 한다. B-12의 `iptables` 결과를 보고 Claude가 명령을 준다
+3. 서버 방화벽: 할 일 없음. B-12의 `iptables -S INPUT`이 기본 ACCEPT(막는 규칙 없음)라 Caddy 컨테이너 → 서버의 8080(옛 웹)이 열려 있다
 4. 🌐 `nano /srv/semachi/caddy.env` → 베타 테스터 아이디(`BETA_AUTH_USER`)와 암호 해시, `PROD_WEB_UPSTREAM=host.docker.internal:8080` 줄이 있는지
    - 해시 만들기 🌐 `docker run --rm -it caddy:2 caddy hash-password` → 암호를 두 번 입력 → 나온 `$2a$14$…`를 `BETA_AUTH_HASH='…'`에 (작은따옴표 필수)
 
@@ -202,7 +205,7 @@
 1. 🌐 `cd /srv/semachi && docker compose config --quiet && echo OK` → `OK` (설정 문법 확인)
 2. 🌐 `sudo systemctl stop nginx` → 이 순간부터 `semachi.net`이 끊긴다
 3. 🌐 `docker compose up -d caddy` → `Container semachi-caddy-1 Started`
-4. 🌐 `docker compose logs caddy | grep -iE 'certificate obtained|error'` → `certificate obtained successfully`가 `semachi.net`·`www.semachi.net`·`test.semachi.net` 각각 (1분 안쪽). `error`가 계속 나오면 바로 되돌리기
+4. 🌐 `docker compose logs caddy | grep -iE 'certificate obtained|error'` → `certificate obtained successfully`가 `semachi.net`·`www.semachi.net`·`test.158-180-85-102.sslip.io` 각각 (1분 안쪽). `error`가 계속 나오면 바로 되돌리기
 5. 🖥 브라우저로 `https://semachi.net` → 지금 화면 그대로, 주소창 자물쇠 (인증서가 Let's Encrypt 새것)
 6. 확인되면 🌐 `sudo systemctl disable nginx` (재부팅 때 nginx가 80·443을 먼저 잡지 않게)
 
@@ -213,7 +216,7 @@
 1. 🖥 `api3.0`(과 `ui3.0`)을 `dev`에 합친다 (PR 또는 `git push origin api3.0:dev`. Claude는 푸시하지 않는다)
 2. 🔧 GitHub → Actions → "배포" 실행: 검사 → 이미지 올리기 → 서버에 배포 (처음엔 15분쯤)
    - 실패하면 빨간 X의 단계를 열어 로그를 본다. "서버에 배포"가 실패하면 서버의 이전 상태로 되돌아가 있다
-3. 확인 🖥 브라우저로 `https://test.semachi.net` → 아이디·암호 → 헤더에 "베타"
+3. 확인 🖥 브라우저로 `https://test.158-180-85-102.sslip.io` → 아이디·암호 → 헤더에 "베타"
    - 🌐 `cd /srv/semachi && docker compose ps` → `api-beta`·`web-beta`가 `healthy`, `caddy`가 `Up`
 4. 🔧 GitHub → Packages: `semachi-api`·`semachi-web`가 보인다 (비공개여도 된다. 서버는 배포 때 토큰으로 받는다)
 5. 진짜 IP 확인: 베타 관리자 화면(`/admin`) → 활동 기록의 IP가 내 휴대폰·PC의 공인 IP인지 (`172.`·`10.`으로 시작하면 ⚠ 프록시 설정을 고친다)
@@ -301,4 +304,4 @@ docker compose run --rm --no-deps api node scripts/hash-pins.ts             # �
 
 ### 베타를 평소에 꺼 두기 (메모리가 빠듯할 때)
 
-`docker compose stop api-beta web-beta` → 쓸 때 `docker compose up -d api-beta web-beta`. 그동안 `test.semachi.net`은 502.
+`docker compose stop api-beta web-beta` → 쓸 때 `docker compose up -d api-beta web-beta`. 그동안 베타 주소는 502.

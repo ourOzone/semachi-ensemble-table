@@ -111,7 +111,8 @@ jobs:
     # Environment: 배포 기록이 남고, 그쪽 Secrets를 쓴다. production에 "승인 필요"를 켜면 누를 때까지 기다린다
     environment:
       name: ${{ needs.publish.outputs.target }}
-      url: ${{ needs.publish.outputs.target == 'production' && 'https://semachi.net' || 'https://test.semachi.net' }}
+      # 베타 주소는 저장소 변수 BETA_URL (지금은 무료 주소 sslip.io, docs/DEPLOY_RUNBOOK.md). 없으면 test.semachi.net
+      url: ${{ needs.publish.outputs.target == 'production' && 'https://semachi.net' || vars.BETA_URL || 'https://test.semachi.net' }}
     permissions:
       contents: read
       packages: read # 서버가 GHCR에서 이미지를 받을 때 이 실행의 토큰을 잠깐 빌려 쓴다

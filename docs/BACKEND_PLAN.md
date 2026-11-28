@@ -406,7 +406,9 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 - **베타 기간의 80·443 (사용자 결정 A, 2026-11-28)**: B-13 시작 때 Caddy가 nginx 자리를 맡는다. `semachi.net`은 베타 기간 동안 Caddy → 옛 웹(호스트 8080, `caddy.env`의 `PROD_WEB_UPSTREAM`), `test.semachi.net` → 베타. nginx는 끄고 부팅에서도 뺀다. 전환(B-14)은 그 줄만 지우면 새 웹. 고른 이유: 입구 교체(인증서·Caddy)를 전환 전에 운영에서 검증, 전환 날 바뀌는 것이 적다. B안(nginx 앞 그대로 + 베타만 뒤에)은 nginx·certbot 설정이 따로 들고 전환 날 입구를 처음 바꾼다
   - 그래서 생긴 것: 웹이 꺼져 있을 때 "점검 중" 안내(Caddy `handle_errors`, 전환 중), compose의 `host.docker.internal`. 확인할 것: 옛 API(8081)가 읽는 인증서 만료일과 갱신 방식(nginx를 끄면 certbot의 nginx 방식 갱신이 멈춘다), 서버 방화벽이 컨테이너 → 호스트 8080을 막지 않는지
 - DNS: `semachi.net` → 서버 IP (SSH 주소와 같음, 확정). **DNS는 AWS Route 53** (네임서버 `awsdns`). 베타 주소 레코드는 Route 53에서 만든다 → AWS 계정 접근 필요
-- **베타 주소는 `test.semachi.net`** (사용자 결정 2026-11-28, 처음 계획은 `beta.semachi.net`). 바깥 주소만 바꾸고 서버 안의 이름(`api-beta`·`beta.env`·`APP_ENV=beta`·헤더 "베타" 표시)은 그대로 (바꾸면 코드·배포 파일 수십 곳이라 비용 대비 이득이 없다)
+- AWS에 들어갈 수 없음 → **베타 주소는 무료 주소 `test.158-180-85-102.sslip.io`** (사용자 결정 2026-11-28. sslip.io는 이름 안의 IP를 그대로 답하는 공개 DNS라 설정이 필요 없다). 서버 `caddy.env`의 `BETA_SITE`, GitHub 변수 `BETA_URL`. 저장소 기본값은 그대로 `test.semachi.net`(Route 53에 들어갈 수 있게 되면 그쪽으로)
+- 서버 방화벽 (`iptables -S INPUT`): 기본 ACCEPT, 22·80·443·8081 허용 줄, 막는 규칙 없음 → Caddy 컨테이너 → 호스트 8080 열림, 할 일 없음
+- 베타 주소 이름은 `test` (사용자 결정, 처음은 `beta`). 바깥 주소만 바꾸고 서버 안의 이름(`api-beta`·`beta.env`·`APP_ENV=beta`·헤더 "베타" 표시)은 그대로 (바꾸면 코드·배포 파일 수십 곳이라 비용 대비 이득이 없다)
 - 폴더: `/home/ubuntu/smch3` 하나 (소스 없이 빌드 결과·`.env`·로그 파일)
 - OCI 콘솔: **들어갈 수 없음** (비밀번호 재설정 메일이 오지 않음). 80·443·8081은 지금 서비스 중이라 바깥 방화벽에서 이미 열려 있다 → 새 구조(80·443만)는 콘솔 없이 갈 수 있다. 서버 복구 등을 위해 계정 복구는 따로 계속
 - DB: MongoDB Atlas (`mongodb+srv`). 사용자는 Atlas 웹 화면에 들어갈 수 있음

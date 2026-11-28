@@ -17,6 +17,8 @@ cp production.env beta.env
 auth_hash=$(docker run --rm caddy:2 caddy hash-password --plaintext smoke-pass)
 cat >caddy.env <<EOF
 PROD_SITE=http://semachi.localhost
+PROD_WWW_SITE=http://www.semachi.localhost
+PROD_REDIRECT_HOST=semachi.localhost
 BETA_SITE=http://beta.semachi.localhost
 BETA_AUTH_USER=tester
 BETA_AUTH_HASH='${auth_hash}'
@@ -44,7 +46,7 @@ echo "== 켜기 (healthy가 될 때까지)"
 
 prod=http://semachi.localhost
 beta=http://beta.semachi.localhost
-resolve=(--resolve semachi.localhost:80:127.0.0.1 --resolve beta.semachi.localhost:80:127.0.0.1)
+resolve=(--resolve semachi.localhost:80:127.0.0.1 --resolve www.semachi.localhost:80:127.0.0.1 --resolve beta.semachi.localhost:80:127.0.0.1)
 tmp=$(mktemp -d)
 
 # req <이름> <기대 상태 코드> <curl 인자...>: 응답 본문은 $tmp/<이름>.body, 헤더는 $tmp/<이름>.headers
@@ -87,6 +89,10 @@ req no-route 404 "$prod/api/no-such-route"
 has_body no-route '"NOT_FOUND"'
 req visit 204 -X POST "$prod/api/visits"
 has_header visit 'set-cookie:'
+
+echo "== www 주소 → semachi.net"
+req www 301 "http://www.semachi.localhost/admin?x=1"
+has_header www 'location: https://semachi.localhost/admin?x=1'
 
 echo "== 베타 주소"
 req beta-no-auth 401 "$beta/"

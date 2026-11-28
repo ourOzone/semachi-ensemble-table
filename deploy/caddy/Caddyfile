@@ -25,6 +25,12 @@
 	}
 }
 
+# www.semachi.net → semachi.net (옛 nginx도 www를 받았다, B-12. 주소창·즐겨찾기에 www로 남아 있을 수 있다)
+{$PROD_WWW_SITE:www.semachi.net} {
+	import common
+	redir https://{$PROD_REDIRECT_HOST:semachi.net}{uri} permanent
+}
+
 {$BETA_SITE:beta.semachi.net} {
 	import common
 	# 베타는 테스터만: 처음 열 때 브라우저가 아이디·암호를 묻는다 (암호는 해시로만 저장, 만드는 법은 docs/DEPLOY_RUNBOOK.md)

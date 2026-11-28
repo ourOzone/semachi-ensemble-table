@@ -2,11 +2,20 @@
 // (모든 팀을 지우던 DELETE /teams는 B-5에서 삭제: B2)
 // 수정·삭제는 요청 본문의 pin(팀 PIN 또는 마스터 PIN)을 서버가 확인한다. 틀리면 403 (B-6 B1)
 // 목록에는 PIN을 넣지 않는다 (모델의 select: false, B-6 B3). 하는 일마다 활동 기록 (B-7)
+// 본문·id는 packages/shared의 스키마로 먼저 검사한다. 틀리면 400 (B-8 S5)
+import {
+    checkTeamPinBodySchema,
+    idParamsSchema,
+    idQuerySchema,
+    teamCreateBodySchema,
+    teamUpdateBodySchema,
+} from '@semachi/shared';
 import express from 'express';
 import { withoutPin, type RecordActivity } from '../lib/activity.ts';
 import type { PinAuth } from '../lib/pin-auth.ts';
 import type { PinCheck } from '../lib/pin-check.ts';
 import { pinTarget, type PinGuard } from '../lib/pin-guard.ts';
+import { validate } from '../lib/validate.ts';
 import { Ensemble } from '../models/ensemble.ts';
 import { Team } from '../models/team.ts';
 
@@ -40,10 +49,11 @@ export function teamsRouter({
         }
     });
 
-    // 팀 추가 (PIN을 정하는 요청이라 확인하지 않는다)
+    // 팀 추가 (PIN을 정하는 요청이라 확인하지 않는다. 새 PIN은 숫자 4자리)
     router.post('/team', async (req, res) => {
         try {
-            const data = req.body;
+            const data = validate(res, teamCreateBodySchema, req.body);
+            if (!data) return;
 
             const newTeam = new Team({
                 name: data.name,
@@ -69,16 +79,14 @@ export function teamsRouter({
     // PIN 확인 (웹의 PIN 칸이 4자리를 다 넣으면 바로 부른다). 틀린 횟수는 팀별로 (lib/pin-guard)
     router.post('/check-team-pin', async (req, res) => {
         try {
-            const { teamId, pin } = req.body;
-
-            if (!teamId || !pin) {
-                return res.status(400).json({ error: 'Both teamId and pin are required' });
-            }
+            const body = validate(res, checkTeamPinBodySchema, req.body);
+            if (!body) return;
+            const { teamId, pin } = body;
 
             const target = pinTarget.team(teamId);
             const entry = {
                 action: 'pin.check',
-                target: { kind: 'team', id: String(teamId) },
+                target: { kind: 'team', id: teamId },
             } as const;
             if (guard.rejectIfBlocked(req, res, target)) {
                 await activity(req, { ...entry, result: 'blocked' });
@@ -117,12 +125,10 @@ export function teamsRouter({
 
     // 팀 삭제 (그 팀의 합주도 함께)
     router.delete('/team', async (req, res) => {
-        const teamId = req.query.id as string | undefined; // 현재 동작: 형식 검사 없음 (B-8)
-
-        // id가 없으면 바로 404 (조건 없이 찾거나 지우지 않게)
-        if (teamId === undefined) {
-            return res.status(404).json({ id: -1 });
-        }
+        // id가 없거나 형식이 아니면 400 (조건 없이 찾거나 지우지 않게, B-8. 이전: 없으면 404, 형식이 틀리면 500)
+        const query = validate(res, idQuerySchema, req.query);
+        if (!query) return;
+        const teamId = query.id;
 
         try {
             // PIN을 확인하려면 팀을 먼저 읽어야 한다 (B-5 O5의 "조회 한 번"은 PIN 확인 때문에 두 번으로)
@@ -157,15 +163,21 @@ export function teamsRouter({
         }
     });
 
-    // 팀 수정 (그 팀 합주의 teamName도 함께). 현재 동작: 본문에 빠진 필드는 지워진다. PIN은 바꾸지 않는다
+    // 팀 수정 (그 팀 합주의 teamName도 함께). 이름·종류·팀원/셋리스트를 모두 받는다 (B-8 전: 빠진 필드는 지워졌다). PIN은 바꾸지 않는다
     router.put('/team', async (req, res) => {
         try {
-            const teamId = req.query.id as string | undefined; // 현재 동작: 형식 검사 없음 (B-8)
+            const query = validate(res, idQuerySchema, req.query);
+            if (!query) return;
+            const teamId = query.id;
             const existingTeam = await Team.findById(teamId).select('+pin');
 
             if (!existingTeam) {
                 return res.status(404).json({ error: 'Team not found' });
             }
+
+            // 팀이 있는지 먼저 본 뒤 본문을 검사한다 (없는 팀이면 본문과 관계없이 404: 웹의 "이미 삭제된 팀")
+            const body = validate(res, teamUpdateBodySchema, req.body);
+            if (!body) return;
 
             const target = {
                 kind: 'team',
@@ -180,12 +192,12 @@ export function teamsRouter({
             if (!via) return;
 
             const before = teamFields(existingTeam);
-            existingTeam.name = req.body.name;
-            existingTeam.desc = req.body.desc;
-            existingTeam.type = req.body.type;
+            existingTeam.name = body.name;
+            existingTeam.desc = body.desc;
+            existingTeam.type = body.type;
 
             await existingTeam.save();
-            await Ensemble.updateMany({ teamId }, { $set: { teamName: req.body.name } });
+            await Ensemble.updateMany({ teamId }, { $set: { teamName: body.name } });
             await activity(req, {
                 action: 'team.update',
                 target,
@@ -202,12 +214,13 @@ export function teamsRouter({
         }
     });
 
-    // 팀 존재 여부 확인
+    // 팀 존재 여부 확인 (id 형식이 아니면 400, B-8. 이전: 500)
     router.get('/team/:id', async (req, res) => {
-        const teamId = req.params.id;
+        const params = validate(res, idParamsSchema, req.params);
+        if (!params) return;
 
         try {
-            const existingTeam = await Team.findById(teamId);
+            const existingTeam = await Team.findById(params.id);
 
             if (existingTeam) {
                 res.json(true);

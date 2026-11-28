@@ -1,5 +1,6 @@
-// 팀 API의 지금 동작 (GET /teams, POST /team, POST /check-team-pin, DELETE /team, DELETE /teams, PUT /team, GET /team/:id)
+// 팀 API의 동작 (GET /teams, POST /team, POST /check-team-pin, DELETE /team, DELETE /teams, PUT /team, GET /team/:id)
 // "현재 동작:"은 이상해 보이지만 그대로 고정한 것. 고치는 단계는 docs/BACKEND_PLAN.md
+import { SETLIST_MAX, TEAM_MEMBER_MAX, TEAM_NAME_MAX } from '@semachi/shared';
 import { describe, expect, test } from 'vitest';
 import {
     api,
@@ -9,6 +10,7 @@ import {
     insert,
     MASTER_PIN,
     missingId,
+    teamBody,
     teamDoc,
 } from './helpers.ts';
 
@@ -70,34 +72,68 @@ describe('POST /team', () => {
         expect(saved).not.toHaveProperty('extra');
     });
 
-    test('현재 동작: 검사 없이 빈 본문도 저장한다 (S5)', async () => {
-        const res = await api().post('/team').send({});
+    test('이름·팀원은 앞뒤 공백을 빼고 저장, 셋리스트는 그대로 (웹과 같음)', async () => {
+        const res = await api()
+            .post('/team')
+            .send({ ...body, name: ' 새 팀 ', desc: [' v ', '', '', '', '', '', ' set\n'] });
+        expect(await findOne('teams', res.body.id)).toMatchObject({
+            name: '새 팀',
+            desc: ['v', '', '', '', '', '', ' set\n'],
+        });
+    });
+
+    test('길이 제한까지는 저장: 팀명 20자·팀원 12자·셋리스트 200자 (웹과 같은 값, B-8)', async () => {
+        const desc = [
+            ...Array<string>(6).fill('가'.repeat(TEAM_MEMBER_MAX)),
+            'x'.repeat(SETLIST_MAX),
+        ];
+        const res = await api()
+            .post('/team')
+            .send({ ...body, name: '가'.repeat(TEAM_NAME_MAX), desc });
         expect(res.status).toBe(200);
-        const saved = await findOne('teams', res.body.id);
-        expect(Object.keys(saved ?? {}).sort()).toEqual([
-            '__v',
-            '_id',
-            'createdAt',
-            'desc',
-            'updatedAt',
-        ]);
-        expect(saved?.desc).toEqual([]);
     });
 
-    test('형식이 맞지 않는 값(날짜)은 500 (텍스트)', async () => {
+    test('옛 팀 종류도 그대로 받는다 (종류는 문자열이면 된다, 사용자 결정)', async () => {
         const res = await api()
             .post('/team')
-            .send({ ...body, publishDate: 'not a date' });
-        expect(res.status).toBe(500);
-        expect(res.text).toBe('Internal Server Error');
-        expect(await findAll('teams')).toHaveLength(0);
+            .send({ ...body, type: '세마치공연(정기/연말)' });
+        expect((await findOne('teams', res.body.id))?.type).toBe('세마치공연(정기/연말)');
     });
 
-    test('숫자 PIN은 문자열로 바뀌어 저장된다', async () => {
+    test.each([
+        ['빈 본문', {}],
+        ['팀명이 비었음', { name: '  ' }],
+        ['팀명 21자', { name: '가'.repeat(TEAM_NAME_MAX + 1) }],
+        ['종류가 비었음', { type: '' }],
+        ['종류가 문자열이 아님', { type: 1 }],
+        ['desc가 7칸이 아님', { desc: ['v'] }],
+        ['desc가 비었음', { desc: [] }],
+        ['팀원 13자', { desc: ['가'.repeat(TEAM_MEMBER_MAX + 1), '', '', '', '', '', ''] }],
+        ['셋리스트 201자', { desc: ['', '', '', '', '', '', 'x'.repeat(SETLIST_MAX + 1)] }],
+        ['PIN이 없음', { pin: undefined }],
+        ['PIN이 숫자 4자리가 아님', { pin: '12345' }],
+        ['PIN이 문자열이 아님', { pin: 1234 }],
+        ['publishDate가 시각이 아님', { publishDate: 'not a date' }],
+    ])(
+        '400, 저장하지 않는다 (B-8 S5, 이전: 검사 없이 저장·날짜는 500): %s',
+        async (_name, over) => {
+            const res = await api()
+                .post('/team')
+                .send(Object.keys(over).length ? { ...body, ...over } : {});
+            expect([res.status, res.body.error]).toEqual([400, 'Invalid request']);
+            expect(await findAll('teams')).toHaveLength(0);
+        },
+    );
+
+    test('400 본문에는 틀린 칸과 이유만 있고 받은 값은 없다', async () => {
         const res = await api()
             .post('/team')
-            .send({ ...body, pin: 1234 });
-        expect((await findOne('teams', res.body.id))?.pin).toBe('1234');
+            .send({ ...body, pin: '98765' });
+        expect(res.body).toEqual({
+            error: 'Invalid request',
+            issues: [{ path: 'pin', message: '숫자 4자리가 아니다' }],
+        });
+        expect(JSON.stringify(res.body)).not.toContain('98765');
     });
 });
 
@@ -112,20 +148,17 @@ describe('POST /check-team-pin', () => {
         );
     });
 
-    test('마스터 PIN이면 팀을 찾지 않고 true (없는 팀·잘못된 id도)', async () => {
+    test('마스터 PIN이면 팀을 찾지 않고 true (없는 팀도)', async () => {
         expect(
             (await api().post('/check-team-pin').send({ teamId: missingId(), pin: MASTER_PIN }))
                 .body,
         ).toBe(true);
-        expect(
-            (await api().post('/check-team-pin').send({ teamId: 'abc', pin: MASTER_PIN })).body,
-        ).toBe(true);
     });
 
-    test('형식까지 같아야 맞다: 숫자 1234는 문자열 "1234"와 다르다', async () => {
+    test('PIN을 숫자로 보내면 400 (B-8. 이전: 문자열 "1234"와 달라 false)', async () => {
         const id = await insert('teams', teamDoc({ pin: '1234' }));
-        expect((await api().post('/check-team-pin').send({ teamId: id, pin: 1234 })).body).toBe(
-            false,
+        expect((await api().post('/check-team-pin').send({ teamId: id, pin: 1234 })).status).toBe(
+            400,
         );
     });
 
@@ -139,7 +172,7 @@ describe('POST /check-team-pin', () => {
     test('teamId나 pin이 없으면 400', async () => {
         const res = await api().post('/check-team-pin').send({ teamId: missingId() });
         expect(res.status).toBe(400);
-        expect(res.body).toEqual({ error: 'Both teamId and pin are required' });
+        expect(res.body.error).toBe('Invalid request');
         expect((await api().post('/check-team-pin').send({ pin: '1234' })).status).toBe(400);
         expect(
             (await api().post('/check-team-pin').send({ teamId: missingId(), pin: '' })).status,
@@ -148,10 +181,7 @@ describe('POST /check-team-pin', () => {
 
     test('본문 없이 보내도 400 (빈 본문으로 본다)', async () => {
         const res = await api().post('/check-team-pin');
-        expect([res.status, res.body]).toEqual([
-            400,
-            { error: 'Both teamId and pin are required' },
-        ]);
+        expect([res.status, res.body.error]).toEqual([400, 'Invalid request']);
     });
 
     test('없는 팀이면 404', async () => {
@@ -160,10 +190,11 @@ describe('POST /check-team-pin', () => {
         expect(res.body).toEqual({ error: 'Team not found' });
     });
 
-    test('id 형식이 잘못되면 500 (JSON)', async () => {
-        const res = await api().post('/check-team-pin').send({ teamId: 'abc', pin: '1234' });
-        expect(res.status).toBe(500);
-        expect(res.body).toEqual({ error: 'Internal Server Error' });
+    test('id 형식이 잘못되면 마스터 PIN이어도 400 (B-8. 이전: 마스터 PIN이면 true, 아니면 500)', async () => {
+        for (const pin of ['1234', MASTER_PIN]) {
+            const res = await api().post('/check-team-pin').send({ teamId: 'abc', pin });
+            expect([res.status, res.body.error]).toEqual([400, 'Invalid request']);
+        }
     });
 });
 
@@ -198,16 +229,9 @@ describe('DELETE /team?id=', () => {
         expect(res.body).toEqual({ id: -1 });
     });
 
-    test('id가 없으면 404 { id: -1 }', async () => {
-        const res = await api().delete('/team');
-        expect(res.status).toBe(404);
-        expect(res.body).toEqual({ id: -1 });
-    });
-
-    test('id 형식이 잘못되면 500 (텍스트)', async () => {
-        const res = await api().delete('/team?id=abc');
-        expect(res.status).toBe(500);
-        expect(res.text).toBe('Internal Server Error');
+    test('id가 없거나 형식이 아니면 400 (B-8. 이전: 없으면 404, 형식은 500)', async () => {
+        expect((await api().delete('/team')).status).toBe(400);
+        expect((await api().delete('/team?id=abc')).status).toBe(400);
     });
 });
 
@@ -249,52 +273,52 @@ describe('PUT /team?id=', () => {
         expect((await findOne('ensembles', other))?.teamName).toBe('다른 팀');
     });
 
-    test('현재 동작: 본문에 빠진 필드(name·desc·type)는 지워진다', async () => {
+    test('본문이 없거나 칸이 빠지면 400, 바꾸지 않는다 (B-8. 이전: 빠진 필드는 지워졌다)', async () => {
         const id = await insert('teams', teamDoc());
-        const e = await insert('ensembles', ensembleDoc({ teamId: id }));
-        await api().put(`/team?id=${id}`).send({ pin: '1234' });
-        const saved = await findOne('teams', id);
-        expect(Object.keys(saved ?? {}).sort()).toEqual([
-            '__v',
-            '_id',
-            'pin',
-            'publishDate',
-            'updatedAt',
-        ]);
-        // 합주의 teamName은 그대로 (Mongoose가 $set의 undefined를 버린다)
-        expect((await findOne('ensembles', e))?.teamName).toBe('테스트밴드');
+        for (const body of [{ pin: '1234' }, { name: '이름만', pin: '1234' }]) {
+            const res = await api().put(`/team?id=${id}`).send(body);
+            expect([res.status, res.body.error]).toEqual([400, 'Invalid request']);
+        }
+        expect(await findOne('teams', id)).toMatchObject({ name: '테스트밴드', type: '교내 공연' });
+    });
+
+    test('본문이 틀리면 PIN을 확인하지 않는다 (틀린 횟수에 들지 않음)', async () => {
+        const id = await insert('teams', teamDoc());
+        const res = await api().put(`/team?id=${id}`).send({ name: '', pin: '0000' });
+        expect(res.status).toBe(400);
+        expect(res.headers['pin-attempts']).toBeUndefined();
     });
 
     test('PIN이 없거나 틀리면 403, 바꾸지 않는다 (B-6 B1)', async () => {
         const id = await insert('teams', teamDoc({ name: '그대로', pin: '1234' }));
-        const res = await api().put(`/team?id=${id}`).send({ name: 'x', pin: '0000' });
+        const res = await api()
+            .put(`/team?id=${id}`)
+            .send(teamBody({ pin: '0000' }));
         expect([res.status, res.body]).toEqual([403, { error: 'Wrong PIN' }]);
-        expect((await api().put(`/team?id=${id}`).send({ name: 'x' })).status).toBe(403);
+        expect((await api().put(`/team?id=${id}`).send(teamBody())).status).toBe(403);
         expect((await findOne('teams', id))?.name).toBe('그대로');
     });
 
-    test('없는 팀이면 404', async () => {
+    test('없는 팀이면 (본문과 관계없이) 404', async () => {
         const res = await api().put(`/team?id=${missingId()}`).send({ name: 'x' });
         expect(res.status).toBe(404);
         expect(res.body).toEqual({ error: 'Team not found' });
     });
 
-    test('id가 없으면 404, 형식이 잘못되면 500 (JSON)', async () => {
-        expect((await api().put('/team').send({ name: 'x' })).status).toBe(404);
-        const bad = await api().put('/team?id=abc').send({ name: 'x' });
-        expect(bad.status).toBe(500);
-        expect(bad.body).toEqual({ error: 'Internal Server Error' });
+    test('id가 없거나 형식이 아니면 400 (B-8. 이전: 없으면 404, 형식은 500)', async () => {
+        expect((await api().put('/team').send(teamBody())).status).toBe(400);
+        expect((await api().put('/team?id=abc').send(teamBody())).status).toBe(400);
     });
 });
 
 describe('GET /team/:id (존재 확인)', () => {
-    test('있으면 true, 없으면 404 false, 형식이 잘못되면 500', async () => {
+    test('있으면 true, 없으면 404 false, 형식이 잘못되면 400 (B-8. 이전: 500)', async () => {
         const id = await insert('teams', teamDoc());
         const ok = await api().get(`/team/${id}`);
         expect([ok.status, ok.body]).toEqual([200, true]);
         const missing = await api().get(`/team/${missingId()}`);
         expect([missing.status, missing.body]).toEqual([404, false]);
         const bad = await api().get('/team/abc');
-        expect([bad.status, bad.body]).toEqual([500, { error: 'Internal Server Error' }]);
+        expect([bad.status, bad.body.error]).toEqual([400, 'Invalid request']);
     });
 });

@@ -221,6 +221,70 @@ describe('POST /ensemble', () => {
     });
 });
 
+describe('합주 본문 검사 (B-8 S5): 틀리면 400, PIN을 확인하지 않고 저장하지 않는다', () => {
+    const valid = {
+        startTime: 20,
+        endTime: 23,
+        due: '2099-12-31',
+        nextDate: '2026-12-04T09:00:00.000Z',
+        repeat: true,
+    };
+    const invalid: [string, Record<string, unknown>][] = [
+        ['시간칸이 0 ~ 29 밖', { startTime: -1 }],
+        ['시간칸이 0 ~ 29 밖', { endTime: 30 }],
+        ['시간칸이 정수가 아님', { startTime: 1.5 }],
+        ['시간칸이 숫자가 아님', { startTime: 'abc' }],
+        ['시작이 끝보다 뒤', { startTime: 24, endTime: 23 }],
+        ['repeat가 불리언이 아님', { repeat: 'true' }],
+        ['nextDate가 시각이 아님', { nextDate: '2026-12-04' }],
+        ['due가 날짜가 아님', { due: '2099-12-31T00:00:00.000Z' }],
+        ['due가 없는 날짜', { due: '2026-02-30' }],
+        ['칸이 빠짐', { due: undefined }],
+    ];
+
+    test.each(invalid)('잡기: %s', async (_name, over) => {
+        const teamId = await insert('teams', teamDoc({ pin: '1234' }));
+        const res = await api()
+            .post('/ensemble')
+            .send({ ...valid, ...over, teamId, pin: '0000' });
+        expect([res.status, res.body.error]).toEqual([400, 'Invalid request']);
+        expect(res.headers['pin-attempts']).toBeUndefined();
+        expect(await findAll('ensembles')).toHaveLength(0);
+    });
+
+    test.each(invalid)('수정: %s', async (_name, over) => {
+        const id = await insert('ensembles', ensembleDoc());
+        const res = await api()
+            .put(`/ensemble?id=${id}`)
+            .send({ ...valid, ...over, pin: MASTER_PIN });
+        expect([res.status, res.body.error]).toEqual([400, 'Invalid request']);
+        expect(await findOne('ensembles', id)).toMatchObject({ startTime: 10, endTime: 13 });
+    });
+
+    test('잡기: teamId가 없거나 형식이 아니면 400', async () => {
+        for (const teamId of [undefined, 'abc', 123]) {
+            const res = await api()
+                .post('/ensemble')
+                .send({ ...valid, teamId, pin: MASTER_PIN });
+            expect(res.status).toBe(400);
+        }
+    });
+
+    test('경계: 0 ~ 29, 시작 = 끝(30분)은 저장', async () => {
+        const teamId = await insert('teams', teamDoc({ pin: '1234' }));
+        for (const [startTime, endTime] of [
+            [0, 0],
+            [29, 29],
+            [0, 29],
+        ]) {
+            const res = await api()
+                .post('/ensemble')
+                .send({ ...valid, startTime, endTime, teamId, pin: '1234' });
+            expect(res.status).toBe(200);
+        }
+    });
+});
+
 describe('DELETE /ensemble?id=', () => {
     test('지우고 { id }', async () => {
         const id = await insert('ensembles', ensembleDoc());
@@ -251,24 +315,27 @@ describe('DELETE /ensemble?id=', () => {
         );
     });
 
-    test('없으면 404 { id: -1 } (id가 없어도), 형식이 잘못되면 500 (텍스트)', async () => {
+    test('없으면 404 { id: -1 }, id가 없거나 형식이 아니면 400 (B-8. 이전: 없으면 404, 형식은 500)', async () => {
         const missing = await api().delete(`/ensemble?id=${missingId()}`);
         expect([missing.status, missing.body]).toEqual([404, { id: -1 }]);
-        expect((await api().delete('/ensemble')).status).toBe(404);
+        expect((await api().delete('/ensemble')).status).toBe(400);
         const bad = await api().delete('/ensemble?id=abc');
-        expect([bad.status, bad.text]).toEqual([500, 'Internal Server Error']);
+        expect([bad.status, bad.body]).toEqual([
+            400,
+            { error: 'Invalid request', issues: [{ path: 'id', message: 'ObjectId가 아니다' }] },
+        ]);
     });
 });
 
 describe('GET /ensemble/:id (존재 확인)', () => {
-    test('있으면 true, 없으면 404 false, 형식이 잘못되면 500', async () => {
+    test('있으면 true, 없으면 404 false, 형식이 잘못되면 400 (B-8. 이전: 500)', async () => {
         const id = await insert('ensembles', ensembleDoc());
         const ok = await api().get(`/ensemble/${id}`);
         expect([ok.status, ok.body]).toEqual([200, true]);
         const missing = await api().get(`/ensemble/${missingId()}`);
         expect([missing.status, missing.body]).toEqual([404, false]);
         const bad = await api().get('/ensemble/abc');
-        expect([bad.status, bad.body]).toEqual([500, { error: 'Internal Server Error' }]);
+        expect([bad.status, bad.body.error]).toEqual([400, 'Invalid request']);
     });
 });
 
@@ -328,17 +395,28 @@ describe('PUT /ensemble?id=', () => {
         ).toBe(200);
     });
 
-    test('본문 없이 보내면 PIN이 없어 403 (빈 본문으로 본다)', async () => {
+    test('본문이 없거나 칸이 빠지면 400, 바꾸지 않는다 (B-8. 이전: 빠진 필드는 지워졌다)', async () => {
         const id = await insert('ensembles', ensembleDoc());
-        expect((await api().put(`/ensemble?id=${id}`)).status).toBe(403);
+        expect((await api().put(`/ensemble?id=${id}`)).status).toBe(400);
+        const { due: _due, ...noDue } = body;
+        expect(
+            (
+                await api()
+                    .put(`/ensemble?id=${id}`)
+                    .send({ ...noDue, pin: MASTER_PIN })
+            ).status,
+        ).toBe(400);
+        expect(await findOne('ensembles', id)).toMatchObject({ startTime: 10, type: '무기한' });
     });
 
-    test('id가 없으면 400, 없는 합주면 404, 형식이 잘못되면 500 (JSON)', async () => {
+    test('id가 없거나 형식이 아니면 400, 없는 합주면 (본문과 관계없이) 404', async () => {
         const noId = await api().put('/ensemble').send(body);
-        expect([noId.status, noId.body]).toEqual([400, { error: 'Ensemble ID is required' }]);
-        const missing = await api().put(`/ensemble?id=${missingId()}`).send(body);
-        expect([missing.status, missing.body]).toEqual([404, { error: 'Ensemble not found' }]);
+        expect([noId.status, noId.body.error]).toEqual([400, 'Invalid request']);
         const bad = await api().put('/ensemble?id=abc').send(body);
-        expect([bad.status, bad.body]).toEqual([500, { error: 'Internal Server Error' }]);
+        expect([bad.status, bad.body.error]).toEqual([400, 'Invalid request']);
+        for (const send of [body, {}]) {
+            const missing = await api().put(`/ensemble?id=${missingId()}`).send(send);
+            expect([missing.status, missing.body]).toEqual([404, { error: 'Ensemble not found' }]);
+        }
     });
 });

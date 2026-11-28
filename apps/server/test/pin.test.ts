@@ -12,6 +12,7 @@ import {
     insert,
     MASTER_PIN,
     adminCookie,
+    teamBody,
     teamDoc,
 } from './helpers.ts';
 
@@ -44,7 +45,9 @@ describe('hashPin·verifyPin', () => {
 
 describe('새 PIN 저장', () => {
     test('기본(전환 전)은 평문으로 저장한다 (옛 서버가 평문으로 비교하므로, 사전 결정 10)', async () => {
-        const res = await api().post('/team').send({ name: 't', desc: [], type: 'x', pin: '1234' });
+        const res = await api()
+            .post('/team')
+            .send(teamBody({ pin: '1234' }));
         expect((await findOne('teams', res.body.id))?.pin).toBe('1234');
     });
 
@@ -52,7 +55,7 @@ describe('새 PIN 저장', () => {
         const hashed = freshApi({ hashPins: true });
         const team = await hashed()
             .post('/team')
-            .send({ name: 't', desc: [], type: 'x', pin: 1234 });
+            .send(teamBody({ pin: '1234' }));
         const stored = (await findOne('teams', team.body.id))?.pin;
         expect(isHashedPin(stored)).toBe(true);
         expect(

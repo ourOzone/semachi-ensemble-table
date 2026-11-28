@@ -2,7 +2,16 @@
 // 대상별(팀·날적이 전체·마스터) 10번 — 맞추면 0으로 / IP 전체 30번 — 맞춰도 그대로
 import { describe, expect, test } from 'vitest';
 import { ipKey } from '../src/lib/pin-guard.ts';
-import { ensembleDoc, freshApi, insert, MASTER_PIN, missingId, teamDoc } from './helpers.ts';
+import {
+    ensembleBody,
+    ensembleDoc,
+    freshApi,
+    insert,
+    MASTER_PIN,
+    missingId,
+    teamBody,
+    teamDoc,
+} from './helpers.ts';
 
 const TOO_MANY = { error: 'Too many PIN attempts' };
 type Api = ReturnType<typeof freshApi>;
@@ -62,7 +71,9 @@ describe('팀별로 센다', () => {
         const api = freshApi();
         const id = await insert('teams', teamDoc({ pin: '1234' }));
         await wrongTeamPin(api, id, 2);
-        const put = await api().put(`/team?id=${id}`).send({ name: 'x', pin: '0000' });
+        const put = await api()
+            .put(`/team?id=${id}`)
+            .send(teamBody({ pin: '0000' }));
         expect([put.status, put.headers['pin-attempts']]).toEqual([403, '3/10']);
     });
 
@@ -72,8 +83,12 @@ describe('팀별로 센다', () => {
         const a = await insert('ensembles', ensembleDoc({ teamId }));
         const b = await insert('ensembles', ensembleDoc({ teamId }));
         await api().delete(`/ensemble?id=${a}`).send({ pin: '0000' });
-        await api().put(`/ensemble?id=${b}`).send({ pin: '0000' });
-        const add = await api().post('/ensemble').send({ teamId, pin: '0000' });
+        await api()
+            .put(`/ensemble?id=${b}`)
+            .send(ensembleBody({ pin: '0000' }));
+        const add = await api()
+            .post('/ensemble')
+            .send(ensembleBody({ teamId, pin: '0000' }));
         expect([add.status, add.headers['pin-attempts']]).toEqual([403, '3/10']);
         const check = await api().post('/check-team-pin').send({ teamId, pin: '0000' });
         expect(check.headers['pin-attempts']).toBe('4/10');

@@ -35,13 +35,26 @@ describe('POST /notice', () => {
         expect(await findAll('notices')).toHaveLength(0);
     });
 
-    test('내용이 없거나 빈 문자열이면 400 (공백만 있는 글은 통과)', async () => {
-        const res = await api().post('/notice').send({});
-        expect([res.status, res.body]).toEqual([400, { error: 'Content are required' }]);
-        expect((await api().post('/notice').send({ content: '' })).status).toBe(400);
-        expect((await api().post('/notice').send({ content: '   ', pin: MASTER_PIN })).status).toBe(
-            201,
-        );
+    test('내용이 없거나 비었거나 공백만 있으면 400 (B-8. 이전: 공백만 있는 글은 올라갔다)', async () => {
+        for (const body of [
+            {},
+            { content: '' },
+            { content: '   ', pin: MASTER_PIN },
+            { content: 1 },
+        ]) {
+            const res = await api().post('/notice').send(body);
+            expect([res.status, res.body.error]).toEqual([400, 'Invalid request']);
+        }
+        expect(await findAll('notices')).toHaveLength(0);
+    });
+
+    test('앞뒤 공백을 빼고 저장한다. 길이 제한은 없다', async () => {
+        const long = '공'.repeat(5000);
+        const res = await api()
+            .post('/notice')
+            .send({ content: ` ${long}\n`, pin: MASTER_PIN });
+        expect(res.status).toBe(201);
+        expect((await findOne('notices', res.body.id))?.content).toBe(long);
     });
 });
 
@@ -73,18 +86,18 @@ describe('DELETE /notice?id=', () => {
         expect(await findAll('notices')).toHaveLength(1);
     });
 
-    test('id가 없으면 400, 없는 공지면 404, 형식이 잘못되면 500 (JSON)', async () => {
+    test('id가 없거나 형식이 아니면 400, 없는 공지면 404 (B-8. 이전: 형식이 틀리면 500)', async () => {
         const noId = await api().delete('/notice');
-        expect([noId.status, noId.body]).toEqual([400, { error: 'Notice ID is required' }]);
+        expect([noId.status, noId.body.error]).toEqual([400, 'Invalid request']);
         const missing = await api().delete(`/notice?id=${missingId()}`).send({ pin: MASTER_PIN });
         expect([missing.status, missing.body]).toEqual([404, { error: 'Notice not found' }]);
         const bad = await api().delete('/notice?id=abc').send({ pin: MASTER_PIN });
-        expect([bad.status, bad.body]).toEqual([500, { error: 'Internal Server Error' }]);
+        expect([bad.status, bad.body.error]).toEqual([400, 'Invalid request']);
     });
 });
 
 describe('POST /check-notice-pin', () => {
-    test('마스터 PIN이면 true, 아니면 false (숫자는 문자열과 다름)', async () => {
+    test('마스터 PIN이면 true, 아니면 false. 숫자로 보내면 400 (B-8. 이전: 문자열과 달라 false)', async () => {
         expect((await api().post('/check-notice-pin').send({ pin: MASTER_PIN })).body).toBe(true);
         expect((await api().post('/check-notice-pin').send({ pin: '0000' })).body).toBe(false);
         expect(
@@ -92,24 +105,24 @@ describe('POST /check-notice-pin', () => {
                 await api()
                     .post('/check-notice-pin')
                     .send({ pin: Number(MASTER_PIN) })
-            ).body,
-        ).toBe(false);
+            ).status,
+        ).toBe(400);
     });
 
     test('pin이 없으면 400', async () => {
         const res = await api().post('/check-notice-pin').send({});
-        expect([res.status, res.body]).toEqual([400, { error: 'Pin is required' }]);
+        expect([res.status, res.body.error]).toEqual([400, 'Invalid request']);
     });
 });
 
 describe('GET /notice/:id (존재 확인)', () => {
-    test('있으면 true, 없으면 404 false, 형식이 잘못되면 500', async () => {
+    test('있으면 true, 없으면 404 false, 형식이 잘못되면 400 (B-8. 이전: 500)', async () => {
         const id = await insert('notices', noticeDoc());
         const ok = await api().get(`/notice/${id}`);
         expect([ok.status, ok.body]).toEqual([200, true]);
         const missing = await api().get(`/notice/${missingId()}`);
         expect([missing.status, missing.body]).toEqual([404, false]);
         const bad = await api().get('/notice/abc');
-        expect([bad.status, bad.body]).toEqual([500, { error: 'Internal Server Error' }]);
+        expect([bad.status, bad.body.error]).toEqual([400, 'Invalid request']);
     });
 });

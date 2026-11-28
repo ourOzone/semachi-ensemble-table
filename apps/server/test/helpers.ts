@@ -94,6 +94,26 @@ export const ensembleDoc = (over: Record<string, unknown> = {}) => ({
     ...over,
 });
 
+// --- 요청 본문 (B-8: 서버가 packages/shared의 스키마로 검사한다) ---
+
+/** 웹이 보내는 모양의 팀 본문 (수정. 만들기는 pin을 더한다) */
+export const teamBody = (over: Record<string, unknown> = {}) => ({
+    name: '테스트밴드',
+    type: '교내 공연',
+    desc: ['보컬', '기타', '베이스', '드럼', '키보드', '매니저', '셋리스트'],
+    ...over,
+});
+
+/** 웹이 보내는 모양의 합주 본문 (수정. 잡기는 teamId를 더한다). nextDate = KST 12/2(수) 09:00 */
+export const ensembleBody = (over: Record<string, unknown> = {}) => ({
+    startTime: 10,
+    endTime: 13,
+    repeat: true,
+    nextDate: '2026-12-02T00:00:00.000Z',
+    due: '2099-12-31',
+    ...over,
+});
+
 // --- 활동 기록 (B-7, models/activity.ts) ---
 
 /** 활동 기록 전체 (오래된 것부터) */

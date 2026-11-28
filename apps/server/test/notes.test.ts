@@ -1,5 +1,6 @@
 // 날적이(note) API의 지금 동작 (GET /notes, DELETE /note, POST /note, GET /note/:id, POST /check-note-pin)
 // "현재 동작:"은 이상해 보이지만 그대로 고정한 것. 고치는 단계는 docs/BACKEND_PLAN.md
+import { NOTE_TEXT_MAX } from '@semachi/shared';
 import { describe, expect, test } from 'vitest';
 import { api, findAll, findOne, insert, MASTER_PIN, missingId } from './helpers.ts';
 
@@ -38,16 +39,27 @@ describe('POST /note', () => {
         expect(await findOne('notes', res.body.id)).toMatchObject({ text: '한 줄', pin: '4321' });
     });
 
-    test('현재 동작: 검사 없이 빈 본문·긴 글도 저장한다 (S5)', async () => {
-        expect((await api().post('/note').send({})).status).toBe(200);
-        expect(
-            (
-                await api()
-                    .post('/note')
-                    .send({ text: 'x'.repeat(10_000), pin: '1' })
-            ).status,
-        ).toBe(200);
-        expect(await findAll('notes')).toHaveLength(2);
+    test('글은 앞뒤 공백을 빼고 저장한다. 200자까지 (웹과 같은 제한, B-8 S5)', async () => {
+        const res = await api()
+            .post('/note')
+            .send({ text: `  ${'가'.repeat(NOTE_TEXT_MAX)}\n `, pin: '4321' });
+        expect(res.status).toBe(200);
+        expect((await findOne('notes', res.body.id))?.text).toBe('가'.repeat(NOTE_TEXT_MAX));
+    });
+
+    test.each([
+        ['빈 본문', {}],
+        ['공백만', { text: ' \n ', pin: '1234' }],
+        ['201자', { text: 'x'.repeat(NOTE_TEXT_MAX + 1), pin: '1234' }],
+        ['글이 문자열이 아님', { text: 1, pin: '1234' }],
+        ['PIN이 없음', { text: '글' }],
+        ['PIN이 숫자 4자리가 아님', { text: '글', pin: '123' }],
+        ['PIN이 숫자 4자리가 아님', { text: '글', pin: '12a4' }],
+        ['PIN이 문자열이 아님', { text: '글', pin: 1234 }],
+    ])('400, 저장하지 않는다 (B-8 S5, 이전: 검사 없이 저장): %s', async (_name, body) => {
+        const res = await api().post('/note').send(body);
+        expect([res.status, res.body.error]).toEqual([400, 'Invalid request']);
+        expect(await findAll('notes')).toHaveLength(0);
     });
 });
 
@@ -69,29 +81,28 @@ describe('DELETE /note?id=', () => {
         expect((await api().delete(`/note?id=${id}`).send({ pin: MASTER_PIN })).status).toBe(200);
     });
 
-    test('없으면 404 { id: -1 } (id가 없어도), 형식이 잘못되면 500 (텍스트)', async () => {
+    test('없으면 404 { id: -1 }, id가 없거나 형식이 아니면 400 (B-8. 이전: 없으면 404, 형식은 500)', async () => {
         const missing = await api().delete(`/note?id=${missingId()}`);
         expect([missing.status, missing.body]).toEqual([404, { id: -1 }]);
-        expect((await api().delete('/note')).status).toBe(404);
-        const bad = await api().delete('/note?id=abc');
-        expect([bad.status, bad.text]).toEqual([500, 'Internal Server Error']);
+        expect((await api().delete('/note')).status).toBe(400);
+        expect((await api().delete('/note?id=abc')).status).toBe(400);
     });
 });
 
 describe('GET /note/:id (존재 확인)', () => {
-    test('있으면 true, 없으면 404 false, 형식이 잘못되면 500', async () => {
+    test('있으면 true, 없으면 404 false, 형식이 잘못되면 400 (B-8. 이전: 500)', async () => {
         const id = await insert('notes', noteDoc());
         const ok = await api().get(`/note/${id}`);
         expect([ok.status, ok.body]).toEqual([200, true]);
         const missing = await api().get(`/note/${missingId()}`);
         expect([missing.status, missing.body]).toEqual([404, false]);
         const bad = await api().get('/note/abc');
-        expect([bad.status, bad.body]).toEqual([500, { error: 'Internal Server Error' }]);
+        expect([bad.status, bad.body.error]).toEqual([400, 'Invalid request']);
     });
 });
 
 describe('POST /check-note-pin', () => {
-    test('글 PIN이 맞으면 true, 틀리면 false (숫자는 문자열과 다름)', async () => {
+    test('글 PIN이 맞으면 true, 틀리면 false. 숫자로 보내면 400 (B-8. 이전: 문자열과 달라 false)', async () => {
         const id = await insert('notes', noteDoc({ pin: '1234' }));
         expect((await api().post('/check-note-pin').send({ noteId: id, pin: '1234' })).body).toBe(
             true,
@@ -99,28 +110,29 @@ describe('POST /check-note-pin', () => {
         expect((await api().post('/check-note-pin').send({ noteId: id, pin: '0000' })).body).toBe(
             false,
         );
-        expect((await api().post('/check-note-pin').send({ noteId: id, pin: 1234 })).body).toBe(
-            false,
+        expect((await api().post('/check-note-pin').send({ noteId: id, pin: 1234 })).status).toBe(
+            400,
         );
     });
 
-    test('마스터 PIN이면 글을 찾지 않고 true', async () => {
+    test('마스터 PIN이면 글을 찾지 않고 true (없는 글도)', async () => {
         expect(
-            (await api().post('/check-note-pin').send({ noteId: 'abc', pin: MASTER_PIN })).body,
+            (await api().post('/check-note-pin').send({ noteId: missingId(), pin: MASTER_PIN }))
+                .body,
         ).toBe(true);
     });
 
-    test('noteId나 pin이 없으면 400, 없는 글이면 404, 형식이 잘못되면 500', async () => {
+    test('noteId나 pin이 없거나 noteId 형식이 아니면 400, 없는 글이면 404 (B-8. 이전: 형식이 틀리면 500)', async () => {
         const noPin = await api().post('/check-note-pin').send({ noteId: missingId() });
         expect([noPin.status, noPin.body]).toEqual([
             400,
-            { error: 'Both noteId and pin are required' },
+            { error: 'Invalid request', issues: [{ path: 'pin', message: expect.any(String) }] },
         ]);
         const missing = await api()
             .post('/check-note-pin')
             .send({ noteId: missingId(), pin: '1234' });
         expect([missing.status, missing.body]).toEqual([404, { error: 'Note not found' }]);
         const bad = await api().post('/check-note-pin').send({ noteId: 'abc', pin: '1234' });
-        expect([bad.status, bad.body]).toEqual([500, { error: 'Internal Server Error' }]);
+        expect([bad.status, bad.body.error]).toEqual([400, 'Invalid request']);
     });
 });

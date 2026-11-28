@@ -1,0 +1,119 @@
+# 서버에서 켜 둘 컨테이너 묶음 (백엔드 개편 B-11). 서버의 /srv/semachi/ 에 놓고 그 폴더에서 docker compose 명령을 쓴다
+#   caddy    : 80·443. HTTPS + 주소별로 나눠 줌 (caddy/Caddyfile)
+#   api·web  : 운영 (profile production)
+#   api-beta·web-beta : 베타 (profile beta). 운영과 같은 DB (사전 결정 10)
+# 같은 폴더의 파일
+#   .env            : 지금 켤 이미지 이름 (deploy.sh가 쓴다. 비밀값 없음). docker compose가 알아서 읽어 아래 ${...}에 넣는다
+#   production.env  : 운영 api 비밀값 (MONGO_DB·MASTER_PIN 등, 사용자가 만든다. 틀: production.env.example)
+#   beta.env        : 베타 api 비밀값 (틀: beta.env.example)
+#   caddy.env       : 주소·베타 기본 인증 (틀: caddy.env.example)
+# profile: 이름을 붙인 컨테이너는 docker compose up -d 만으로는 켜지지 않고, 이름을 적어야 켜진다
+#   (아직 배포한 적 없는 쪽을 실수로 켜지 않게. 예: docker compose up -d api-beta web-beta)
+name: semachi
+
+# 컨테이너 로그(docker compose logs)는 컨테이너마다 10MB × 5개까지만 남긴다 (디스크가 차지 않게)
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '5'
+
+# api·api-beta가 함께 쓰는 설정
+x-api: &api
+  restart: unless-stopped
+  init: true
+  logging: *logging
+  # 서버가 떠 있고 DB에 연결돼 있는지 (GET /health). deploy.sh는 이것이 healthy가 될 때까지 기다린다
+  healthcheck:
+    test:
+      [
+        'CMD',
+        'node',
+        '-e',
+        "fetch('http://127.0.0.1:8081/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+      ]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 30s
+    start_interval: 2s
+
+# web·web-beta가 함께 쓰는 설정
+x-web: &web
+  restart: unless-stopped
+  logging: *logging
+  healthcheck:
+    test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1/']
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 10s
+    start_interval: 2s
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - '80:80' # HTTP (인증서 발급 확인, https로 넘기기)
+      - '443:443' # HTTPS
+      - '443:443/udp' # HTTP/3
+    env_file: caddy.env
+    volumes:
+      # 파일 하나가 아니라 폴더를 연결한다: 배포가 파일을 새로 덮어써도 컨테이너가 새 파일을 본다
+      - ./caddy:/etc/caddy:ro
+      # 받은 인증서. 지우면 다시 받는다 (Let's Encrypt는 너무 자주 받으면 잠시 막는다)
+      - caddy_data:/data
+      - caddy_config:/config
+    logging: *logging
+
+  api:
+    <<: *api
+    profiles: [production]
+    image: ${API_IMAGE:-semachi-api:not-deployed}
+    env_file: production.env
+    environment:
+      APP_ENV: production
+      PORT: '8081'
+      TZ: Asia/Seoul
+      # 앞에 Caddy 하나 → 진짜 사용자 IP는 X-Forwarded-For의 마지막 (PIN 시도 제한이 IP로 센다, B-5)
+      TRUST_PROXY: '1'
+      # 날짜 지난 팀·합주 정리 (B-9): 운영 하나에서만. 시작할 때 한 번 + 매일 04:00
+      CLEANUP_ENABLED: 'true'
+
+  web:
+    <<: *web
+    profiles: [production]
+    image: ${WEB_IMAGE:-semachi-web:not-deployed}
+
+  api-beta:
+    <<: *api
+    profiles: [beta]
+    image: ${API_BETA_IMAGE:-semachi-api:not-deployed}
+    env_file: beta.env
+    environment:
+      APP_ENV: beta
+      PORT: '8081'
+      TZ: Asia/Seoul
+      TRUST_PROXY: '1'
+      # 베타는 늘 끈다: 운영과 같은 DB라 켜면 같은 일을 두 번 한다 (B-9)
+      CLEANUP_ENABLED: 'false'
+
+  web-beta:
+    <<: *web
+    profiles: [beta]
+    image: ${WEB_BETA_IMAGE:-semachi-web:not-deployed}
+
+  # DB 백업·복원 도구 (MongoDB 공식 이미지의 mongodump·mongorestore). 늘 꺼져 있고, 쓸 때만 docker compose run
+  # 운영 DB 주소는 production.env의 MONGO_DB (화면에 출력하지 않는다). 백업 파일은 ./backups/ (backup.sh)
+  db-tools:
+    profiles: [tools]
+    image: mongo:8
+    env_file: production.env
+    volumes:
+      - ./backups:/backup
+    entrypoint: ['sh', '-c']
+
+volumes:
+  caddy_data:
+  caddy_config:

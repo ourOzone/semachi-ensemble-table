@@ -1,0 +1,21 @@
+# CI의 "이미지 확인"용 덧붙임 (백엔드 개편 B-11, deploy/smoke/run.sh)
+# deploy/compose.yaml 위에 겹쳐 쓴다: docker compose -f compose.yaml -f smoke/compose.yaml ...
+# 실제 DB 대신 이 안에서 띄운 빈 MongoDB를 쓴다 (운영 DB에 닿지 않는다)
+services:
+  mongo:
+    image: mongo:8
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.runCommand({ ping: 1 }).ok']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  api-beta:
+    depends_on:
+      mongo:
+        condition: service_healthy

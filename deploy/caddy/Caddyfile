@@ -1,0 +1,40 @@
+# 서버 맨 앞의 Caddy (백엔드 개편 B-11). 80·443을 받아 HTTPS 인증서를 알아서 받고·갱신하고, 주소별로 나눠 준다
+#   운영  https://semachi.net       → /api/* 는 api,      그 밖은 web
+#   베타  https://beta.semachi.net  → /api/* 는 api-beta, 그 밖은 web-beta (기본 인증: 테스터 아이디·암호)
+# 주소·베타 암호는 서버의 caddy.env에서 읽는다 ({$이름}). 이 파일에는 비밀값이 없다
+# 바꾼 뒤: 배포가 서버에 복사하고 다시 읽는다(deploy.sh). 손으로는 docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+
+# 두 주소에 함께 쓰는 설정
+(common) {
+	# 검색 엔진에 나오지 않게 (웹 파일·API 모든 응답, B-1. index.html의 noindex와 함께)
+	header X-Robots-Tag "noindex, nofollow"
+	# 응답 압축 (JSON·JS·CSS가 작아진다)
+	encode zstd gzip
+	# 접속 기록 (docker compose logs caddy). 요청 본문·쿠키는 남기지 않는다
+	log
+}
+
+{$PROD_SITE:semachi.net} {
+	import common
+	# /api/teams → api 서버의 /teams (앞의 /api를 떼고 넘긴다)
+	handle_path /api/* {
+		reverse_proxy api:8081
+	}
+	handle {
+		reverse_proxy web:80
+	}
+}
+
+{$BETA_SITE:beta.semachi.net} {
+	import common
+	# 베타는 테스터만: 처음 열 때 브라우저가 아이디·암호를 묻는다 (암호는 해시로만 저장, 만드는 법은 docs/DEPLOY_RUNBOOK.md)
+	basic_auth {
+		{$BETA_AUTH_USER} {$BETA_AUTH_HASH}
+	}
+	handle_path /api/* {
+		reverse_proxy api-beta:8081
+	}
+	handle {
+		reverse_proxy web-beta:80
+	}
+}

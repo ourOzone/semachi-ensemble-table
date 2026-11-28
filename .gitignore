@@ -31,6 +31,11 @@ Thumbs.db
 .claude/settings.local.json
 CLAUDE.local.md
 
+# 배포(deploy/): 서버에서 채우는 비밀값 파일·이미지 이름·DB 백업 (틀은 *.env.example만 커밋)
+deploy/*.env
+deploy/.env.previous
+deploy/backups/
+
 # 서버: 개발용 메모리 DB 데이터(pnpm dev:server), 활동 로그 파일
 apps/server/.dev-db/
 apps/server/log.txt

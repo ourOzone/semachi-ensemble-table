@@ -6,7 +6,7 @@ export default defineConfig({
         include: ['test/**/*.test.ts'],
         setupFiles: ['./test/setup.ts'],
         env: {
-            // 서버는 시간대를 코드에 적지 않고 서버 설정을 따른다(D1). 보통 서버(UTC)와 같게 고정한다
+            // 날짜 계산은 코드가 한국 시간으로 한다(lib/time.ts, B-8 D1). 운영 서버처럼 UTC로 두고 그래도 맞는지 본다
             TZ: 'UTC',
         },
         restoreMocks: true,

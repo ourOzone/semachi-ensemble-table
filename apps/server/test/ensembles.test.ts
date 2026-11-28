@@ -14,7 +14,8 @@ import {
 } from './helpers.ts';
 
 describe('GET /ensembles', () => {
-    // 서버 시간대 UTC(vitest 설정). "오늘"은 서버 시간대의 0시 = 2026-11-27T00:00Z (KST 09:00)
+    // 지금 = KST 11/27 19:00. "오늘 0시"는 한국 날짜 기준 = 2026-11-26T15:00Z (D1, B-8).
+    // 서버 시간대는 UTC로 둔다(vitest 설정): 운영 서버처럼 UTC여도 한국 날짜로 계산하는지 본다
     const NOW = '2026-11-27T10:00:00Z';
 
     async function names() {
@@ -45,8 +46,9 @@ describe('GET /ensembles', () => {
         ]);
     });
 
-    test('반복 합주: 반복 종료 날짜(due)가 오늘 0시보다 앞이면 뺀다. 없거나 null이어도 넣는다', async () => {
+    test('반복 합주: 반복 종료 날짜(due)가 오늘(한국 날짜)보다 앞이면 뺀다. 없거나 null이어도 넣는다', async () => {
         freezeTime(NOW);
+        // 웹은 due를 'YYYY-MM-DD'로 보내고, DB에는 그날 UTC 0시로 저장된다 (예: '2026-11-27' → 2026-11-27T00:00Z)
         await insert(
             'ensembles',
             ensembleDoc({ teamName: '계속', due: new Date('2099-12-31T00:00:00Z') }),
@@ -55,27 +57,21 @@ describe('GET /ensembles', () => {
         await insert('ensembles', ensembleDoc({ teamName: 'due null', due: null }));
         await insert(
             'ensembles',
-            ensembleDoc({ teamName: '오늘 0시', due: new Date('2026-11-27T00:00:00Z') }),
+            ensembleDoc({ teamName: '오늘 끝', due: new Date('2026-11-27T00:00:00Z') }),
         );
         await insert(
             'ensembles',
-            ensembleDoc({ teamName: '어제 끝', due: new Date('2026-11-26T23:59:59.999Z') }),
+            ensembleDoc({ teamName: '어제 끝', due: new Date('2026-11-26T00:00:00Z') }),
         );
         // 반복 합주는 nextDate가 지났어도 넣는다 (다음 날짜는 웹이 계산)
         await insert(
             'ensembles',
             ensembleDoc({ teamName: '지난 nextDate', nextDate: new Date('2026-01-01T00:00:00Z') }),
         );
-        expect(await names()).toEqual([
-            '계속',
-            'due 없음',
-            'due null',
-            '오늘 0시',
-            '지난 nextDate',
-        ]);
+        expect(await names()).toEqual(['계속', 'due 없음', 'due null', '오늘 끝', '지난 nextDate']);
     });
 
-    test('일회성 합주: 날짜(nextDate)가 오늘 0시 이후면 넣는다', async () => {
+    test('일회성 합주: 날짜(nextDate)가 오늘 0시(한국) 이후면 넣는다', async () => {
         freezeTime(NOW);
         const once = { repeat: false, type: '일회성' };
         await insert(
@@ -83,7 +79,7 @@ describe('GET /ensembles', () => {
             ensembleDoc({
                 ...once,
                 teamName: '오늘 0시',
-                nextDate: new Date('2026-11-27T00:00:00Z'),
+                nextDate: new Date('2026-11-26T15:00:00Z'), // KST 11/27 00:00
             }),
         );
         await insert(
@@ -95,7 +91,7 @@ describe('GET /ensembles', () => {
             ensembleDoc({
                 ...once,
                 teamName: '어제',
-                nextDate: new Date('2026-11-26T23:59:59.999Z'),
+                nextDate: new Date('2026-11-26T14:59:59.999Z'), // KST 11/26 23:59
             }),
         );
         // 일회성은 due와 관계없다 (nextDate는 미래)
@@ -106,7 +102,8 @@ describe('GET /ensembles', () => {
         expect(await names()).toEqual(['오늘 0시', '미래', '지난 due']);
     });
 
-    test('현재 동작 (서버 UTC): KST로 오늘 오전 9시 전에 시작하는 일회성 합주는 9시(UTC 0시)부터 빠진다 (D1)', async () => {
+    test('서버가 UTC여도 KST 오전 9시 전에 시작하는 오늘 일회성 합주가 그날 내내 보이고, 다음 날 0시(KST)에 빠진다 (D1)', async () => {
+        // B-8 전에는 "오늘 0시"가 서버 시간대(UTC)의 0시 = KST 09:00이라, 이 합주가 9시부터 빠졌다
         const once = { repeat: false, type: '일회성', teamName: 'KST 08:00 합주' };
         // KST 11/27 08:00 = 11/26 23:00Z
         await insert(
@@ -115,7 +112,11 @@ describe('GET /ensembles', () => {
         );
         freezeTime('2026-11-26T23:30:00Z'); // KST 11/27 08:30
         expect(await names()).toEqual(['KST 08:00 합주']);
-        freezeTime('2026-11-27T00:30:00Z'); // KST 11/27 09:30, 같은 날인데 빠진다
+        freezeTime('2026-11-27T00:30:00Z'); // KST 11/27 09:30
+        expect(await names()).toEqual(['KST 08:00 합주']);
+        freezeTime('2026-11-27T14:59:00Z'); // KST 11/27 23:59
+        expect(await names()).toEqual(['KST 08:00 합주']);
+        freezeTime('2026-11-27T15:00:00Z'); // KST 11/28 00:00
         expect(await names()).toEqual([]);
     });
 

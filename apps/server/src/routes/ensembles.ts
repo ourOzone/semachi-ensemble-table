@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import { withoutPin, type RecordActivity } from '../lib/activity.ts';
 import type { PinCheck } from '../lib/pin-check.ts';
 import { pinTarget } from '../lib/pin-guard.ts';
+import { startOfKstDay } from '../lib/time.ts';
 import { Ensemble } from '../models/ensemble.ts';
 import { Team } from '../models/team.ts';
 
@@ -39,9 +40,8 @@ export function ensemblesRouter({
     // 전체 합주
     router.get('/ensembles', async (_req, res) => {
         try {
-            // 현재 동작: "오늘"은 서버 시간대의 0시 (D1)
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            // "오늘"은 한국 날짜의 0시 (D1, B-8). 이전엔 서버 시간대의 0시라 UTC 서버에서는 KST 오전 9시였다
+            const today = startOfKstDay(new Date());
 
             const ensembles = await Ensemble.find({
                 $or: [

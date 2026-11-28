@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { objectIdTime, toNotes, toNotices } from './notes';
 
 describe('toNotes · toNotices', () => {
-    it('한마디는 { id, text }로, 공지는 content를 text로 바꾼다 (pin은 버린다)', () => {
-        expect(toNotes([{ _id: 'n1', text: '한마디', pin: '0000' }])).toEqual([
+    it('한마디는 { id, text }로, 공지는 content를 text로 바꾼다', () => {
+        expect(toNotes([{ _id: 'n1', text: '한마디' }])).toEqual([
             { id: 'n1', text: '한마디', createdAt: null },
         ]);
         expect(

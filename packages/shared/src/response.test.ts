@@ -46,10 +46,14 @@ describe('서버 응답 스키마', () => {
     });
 
     it('optional 필드가 없어도 받아들인다', () => {
-        const { publishDate: _p, pin: _pin, ...team } = teamJson;
-        const { type: _t, ...ensemble } = ensembleJson;
+        const { publishDate: _p, ...team } = teamJson;
         expect(teamResponseSchema.safeParse(team).success).toBe(true);
-        expect(ensembleResponseSchema.safeParse(ensemble).success).toBe(true);
+    });
+
+    it('옛 데이터의 PIN·type이 와도 버린다 (B-6 B3, B-8 D3)', () => {
+        expect(teamResponseSchema.parse(teamJson)).not.toHaveProperty('pin');
+        expect(noteResponseSchema.parse(noteJson)).not.toHaveProperty('pin');
+        expect(ensembleResponseSchema.parse(ensembleJson)).not.toHaveProperty('type');
     });
 
     it('필수 필드가 빠지거나 타입이 다르면 거부한다', () => {

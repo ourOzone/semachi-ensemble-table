@@ -41,7 +41,7 @@ export function useRefreshEnsembles() {
     return useRefresh(ENSEMBLES);
 }
 
-/** 합주 잡기. pin: 그 팀의 PIN (서버가 확인한다). 호출부가 팀 존재를 먼저 확인한다 (ISSUES B4) */
+/** 합주 잡기. pin: 그 팀의 PIN (서버가 확인한다). 팀이 없으면 서버가 404 (B-8 B4) */
 export function useAddEnsemble() {
     const refreshEnsembles = useRefreshEnsembles();
     return useMutation({

@@ -206,10 +206,10 @@ describe('합주표', () => {
             repeat: true,
             startTime: 2,
             endTime: 5,
-            day: 4, // 금요일 (월요일 0 기준)
-            type: '무기한',
             due: '2099-12-31',
         });
+        // 팀 이름·요일·type은 보내지 않는다: 서버가 채운다 (백엔드 개편 B-8 D3)
+        for (const key of ['teamName', 'day', 'type']) expect(putBody).not.toHaveProperty(key);
         // 날짜에 시작 시각을 붙여 보낸다 (합주 잡기와 같음)
         expect(dayjs(putBody!.nextDate as string).format('YYYY-MM-DD HH:mm')).toBe(
             '2026-11-27 10:00',
@@ -247,7 +247,7 @@ describe('합주표', () => {
         await user.click(drawer.getByRole('button', { name: '수정하기' }));
 
         await waitFor(() => expect(putBody).toBeDefined());
-        expect(putBody).toMatchObject({ repeat: true, type: '무기한', due: '2099-12-31' });
+        expect(putBody).toMatchObject({ repeat: true, due: '2099-12-31' });
     });
 
     it('수정: 한 번만으로 바꾸면 그 날짜만 (due는 그 날짜)', async () => {
@@ -259,7 +259,7 @@ describe('합주표', () => {
         await user.click(drawer.getByRole('button', { name: '수정하기' }));
 
         await waitFor(() => expect(putBody).toBeDefined());
-        expect(putBody).toMatchObject({ repeat: false, type: '일회성', due: '2026-11-23' });
+        expect(putBody).toMatchObject({ repeat: false, due: '2026-11-23' });
         const info = within(await findDialog('월 10:00 – 11:00'));
         expect(info.getByText('이번 한 번')).toBeInTheDocument();
     });
@@ -341,7 +341,7 @@ describe('합주표', () => {
 
         await waitFor(() => expect(putBody).toBeDefined());
         // 이전: 수정·미루기 때마다 2099-12-31로 덮어썼다
-        expect(putBody).toMatchObject({ repeat: true, type: '무기한', due: '2026-12-21' });
+        expect(putBody).toMatchObject({ repeat: true, due: '2026-12-21' });
     });
 
     it('반복 종료 날짜가 이미 지난 합주(옛 데이터)는 합주판에 보이지 않는다 (32차 V13)', async () => {
@@ -457,7 +457,6 @@ describe('합주표', () => {
             repeat: true,
             startTime: 2,
             endTime: 3,
-            day: 0,
         });
         expect(dayjs(putBody!.nextDate as string).format('YYYY-MM-DD')).toBe('2026-11-23');
         const reopened = within(await findDialog('월 10:00 – 11:00'));
@@ -481,7 +480,6 @@ describe('합주표', () => {
         await waitFor(() => expect(putBody).toBeDefined());
         expect(putBody).toMatchObject({
             repeat: true,
-            type: '무기한',
             due: '2099-12-31',
             startTime: 2,
         });

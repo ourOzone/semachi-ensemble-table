@@ -427,21 +427,20 @@ describe('팀', () => {
             expect(useDrawerStore.getState().openedDrawers).toEqual([]);
             expect(posted).toMatchObject({
                 teamId: 'team-1',
-                teamName: '테스트밴드',
                 repeat: false,
                 startTime: 6,
                 endTime: 9,
-                day: 4, // 금요일 (월요일 0 기준)
-                type: '일회성',
                 due: '2026-11-27',
                 pin: '1234', // 마지막에 받은 그 팀의 PIN (서버가 다시 확인)
             });
+            // 팀 이름·요일·type은 보내지 않는다: 서버가 채운다 (백엔드 개편 B-8 D3)
+            for (const key of ['teamName', 'day', 'type']) expect(posted).not.toHaveProperty(key);
             // 날짜에 시작 시각을 붙여 보낸다 (서버가 지난 일회성 합주를 날짜로 걸러 냄)
             expect(dayjs(posted!.nextDate as string).format('YYYY-MM-DD HH:mm')).toBe(
                 '2026-11-27 12:00',
             );
-            // 서버가 팀 존재를 검사하지 않아(ISSUES B4) 저장 직전 확인은 유지: 팀 정보 Drawer의 합주 추가 버튼 + 저장 직전 = 2회
-            expect(countOf(requests, 'GET /team/team-1')).toBe(2);
+            // 팀 정보 Drawer의 합주 잡기 버튼에서 한 번. 저장 직전 확인은 없앴다: 서버가 확인한다 (B-8 B4, 이전 2회)
+            expect(countOf(requests, 'GET /team/team-1')).toBe(1);
         });
 
         it('저장하지 않고 닫으면 팀 정보로 돌아간다', async () => {
@@ -492,22 +491,23 @@ describe('팀', () => {
             );
         });
 
-        it('팀이 그새 삭제됐으면 저장하지 않고 모두 닫으며 알린다', async () => {
+        it('팀이 그새 삭제됐으면(서버가 404) 모두 닫고 알리며 목록을 다시 불러온다 (B-8 B4)', async () => {
             let attempted = false;
             server.use(
                 http.post(`${url}/ensemble`, () => {
                     attempted = true;
-                    return HttpResponse.json({ id: 'x' });
+                    return HttpResponse.json({ error: 'Team not found' }, { status: 404 });
                 }),
             );
             const user = await openTeamInfo();
             await openAddEnsembleFromTeam(user);
-            server.use(http.get(`${url}/team/:id`, () => new HttpResponse(null, { status: 404 })));
+            const before = countOf(requests, 'GET /teams');
             await fillAddEnsembleAfterOpen(user);
 
             expect(await screen.findByText('이미 삭제된 팀이에요.')).toBeInTheDocument();
             expect(useDrawerStore.getState().openedDrawers).toEqual([]);
-            expect(attempted).toBe(false);
+            expect(attempted).toBe(true);
+            await waitFor(() => expect(countOf(requests, 'GET /teams')).toBeGreaterThan(before));
         });
 
         // F3: 이전에는 저장 결과와 관계없이 완료 화면을 열었다

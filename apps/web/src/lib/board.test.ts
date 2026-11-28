@@ -24,7 +24,6 @@ const teamRaw = (id: string, name: string): TeamResponse => ({
     name,
     type: '기타 등등',
     desc: ['보컬', '기타', '베이스', '드럼', '키보드', '매니저', '셋리'],
-    pin: '1234',
 });
 
 const ensemble = (overrides: Partial<EnsembleResponse> & { _id: string }): EnsembleResponse => ({

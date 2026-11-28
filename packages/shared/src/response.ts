@@ -15,16 +15,16 @@ export const teamResponseSchema = z.object({
     publishDate: z.string().optional(),
     /** 팀 자동 삭제 날짜 (V-3 10차). 아직 백엔드 스키마에 없다: 생기면 그대로 받는다 */
     due: z.string().optional(),
-    /** 백엔드가 그대로 내려주는 값. 앱 내부 타입(Team)으로 옮기지 않는다. */
-    pin: z.string().optional(),
+    // PIN은 서버가 목록에 넣지 않는다 (B-6 B3). 와도 버린다
 });
 
 export const ensembleResponseSchema = z
     .object({
         _id: z.string(),
         teamId: z.string(),
+        /** 그 팀의 이름. 서버가 채운다 (B-8 D3) */
         teamName: z.string(),
-        /** 월요일 0 ~ 일요일 6 */
+        /** 월요일 0 ~ 일요일 6. 서버가 nextDate의 한국 요일로 채운다 (B-8 D3) */
         day: z.number().int().min(0).max(6),
         /** 시작 시간칸 인덱스 (idx2hour 기준, 30분 단위, 0 ~ 29) */
         startTime: z.number().int().min(0).max(29),
@@ -33,8 +33,7 @@ export const ensembleResponseSchema = z
         repeat: z.boolean(),
         nextDate: z.string(),
         due: z.string(),
-        /** '무기한' | '일회성'. 레거시 필드 (repeat로 대체됨) */
-        type: z.string().optional(),
+        // type('무기한'·'일회성')은 없앴다 (B-8 D3: repeat·due로 나타냄). 옛 데이터에 남아 있어도 버린다
     })
     // 범위 밖·시작 > 끝인 합주는 항목 단위 검증(getList)에서 제외된다 (3-10). 합주표(7 x 30) 배열 접근이 이 범위를 전제로 한다.
     // 이전에는 시작 > 끝이면 칸이 만들어지지 않아 보이지 않았고, 범위 밖이면 합주표를 만들다 TypeError가 났다
@@ -43,8 +42,7 @@ export const ensembleResponseSchema = z
 export const noteResponseSchema = z.object({
     _id: z.string(),
     text: z.string(),
-    /** 백엔드가 그대로 내려주는 값. 앱 내부 타입(Note)으로 옮기지 않는다. */
-    pin: z.string().optional(),
+    // PIN은 서버가 목록에 넣지 않는다 (B-6 B3). 와도 버린다
 });
 
 export const noticeResponseSchema = z.object({

@@ -105,18 +105,18 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
         expect(posted).toMatchObject({
             pin: '1234', // 다 고른 뒤 받은 그 팀의 PIN
             teamId: 'team-1',
-            teamName: '테스트밴드',
             repeat: true,
             startTime: 6,
             endTime: 9,
-            day: 5,
-            type: '무기한',
             due: '2099-12-31',
         });
+        // 팀 이름·요일·type은 보내지 않는다: 서버가 채운다 (백엔드 개편 B-8 D3)
+        for (const key of ['teamName', 'day', 'type']) expect(posted).not.toHaveProperty(key);
         expect(dayjs(posted!.nextDate as string).format('YYYY-MM-DD HH:mm')).toBe(
             '2026-11-21 12:00',
         );
-        expect(countOf(requests, 'GET /team/team-1')).toBe(1);
+        // 팀이 있는지는 서버가 확인한다 (B-8 B4, 이전: 저장 직전에 GET /team/:id)
+        expect(countOf(requests, 'GET /team/team-1')).toBe(0);
         expect(useDrawerStore.getState().openedDrawers).toEqual([]);
     });
 
@@ -399,7 +399,7 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
         await enterBookingPin(user);
         // 알림은 한 문장만 (V-3 15차, 이전: 아래에 "(11/28(토)까지)"가 든 합주 요약)
         expect(await screen.findByText('합주를 잡았어요.')).toBeInTheDocument();
-        expect(posted).toMatchObject({ repeat: true, type: '무기한', due: '2026-11-28' });
+        expect(posted).toMatchObject({ repeat: true, due: '2026-11-28' });
     });
 
     it('시작 날짜를 종료 날짜 뒤로 옮기면 종료 날짜를 다시 고르게 한다', async () => {

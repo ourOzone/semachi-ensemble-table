@@ -85,8 +85,6 @@ describe('합주 수정·삭제 경로', () => {
                 nextDate,
                 startTime: 2,
                 endTime: 3,
-                day: 4,
-                type: '무기한',
                 due: '2099-12-31',
             },
             '1234',
@@ -100,11 +98,11 @@ describe('합주 수정·삭제 경로', () => {
 describe('응답 검증 (Zod)', () => {
     const team = { _id: 't1', type: '기타 등등', name: '팀', desc: [], pin: '9876', __v: 0 };
 
-    it('getList: 항목을 스키마로 검증하고, 모르는 필드(__v)는 버린다', async () => {
+    it('getList: 항목을 스키마로 검증하고, 모르는 필드(__v, 옛 데이터의 pin)는 버린다', async () => {
         server.use(http.get(`${url}/teams`, () => HttpResponse.json([team])));
 
         await expect(getList('/teams', teamResponseSchema)).resolves.toEqual([
-            { _id: 't1', type: '기타 등등', name: '팀', desc: [], pin: '9876' },
+            { _id: 't1', type: '기타 등등', name: '팀', desc: [] },
         ]);
     });
 

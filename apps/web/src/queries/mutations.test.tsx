@@ -63,8 +63,6 @@ const ensembleRequest: EnsembleUpdateRequest = {
     nextDate: dayjs('2026-11-27'),
     startTime: 2,
     endTime: 3,
-    day: 4,
-    type: '무기한',
     due: '2099-12-31',
 };
 
@@ -144,7 +142,6 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
         await act(() =>
             result.current.addEnsemble.mutateAsync({
                 ...ensembleRequest,
-                teamName: '테스트밴드',
                 pin: '1234',
             }),
         );
@@ -155,7 +152,6 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
             act(() =>
                 result.current.addEnsemble.mutateAsync({
                     ...ensembleRequest,
-                    teamName: 'x',
                     pin: '1234',
                 }),
             ),

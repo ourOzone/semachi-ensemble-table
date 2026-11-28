@@ -3,10 +3,10 @@ import { idx2hour } from '@/constants';
 import type { EnsembleUpdateRequest, TimeSlot } from '@/types';
 
 /**
- * 합주 추가·수정 요청 본문 (추가는 여기에 teamName을 더한다).
- * - day: dayjs의 day()(일요일 0)를 월요일 0 ~ 일요일 6으로 변환
- * - type: repeat에서 파생되는 레거시 필드 (TODO 삭제)
+ * 합주 추가·수정 요청 본문.
  * - due: 일회성은 그 날짜. 반복은 반복 종료 날짜(이 날짜 이후 자동 삭제, View 개편 V-2 23차), 없으면 2099-12-31 (= 계속 반복)
+ * - 팀 이름(teamName)·요일(day)은 보내지 않는다: 서버가 팀 id와 nextDate로 채운다. type은 없앴다 (백엔드 개편 B-8 D3)
+ * - teamId: 합주 잡기에서만 쓰인다 (수정은 팀을 바꾸지 않아 서버가 버린다)
  */
 export function toEnsembleRequest(
     teamId: string,
@@ -23,8 +23,6 @@ export function toEnsembleRequest(
         nextDate,
         startTime,
         endTime,
-        day: (nextDate.day() + 6) % 7,
-        type: repeat ? '무기한' : '일회성',
         due: repeat
             ? (repeatEnd?.format('YYYY-MM-DD') ?? NO_REPEAT_END)
             : nextDate.format('YYYY-MM-DD'),

@@ -7,7 +7,7 @@
 ## 요약
 
 - **무엇을:** `api.js` 한 파일을 TypeScript 서버로 나누고, 저장소를 모노레포(`apps/web`·`apps/server`·`packages/shared`)로. 보안 문제·PIN·로그·입력 검증·API 형태를 고치고, 팀 자동 삭제를 켠다. 검색 엔진 차단
-- **어떻게 배포:** `dev`에 푸시 → 베타(`beta.semachi.net`), `main`에 푸시 → 운영(`semachi.net`)에 자동 배포. GitHub Actions + Docker + Caddy, 서버는 OCI
+- **어떻게 배포:** `dev`에 푸시 → 베타(`test.semachi.net`), `main`에 푸시 → 운영(`semachi.net`)에 자동 배포. GitHub Actions + Docker + Caddy, 서버는 OCI
 - **순서:** 서버·DB 없이 할 수 있는 코드 작업을 모두 먼저 하고(B-1~B-11), 서버에 들어갈 수 있게 되면 조사 → 베타 배포·확인 → 운영 한 번에 전환(B-12~B-15). 모든 단계를 마친 뒤 한 번에 운영에 올린다 (중간에 급히 내는 것 없음)
 - **지금:** B-11까지 끝. 서버 SSH·Atlas 화면 접속 가능 (2026-11-28). 다음은 B-12 서버 조사 (`docs/DEPLOY_RUNBOOK.md`)
 - **방식:** 사용자가 배우면서 따라간다. 개념 먼저 설명, 서버 명령은 하나씩, 단계마다 `docs/LEARNING_NOTES.md`
@@ -75,7 +75,7 @@
 | 2 | 런타임 | Node 최신 LTS(웹·서버 같게), Express 5, Mongoose 최신, Zod 4 | 사용자 결정(최신으로). Express 5는 async 오류를 자동으로 넘겨 `try/catch` 반복이 사라진다 |
 | 3 | 서버 TypeScript 실행 | 개발·운영 모두 Node가 `.ts`를 바로 실행(type stripping). ~~운영 이미지는 `tsdown`으로 묶음~~ → B-11: 묶지 않는다 | 이미지 안에서도 `node_modules/@semachi/shared`가 `packages/shared`로 가는 링크라 `node_modules` 안 `.ts` 제약에 걸리지 않는다 (B-3·B-11에서 확인). 묶는 도구·단계가 없어 개발과 운영이 같다 |
 | 4 | 배포 방식 | **Docker 이미지 + docker compose + Caddy** | 서버에는 Docker만 있으면 되고, 같은 이미지를 어디서나 똑같이 실행한다. 되돌리기도 이미지 이름 하나 |
-| 5 | 주소 | 운영 `https://semachi.net`(API는 `/api`), 베타 `https://beta.semachi.net`(DNS를 못 바꾸면 `https://semachi.net:8443`) | 같은 주소라 CORS가 필요 없다(S3). `:8081`·인증서 직접 읽기(O3) 사라짐. ~~옮기는 동안 `:8081`도 잠깐 살림~~ → **하지 않는다** (사용자 결정 2026-11-28: 옛 웹은 새 API와 맞지 않아 넘겨도 동작하지 않음, B-10) |
+| 5 | 주소 | 운영 `https://semachi.net`(API는 `/api`), 베타 `https://test.semachi.net`(2026-11-28 사용자 결정, 처음은 beta.semachi.net. DNS는 AWS Route 53) | 같은 주소라 CORS가 필요 없다(S3). `:8081`·인증서 직접 읽기(O3) 사라짐. ~~옮기는 동안 `:8081`도 잠깐 살림~~ → **하지 않는다** (사용자 결정 2026-11-28: 옛 웹은 새 API와 맞지 않아 넘겨도 동작하지 않음, B-10) |
 | 6 | 브랜치 | 작업 브랜치 → PR → `dev`(베타 자동 배포) → PR → `main`(운영 자동 배포) | 베타 테스터가 먼저 써 보고, 문제없으면 운영으로 |
 | 7 | 테스트 | Vitest + supertest + 메모리 MongoDB(`mongodb-memory-server`) | 웹과 같은 도구. 실제 DB를 건드리지 않는다 |
 | 8 | 비밀값 | 서버의 `.env`에만 (운영·베타 각각, DB 주소는 같음). GitHub에는 서버 접속용 SSH 키만 | 비밀값이 GitHub로 나가지 않는다 |
@@ -126,7 +126,7 @@ repo/
               OCI 서버 (Docker)
                ├─ caddy        : 80·443. HTTPS 인증서 자동 발급·갱신, 주소별로 나눠 줌
                │     semachi.net       → 운영 웹 파일, /api → api
-               │     beta.semachi.net  → 베타 웹 파일, /api → api-beta (암호 걸기)
+               │     test.semachi.net  → 베타 웹 파일, /api → api-beta (암호 걸기)
                ├─ api          : 운영 Node 서버 (외부에 직접 열지 않음)
                ├─ api-beta     : 베타 Node 서버 (운영과 같은 DB, 사전 결정 10)
                └─ (DB)         : 지금 쓰는 MongoDB 하나 (위치는 B-12에서 확인)
@@ -366,7 +366,7 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 - 웹: Actions에서 `pnpm build` → Caddy 이미지에 넣음 (운영·베타는 `VITE_API_URL`·`VITE_APP_ENV`만 다르게 두 번 빌드)
 - `deploy/compose.yaml`(caddy·api·api-beta), `deploy/Caddyfile`:
   - `semachi.net` → 운영 웹, `/api/*` → api (앞의 `/api`를 떼고 전달)
-  - `beta.semachi.net` → 베타 웹 + 기본 인증, `/api/*` → api-beta
+  - `test.semachi.net` → 베타 웹 + 기본 인증, `/api/*` → api-beta
   - ~~옮기는 동안 `semachi.net:8081` → api~~ → B-10 결과: 옛 웹은 새 API와 맞지 않아 넘겨도 동작하지 않는다. 하지 않는 것을 추천 (사용자 확인)
   - 모든 응답에 `X-Robots-Tag: noindex, nofollow` (B-1)
   - api 환경변수: `CLEANUP_ENABLED=true` (운영 api만, B-9. api-beta는 넣지 않는다: 같은 DB라 두 번 돌거나 베타가 운영 데이터를 지운다), `TRUST_PROXY=1` (Caddy 뒤라 진짜 사용자 IP로 PIN 시도를 센다, B-5 S2. 안 정하면 모든 사용자가 한 IP로 세어져 서로 막힌다), `CORS_ORIGINS`는 `:8081` 넘기기를 하지 않으면 운영에 필요 없다 (B-5 S3, B-10 결과)
@@ -403,9 +403,10 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 - 서버: Ubuntu, `x86_64`, Node 22.14(옛 서버용. 새 서버는 이미지 안의 Node 26이라 올리지 않는다), 시간대 Asia/Seoul, Docker 없음
 - 포트 (`ss -tlnp`): 80·443 = **nginx**, 8081 = `node /home/ubuntu/smch3/cookie_back.js`(옛 API), 8080 = `node /home/ubuntu/smch3/index-prod.js`(무엇인지 확인 중, 웹일 가능성), 22 = sshd. 둘 다 **root의 pm2 v6.0.5**(`/root/.pm2`, 2026-09-01부터)가 켜고 있다(2026-11-18 재시작). 재부팅 때 pm2·nginx가 다시 켜질 가능성이 크다 → 전환 때 "멈춤"과 함께 "부팅 때 켜지 않기"(nginx `systemctl disable`, pm2 `delete`+`save`). pm2 목록(`sudo pm2 list`): `cookie_back`(online, 8081) · `index-prod`(online, 8080) · `back`(stopped, 더 옛 API로 보임). 새 구조의 재부팅 대비는 Docker(부팅 때 켜짐) + compose `restart: unless-stopped` (사용자 요청 2026-11-28)
 - nginx (`/etc/nginx/sites-available/default`, sites-enabled에는 그 바로가기): 80 → https로 301, 443(`semachi.net`·`www.semachi.net`, 인증서 `/etc/letsencrypt/live/semachi.net/`) → 모두 `localhost:8080`(= `index-prod.js`, 옛 웹). 그래서 semachi.net은 이 서버를 가리킨다고 본다. 새 Caddyfile에 www → semachi.net 301 추가
-- **베타 기간의 80·443 (사용자 결정 A, 2026-11-28)**: B-13 시작 때 Caddy가 nginx 자리를 맡는다. `semachi.net`은 베타 기간 동안 Caddy → 옛 웹(호스트 8080, `caddy.env`의 `PROD_WEB_UPSTREAM`), `beta.semachi.net` → 베타. nginx는 끄고 부팅에서도 뺀다. 전환(B-14)은 그 줄만 지우면 새 웹. 고른 이유: 입구 교체(인증서·Caddy)를 전환 전에 운영에서 검증, 전환 날 바뀌는 것이 적다. B안(nginx 앞 그대로 + 베타만 뒤에)은 nginx·certbot 설정이 따로 들고 전환 날 입구를 처음 바꾼다
+- **베타 기간의 80·443 (사용자 결정 A, 2026-11-28)**: B-13 시작 때 Caddy가 nginx 자리를 맡는다. `semachi.net`은 베타 기간 동안 Caddy → 옛 웹(호스트 8080, `caddy.env`의 `PROD_WEB_UPSTREAM`), `test.semachi.net` → 베타. nginx는 끄고 부팅에서도 뺀다. 전환(B-14)은 그 줄만 지우면 새 웹. 고른 이유: 입구 교체(인증서·Caddy)를 전환 전에 운영에서 검증, 전환 날 바뀌는 것이 적다. B안(nginx 앞 그대로 + 베타만 뒤에)은 nginx·certbot 설정이 따로 들고 전환 날 입구를 처음 바꾼다
   - 그래서 생긴 것: 웹이 꺼져 있을 때 "점검 중" 안내(Caddy `handle_errors`, 전환 중), compose의 `host.docker.internal`. 확인할 것: 옛 API(8081)가 읽는 인증서 만료일과 갱신 방식(nginx를 끄면 certbot의 nginx 방식 갱신이 멈춘다), 서버 방화벽이 컨테이너 → 호스트 8080을 막지 않는지
-- DNS: `semachi.net` → `158.180.85.102` (사용자 PC의 DNS로 조회. 서버 SSH 주소와 같은지 확인 중). 도메인 관리 회사는 아직 모름 (`cnmnoc`은 사용자 인터넷 회사의 DNS). 베타 주소 이름은 `beta` 추천 (사용자가 `test` 제안, 답 대기)
+- DNS: `semachi.net` → 서버 IP (SSH 주소와 같음, 확정). **DNS는 AWS Route 53** (네임서버 `awsdns`). 베타 주소 레코드는 Route 53에서 만든다 → AWS 계정 접근 필요
+- **베타 주소는 `test.semachi.net`** (사용자 결정 2026-11-28, 처음 계획은 `beta.semachi.net`). 바깥 주소만 바꾸고 서버 안의 이름(`api-beta`·`beta.env`·`APP_ENV=beta`·헤더 "베타" 표시)은 그대로 (바꾸면 코드·배포 파일 수십 곳이라 비용 대비 이득이 없다)
 - 폴더: `/home/ubuntu/smch3` 하나 (소스 없이 빌드 결과·`.env`·로그 파일)
 - OCI 콘솔: **들어갈 수 없음** (비밀번호 재설정 메일이 오지 않음). 80·443·8081은 지금 서비스 중이라 바깥 방화벽에서 이미 열려 있다 → 새 구조(80·443만)는 콘솔 없이 갈 수 있다. 서버 복구 등을 위해 계정 복구는 따로 계속
 - DB: MongoDB Atlas (`mongodb+srv`). 사용자는 Atlas 웹 화면에 들어갈 수 있음
@@ -421,7 +422,7 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 - 인증서: `/etc/letsencrypt/` 갱신 설정(certbot 타이머)
 - DB: `.env`의 `MONGO_DB`가 가리키는 곳(같은 서버인지 Atlas인지). 값은 출력하지 않는다
 - 웹: `semachi.net`(443)을 누가 서비스하는지 (nginx·Apache·다른 호스팅)
-- 도메인: `semachi.net`의 DNS를 어디서 관리하는지 (`beta.semachi.net`을 만들 수 있는지)
+- 도메인: `semachi.net`의 DNS를 어디서 관리하는지 (`test.semachi.net`을 만들 수 있는지)
 - 열린 포트: 서버 방화벽과 OCI 콘솔의 Security List(80·443·8081)
 - 로그 파일 `log.txt` 위치·크기 (보관)
 - Docker 설치 여부
@@ -433,7 +434,7 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 
 ### B-13 베타 배포 + 테스터 확인
 
-- 배포용 SSH 키, GitHub Environments·Secrets·Variables(`DEPLOY_BETA`), DNS(`beta.semachi.net`), 방화벽 (`docs/DEPLOY_RUNBOOK.md` "B-13". Docker는 B-12에서 설치)
+- 배포용 SSH 키, GitHub Environments·Secrets·Variables(`DEPLOY_BETA`), DNS(`test.semachi.net`), 방화벽 (`docs/DEPLOY_RUNBOOK.md` "B-13". Docker는 B-12에서 설치)
 - 베타는 운영과 같은 DB를 쓴다. 데이터 변경 스크립트는 실행하지 않는다 (옛 운영 서버가 아직 같은 DB를 쓰므로, B-14에서)
 - 베타 테스터에게 "실제 데이터라 지우면 진짜 지워진다"고 알린다
 - `dev` 푸시 → 베타 자동 배포 → 사용자·베타 테스터가 전체 기능 확인. 팀 자동 삭제는 베타에서 실제로 지워지지 않으므로(정리 작업은 운영에서만, B-9) 오늘 날짜로 시험 팀을 만들고 다음 날 `scripts/cleanup.ts`(세어 보기)에 그 팀이 잡히는지 본 뒤, 그 팀은 직접 지운다
@@ -471,7 +472,7 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 5. **배포용 키**: GitHub Actions가 접속할 전용 SSH 키 만들기 → 공개키는 서버에, 비밀키는 GitHub Environment Secrets에. 서버 주소·사용자도 Secrets로
 6. **서버 폴더**: `/srv/semachi/` 아래 `compose.yaml`·`caddy/Caddyfile`·`deploy.sh`·`backup.sh`(배포가 복사) + `production.env`·`beta.env`·`caddy.env`(사용자가 만듦, 기존 `.env`의 값을 옮김)
 7. **방화벽**: OCI Security List와 서버 방화벽에서 80·443 열기 (Caddy 인증서 발급에 80 필요), 8081은 옮기는 동안만, 베타를 포트로 하면 8443
-8. **DNS**: `beta.semachi.net` A 레코드를 서버 IP로 (관리하는 곳에서)
+8. **DNS**: `test.semachi.net` A 레코드를 서버 IP로 (관리하는 곳에서)
 9. **베타 → 운영 전환**: B-13·B-14
 10. **확인 후**: GitHub에서 `main`·`dev` 보호 규칙, Environments 설정, 자동 배포를 한 번 일부러 돌려 보기
 

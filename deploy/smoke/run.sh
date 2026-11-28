@@ -19,7 +19,7 @@ cat >caddy.env <<EOF
 PROD_SITE=http://semachi.localhost
 PROD_WWW_SITE=http://www.semachi.localhost
 PROD_REDIRECT_HOST=semachi.localhost
-BETA_SITE=http://beta.semachi.localhost
+BETA_SITE=http://test.semachi.localhost
 BETA_AUTH_USER=tester
 BETA_AUTH_HASH='${auth_hash}'
 EOF
@@ -45,8 +45,8 @@ echo "== 켜기 (healthy가 될 때까지)"
 "${compose[@]}" up -d --wait --wait-timeout 180 mongo api web api-beta web-beta caddy
 
 prod=http://semachi.localhost
-beta=http://beta.semachi.localhost
-resolve=(--resolve semachi.localhost:80:127.0.0.1 --resolve www.semachi.localhost:80:127.0.0.1 --resolve beta.semachi.localhost:80:127.0.0.1)
+beta=http://test.semachi.localhost
+resolve=(--resolve semachi.localhost:80:127.0.0.1 --resolve www.semachi.localhost:80:127.0.0.1 --resolve test.semachi.localhost:80:127.0.0.1)
 tmp=$(mktemp -d)
 
 # req <이름> <기대 상태 코드> <curl 인자...>: 응답 본문은 $tmp/<이름>.body, 헤더는 $tmp/<이름>.headers

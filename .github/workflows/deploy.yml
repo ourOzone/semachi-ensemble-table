@@ -1,4 +1,4 @@
-# 배포: dev에 푸시 → 베타(beta.semachi.net), main에 푸시 → 운영(semachi.net) (백엔드 개편 B-11)
+# 배포: dev에 푸시 → 베타(test.semachi.net), main에 푸시 → 운영(semachi.net) (백엔드 개편 B-11)
 #   ① 검사: ci.yml 그대로 (린트·타입·테스트·빌드·이미지 확인). 실패하면 여기서 멈춘다
 #   ② 이미지 올리기: API·웹 이미지를 ARM·x86 둘 다 만들어 GHCR(GitHub의 이미지 저장소)에 올린다
 #   ③ 서버에 배포: SSH로 서버에 접속해 deploy/deploy.sh 실행 (새 이미지 받기 → 다시 켜기 → /health 확인, 실패하면 이전 것으로)
@@ -111,7 +111,7 @@ jobs:
     # Environment: 배포 기록이 남고, 그쪽 Secrets를 쓴다. production에 "승인 필요"를 켜면 누를 때까지 기다린다
     environment:
       name: ${{ needs.publish.outputs.target }}
-      url: ${{ needs.publish.outputs.target == 'production' && 'https://semachi.net' || 'https://beta.semachi.net' }}
+      url: ${{ needs.publish.outputs.target == 'production' && 'https://semachi.net' || 'https://test.semachi.net' }}
     permissions:
       contents: read
       packages: read # 서버가 GHCR에서 이미지를 받을 때 이 실행의 토큰을 잠깐 빌려 쓴다

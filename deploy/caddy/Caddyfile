@@ -1,6 +1,6 @@
 # 서버 맨 앞의 Caddy (백엔드 개편 B-11). 80·443을 받아 HTTPS 인증서를 알아서 받고·갱신하고, 주소별로 나눠 준다
 #   운영  https://semachi.net       → /api/* 는 api,      그 밖은 web
-#   베타  https://beta.semachi.net  → /api/* 는 api-beta, 그 밖은 web-beta (기본 인증: 테스터 아이디·암호)
+#   베타  https://test.semachi.net  → /api/* 는 api-beta, 그 밖은 web-beta (기본 인증: 테스터 아이디·암호)
 # 주소·베타 암호는 서버의 caddy.env에서 읽는다 ({$이름}). 이 파일에는 비밀값이 없다
 # 바꾼 뒤: 배포가 서버에 복사하고 다시 읽는다(deploy.sh). 손으로는 docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 
@@ -39,7 +39,7 @@
 	redir https://{$PROD_REDIRECT_HOST:semachi.net}{uri} permanent
 }
 
-{$BETA_SITE:beta.semachi.net} {
+{$BETA_SITE:test.semachi.net} {
 	import common
 	# 베타는 테스터만: 처음 열 때 브라우저가 아이디·암호를 묻는다 (암호는 해시로만 저장, 만드는 법은 docs/DEPLOY_RUNBOOK.md)
 	basic_auth {

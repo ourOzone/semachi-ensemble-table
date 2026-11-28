@@ -1517,6 +1517,18 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm test:run` ✅ 공유 5 + 서버 222 + 웹 236 (패키지 하나씩) / `pnpm lint` ✅ / `pnpm format:check` ✅ / 서버 `typecheck` ✅
 
+### 2026-11-28 — B-12 조사 이어서: pm2·nginx·DNS, 베타 방식 A, 베타 주소 test
+
+- 사용자 푸시 뒤 CI 통과 ✅ (테스트 수정 반영)
+- 조사: 옛 API·옛 웹은 root의 pm2(`cookie_back`·`index-prod`, `back`은 stopped), nginx는 80 → https, 443(semachi.net·www) → 8080 옛 웹. DNS는 AWS Route 53, semachi.net = 이 서버 IP. 상세는 `docs/BACKEND_PLAN.md` B-12 "조사 결과"
+- 재부팅 대비 (사용자 요청): 새 구조는 Docker 부팅 등록 + compose `restart: unless-stopped`. 절차서에 Docker 설치 뒤 `systemctl is-enabled docker`, 전환 때 nginx `disable`·pm2 `delete`+`save`, 재부팅 확인
+- 지금 → 바꾼 후 (배포 준비물)
+  - `www.semachi.net`: 처리 없음 → `semachi.net`으로 301 (옛 nginx가 받던 주소)
+  - 베타 기간의 80·443 (**사용자 결정 A**): 전환 때 nginx → Caddy를 처음 바꿈 → 베타 시작 때 Caddy가 nginx 자리를 맡고 `semachi.net`은 옛 웹(호스트 8080)으로 넘긴다 (`caddy.env`의 `PROD_WEB_UPSTREAM`, compose `host.docker.internal`). 전환은 그 줄만 지움
+  - 뒤의 서버가 꺼져 있으면: Caddy 빈 502 → "세마치 합주판 점검 중이에요…" 503 (전환 중)
+  - 베타 주소: `beta.semachi.net` → **`test.semachi.net`** (사용자 결정). 바깥 주소만, 서버 안의 이름(`api-beta`·`beta.env`·`APP_ENV=beta`·"베타" 표시)은 그대로
+  - smoke: www 넘기기, 웹을 멈추면 점검 안내
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.

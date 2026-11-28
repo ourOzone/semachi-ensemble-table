@@ -408,7 +408,9 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 - DNS: `semachi.net` → 서버 IP (SSH 주소와 같음, 확정). **DNS는 AWS Route 53** (네임서버 `awsdns`). 베타 주소 레코드는 Route 53에서 만든다 → AWS 계정 접근 필요
 - AWS에 들어갈 수 없음 → **베타 주소는 무료 주소 `test.158-180-85-102.sslip.io`** (사용자 결정 2026-11-28. sslip.io는 이름 안의 IP를 그대로 답하는 공개 DNS라 설정이 필요 없다). 서버 `caddy.env`의 `BETA_SITE`, GitHub 변수 `BETA_URL`. 저장소 기본값은 그대로 `test.semachi.net`(Route 53에 들어갈 수 있게 되면 그쪽으로)
 - 한 일: 스왑 2G, Docker 29.10 설치(부팅 때 켜짐), `/srv/semachi` 준비(설정 파일 셋, 값은 옛 `.env`에서 화면에 띄우지 않고 옮김), **첫 DB 백업** `backups/semachi-20261128-201530.gz`(12K)
-- Atlas: **FREE(M0) → Atlas 자동 백업 없음** (backup.sh가 유일한 백업). Network Access에 서버 IP와 함께 `0.0.0.0/0`(어디서나) → 비밀번호 노출과 겹쳐 위험, 지우기를 추천 (사용자 결정 대기)
+- Atlas: **FREE(M0) → Atlas 자동 백업 없음** (backup.sh가 유일한 백업). Network Access에 서버 IP와 함께 `0.0.0.0/0`(어디서나) → 비밀번호 노출과 겹쳐 위험 → **사용자가 지움** (2026-11-28, 서버 IP는 남김)
+- 백업 내용 (`mongorestore --dryRun`): 서비스 데이터는 **`test` DB** (MONGO_DB 주소에 DB 이름이 없어 기본값) — teams·ensembles·notes·notices + 새 서버의 activities·settings. 그 밖에 **`semachi` DB의 ensembles** (지금 쓰지 않는 옛 데이터로 보임, 전환 뒤 확인·정리 대상)
+- GitHub: 저장소 주인이 `ourozone`이라 사용자는 Environments·Secrets·Variables를 만들 수 없다 → 주인이 대신 입력 (사용자 결정 2026-11-28, 배포 키는 파일로 건네고 입력 뒤 지움). `DEPLOY_BETA=true`·`BETA_URL`도 함께, `DEPLOY_PRODUCTION`은 B-14에 다시 부탁
 - 메모리 956Mi(남은 약 460Mi), **스왑 없음**, 디스크 45G 중 37G 남음 → 컨테이너 5개 + 베타 기간의 옛 pm2 둘이면 빠듯해 **스왑 2G를 만든다** (절차서 B-12)
 - 서버 방화벽 (`iptables -S INPUT`): 기본 ACCEPT, 22·80·443·8081 허용 줄, 막는 규칙 없음 → Caddy 컨테이너 → 호스트 8080 열림, 할 일 없음
 - 인증서 (O3 그대로): 파일 `/etc/letsencrypt/live/semachi.net/`은 **2027-02-25**까지 (11월 말에 자동 갱신됨). 그런데 옛 API(8081)는 켤 때(11-18) 읽은 **옛 인증서를 써서 2026-12-27 10:43 KST에 만료** → 2026-11-28 사용자가 `sudo pm2 restart cookie_back` ✅ (8081도 이제 2027-02-25까지). A안으로 nginx를 끄면 certbot 갱신(nginx 방식으로 보임)이 멈추므로, 옛 API는 파일 만료일(2027-02-25) 전까지 운영 전환을 마쳐야 한다. 새 구조는 Caddy가 인증서를 받아 해당 없음

@@ -7,7 +7,8 @@ import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 let mongod: MongoMemoryServer | undefined;
 
 beforeAll(async () => {
-    mongod = await MongoMemoryServer.create();
+    // 켜는 데 기다리는 시간: 기본 10초 → 60초 (CI 컴퓨터는 웹·서버 테스트가 함께 돌면 10초를 넘길 때가 있다)
+    mongod = await MongoMemoryServer.create({ instance: { launchTimeout: 60_000 } });
     await mongoose.connect(mongod.getUri());
 });
 

@@ -10,7 +10,7 @@
     "build": "pnpm -r --if-present build",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm --filter @semachi/web test",
-    "test:run": "pnpm -r --if-present test:run",
+    "test:run": "pnpm -r --workspace-concurrency=1 --if-present test:run",
     "test:coverage": "pnpm -r --if-present test:coverage",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",

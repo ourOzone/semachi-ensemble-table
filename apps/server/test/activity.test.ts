@@ -1,5 +1,5 @@
 // 활동 기록 (B-7, models/activity.ts·lib/activity.ts): 누가(방문자·IP·기기) 무엇을 어떤 PIN으로 했는지. PIN 값은 절대 없음
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { parseDevice } from '../src/lib/device.ts';
 import {
     activities,
@@ -126,7 +126,15 @@ describe('무엇을 — 팀', () => {
                     .send(teamBody({ pin: SECRET }))
             ).status,
         ).toBe(429);
-        expect(await lastActivity()).toMatchObject({ action: 'team.update', result: 'blocked' });
+        // 막힘(429)은 응답을 먼저 보내고 기록을 남긴다 → 기록이 생길 때까지 기다린다 (느린 CI에서 바로 읽으면 이전 기록)
+        await vi.waitFor(
+            async () =>
+                expect(await lastActivity()).toMatchObject({
+                    action: 'team.update',
+                    result: 'blocked',
+                }),
+            { timeout: 5000 },
+        );
     });
 
     test('PIN 확인: 맞음(어떤 PIN)·틀림·없는 팀', async () => {

@@ -1,6 +1,6 @@
 // PIN 틀린 횟수 세기·막기 (src/lib/pin-guard.ts). 테스트마다 새 앱으로 센다
 // 대상별(팀·날적이 전체·마스터) 10번 — 맞추면 0으로 / IP 전체 30번 — 맞춰도 그대로
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { ipKey } from '../src/lib/pin-guard.ts';
 import {
     apiError,
@@ -93,12 +93,15 @@ describe('팀별로 센다', () => {
         expect(check.headers['pin-attempts']).toBe('4/10');
     });
 
-    test('기간이 지나면 다시 된다', async () => {
-        const api = freshApi({ pinLimits: { windowMs: 300 } });
+    test('기간(15분)이 지나면 다시 된다', async () => {
+        // 진짜로 기다리지 않고 Date만 15분 뒤로 옮긴다 (DB 타이머는 그대로).
+        // 이전에는 기간을 0.3초로 줄였는데, 느린 CI에서는 10번 틀리는 사이 기간이 끝나 막히지 않았다
+        vi.useFakeTimers({ toFake: ['Date'] });
+        const api = freshApi();
         const id = await insert('teams', teamDoc({ pin: '1234' }));
         await wrongTeamPin(api, id, 10);
         expect((await api().post(`/teams/${id}/check-pin`).send({ pin: '1234' })).status).toBe(429);
-        await new Promise((r) => setTimeout(r, 400));
+        vi.setSystemTime(Date.now() + 15 * 60 * 1000);
         expect((await api().post(`/teams/${id}/check-pin`).send({ pin: '1234' })).body).toBe(true);
     });
 });

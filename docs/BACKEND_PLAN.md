@@ -399,6 +399,14 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 
 명령 단위 순서는 `docs/DEPLOY_RUNBOOK.md` "B-12". 지금 아는 것 (사용자, 2026-11-28): 서버 SSH 접속 가능, MongoDB는 Atlas 웹 화면으로 접속 가능, 포트 포워딩·로드 밸런싱은 되어 있지만 어떻게인지 모름(필요하면 처음부터 다시 해도 됨), CI/CD·Docker 없음.
 
+조사 결과 (진행 중, 2026-11-28):
+- 서버: Ubuntu, `x86_64`, Node 22.14(옛 서버용. 새 서버는 이미지 안의 Node 26이라 올리지 않는다), 시간대 Asia/Seoul, Docker 없음
+- 포트 (`ss -tlnp`): 80·443 = **nginx**, 8081 = `node /home/ubuntu/smch3/cookie_back.js`(옛 API), 8080 = `node /home/ubuntu/smch3/index-prod.js`(무엇인지 확인 중, 웹일 가능성), 22 = sshd. 둘 다 root, 2026-11-18 시작, 부모 프로세스(무엇이 켰는지) 확인 중
+- 폴더: `/home/ubuntu/smch3` 하나 (소스 없이 빌드 결과·`.env`·로그 파일)
+- OCI 콘솔: **들어갈 수 없음** (비밀번호 재설정 메일이 오지 않음). 80·443·8081은 지금 서비스 중이라 바깥 방화벽에서 이미 열려 있다 → 새 구조(80·443만)는 콘솔 없이 갈 수 있다. 서버 복구 등을 위해 계정 복구는 따로 계속
+- DB: MongoDB Atlas (`mongodb+srv`). 사용자는 Atlas 웹 화면에 들어갈 수 있음
+- ⚠ DB 접속 비밀번호가 채팅에 노출됨 (2026-11-28) → **B-14 전환 때 Atlas에서 DB 사용자 비밀번호를 바꾸고** 새 `production.env`·`beta.env`에만 넣는다 (옛 서버는 그때 멈추므로 함께 바꿀 필요 없음)
+
 서버에서 확인할 것 (값은 기록하지 않고 "있음/없음·버전"만):
 - OCI 콘솔: 인스턴스 Shape(CPU·메모리), Load Balancer 유무와 Listener, Security List의 열린 포트
 - Atlas: 클러스터 등급(M0면 Atlas 자동 백업 없음), Network Access에 서버 IP

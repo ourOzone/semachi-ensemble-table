@@ -217,6 +217,7 @@
 |---|---|---|---|
 | 1 | 직전 백업 + 내 PC로 복사 | 🌐 `bash backup.sh` → 🖥 `scp …` | – |
 | 2 | 옛 서버(`api.js`) 멈춤 = 서비스 중단 시작 | ⚠ pm2·systemd 등 B-12에서 찾은 방법 (예: `pm2 stop <이름>`) | 같은 방법으로 다시 켬 |
+| 2-1 | DB 비밀번호 바꾸기 (2026-11-28 채팅에 노출됨). 옛 서버는 멈췄으니 새 서버 설정만 바꾸면 된다 | 🔧 Atlas → Security → Database Access → 그 사용자 → Edit Password → 🌐 `production.env`·`beta.env`의 `MONGO_DB` 안 비밀번호를 새것으로 | 옛 비밀번호로 되돌림 |
 | 3 | 베타 api 멈춤 (스크립트 도는 동안 DB를 바꾸지 않게) | 🌐 `docker compose stop api-beta` | `docker compose up -d api-beta` |
 | 4 | ⛔ 합주 `type` 지우기: 세어 보기 → 확인 → `--apply` → 다시 세어 보기 (`type 있음` 0) | 🌐 `docker compose run --rm --no-deps api-beta node scripts/remove-ensemble-type.ts` (끝에 `--apply`) | 1의 백업 복원 |
 | 5 | ⛔ PIN 해시: 세어 보기 → 확인 → `--apply` (이 뒤로 옛 서버는 PIN이 모두 틀린다) | 🌐 `docker compose run --rm --no-deps api-beta node scripts/hash-pins.ts` (끝에 `--apply`) | 1의 백업 복원 |

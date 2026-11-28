@@ -197,6 +197,16 @@
 4. 🌐 `nano /srv/semachi/caddy.env` → 베타 테스터 아이디(`BETA_AUTH_USER`)와 암호 해시, `PROD_WEB_UPSTREAM=host.docker.internal:8080` 줄이 있는지
    - 해시 만들기 🌐 `docker run --rm -it caddy:2 caddy hash-password` → 암호를 두 번 입력 → 나온 `$2a$14$…`를 `BETA_AUTH_HASH='…'`에 (작은따옴표 필수)
 
+### 3-1. 옛 API 인증서 다시 읽기 (B-12에서 찾음, **2026-12-27 10:43 KST 전에**)
+
+옛 API(pm2 `cookie_back`, 8081)는 켤 때 한 번 읽은 인증서를 계속 쓴다. 11-18에 켜져 12-27에 만료되는 옛 인증서를 쓰고 있다 (파일은 이미 2027-02-25까지로 갱신됨).
+
+1. 🌐 `sudo pm2 restart cookie_back` → 표에 `cookie_back`이 `online`, ↺가 1 늘어남 (몇 초 끊김)
+2. 🌐 `echo | openssl s_client -connect localhost:8081 -servername semachi.net 2>/dev/null | openssl x509 -noout -enddate` → `notAfter=Feb 25 … 2027 GMT`
+3. 🖥 브라우저로 `https://semachi.net` → 팀·합주가 보임
+
+문제가 생기면: 🌐 `sudo pm2 logs cookie_back --lines 50 --nostream`을 Claude에게 (값이 보이면 지우고). 2027-02-25 전에 운영 전환(B-14)을 마쳐야 한다 (A안으로 nginx를 끄면 인증서 파일 자동 갱신이 멈춘다)
+
 ### 4. Caddy가 nginx 자리를 맡는다 (사용자 결정 A, 2026-11-28) — ⚠ 운영이 몇 초 끊긴다
 
 베타 기간에도 80·443은 Caddy가 받고, `semachi.net`은 지금처럼 옛 웹(pm2 `index-prod`, 8080)으로 넘긴다. 옛 API(8081)는 그대로.

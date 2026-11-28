@@ -104,4 +104,9 @@ req beta-health 200 -u tester:smoke-pass "$beta/api/health"
 has_body beta-health '"status":"ok"'
 req beta-api-no-auth 401 "$beta/api/teams"
 
+echo "== 웹이 꺼져 있으면 점검 안내 (운영 전환 중)"
+"${compose[@]}" stop web >/dev/null
+req maintenance 503 "$prod/"
+has_body maintenance '점검 중'
+
 echo "== 모두 통과"

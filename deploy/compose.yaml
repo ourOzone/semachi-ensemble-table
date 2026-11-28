@@ -59,6 +59,9 @@ services:
       - '443:443' # HTTPS
       - '443:443/udp' # HTTP/3
     env_file: caddy.env
+    # 컨테이너 안에서 서버 자신(호스트)을 부르는 이름. 베타 기간에 옛 웹(호스트의 8080)으로 넘길 때 쓴다 (B-13)
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     volumes:
       # 파일 하나가 아니라 폴더를 연결한다: 배포가 파일을 새로 덮어써도 컨테이너가 새 파일을 본다
       - ./caddy:/etc/caddy:ro

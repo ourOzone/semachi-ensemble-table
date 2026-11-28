@@ -20,8 +20,16 @@
 	handle_path /api/* {
 		reverse_proxy api:8081
 	}
+	# 웹 화면. 베타 기간(B-13)에는 caddy.env의 PROD_WEB_UPSTREAM=host.docker.internal:8080 으로
+	# 옛 웹(pm2 index-prod)에 넘긴다 (Caddy가 nginx 자리를 미리 맡는다, 사용자 결정 2026-11-28). 전환(B-14) 때 그 줄을 지운다
 	handle {
-		reverse_proxy web:80
+		reverse_proxy {$PROD_WEB_UPSTREAM:web:80}
+	}
+	# 뒤의 서버가 꺼져 있을 때 (전환 중·다시 켜는 몇 초) Caddy 기본 빈 화면 대신 안내
+	handle_errors 502 503 504 {
+		header Content-Type "text/plain; charset=utf-8"
+		header Retry-After "60"
+		respond "세마치 합주판 점검 중이에요. 잠시 후 다시 열어 주세요." 503
 	}
 }
 

@@ -90,7 +90,7 @@
 
 ### ⚠ 조사 결과에 따라 갈리는 것
 
-- **80·443을 지금 다른 프로그램(nginx 등)이 쓰고 있으면**: Caddy를 켤 수 없다. 베타 기간에 고를 수 있는 것 (Claude가 결과를 보고 추천):
+- **80·443을 지금 다른 프로그램(nginx 등)이 쓰고 있으면**: Caddy를 켤 수 없다. 베타 기간에 고를 수 있는 것 → **결정: ①** (B-12 결과 nginx였다. 사용자 결정 2026-11-28, B-13 "4. Caddy가 nginx 자리를 맡는다"):
   ① Caddy가 80·443을 맡고, 옛 웹은 Caddy 뒤로 옮김 (옛 웹 서버 포트를 바꾸는 작은 운영 변경)
   ② 베타를 다른 포트(`semachi.net:8443`)로, 기존 인증서 파일을 Caddy에 연결
 - **semachi.net이 다른 곳(웹 호스팅)을 가리키면**: 이 서버의 80·443은 비어 있을 가능성이 크다 → 베타는 바로 이 문서대로. 운영 전환 때 DNS를 이 서버로 바꾼다
@@ -185,16 +185,30 @@
 4. Settings → Secrets and variables → Actions → **Variables** → `DEPLOY_BETA` = `true`
    - 이것이 있어야 `dev` 푸시가 서버까지 배포한다. `DEPLOY_PRODUCTION`은 B-14에서
 
-### 3. 베타 주소·방화벽 🔧 🌐 (⚠ B-12 결과에 따라)
+### 3. 베타 주소·방화벽 🔧 🌐
 
 1. DNS 관리 화면에서 A 레코드 `beta` → 서버 Public IP
    - 확인 🖥 `nslookup beta.semachi.net`이 서버 IP (몇 분~몇 시간)
-2. OCI Security List Ingress: TCP 80, TCP 443 (Source `0.0.0.0/0`)이 없으면 추가 (UDP 443은 선택: HTTP/3)
-3. 서버 방화벽: Ubuntu OCI 이미지는 iptables로 막혀 있는 경우가 많다. B-12의 `iptables -L` 결과를 보고 Claude가 명령을 준다
-4. 🌐 `nano /srv/semachi/caddy.env` → 베타 테스터 아이디(`BETA_AUTH_USER`)와 암호 해시
+2. 바깥 방화벽(OCI Security List): 80·443은 지금 nginx가 서비스 중이라 이미 열려 있다 (B-12). OCI 콘솔에 들어갈 수 없어도 된다
+3. 서버 방화벽: Caddy 컨테이너가 서버 자신의 8080(옛 웹)에 닿아야 한다. B-12의 `iptables` 결과를 보고 Claude가 명령을 준다
+4. 🌐 `nano /srv/semachi/caddy.env` → 베타 테스터 아이디(`BETA_AUTH_USER`)와 암호 해시, `PROD_WEB_UPSTREAM=host.docker.internal:8080` 줄이 있는지
    - 해시 만들기 🌐 `docker run --rm -it caddy:2 caddy hash-password` → 암호를 두 번 입력 → 나온 `$2a$14$…`를 `BETA_AUTH_HASH='…'`에 (작은따옴표 필수)
 
-### 4. 첫 베타 배포
+### 4. Caddy가 nginx 자리를 맡는다 (사용자 결정 A, 2026-11-28) — ⚠ 운영이 몇 초 끊긴다
+
+베타 기간에도 80·443은 Caddy가 받고, `semachi.net`은 지금처럼 옛 웹(pm2 `index-prod`, 8080)으로 넘긴다. 옛 API(8081)는 그대로.
+사람이 적은 시간에. 순서대로, 하나씩:
+
+1. 🌐 `cd /srv/semachi && docker compose config --quiet && echo OK` → `OK` (설정 문법 확인)
+2. 🌐 `sudo systemctl stop nginx` → 이 순간부터 `semachi.net`이 끊긴다
+3. 🌐 `docker compose up -d caddy` → `Container semachi-caddy-1 Started`
+4. 🌐 `docker compose logs caddy | grep -iE 'certificate obtained|error'` → `certificate obtained successfully`가 `semachi.net`·`www.semachi.net`·`beta.semachi.net` 각각 (1분 안쪽). `error`가 계속 나오면 바로 되돌리기
+5. 🖥 브라우저로 `https://semachi.net` → 지금 화면 그대로, 주소창 자물쇠 (인증서가 Let's Encrypt 새것)
+6. 확인되면 🌐 `sudo systemctl disable nginx` (재부팅 때 nginx가 80·443을 먼저 잡지 않게)
+
+되돌리기 (1분): 🌐 `docker compose stop caddy` → `sudo systemctl start nginx` (6을 했으면 `sudo systemctl enable --now nginx`)
+
+### 5. 첫 베타 배포
 
 1. 🖥 `api3.0`(과 `ui3.0`)을 `dev`에 합친다 (PR 또는 `git push origin api3.0:dev`. Claude는 푸시하지 않는다)
 2. 🔧 GitHub → Actions → "배포" 실행: 검사 → 이미지 올리기 → 서버에 배포 (처음엔 15분쯤)
@@ -204,7 +218,7 @@
 4. 🔧 GitHub → Packages: `semachi-api`·`semachi-web`가 보인다 (비공개여도 된다. 서버는 배포 때 토큰으로 받는다)
 5. 진짜 IP 확인: 베타 관리자 화면(`/admin`) → 활동 기록의 IP가 내 휴대폰·PC의 공인 IP인지 (`172.`·`10.`으로 시작하면 ⚠ 프록시 설정을 고친다)
 
-### 5. 베타 기간에 할 것
+### 6. 베타 기간에 할 것
 
 - 테스터에게: "**실제 데이터**라 지우면 진짜 지워진다", 아이디·암호
 - 데이터 변경 스크립트 **세어 보기** (평소 운영 → 데이터 스크립트, `api-beta`로). `--apply`는 B-14에서만
@@ -215,7 +229,7 @@
 
 ## B-14 운영 전환 (서비스를 1~2시간 내린다)
 
-> 시간을 정해 미리 공지한다. 순서를 바꾸지 않는다. ⚠ 7·8은 B-12 결과(옛 웹이 어디서 도는지)에 따라 Claude가 정확한 명령을 준다.
+> 시간을 정해 미리 공지한다. 순서를 바꾸지 않는다. 2부터 9까지 `semachi.net`은 "점검 중" 안내가 나온다 (Caddy, 옛 웹이 꺼져 있을 때).
 
 | # | 할 일 | 명령 / 위치 | 되돌리기 |
 |---|---|---|---|
@@ -226,7 +240,7 @@
 | 4 | ⛔ 합주 `type` 지우기: 세어 보기 → 확인 → `--apply` → 다시 세어 보기 (`type 있음` 0) | 🌐 `docker compose run --rm --no-deps api-beta node scripts/remove-ensemble-type.ts` (끝에 `--apply`) | 1의 백업 복원 |
 | 5 | ⛔ PIN 해시: 세어 보기 → 확인 → `--apply` (이 뒤로 옛 서버는 PIN이 모두 틀린다) | 🌐 `docker compose run --rm --no-deps api-beta node scripts/hash-pins.ts` (끝에 `--apply`) | 1의 백업 복원 |
 | 6 | ⛔ 정리 작업 세어 보기 (지울 팀 이름·지난 합주 수). 확인받으면 운영 api가 켜질 때 지운다 | 🌐 `docker compose run --rm --no-deps api-beta node scripts/cleanup.ts` | 1의 백업 복원 |
-| 7 | 주소를 새 서버로 (배포보다 먼저): 80·443을 쓰던 **nginx**를 멈추고 부팅 때도 켜지 않게 (그대로 두면 재부팅 때 nginx가 80·443을 먼저 잡아 Caddy가 못 켜진다) | 🌐 `sudo systemctl disable --now nginx` → 다음 8의 배포에서 Caddy가 80·443을 받는다 (⚠ DNS·로드 밸런서는 B-12 결과대로) | `sudo systemctl enable --now nginx` (Caddy를 먼저 멈춤) |
+| 7 | 웹 화면을 새 웹으로: nginx는 B-13에서 이미 꺼 두었다(Caddy가 80·443). Caddy가 옛 웹(8080)으로 넘기던 줄을 지운다 | 🌐 `nano caddy.env`에서 `PROD_WEB_UPSTREAM=…` 줄 삭제 → 다음 8의 배포가 Caddy를 새로 만든다 (그 사이 `semachi.net`은 "점검 중" 안내) | 그 줄을 다시 넣고 `docker compose up -d caddy` |
 | 8 | 운영 배포 (Caddy가 80·443을 잡는다) | 🔧 Variables `DEPLOY_PRODUCTION` = `true` → 🖥 `dev`를 `main`에 합침 → Actions "배포" (production) | `docker compose stop api web` |
 | 8-1 | 옛 pm2 목록에서 지우고 저장 (재부팅 때 옛 서버가 다시 켜지지 않게). 9 확인이 끝나고 하루쯤 지나 문제가 없을 때 | 🌐 `sudo pm2 delete cookie_back index-prod back` → `sudo pm2 save` | `sudo pm2 start /home/ubuntu/smch3/<파일> --name <이름>` → `sudo pm2 save` |
 | 8-2 | 재부팅 확인 (선택, 사람이 적은 시간에. 1~2분 끊김) | 🌐 `sudo reboot` → 다시 접속해 `docker compose ps` (모두 Up·healthy), `sudo ss -tlnp`에 80·443 = docker-proxy | – |
@@ -237,7 +251,7 @@
 크게 잘못되면 (전부 되돌리기):
 1. 🌐 `docker compose stop api web` (새 운영 끔)
 2. ⛔ 백업 복원 (평소 운영 → 백업에서 복원). 4·5를 했다면 반드시 (옛 서버는 해시 PIN을 못 읽는다)
-3. 옛 서버를 2·7의 반대로 다시 켬: `docker compose stop caddy` → `sudo systemctl enable --now nginx` → `sudo pm2 start cookie_back index-prod` (8-1을 했다면 그 칸의 되돌리기)
+3. 옛 서버를 2·7의 반대로 다시 켬: `caddy.env`에 `PROD_WEB_UPSTREAM=host.docker.internal:8080` 다시 넣고 `docker compose up -d caddy` → `sudo pm2 start cookie_back index-prod` (8-1을 했다면 그 칸의 되돌리기). Caddy 자체가 문제면 `docker compose stop caddy` → `sudo systemctl enable --now nginx`
 4. Variables `DEPLOY_PRODUCTION`을 `false`로
 
 전환 뒤 한동안: 옛 `api.js` 폴더·`log.txt`는 지우지 않고 보관 (B-15에서 정리), `:8081`은 아무도 쓰지 않으므로 Security List에서 닫는다 (B-15).

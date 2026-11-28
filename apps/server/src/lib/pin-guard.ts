@@ -14,6 +14,7 @@
 // - 프록시(Caddy) 뒤에서는 req.ip가 진짜 사용자 IP가 되도록 TRUST_PROXY를 정해야 한다 (B-11)
 import net from 'node:net';
 import type { Request, Response } from 'express';
+import { sendError } from './errors.ts';
 
 export interface PinLimitOptions {
     /** 세는 기간 (ms, 기본 15분): 처음 틀린 때부터 */
@@ -24,7 +25,6 @@ export interface PinLimitOptions {
     perIp?: number;
 }
 
-export const PIN_LIMIT_ERROR = { error: 'Too many PIN attempts' };
 /** 틀린 횟수를 알려 주는 응답 헤더 */
 export const PIN_ATTEMPTS_HEADER = 'Pin-Attempts';
 
@@ -115,7 +115,7 @@ export function createPinGuard({
 
             const until = Math.max(...blocked.map(({ counter }) => counter!.resetAt));
             res.setHeader('Retry-After', String(Math.ceil((until - now) / 1000)));
-            res.status(429).json(PIN_LIMIT_ERROR);
+            sendError(res, 'TOO_MANY_PIN_ATTEMPTS');
             return true;
         },
 

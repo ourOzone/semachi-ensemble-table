@@ -2,6 +2,7 @@
 // "현재 동작:"은 이상해 보이지만 그대로 고정한 것. 고치는 단계는 docs/BACKEND_PLAN.md
 import { describe, expect, test } from 'vitest';
 import {
+    apiError,
     api,
     ensembleDoc,
     findAll,
@@ -134,7 +135,7 @@ describe('GET /ensembles', () => {
     });
 });
 
-describe('POST /ensemble', () => {
+describe('POST /ensembles', () => {
     // 웹이 보내는 모양 (B-8: teamName·day·type은 보내지 않는다). nextDate = KST 12/4(금) 18:00
     const body = {
         startTime: 20,
@@ -147,9 +148,9 @@ describe('POST /ensemble', () => {
     test('그 팀의 PIN이 맞으면 저장하고 { id }. teamName·day는 서버가 채운다 (B-8 D3)', async () => {
         const teamId = await insert('teams', teamDoc({ name: '진짜 이름', pin: '1234' }));
         const res = await api()
-            .post('/ensemble')
+            .post('/ensembles')
             .send({ ...body, teamId, pin: '1234' });
-        expect(res.status).toBe(200);
+        expect(res.status).toBe(201);
         expect(res.body).toEqual({ id: expect.stringMatching(/^[0-9a-f]{24}$/) });
         const saved = await findOne('ensembles', res.body.id);
         expect(saved).toMatchObject({
@@ -167,7 +168,7 @@ describe('POST /ensemble', () => {
     test('본문의 teamName·day·type은 쓰지 않는다 (B-8 D3)', async () => {
         const teamId = await insert('teams', teamDoc({ name: '진짜 이름', pin: '1234' }));
         const res = await api()
-            .post('/ensemble')
+            .post('/ensembles')
             .send({ ...body, teamId, teamName: '가짜', day: 0, type: '무기한', pin: '1234' });
         const saved = await findOne('ensembles', res.body.id);
         expect(saved).toMatchObject({ teamName: '진짜 이름', day: 4 });
@@ -177,7 +178,7 @@ describe('POST /ensemble', () => {
     test('요일은 한국 날짜로: UTC로는 일요일 23시지만 한국은 월요일 8시 → day 0', async () => {
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
         const res = await api()
-            .post('/ensemble')
+            .post('/ensembles')
             .send({ ...body, teamId, nextDate: '2026-11-29T23:00:00.000Z', pin: '1234' });
         expect((await findOne('ensembles', res.body.id))?.day).toBe(0);
     });
@@ -186,9 +187,9 @@ describe('POST /ensemble', () => {
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
         for (const pin of [undefined, '0000']) {
             const res = await api()
-                .post('/ensemble')
+                .post('/ensembles')
                 .send({ ...body, teamId, pin });
-            expect([res.status, res.body]).toEqual([403, { error: 'Wrong PIN' }]);
+            expect([res.status, res.body]).toEqual([403, apiError('WRONG_PIN')]);
         }
         expect(await findAll('ensembles')).toHaveLength(0);
     });
@@ -196,25 +197,25 @@ describe('POST /ensemble', () => {
     test('마스터 PIN이면 어느 팀이든 저장', async () => {
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
         const res = await api()
-            .post('/ensemble')
+            .post('/ensembles')
             .send({ ...body, teamId, pin: MASTER_PIN });
-        expect(res.status).toBe(200);
+        expect(res.status).toBe(201);
         expect(await findOne('ensembles', res.body.id)).toMatchObject({ teamId });
     });
 
     test('팀이 없으면 마스터 PIN이어도 404, 저장하지 않는다 (B-8 B4, 이전: 마스터 PIN이면 저장)', async () => {
         for (const pin of ['1234', MASTER_PIN]) {
             const res = await api()
-                .post('/ensemble')
+                .post('/ensembles')
                 .send({ ...body, teamId: missingId(), pin });
-            expect([res.status, res.body]).toEqual([404, { error: 'Team not found' }]);
+            expect([res.status, res.body]).toEqual([404, apiError('NOT_FOUND')]);
         }
         expect(await findAll('ensembles')).toHaveLength(0);
     });
 
     test('팀이 없으면 PIN을 확인하지 않아 틀린 횟수에 들지 않는다', async () => {
         const res = await api()
-            .post('/ensemble')
+            .post('/ensembles')
             .send({ ...body, teamId: missingId(), pin: '0000' });
         expect(res.status).toBe(404);
         expect(res.headers['pin-attempts']).toBeUndefined();
@@ -245,9 +246,9 @@ describe('합주 본문 검사 (B-8 S5): 틀리면 400, PIN을 확인하지 않�
     test.each(invalid)('잡기: %s', async (_name, over) => {
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
         const res = await api()
-            .post('/ensemble')
+            .post('/ensembles')
             .send({ ...valid, ...over, teamId, pin: '0000' });
-        expect([res.status, res.body.error]).toEqual([400, 'Invalid request']);
+        expect([res.status, res.body.error.code]).toEqual([400, 'INVALID_REQUEST']);
         expect(res.headers['pin-attempts']).toBeUndefined();
         expect(await findAll('ensembles')).toHaveLength(0);
     });
@@ -255,16 +256,16 @@ describe('합주 본문 검사 (B-8 S5): 틀리면 400, PIN을 확인하지 않�
     test.each(invalid)('수정: %s', async (_name, over) => {
         const id = await insert('ensembles', ensembleDoc());
         const res = await api()
-            .put(`/ensemble?id=${id}`)
+            .put(`/ensembles/${id}`)
             .send({ ...valid, ...over, pin: MASTER_PIN });
-        expect([res.status, res.body.error]).toEqual([400, 'Invalid request']);
+        expect([res.status, res.body.error.code]).toEqual([400, 'INVALID_REQUEST']);
         expect(await findOne('ensembles', id)).toMatchObject({ startTime: 10, endTime: 13 });
     });
 
     test('잡기: teamId가 없거나 형식이 아니면 400', async () => {
         for (const teamId of [undefined, 'abc', 123]) {
             const res = await api()
-                .post('/ensemble')
+                .post('/ensembles')
                 .send({ ...valid, teamId, pin: MASTER_PIN });
             expect(res.status).toBe(400);
         }
@@ -278,21 +279,20 @@ describe('합주 본문 검사 (B-8 S5): 틀리면 400, PIN을 확인하지 않�
             [0, 29],
         ]) {
             const res = await api()
-                .post('/ensemble')
+                .post('/ensembles')
                 .send({ ...valid, startTime, endTime, teamId, pin: '1234' });
-            expect(res.status).toBe(200);
+            expect(res.status).toBe(201);
         }
     });
 });
 
-describe('DELETE /ensemble?id=', () => {
-    test('지우고 { id }', async () => {
+describe('DELETE /ensembles/:id', () => {
+    test('지우고 204', async () => {
         const id = await insert('ensembles', ensembleDoc());
         const keep = await insert('ensembles', ensembleDoc());
         // ensembleDoc의 팀은 DB에 없다: 마스터 PIN만 통과
-        const res = await api().delete(`/ensemble?id=${id}`).send({ pin: MASTER_PIN });
-        expect(res.status).toBe(200);
-        expect(res.body).toEqual({ id });
+        const res = await api().delete(`/ensembles/${id}`).send({ pin: MASTER_PIN });
+        expect([res.status, res.text]).toEqual([204, '']); // 삭제는 204, 본문 없음 (B-10)
         expect((await findAll('ensembles')).map((e) => String(e._id))).toEqual([keep]);
     });
 
@@ -300,46 +300,44 @@ describe('DELETE /ensemble?id=', () => {
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
         const id = await insert('ensembles', ensembleDoc({ teamId }));
         for (const body of [{}, { pin: '0000' }]) {
-            const res = await api().delete(`/ensemble?id=${id}`).send(body);
-            expect([res.status, res.body]).toEqual([403, { error: 'Wrong PIN' }]);
+            const res = await api().delete(`/ensembles/${id}`).send(body);
+            expect([res.status, res.body]).toEqual([403, apiError('WRONG_PIN')]);
         }
         expect(await findAll('ensembles')).toHaveLength(1);
-        expect((await api().delete(`/ensemble?id=${id}`).send({ pin: '1234' })).status).toBe(200);
+        expect((await api().delete(`/ensembles/${id}`).send({ pin: '1234' })).status).toBe(204);
     });
 
     test('팀이 없는 합주(삭제된 팀)는 마스터 PIN만 통과', async () => {
         const id = await insert('ensembles', ensembleDoc({ teamId: 'not-an-object-id' }));
-        expect((await api().delete(`/ensemble?id=${id}`).send({ pin: '1234' })).status).toBe(403);
-        expect((await api().delete(`/ensemble?id=${id}`).send({ pin: MASTER_PIN })).status).toBe(
-            200,
-        );
+        expect((await api().delete(`/ensembles/${id}`).send({ pin: '1234' })).status).toBe(403);
+        expect((await api().delete(`/ensembles/${id}`).send({ pin: MASTER_PIN })).status).toBe(204);
     });
 
-    test('없으면 404 { id: -1 }, id가 없거나 형식이 아니면 400 (B-8. 이전: 없으면 404, 형식은 500)', async () => {
-        const missing = await api().delete(`/ensemble?id=${missingId()}`);
-        expect([missing.status, missing.body]).toEqual([404, { id: -1 }]);
-        expect((await api().delete('/ensemble')).status).toBe(400);
-        const bad = await api().delete('/ensemble?id=abc');
+    test('없으면 404, 형식이 아니면 400, id 없는 주소는 없는 경로 (B-10)', async () => {
+        const missing = await api().delete(`/ensembles/${missingId()}`);
+        expect([missing.status, missing.body]).toEqual([404, apiError('NOT_FOUND')]);
+        expect((await api().delete('/ensembles')).status).toBe(404); // id 없는 주소는 없는 경로 (B-10);
+        const bad = await api().delete('/ensembles/abc');
         expect([bad.status, bad.body]).toEqual([
             400,
-            { error: 'Invalid request', issues: [{ path: 'id', message: 'ObjectId가 아니다' }] },
+            apiError('INVALID_REQUEST', { issues: [{ path: 'id', message: 'ObjectId가 아니다' }] }),
         ]);
     });
 });
 
-describe('GET /ensemble/:id (존재 확인)', () => {
-    test('있으면 true, 없으면 404 false, 형식이 잘못되면 400 (B-8. 이전: 500)', async () => {
+describe('GET /ensembles/:id (한 합주)', () => {
+    test('있으면 그 합주, 없으면 404, 형식이 잘못되면 400 (B-10. 이전: 있는지만 true/false)', async () => {
         const id = await insert('ensembles', ensembleDoc());
-        const ok = await api().get(`/ensemble/${id}`);
-        expect([ok.status, ok.body]).toEqual([200, true]);
-        const missing = await api().get(`/ensemble/${missingId()}`);
-        expect([missing.status, missing.body]).toEqual([404, false]);
-        const bad = await api().get('/ensemble/abc');
-        expect([bad.status, bad.body.error]).toEqual([400, 'Invalid request']);
+        const ok = await api().get(`/ensembles/${id}`);
+        expect([ok.status, ok.body._id]).toEqual([200, id]);
+        const missing = await api().get(`/ensembles/${missingId()}`);
+        expect([missing.status, missing.body]).toEqual([404, apiError('NOT_FOUND')]);
+        const bad = await api().get('/ensembles/abc');
+        expect([bad.status, bad.body.error.code]).toEqual([400, 'INVALID_REQUEST']);
     });
 });
 
-describe('PUT /ensemble?id=', () => {
+describe('PUT /ensembles/:id', () => {
     // 웹이 보내는 모양 (B-8). nextDate = KST 12/7(월) 12:00
     const body = {
         startTime: 4,
@@ -353,7 +351,7 @@ describe('PUT /ensemble?id=', () => {
         const teamId = missingId();
         const id = await insert('ensembles', ensembleDoc({ teamId, teamName: '그대로', day: 2 }));
         const res = await api()
-            .put(`/ensemble?id=${id}`)
+            .put(`/ensembles/${id}`)
             .send({
                 ...body,
                 teamId: missingId(),
@@ -363,7 +361,7 @@ describe('PUT /ensemble?id=', () => {
                 pin: MASTER_PIN,
             });
         expect(res.status).toBe(200);
-        expect(res.body).toEqual({ message: 'Ensemble updated successfully', id });
+        expect(res.body).toEqual({ id });
         expect(await findOne('ensembles', id)).toMatchObject({
             ...body,
             teamId,
@@ -377,11 +375,11 @@ describe('PUT /ensemble?id=', () => {
     test('그 합주 팀의 PIN이 맞아야 바꾼다. 없거나 틀리면 403 (B-6 B1)', async () => {
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
         const id = await insert('ensembles', ensembleDoc({ teamId, startTime: 10 }));
-        expect((await api().put(`/ensemble?id=${id}`).send(body)).status).toBe(403);
+        expect((await api().put(`/ensembles/${id}`).send(body)).status).toBe(403);
         expect(
             (
                 await api()
-                    .put(`/ensemble?id=${id}`)
+                    .put(`/ensembles/${id}`)
                     .send({ ...body, pin: '0000' })
             ).status,
         ).toBe(403);
@@ -389,7 +387,7 @@ describe('PUT /ensemble?id=', () => {
         expect(
             (
                 await api()
-                    .put(`/ensemble?id=${id}`)
+                    .put(`/ensembles/${id}`)
                     .send({ ...body, pin: '1234' })
             ).status,
         ).toBe(200);
@@ -397,26 +395,26 @@ describe('PUT /ensemble?id=', () => {
 
     test('본문이 없거나 칸이 빠지면 400, 바꾸지 않는다 (B-8. 이전: 빠진 필드는 지워졌다)', async () => {
         const id = await insert('ensembles', ensembleDoc());
-        expect((await api().put(`/ensemble?id=${id}`)).status).toBe(400);
+        expect((await api().put(`/ensembles/${id}`)).status).toBe(400);
         const { due: _due, ...noDue } = body;
         expect(
             (
                 await api()
-                    .put(`/ensemble?id=${id}`)
+                    .put(`/ensembles/${id}`)
                     .send({ ...noDue, pin: MASTER_PIN })
             ).status,
         ).toBe(400);
         expect(await findOne('ensembles', id)).toMatchObject({ startTime: 10, type: '무기한' });
     });
 
-    test('id가 없거나 형식이 아니면 400, 없는 합주면 (본문과 관계없이) 404', async () => {
-        const noId = await api().put('/ensemble').send(body);
-        expect([noId.status, noId.body.error]).toEqual([400, 'Invalid request']);
-        const bad = await api().put('/ensemble?id=abc').send(body);
-        expect([bad.status, bad.body.error]).toEqual([400, 'Invalid request']);
+    test('id 없는 주소는 404, 형식이 아니면 400, 없는 합주면 (본문과 관계없이) 404', async () => {
+        const noId = await api().put('/ensembles').send(body);
+        expect([noId.status, noId.body.error.code]).toEqual([404, 'NOT_FOUND']); // id 없는 주소는 없는 경로 (B-10)
+        const bad = await api().put('/ensembles/abc').send(body);
+        expect([bad.status, bad.body.error.code]).toEqual([400, 'INVALID_REQUEST']);
         for (const send of [body, {}]) {
-            const missing = await api().put(`/ensemble?id=${missingId()}`).send(send);
-            expect([missing.status, missing.body]).toEqual([404, { error: 'Ensemble not found' }]);
+            const missing = await api().put(`/ensembles/${missingId()}`).send(send);
+            expect([missing.status, missing.body]).toEqual([404, apiError('NOT_FOUND')]);
         }
     });
 });

@@ -1,7 +1,8 @@
 // 모든 요청에 걸리는 처리 (CORS·보안 헤더·방문자 쿠키·요청 본문·GET /)
 // 옛 로그 파일(log.txt) 테스트는 B-7에서 활동 기록으로 바꾸며 지웠다 (activity.test.ts)
-import { describe, expect, test } from 'vitest';
-import { ALLOWED_ORIGIN, api } from './helpers.ts';
+import { describe, expect, test, vi } from 'vitest';
+import { Team } from '../src/models/team.ts';
+import { apiError, ALLOWED_ORIGIN, api } from './helpers.ts';
 
 const VID = '0b8a5c7e-1f2d-4c3b-9a8e-7d6c5b4a3f21';
 const COOKIE_RE =
@@ -31,7 +32,7 @@ describe('CORS (B-5 S3: 허락한 주소만)', () => {
     });
 
     test('사전 요청(OPTIONS)은 Express가 200으로 답하고, 방문자 쿠키를 주지 않는다', async () => {
-        const res = await api().options('/team').set('Origin', 'http://localhost:3000');
+        const res = await api().options('/teams').set('Origin', 'http://localhost:3000');
         expect(res.status).toBe(200);
         expect(res.headers['access-control-allow-origin']).toBe('http://localhost:3000');
         expect(res.headers['set-cookie']).toBeUndefined();
@@ -88,19 +89,19 @@ describe('방문자 쿠키 (semachi_vid, B-5에서 SameSite=Lax)', () => {
 
 describe('요청 본문', () => {
     test('JSON과 form(urlencoded) 모두 받는다', async () => {
-        const json = await api().post('/check-notice-pin').send({ pin: '9999' });
+        const json = await api().post('/notices/check-pin').send({ pin: '9999' });
         expect(json.body).toBe(true);
-        const form = await api().post('/check-notice-pin').type('form').send('pin=9999');
+        const form = await api().post('/notices/check-pin').type('form').send('pin=9999');
         expect(form.body).toBe(true);
     });
 
-    test('JSON 형식이 깨지면 Express 기본 오류 화면(HTML)으로 400', async () => {
+    test('JSON 형식이 깨지면 400 JSON (B-10. 이전: Express 기본 오류 화면 HTML)', async () => {
         const res = await api()
-            .post('/check-notice-pin')
+            .post('/notices/check-pin')
             .set('Content-Type', 'application/json')
             .send('{"pin":');
-        expect(res.status).toBe(400);
-        expect(res.headers['content-type']).toContain('text/html');
+        expect([res.status, res.body]).toEqual([400, apiError('INVALID_REQUEST')]);
+        expect(res.text).not.toContain('SyntaxError'); // 오류 내용(스택 등)은 보내지 않는다
     });
 });
 
@@ -113,9 +114,17 @@ describe('GET / (로그 보기, B-5 S1에서 삭제)', () => {
 });
 
 describe('없는 경로', () => {
-    test('Express 기본 404 (HTML)', async () => {
+    test('404 JSON (B-10. 이전: Express 기본 HTML)', async () => {
         const res = await api().get('/nope');
-        expect(res.status).toBe(404);
-        expect(res.headers['content-type']).toContain('text/html');
+        expect([res.status, res.body]).toEqual([404, apiError('NOT_FOUND')]);
+    });
+});
+
+describe('처리 중 오류 (B-10: middleware/errors)', () => {
+    test('라우트가 던진 오류는 500 JSON, 오류 내용은 보내지 않는다 (이전: 라우트마다 try/catch, 글자·JSON이 섞임)', async () => {
+        vi.spyOn(Team, 'find').mockRejectedValueOnce(new Error('비밀스러운 DB 오류'));
+        const res = await api().get('/teams');
+        expect([res.status, res.body]).toEqual([500, apiError('INTERNAL_ERROR')]);
+        expect(res.text).not.toContain('비밀스러운');
     });
 });

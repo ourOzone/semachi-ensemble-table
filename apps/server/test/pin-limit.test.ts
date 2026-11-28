@@ -3,6 +3,7 @@
 import { describe, expect, test } from 'vitest';
 import { ipKey } from '../src/lib/pin-guard.ts';
 import {
+    apiError,
     ensembleBody,
     ensembleDoc,
     freshApi,
@@ -13,12 +14,12 @@ import {
     teamDoc,
 } from './helpers.ts';
 
-const TOO_MANY = { error: 'Too many PIN attempts' };
+const TOO_MANY = apiError('TOO_MANY_PIN_ATTEMPTS');
 type Api = ReturnType<typeof freshApi>;
 
 async function wrongTeamPin(api: Api, teamId: string, times: number) {
     for (let i = 0; i < times; i++) {
-        const res = await api().post('/check-team-pin').send({ teamId, pin: '0000' });
+        const res = await api().post(`/teams/${teamId}/check-pin`).send({ pin: '0000' });
         expect(res.body).toBe(false);
     }
 }
@@ -29,7 +30,7 @@ describe('팀별로 센다', () => {
         const id = await insert('teams', teamDoc({ pin: '1234' }));
         await wrongTeamPin(api, id, 10);
 
-        const blocked = await api().post('/check-team-pin').send({ teamId: id, pin: '1234' });
+        const blocked = await api().post(`/teams/${id}/check-pin`).send({ pin: '1234' });
         expect([blocked.status, blocked.body]).toEqual([429, TOO_MANY]);
         expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(890);
         expect(Number(blocked.headers['retry-after'])).toBeLessThanOrEqual(900);
@@ -39,11 +40,9 @@ describe('팀별로 센다', () => {
         const api = freshApi();
         const id = await insert('teams', teamDoc({ pin: '1234' }));
         await wrongTeamPin(api, id, 9);
-        expect((await api().post('/check-team-pin').send({ teamId: id, pin: '1234' })).body).toBe(
-            true,
-        );
+        expect((await api().post(`/teams/${id}/check-pin`).send({ pin: '1234' })).body).toBe(true);
 
-        const again = await api().post('/check-team-pin').send({ teamId: id, pin: '0000' });
+        const again = await api().post(`/teams/${id}/check-pin`).send({ pin: '0000' });
         expect(again.headers['pin-attempts']).toBe('1/10');
     });
 
@@ -52,17 +51,17 @@ describe('팀별로 센다', () => {
         const victim = await insert('teams', teamDoc({ pin: '1234' }));
         const mine = await insert('teams', teamDoc({ pin: '5678' }));
         await wrongTeamPin(api, victim, 9);
-        expect((await api().post('/check-team-pin').send({ teamId: mine, pin: '5678' })).body).toBe(
+        expect((await api().post(`/teams/${mine}/check-pin`).send({ pin: '5678' })).body).toBe(
             true,
         );
 
-        const tenth = await api().post('/check-team-pin').send({ teamId: victim, pin: '0001' });
+        const tenth = await api().post(`/teams/${victim}/check-pin`).send({ pin: '0001' });
         expect(tenth.headers['pin-attempts']).toBe('10/10');
-        expect(
-            (await api().post('/check-team-pin').send({ teamId: victim, pin: '0002' })).status,
-        ).toBe(429);
+        expect((await api().post(`/teams/${victim}/check-pin`).send({ pin: '0002' })).status).toBe(
+            429,
+        );
         // 다른 팀은 그대로 된다
-        expect((await api().post('/check-team-pin').send({ teamId: mine, pin: '5678' })).body).toBe(
+        expect((await api().post(`/teams/${mine}/check-pin`).send({ pin: '5678' })).body).toBe(
             true,
         );
     });
@@ -72,7 +71,7 @@ describe('팀별로 센다', () => {
         const id = await insert('teams', teamDoc({ pin: '1234' }));
         await wrongTeamPin(api, id, 2);
         const put = await api()
-            .put(`/team?id=${id}`)
+            .put(`/teams/${id}`)
             .send(teamBody({ pin: '0000' }));
         expect([put.status, put.headers['pin-attempts']]).toEqual([403, '3/10']);
     });
@@ -82,15 +81,15 @@ describe('팀별로 센다', () => {
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
         const a = await insert('ensembles', ensembleDoc({ teamId }));
         const b = await insert('ensembles', ensembleDoc({ teamId }));
-        await api().delete(`/ensemble?id=${a}`).send({ pin: '0000' });
+        await api().delete(`/ensembles/${a}`).send({ pin: '0000' });
         await api()
-            .put(`/ensemble?id=${b}`)
+            .put(`/ensembles/${b}`)
             .send(ensembleBody({ pin: '0000' }));
         const add = await api()
-            .post('/ensemble')
+            .post('/ensembles')
             .send(ensembleBody({ teamId, pin: '0000' }));
         expect([add.status, add.headers['pin-attempts']]).toEqual([403, '3/10']);
-        const check = await api().post('/check-team-pin').send({ teamId, pin: '0000' });
+        const check = await api().post(`/teams/${teamId}/check-pin`).send({ pin: '0000' });
         expect(check.headers['pin-attempts']).toBe('4/10');
     });
 
@@ -98,13 +97,9 @@ describe('팀별로 센다', () => {
         const api = freshApi({ pinLimits: { windowMs: 300 } });
         const id = await insert('teams', teamDoc({ pin: '1234' }));
         await wrongTeamPin(api, id, 10);
-        expect((await api().post('/check-team-pin').send({ teamId: id, pin: '1234' })).status).toBe(
-            429,
-        );
+        expect((await api().post(`/teams/${id}/check-pin`).send({ pin: '1234' })).status).toBe(429);
         await new Promise((r) => setTimeout(r, 400));
-        expect((await api().post('/check-team-pin').send({ teamId: id, pin: '1234' })).body).toBe(
-            true,
-        );
+        expect((await api().post(`/teams/${id}/check-pin`).send({ pin: '1234' })).body).toBe(true);
     });
 });
 
@@ -113,17 +108,17 @@ describe('날적이는 전체를 하나로, 공지·관리자는 마스터로 �
         const api = freshApi();
         const a = await insert('notes', { text: 'a', pin: '1111' });
         const b = await insert('notes', { text: 'b', pin: '2222' });
-        await api().post('/check-note-pin').send({ noteId: a, pin: '0000' });
-        const res = await api().delete(`/note?id=${b}`).send({ pin: '0000' });
+        await api().post(`/notes/${a}/check-pin`).send({ pin: '0000' });
+        const res = await api().delete(`/notes/${b}`).send({ pin: '0000' });
         expect([res.status, res.headers['pin-attempts']]).toEqual([403, '2/10']);
     });
 
     test('공지·관리자 화면은 "마스터"로 함께 센다 (10번)', async () => {
         const api = freshApi();
-        for (let i = 0; i < 9; i++) await api().post('/check-notice-pin').send({ pin: '0000' });
+        for (let i = 0; i < 9; i++) await api().post('/notices/check-pin').send({ pin: '0000' });
         const admin = await api().post('/admin/login').send({ pin: '0000' });
         expect([admin.status, admin.headers['pin-attempts']]).toEqual([403, '10/10']);
-        expect((await api().post('/check-notice-pin').send({ pin: MASTER_PIN })).status).toBe(429);
+        expect((await api().post('/notices/check-pin').send({ pin: MASTER_PIN })).status).toBe(429);
     });
 });
 
@@ -134,15 +129,15 @@ describe('같은 IP 전체 (30번, 맞춰도 그대로)', () => {
         for (let round = 0; round < 3; round++) {
             // 마스터 PIN 후보를 9번 넣고(틀림) 내 팀 PIN으로 팀 횟수를 0으로
             await wrongTeamPin(api, mine, 9);
-            expect(
-                (await api().post('/check-team-pin').send({ teamId: mine, pin: '5678' })).body,
-            ).toBe(true);
+            expect((await api().post(`/teams/${mine}/check-pin`).send({ pin: '5678' })).body).toBe(
+                true,
+            );
         }
         // 27번 틀렸다: 3번 더 틀리면 IP 전체 한도
-        const left = await api().post('/check-team-pin').send({ teamId: mine, pin: '0000' });
+        const left = await api().post(`/teams/${mine}/check-pin`).send({ pin: '0000' });
         expect(left.headers['pin-attempts']).toBe('28/30');
         await wrongTeamPin(api, mine, 2);
-        const blocked = await api().post('/check-notice-pin').send({ pin: MASTER_PIN });
+        const blocked = await api().post('/notices/check-pin').send({ pin: MASTER_PIN });
         expect([blocked.status, blocked.body]).toEqual([429, TOO_MANY]);
     });
 
@@ -150,18 +145,18 @@ describe('같은 IP 전체 (30번, 맞춰도 그대로)', () => {
         const api = freshApi();
         for (let i = 0; i < 30; i++) {
             const res = await api()
-                .post('/check-team-pin')
-                .send({ teamId: missingId(), pin: String(i) });
+                .post(`/teams/${missingId()}/check-pin`)
+                .send({ pin: String(i) });
             expect(res.status).toBe(404);
         }
-        expect((await api().post('/check-notice-pin').send({ pin: MASTER_PIN })).status).toBe(429);
+        expect((await api().post('/notices/check-pin').send({ pin: MASTER_PIN })).status).toBe(429);
     });
 
     test('IP 전체 한도가 더 빠듯하면 그쪽을 보여준다', async () => {
         const api = freshApi({ pinLimits: { perIp: 3 } });
-        await api().post('/check-team-pin').send({ teamId: missingId(), pin: '0000' });
+        await api().post(`/teams/${missingId()}/check-pin`).send({ pin: '0000' });
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
-        const res = await api().post('/check-team-pin').send({ teamId, pin: '0000' });
+        const res = await api().post(`/teams/${teamId}/check-pin`).send({ pin: '0000' });
         expect(res.headers['pin-attempts']).toBe('2/3');
     });
 
@@ -169,17 +164,17 @@ describe('같은 IP 전체 (30번, 맞춰도 그대로)', () => {
         const api = freshApi({ trustProxy: 1, pinLimits: { perTarget: 100 } });
         for (let i = 0; i < 30; i++) {
             await api()
-                .post('/check-notice-pin')
+                .post('/notices/check-pin')
                 .set('X-Forwarded-For', '203.0.113.1')
                 .send({ pin: '0000' });
         }
         const other = await api()
-            .post('/check-notice-pin')
+            .post('/notices/check-pin')
             .set('X-Forwarded-For', '203.0.113.2')
             .send({ pin: MASTER_PIN });
         expect([other.status, other.body]).toEqual([200, true]);
         const same = await api()
-            .post('/check-notice-pin')
+            .post('/notices/check-pin')
             .set('X-Forwarded-For', '203.0.113.1')
             .send({ pin: MASTER_PIN });
         expect(same.status).toBe(429);

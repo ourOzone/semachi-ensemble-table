@@ -8,9 +8,6 @@ import { hashPin, verifyPin } from './pin.ts';
 
 const MASTER_PIN_KEY = 'masterPin';
 
-/** 변경 API에서 PIN이 없거나 틀렸을 때 (403) */
-export const WRONG_PIN = { error: 'Wrong PIN' };
-
 /** 새 마스터 PIN 형식: 웹의 PIN 칸이 숫자 4자리라 */
 export const MASTER_PIN_FORMAT = /^\d{4}$/;
 

@@ -2,28 +2,13 @@
 // 맞으면 검사·정리된 값(앞뒤 공백 뺌, 모르는 필드 버림)을 돌려주고, 아니면 400을 보내고 null.
 // 핸들러 안에서 부른다: const body = validate(res, teamCreateBodySchema, req.body); if (!body) return;
 // (미들웨어로 만들지 않은 이유: 검사한 값의 타입이 핸들러 안에서 그대로 이어지게)
+// 400 본문: { error: { code: 'INVALID_REQUEST', message, issues: [{ path, message }] } } (B-10). 받은 값은 담지 않는다 (PIN이 있을 수 있음)
 import type { Response } from 'express';
 import type { z } from 'zod';
+import { sendError } from './errors.ts';
 
-/**
- * 400 응답 본문. 어느 칸이 왜 틀렸는지(path·message)만 담는다. 받은 값은 담지 않는다 (PIN이 있을 수 있음).
- * 형식은 B-10(응답 형식 통일)에서 다시 정한다 (지금은 다른 오류와 같은 { error: '…' } 모양)
- */
-export function invalidRequest(error: z.ZodError) {
-    return {
-        error: 'Invalid request',
-        issues: error.issues.map((issue) => ({
-            path: issue.path.join('.'),
-            message: issue.message,
-        })),
-    };
-}
-
-/** 자동 삭제 날짜(due)가 이미 지났을 때 (팀, B-9). 스키마 밖의 검사라 같은 모양으로 따로 만든다 */
-export const invalidDue = {
-    error: 'Invalid request',
-    issues: [{ path: 'due', message: '지난 날짜다' }],
-};
+const issuesOf = (error: z.ZodError) =>
+    error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message }));
 
 export function validate<T extends z.ZodType>(
     res: Response,
@@ -32,6 +17,11 @@ export function validate<T extends z.ZodType>(
 ): z.output<T> | null {
     const result = schema.safeParse(value);
     if (result.success) return result.data;
-    res.status(400).json(invalidRequest(result.error));
+    sendError(res, 'INVALID_REQUEST', { issues: issuesOf(result.error) });
     return null;
+}
+
+/** 스키마 밖에서 검사한 칸이 틀렸을 때 (예: 팀 자동 삭제 날짜가 이미 지남, B-9) */
+export function sendInvalid(res: Response, path: string, message: string) {
+    return sendError(res, 'INVALID_REQUEST', { issues: [{ path, message }] });
 }

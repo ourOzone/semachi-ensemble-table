@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest';
 import { hashPin, isHashedPin, verifyPin } from '../src/lib/pin.ts';
 import { hashPlainPins } from '../src/lib/pin-migration.ts';
 import {
+    apiError,
     ALLOWED_ORIGIN,
     api,
     findAll,
@@ -46,7 +47,7 @@ describe('hashPin·verifyPin', () => {
 describe('새 PIN 저장', () => {
     test('기본(전환 전)은 평문으로 저장한다 (옛 서버가 평문으로 비교하므로, 사전 결정 10)', async () => {
         const res = await api()
-            .post('/team')
+            .post('/teams')
             .send(teamBody({ pin: '1234' }));
         expect((await findOne('teams', res.body.id))?.pin).toBe('1234');
     });
@@ -54,29 +55,24 @@ describe('새 PIN 저장', () => {
     test('해시 저장을 켜면(PIN_HASH) 팀·날적이 PIN을 해시로 저장하고, 그 PIN으로 확인·삭제된다', async () => {
         const hashed = freshApi({ hashPins: true });
         const team = await hashed()
-            .post('/team')
+            .post('/teams')
             .send(teamBody({ pin: '1234' }));
         const stored = (await findOne('teams', team.body.id))?.pin;
         expect(isHashedPin(stored)).toBe(true);
         expect(
-            (await hashed().post('/check-team-pin').send({ teamId: team.body.id, pin: '1234' }))
-                .body,
+            (await hashed().post(`/teams/${team.body.id}/check-pin`).send({ pin: '1234' })).body,
         ).toBe(true);
 
-        const note = await hashed().post('/note').send({ text: '글', pin: '5678' });
+        const note = await hashed().post('/notes').send({ text: '글', pin: '5678' });
         expect(isHashedPin((await findOne('notes', note.body.id))?.pin)).toBe(true);
-        const del = await hashed().delete(`/note?id=${note.body.id}`).send({ pin: '5678' });
-        expect(del.status).toBe(200);
+        const del = await hashed().delete(`/notes/${note.body.id}`).send({ pin: '5678' });
+        expect(del.status).toBe(204);
     });
 
     test('해시로 바꾼 PIN은 해시 저장을 꺼도 확인된다 (평문·해시 둘 다 읽음)', async () => {
         const id = await insert('teams', teamDoc({ pin: await hashPin('4321') }));
-        expect((await api().post('/check-team-pin').send({ teamId: id, pin: '4321' })).body).toBe(
-            true,
-        );
-        expect((await api().post('/check-team-pin').send({ teamId: id, pin: '0000' })).body).toBe(
-            false,
-        );
+        expect((await api().post(`/teams/${id}/check-pin`).send({ pin: '4321' })).body).toBe(true);
+        expect((await api().post(`/teams/${id}/check-pin`).send({ pin: '0000' })).body).toBe(false);
     });
 });
 
@@ -86,17 +82,19 @@ describe('마스터 PIN 바꾸기 (PUT /admin/master-pin, 관리자로 로그인
             .put('/admin/master-pin')
             .set('Cookie', await adminCookie())
             .send({ currentPin: MASTER_PIN, newPin: '2580' });
-        expect([res.status, res.body]).toEqual([200, { message: 'Master PIN changed' }]);
+        expect([res.status, res.text]).toEqual([204, '']);
 
         const [setting] = await findAll('settings');
         expect(setting).toMatchObject({ _id: 'masterPin' });
         expect(isHashedPin(String(setting?.value))).toBe(true);
 
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
-        expect((await api().post('/check-notice-pin').send({ pin: '2580' })).body).toBe(true);
-        expect((await api().post('/check-team-pin').send({ teamId, pin: '2580' })).body).toBe(true);
+        expect((await api().post('/notices/check-pin').send({ pin: '2580' })).body).toBe(true);
+        expect((await api().post(`/teams/${teamId}/check-pin`).send({ pin: '2580' })).body).toBe(
+            true,
+        );
         // 환경변수의 처음 마스터 PIN은 더 이상 통과하지 않는다
-        expect((await api().post('/check-notice-pin').send({ pin: MASTER_PIN })).body).toBe(false);
+        expect((await api().post('/notices/check-pin').send({ pin: MASTER_PIN })).body).toBe(false);
         // 다시 바꿀 때는 새 PIN으로
         expect(
             (
@@ -105,8 +103,8 @@ describe('마스터 PIN 바꾸기 (PUT /admin/master-pin, 관리자로 로그인
                     .set('Cookie', await adminCookie(api, '2580'))
                     .send({ currentPin: '2580', newPin: '1357' })
             ).status,
-        ).toBe(200);
-        expect((await api().post('/check-notice-pin').send({ pin: '1357' })).body).toBe(true);
+        ).toBe(204);
+        expect((await api().post('/notices/check-pin').send({ pin: '1357' })).body).toBe(true);
     });
 
     test('지금 마스터 PIN이 틀리면 403, 바꾸지 않는다', async () => {
@@ -114,9 +112,9 @@ describe('마스터 PIN 바꾸기 (PUT /admin/master-pin, 관리자로 로그인
             .put('/admin/master-pin')
             .set('Cookie', await adminCookie())
             .send({ currentPin: '0000', newPin: '2580' });
-        expect([res.status, res.body]).toEqual([403, { error: 'Wrong PIN' }]);
+        expect([res.status, res.body]).toEqual([403, apiError('WRONG_PIN')]);
         expect(await findAll('settings')).toHaveLength(0);
-        expect((await api().post('/check-notice-pin').send({ pin: MASTER_PIN })).body).toBe(true);
+        expect((await api().post('/notices/check-pin').send({ pin: MASTER_PIN })).body).toBe(true);
     });
 
     test('새 PIN은 숫자 4자리 (웹의 PIN 칸이 4자리)', async () => {
@@ -125,7 +123,12 @@ describe('마스터 PIN 바꾸기 (PUT /admin/master-pin, 관리자로 로그인
                 .put('/admin/master-pin')
                 .set('Cookie', await adminCookie())
                 .send({ currentPin: MASTER_PIN, newPin });
-            expect([res.status, res.body]).toEqual([400, { error: 'newPin must be 4 digits' }]);
+            expect([res.status, res.body]).toEqual([
+                400,
+                apiError('INVALID_REQUEST', {
+                    issues: [{ path: 'newPin', message: '숫자 4자리가 아니다' }],
+                }),
+            ]);
         }
     });
 });
@@ -134,28 +137,28 @@ describe('틀린 횟수 알려 주기 (Pin-Attempts 헤더, 웹의 "(7/10)")', (
     test('틀릴 때마다 "틀린 횟수/한도". 확인 API와 변경 API가 같은 팀이면 함께 센다', async () => {
         const fresh = freshApi();
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
-        const wrong1 = await fresh().post('/check-team-pin').send({ teamId, pin: '0000' });
+        const wrong1 = await fresh().post(`/teams/${teamId}/check-pin`).send({ pin: '0000' });
         expect(wrong1.headers['pin-attempts']).toBe('1/10');
-        const wrong2 = await fresh().post('/check-team-pin').send({ teamId, pin: '0001' });
+        const wrong2 = await fresh().post(`/teams/${teamId}/check-pin`).send({ pin: '0001' });
         expect(wrong2.headers['pin-attempts']).toBe('2/10');
-        const wrongDelete = await fresh().delete(`/team?id=${teamId}`).send({ pin: '0002' });
+        const wrongDelete = await fresh().delete(`/teams/${teamId}`).send({ pin: '0002' });
         expect([wrongDelete.status, wrongDelete.headers['pin-attempts']]).toEqual([403, '3/10']);
     });
 
     test('맞으면 헤더가 없다', async () => {
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
-        const res = await freshApi()().post('/check-team-pin').send({ teamId, pin: '1234' });
+        const res = await freshApi()().post(`/teams/${teamId}/check-pin`).send({ pin: '1234' });
         expect(res.headers['pin-attempts']).toBeUndefined();
     });
 
     test('공지(마스터 PIN)는 "마스터"의 횟수로', async () => {
-        const res = await freshApi()().post('/check-notice-pin').send({ pin: '0000' });
+        const res = await freshApi()().post('/notices/check-pin').send({ pin: '0000' });
         expect(res.headers['pin-attempts']).toBe('1/10');
     });
 
     test('다른 주소의 웹(개발)도 읽을 수 있게 헤더를 연다 (CORS)', async () => {
         const res = await api()
-            .post('/check-notice-pin')
+            .post('/notices/check-pin')
             .set('Origin', ALLOWED_ORIGIN)
             .send({ pin: '0000' });
         expect(res.headers['access-control-expose-headers']).toBe('Pin-Attempts, Retry-After');
@@ -191,8 +194,8 @@ describe('기존 평문 PIN을 해시로 (scripts/hash-pins.ts)', () => {
         expect(pins.every((pin) => isHashedPin(pin))).toBe(true);
         const team = (await findAll('teams'))[0]!;
         const check = await api()
-            .post('/check-team-pin')
-            .send({ teamId: String(team._id), pin: '1111' });
+            .post(`/teams/${String(team._id)}/check-pin`)
+            .send({ pin: '1111' });
         expect(check.body).toBe(true);
 
         const again = await hashPlainPins(db(), { apply: true });

@@ -2,7 +2,7 @@
 import mongoose from 'mongoose';
 import { pino } from 'pino';
 import request from 'supertest';
-import { vi } from 'vitest';
+import { expect, vi } from 'vitest';
 import { createApp, type AppOptions } from '../src/app.ts';
 
 /** 테스트용 마스터 PIN. 실제 값(루트 .env)은 읽지 않는다 */
@@ -126,3 +126,8 @@ export async function activities(filter: Record<string, unknown> = {}) {
 export async function lastActivity() {
     return (await activities()).at(-1);
 }
+
+/** 오류 응답 본문 (B-10 A1: { error: { code, message, issues? } }). message는 설명이라 값은 보지 않는다 */
+export const apiError = (code: string, extra: Record<string, unknown> = {}) => ({
+    error: { code, message: expect.any(String), ...extra },
+});

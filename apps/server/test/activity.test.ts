@@ -65,7 +65,7 @@ describe('누가', () => {
 describe('무엇을 — 팀', () => {
     test('만들기: 만든 내용 (PIN 없이)', async () => {
         const res = await api()
-            .post('/team')
+            .post('/teams')
             .send(teamBody({ name: '새 팀', pin: SECRET }));
         expect(await lastActivity()).toMatchObject({
             action: 'team.create',
@@ -78,7 +78,7 @@ describe('무엇을 — 팀', () => {
     test('수정: 바뀌기 전·후와 어떤 PIN으로 (팀 PIN = own, 마스터 PIN = master)', async () => {
         const id = await insert('teams', teamDoc({ name: '옛 이름', pin: SECRET }));
         await api()
-            .put(`/team?id=${id}`)
+            .put(`/teams/${id}`)
             .send(teamBody({ name: '새 이름', type: 'x', pin: SECRET }));
         expect(await lastActivity()).toMatchObject({
             action: 'team.update',
@@ -90,7 +90,7 @@ describe('무엇을 — 팀', () => {
         });
 
         await api()
-            .put(`/team?id=${id}`)
+            .put(`/teams/${id}`)
             .send(teamBody({ name: '또', pin: MASTER_PIN }));
         expect(await lastActivity()).toMatchObject({ action: 'team.update', pin: 'master' });
     });
@@ -98,7 +98,7 @@ describe('무엇을 — 팀', () => {
     test('삭제: 지운 팀과 그 팀의 합주 전체 (지워져도 무엇이었는지 남게)', async () => {
         const id = await insert('teams', teamDoc({ name: '지울 팀', pin: SECRET }));
         await insert('ensembles', ensembleDoc({ teamId: id, startTime: 3 }));
-        await api().delete(`/team?id=${id}`).send({ pin: SECRET });
+        await api().delete(`/teams/${id}`).send({ pin: SECRET });
         const last = await lastActivity();
         expect(last).toMatchObject({
             action: 'team.delete',
@@ -114,7 +114,7 @@ describe('무엇을 — 팀', () => {
         const fresh = freshApi({ pinLimits: { perTarget: 1 } });
         const id = await insert('teams', teamDoc({ pin: SECRET }));
         await fresh()
-            .put(`/team?id=${id}`)
+            .put(`/teams/${id}`)
             .send(teamBody({ pin: '0000' }));
         expect(await lastActivity()).toMatchObject({ action: 'team.update', result: 'wrong-pin' });
         expect(await lastActivity()).not.toHaveProperty('pin');
@@ -122,7 +122,7 @@ describe('무엇을 — 팀', () => {
         expect(
             (
                 await fresh()
-                    .put(`/team?id=${id}`)
+                    .put(`/teams/${id}`)
                     .send(teamBody({ pin: SECRET }))
             ).status,
         ).toBe(429);
@@ -131,10 +131,10 @@ describe('무엇을 — 팀', () => {
 
     test('PIN 확인: 맞음(어떤 PIN)·틀림·없는 팀', async () => {
         const id = await insert('teams', teamDoc({ name: '팀', pin: SECRET }));
-        await api().post('/check-team-pin').send({ teamId: id, pin: SECRET });
-        await api().post('/check-team-pin').send({ teamId: id, pin: MASTER_PIN });
-        await api().post('/check-team-pin').send({ teamId: id, pin: '0000' });
-        await api().post('/check-team-pin').send({ teamId: missingId(), pin: '0000' });
+        await api().post(`/teams/${id}/check-pin`).send({ pin: SECRET });
+        await api().post(`/teams/${id}/check-pin`).send({ pin: MASTER_PIN });
+        await api().post(`/teams/${id}/check-pin`).send({ pin: '0000' });
+        await api().post(`/teams/${missingId()}/check-pin`).send({ pin: '0000' });
         expect((await activities()).map((a) => [a.action, a.target.name, a.pin, a.result])).toEqual(
             [
                 ['pin.check', '팀', 'own', 'ok'],
@@ -150,13 +150,13 @@ describe('무엇을 — 합주·날적이·공지', () => {
     test('합주 잡기·수정·삭제 (수정은 바뀌기 전·후)', async () => {
         const teamId = await insert('teams', teamDoc({ name: '팀', pin: SECRET }));
         const created = await api()
-            .post('/ensemble')
+            .post('/ensembles')
             .send(ensembleBody({ teamId, pin: SECRET }));
         const id = created.body.id;
         await api()
-            .put(`/ensemble?id=${id}`)
+            .put(`/ensembles/${id}`)
             .send(ensembleBody({ startTime: 20, endTime: 22, pin: SECRET }));
-        await api().delete(`/ensemble?id=${id}`).send({ pin: SECRET });
+        await api().delete(`/ensembles/${id}`).send({ pin: SECRET });
 
         const [create, update, remove] = await activities();
         expect(create).toMatchObject({
@@ -177,8 +177,8 @@ describe('무엇을 — 합주·날적이·공지', () => {
 
     test('날적이 남기기·지우기 (글 내용, 대상 이름은 앞 40자)', async () => {
         const long = '가'.repeat(50);
-        const res = await api().post('/note').send({ text: long, pin: SECRET });
-        await api().delete(`/note?id=${res.body.id}`).send({ pin: SECRET });
+        const res = await api().post('/notes').send({ text: long, pin: SECRET });
+        await api().delete(`/notes/${res.body.id}`).send({ pin: SECRET });
         const [create, remove] = await activities();
         expect(create).toMatchObject({
             action: 'note.create',
@@ -189,8 +189,8 @@ describe('무엇을 — 합주·날적이·공지', () => {
     });
 
     test('공지 올리기·지우기 (마스터 PIN)', async () => {
-        const res = await api().post('/notice').send({ content: '공지', pin: MASTER_PIN });
-        await api().delete(`/notice?id=${res.body.id}`).send({ pin: MASTER_PIN });
+        const res = await api().post('/notices').send({ content: '공지', pin: MASTER_PIN });
+        await api().delete(`/notices/${res.body.id}`).send({ pin: MASTER_PIN });
         expect((await activities()).map((a) => [a.action, a.pin, a.result])).toEqual([
             ['notice.create', 'master', 'ok'],
             ['notice.delete', 'master', 'ok'],
@@ -201,14 +201,14 @@ describe('무엇을 — 합주·날적이·공지', () => {
 test('PIN 값은 어떤 기록에도 남지 않는다', async () => {
     const teamId = await insert('teams', teamDoc({ pin: SECRET }));
     await api()
-        .post('/team')
+        .post('/teams')
         .send(teamBody({ pin: SECRET }));
-    await api().post('/check-team-pin').send({ teamId, pin: SECRET });
+    await api().post(`/teams/${teamId}/check-pin`).send({ pin: SECRET });
     await api()
-        .put(`/team?id=${teamId}`)
+        .put(`/teams/${teamId}`)
         .send(teamBody({ pin: SECRET }));
-    await api().post('/note').send({ text: '글', pin: SECRET });
-    await api().delete(`/team?id=${teamId}`).send({ pin: SECRET });
+    await api().post('/notes').send({ text: '글', pin: SECRET });
+    await api().delete(`/teams/${teamId}`).send({ pin: SECRET });
     const all = await activities();
     expect(all.length).toBeGreaterThanOrEqual(5);
     // 모든 값을 훑어 PIN과 같은 값이 없는지 (id·방문자 UUID 안에 우연히 같은 숫자가 섞일 수 있어 문자열 검색은 쓰지 않는다)

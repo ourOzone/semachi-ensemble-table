@@ -56,21 +56,48 @@ export type EnsembleResponse = z.infer<typeof ensembleResponseSchema>;
 export type NoteResponse = z.infer<typeof noteResponseSchema>;
 export type NoticeResponse = z.infer<typeof noticeResponseSchema>;
 
-// 변경 요청(POST/PUT/DELETE)의 응답. 현재 호출부에서 쓰지 않으므로 스키마 없이 타입만 둔다.
+// 변경 요청의 응답 (B-10 A1): 만들기 201 { id }, 수정 200 { id }, 삭제 204 (본문 없음). 웹은 상태 코드만 본다
 
-/** 생성·수정·삭제된 문서의 id */
+/** 만들거나 고친 문서의 id */
 export interface IdResponse {
     id: string;
 }
 
+/** 옛 응답 (웹 커밋에서 지운다) */
 export interface MessageResponse {
     message: string;
 }
+export const existsResponseSchema = z.boolean();
 
-/** check-xxx-pin 응답. PIN이 맞으면 true */
+/** PIN 확인(POST /teams/:id/check-pin 등) 응답. PIN이 맞으면 true. 틀리면 false + Pin-Attempts 헤더 */
 export const pinCheckResponseSchema = z.boolean();
 export type PinCheckResponse = z.infer<typeof pinCheckResponseSchema>;
 
-/** xxx/:id 존재 확인 응답. 존재하면 true, 없으면 404 에러로 거부된다 */
-export const existsResponseSchema = z.boolean();
-export type ExistsResponse = z.infer<typeof existsResponseSchema>;
+// --- 오류 응답 (B-10 A1): 모든 오류가 같은 모양 { error: { code, message, issues? } } ---
+// 웹은 지금 상태 코드·헤더만 보지만, 무엇이 틀렸는지 알아야 할 때 code로 나눈다 (message는 사람이 읽는 설명, 바뀔 수 있음)
+
+export const API_ERROR_CODES = [
+    /** 400: 요청 모양이 틀림 (issues에 어느 칸이 왜) */
+    'INVALID_REQUEST',
+    /** 401: 관리자 로그인이 필요함 */
+    'ADMIN_LOGIN_REQUIRED',
+    /** 403: PIN이 없거나 틀림 */
+    'WRONG_PIN',
+    /** 404: 대상(팀·합주·글·주소)이 없음 */
+    'NOT_FOUND',
+    /** 429: PIN을 너무 많이 틀려 잠시 막힘 (Retry-After 헤더) */
+    'TOO_MANY_PIN_ATTEMPTS',
+    /** 500: 서버가 처리하다 실패 */
+    'INTERNAL_ERROR',
+] as const;
+export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
+
+export const apiErrorSchema = z.object({
+    error: z.object({
+        code: z.enum(API_ERROR_CODES),
+        message: z.string(),
+        /** INVALID_REQUEST일 때: 틀린 칸(path, 예: 'desc.6')과 이유. 받은 값은 담지 않는다 */
+        issues: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
+    }),
+});
+export type ApiError = z.infer<typeof apiErrorSchema>;

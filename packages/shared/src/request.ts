@@ -9,9 +9,7 @@ import { NOTE_TEXT_MAX, SETLIST_MAX, TEAM_MEMBER_MAX, TEAM_NAME_MAX } from './li
 /** MongoDB 문서 id (ObjectId: 16진수 24자리). 이 형식이 아니면 DB에 묻지 않고 400 (이전: DB가 500) */
 export const objectIdSchema = z.string().regex(/^[0-9a-f]{24}$/i, 'ObjectId가 아니다');
 
-/** 주소의 ?id= (팀·합주·날적이·공지 수정·삭제) */
-export const idQuerySchema = z.object({ id: objectIdSchema });
-/** 주소의 /:id (있는지 확인) */
+/** 주소의 /:id (/teams/:id 등, B-10 A2: 이전엔 ?id=와 /:id가 섞여 있었다) */
 export const idParamsSchema = z.object({ id: objectIdSchema });
 
 /** 새로 정하는 PIN: 숫자 4자리 (웹의 PIN 칸) */
@@ -19,6 +17,9 @@ export const newPinSchema = z.string().regex(/^\d{4}$/, '숫자 4자리가 아�
 
 /** PIN 확인 API의 PIN: 비어 있지 않은 문자열 (형식이 다르면 어차피 틀린다) */
 const pinInputSchema = z.string().min(1).max(64);
+
+/** PIN 확인 (POST /teams/:id/check-pin, /notes/:id/check-pin, /notices/check-pin). 대상 id는 주소에 */
+export const pinCheckBodySchema = z.object({ pin: pinInputSchema });
 
 /** 시간칸 0 ~ 29 (09:00부터 30분씩, 웹 constants의 idx2hour) */
 export const timeSlotSchema = z.number().int().min(0).max(29);
@@ -57,8 +58,6 @@ export const teamCreateBodySchema = teamUpdateBodySchema.extend({
     publishDate: z.iso.datetime().optional(),
 });
 
-export const checkTeamPinBodySchema = z.object({ teamId: objectIdSchema, pin: pinInputSchema });
-
 // --- 합주 ---
 
 /** 합주 수정 (PUT /ensemble?id=). 팀은 바꾸지 않는다. teamName·day는 서버가 채운다 */
@@ -90,12 +89,8 @@ export const noteCreateBodySchema = z.object({
     pin: newPinSchema,
 });
 
-export const checkNotePinBodySchema = z.object({ noteId: objectIdSchema, pin: pinInputSchema });
-
 /** 공지 올리기 (POST /notice). 길이 제한 없음 (limits.ts) */
 export const noticeCreateBodySchema = z.object({ content: z.string().trim().min(1) });
-
-export const checkNoticePinBodySchema = z.object({ pin: pinInputSchema });
 
 export type TeamCreateBody = z.infer<typeof teamCreateBodySchema>;
 export type TeamUpdateBody = z.infer<typeof teamUpdateBodySchema>;

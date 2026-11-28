@@ -3,7 +3,8 @@
 import type { Request, Response } from 'express';
 import type { PinKind } from '../models/activity.ts';
 import type { ActivityEntry, RecordActivity } from './activity.ts';
-import { WRONG_PIN, type PinAuth } from './pin-auth.ts';
+import { sendError } from './errors.ts';
+import type { PinAuth } from './pin-auth.ts';
 import type { PinGuard } from './pin-guard.ts';
 
 export interface PinCheck {
@@ -44,7 +45,7 @@ export function createPinCheck({
             guard.record(req, res, guardTarget, via !== null);
             if (!via) {
                 await activity(req, { ...entry, result: 'wrong-pin' });
-                res.status(403).json(WRONG_PIN);
+                sendError(res, 'WRONG_PIN');
                 return null;
             }
             return via;

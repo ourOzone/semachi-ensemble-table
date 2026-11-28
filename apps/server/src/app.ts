@@ -9,6 +9,7 @@ import { createPinAuth } from './lib/pin-auth.ts';
 import { createPinCheck } from './lib/pin-check.ts';
 import { createPinGuard, type PinLimitOptions } from './lib/pin-guard.ts';
 import { cors } from './middleware/cors.ts';
+import { errorHandler, notFound } from './middleware/errors.ts';
 import { visitor } from './middleware/visitor.ts';
 import { adminRouter } from './routes/admin.ts';
 import { ensemblesRouter } from './routes/ensembles.ts';
@@ -91,6 +92,10 @@ export function createApp({
     app.use(notesRouter({ pins, guard, pinCheck, activity }));
     app.use(noticesRouter({ pins, guard, pinCheck, activity }));
     app.use(adminRouter({ pins, guard, pinCheck, activity, sessions }));
+
+    // 어떤 라우트도 답하지 않은 요청 → 404 JSON, 처리 중 던져진 오류 → JSON (B-10 A1). 반드시 맨 뒤에
+    app.use(notFound);
+    app.use(errorHandler);
 
     return app;
 }

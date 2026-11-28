@@ -8,7 +8,7 @@ const desc = ['', '', '', '', '', '', ''];
 test('만들면 createdAt·updatedAt이 서버의 지금, 고치면 updatedAt만 바뀐다', async () => {
     freezeTime('2026-11-27T01:00:00Z');
     const { body } = await api()
-        .post('/team')
+        .post('/teams')
         .send({ name: '새 팀', desc, type: '교내 공연', due: '2099-12-31', pin: '1234' });
     expect(await findOne('teams', body.id)).toMatchObject({
         createdAt: new Date('2026-11-27T01:00:00Z'),
@@ -17,7 +17,7 @@ test('만들면 createdAt·updatedAt이 서버의 지금, 고치면 updatedAt만
 
     freezeTime('2026-11-28T02:00:00Z');
     await api()
-        .put(`/team?id=${body.id}`)
+        .put(`/teams/${body.id}`)
         .send({ name: '바뀐 팀', desc, type: '교내 공연', due: '2099-12-31', pin: '1234' });
     expect(await findOne('teams', body.id)).toMatchObject({
         createdAt: new Date('2026-11-27T01:00:00Z'),
@@ -34,7 +34,7 @@ test('만들면 createdAt·updatedAt이 서버의 지금, 고치면 updatedAt만
 test('옛 문서(시각 없음)는 고칠 때 updatedAt만 생긴다 (createdAt은 모른다)', async () => {
     freezeTime('2026-11-28T02:00:00Z');
     const id = await insert('ensembles', ensembleDoc());
-    await api().put(`/ensemble?id=${id}`).send({
+    await api().put(`/ensembles/${id}`).send({
         startTime: 1,
         endTime: 2,
         repeat: true,
@@ -52,7 +52,7 @@ test('팀 이름을 바꾸면 그 팀 합주의 updatedAt도 바뀐다', async (
     const e = await insert('ensembles', ensembleDoc({ teamId }));
     freezeTime('2026-11-29T00:00:00Z');
     await api()
-        .put(`/team?id=${teamId}`)
+        .put(`/teams/${teamId}`)
         .send({ name: '새 이름', desc, type: '교내 공연', due: '2099-12-31', pin: '1234' });
     expect(await findOne('ensembles', e)).toMatchObject({
         teamName: '새 이름',

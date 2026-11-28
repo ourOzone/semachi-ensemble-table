@@ -2,6 +2,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import { createAdminSessions } from '../src/lib/admin-session.ts';
 import {
+    apiError,
     activities,
     adminCookie,
     api,
@@ -40,7 +41,7 @@ describe('로그인 (마스터 PIN)', () => {
         const res = await api().post('/admin/login').send({ pin: '0000' });
         expect([res.status, res.body, res.headers['pin-attempts']]).toEqual([
             403,
-            { error: 'Wrong PIN' },
+            apiError('WRONG_PIN'),
             '1/10',
         ]);
         expect(setCookies(res).join()).not.toContain('semachi_admin=');
@@ -63,7 +64,7 @@ describe('로그인 (마스터 PIN)', () => {
         const change = await api()
             .put('/admin/master-pin')
             .send({ currentPin: MASTER_PIN, newPin: '1111' });
-        expect([change.status, change.body]).toEqual([401, { error: 'Admin login required' }]);
+        expect([change.status, change.body]).toEqual([401, apiError('ADMIN_LOGIN_REQUIRED')]);
     });
 
     test('12시간이 지나면 다시 로그인', () => {
@@ -88,9 +89,9 @@ describe('활동 기록 찾기 (GET /admin/activities)', () => {
         await visit(B);
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
         await api()
-            .post('/check-team-pin')
+            .post(`/teams/${teamId}/check-pin`)
             .set('Cookie', `semachi_vid=${A}`)
-            .send({ teamId, pin: '0000' });
+            .send({ pin: '0000' });
         const cookie = await adminCookie();
         const get = (query: string) =>
             api().get(`/admin/activities?${query}`).set('Cookie', cookie);
@@ -155,14 +156,14 @@ describe('요약 (GET /admin/overview)', () => {
         const teamId = await insert('teams', teamDoc({ pin: '1234' }));
         for (let i = 0; i < 3; i++) {
             await api()
-                .post('/check-team-pin')
+                .post(`/teams/${teamId}/check-pin`)
                 .set('Cookie', `semachi_vid=${A}`)
-                .send({ teamId, pin: '0000' });
+                .send({ pin: '0000' });
         }
         await api()
-            .post('/check-team-pin')
+            .post(`/teams/${teamId}/check-pin`)
             .set('Cookie', `semachi_vid=${B}`)
-            .send({ teamId, pin: MASTER_PIN });
+            .send({ pin: MASTER_PIN });
 
         const res = await api()
             .get('/admin/overview')

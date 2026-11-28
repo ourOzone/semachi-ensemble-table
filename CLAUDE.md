@@ -15,6 +15,7 @@
 - 내 PC 서버 (http://localhost:8081) + 다른 터미널에서 `pnpm dev:local` (웹을 이 서버에 연결):
   - `pnpm dev:server`: **운영 DB** (루트 `.env`, 실제 데이터가 바뀐다, 사용자 결정 2026-11-27). 사용자가 직접 실행하고, Claude는 실행하지 않는다
   - `pnpm dev:server:sample`: 메모리 MongoDB + 예시 데이터 (마스터 PIN `0000`). Claude가 확인할 때는 이것만. 데이터 지우기: `pnpm --filter @semachi/server dev:sample:reset`
+- 정리 작업(날짜 지난 팀·합주 삭제, 매일 04:00, B-9)은 `CLEANUP_ENABLED=true`인 운영 서버에서만 돈다. 내 PC 서버는 늘 꺼짐. 무엇이 지워질지 보기: `apps/server/scripts/cleanup.ts`(세어 보기, Claude는 운영 DB로 실행하지 않는다)
 - 관리자 화면: 웹 `/admin` (마스터 PIN으로 로그인, 활동 기록·마스터 PIN 바꾸기, 백엔드 개편 B-7)
 - CI: `.github/workflows/ci.yml` (푸시·PR마다 린트·포맷·타입·테스트·빌드). Node 버전은 `.nvmrc`
 - 타입 체크: `pnpm typecheck`

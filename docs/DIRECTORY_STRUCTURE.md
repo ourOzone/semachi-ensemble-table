@@ -71,7 +71,8 @@ apps/server/
 │   ├── dev-sample.ts        [개발] 내 PC 서버를 메모리 MongoDB + 예시 데이터로 (pnpm dev:server:sample)
 │   ├── port-check.ts        [개발] 위 둘이 켜기 전에 포트 확인 (이미 켜 둔 서버가 있으면 알림)
 │   ├── hash-pins.ts         [데이터 변경, 한 번] 기존 평문 PIN을 해시로 (기본 세어 보기, --apply. B-14 때)
-│   └── remove-ensemble-type.ts [데이터 변경, 한 번] 합주의 옛 type 필드를 지움 (기본 세어 보기, --apply. B-14 때, B-8)
+│   ├── remove-ensemble-type.ts [데이터 변경, 한 번] 합주의 옛 type 필드를 지움 (기본 세어 보기, --apply. B-14 때, B-8)
+│   └── cleanup.ts           [데이터 변경] 정리 작업을 손으로 (기본 세어 보기, --apply. 운영 첫 실행 전 확인, B-9)
 ├── src/
 │   ├── main.ts              시작: 설정 검사 → DB 연결 → HTTP(S) 실행 → 종료 신호 처리
 │   ├── app.ts               Express 앱 조립: createApp({ masterPin, logFile }) (테스트는 이것만 가져다 씀)
@@ -79,12 +80,12 @@ apps/server/
 │   ├── models/              MongoDB 스키마 (team·ensemble·note·notice·setting(마스터 PIN)·activity(활동 기록))
 │   ├── routes/              API (teams·ensembles·notes·notices·visits·health·admin)
 │   ├── middleware/          모든 요청이 라우트 전에 거치는 처리 (cors: 다른 주소의 웹 허락, visitor: 방문자 쿠키)
-│   ├── jobs/                (예정 B-9) 정해진 시간에 도는 일 (날짜 지난 팀·합주 정리)
+│   ├── jobs/                정해진 시간에 도는 일 (cleanup: 날짜 지난 팀·합주 정리, 매일 04:00, B-9)
 │   ├── lib/                 라우트가 불러 쓰는 함수 (activity·device: 활동 기록, admin-session: 관리자 로그인, pin·pin-auth·pin-guard·pin-check: PIN, validate: 요청 검사, time: 한국 날짜, pin-migration·ensemble-type-migration: 데이터 변경)
 │   └── types/               Express에 붙이는 타입 (req.visitorId)
 └── test/                    API 테스트 (메모리 MongoDB, 실제 DB·포트 없음)
     ├── setup.ts · helpers.ts  DB 켜기·비우기, 임시 로그 파일, 요청·데이터 도우미
-    └── *.test.ts            팀·합주·날적이·공지·공통 처리(middleware)·설정·health·PIN(pin, pin-limit)·삭제 안전·생성 시각·활동 기록·관리자·한국 날짜(time)·웹과의 약속(contract)·type 지우기
+    └── *.test.ts            팀·합주·날적이·공지·공통 처리(middleware)·설정·health·PIN(pin, pin-limit)·삭제 안전·생성 시각·활동 기록·관리자·한국 날짜(time)·웹과의 약속(contract)·type 지우기·정리 작업(cleanup)
 ```
 - 가져오기는 실제 파일 확장자로 (`./app.ts`), 타입만 가져올 때는 `import type`. enum·namespace처럼 타입만 지워서는 실행되지 않는 문법은 쓰지 않는다 (Node가 타입만 지우고 실행하므로)
 - 새 API: `routes/<리소스>.ts`에 `xxxRouter(의존성)` 함수를 만들고 `app.ts`에서 `app.use`
@@ -183,14 +184,14 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
 |---|---|
 | `main.ts` | 프로그램의 시작점. 부수 효과(바깥 세상과 닿는 일)만 한다: 환경변수 검사 → DB 연결(실패하면 종료) → 포트 열기 → 종료 신호(Ctrl+C·Docker 정지)에 하던 요청 마치고 끄기. `node src/main.ts`로 켠다 |
 | `app.ts` | Express 앱 조립만 한다(미들웨어·라우터를 순서대로 등록). DB 연결·포트는 없다 → 테스트가 이것만 가져다 메모리 안에서 요청을 보낸다 |
-| `config.ts` | 환경변수(`MONGO_DB`·`MASTER_PIN`·`PORT`·`CORS_ORIGINS`·`TRUST_PROXY`·`PIN_HASH`…)를 읽어 검사하고 한 객체로. 없거나 틀리면 시작하지 않게(빨리 실패) |
+| `config.ts` | 환경변수(`MONGO_DB`·`MASTER_PIN`·`PORT`·`CORS_ORIGINS`·`TRUST_PROXY`·`PIN_HASH`·`CLEANUP_ENABLED`…)를 읽어 검사하고 한 객체로. 없거나 틀리면 시작하지 않게(빨리 실패) |
 | `types/express.d.ts` | Express의 `Request` 타입에 이 서버가 붙이는 값(`req.visitorId`)을 더한다 (TypeScript 선언 합치기) |
 
 **src/models/ — DB에 저장하는 모양**
 
 | 파일 | 컬렉션 | 메모 |
 |---|---|---|
-| `team.ts` | teams | 팀 이름·종류·멤버/셋리(`desc` 7칸)·PIN. PIN은 `select: false`(조회 결과에 기본으로 넣지 않음) |
+| `team.ts` | teams | 팀 이름·종류·멤버/셋리(`desc` 7칸)·자동 삭제 날짜(`due`, B-9)·PIN. PIN은 `select: false`(조회 결과에 기본으로 넣지 않음) |
 | `ensemble.ts` | ensembles | 합주: 팀 id·요일·시간칸·반복·다음 날짜·반복 종료(`due`). `teamId` 인덱스(팀으로 빨리 찾기). `teamName`·`day`는 서버가 채운다(팀 이름·nextDate의 한국 요일, 옛 웹이 읽음). 옛 `type`은 모델에서 지웠다 (저장된 값은 B-14에 스크립트로, B-8) |
 | `note.ts` | notes | 날적이 글·PIN |
 | `notice.ts` | notices | 공지 글·올린 시각 |
@@ -230,15 +231,19 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
 | `pin-migration.ts` | 기존 평문 PIN을 해시로 바꾸는 로직 (scripts/hash-pins.ts가 부르고, 테스트가 메모리 DB로 확인) |
 | `ensemble-type-migration.ts` | 합주의 옛 `type` 필드를 지우는 로직 (scripts/remove-ensemble-type.ts가 부른다, B-8) |
 | `validate.ts` | 요청 검사 (B-8): `validate(res, 스키마, req.body)` → 검사·정리한 값, 틀리면 400을 보내고 null. 핸들러 안에서 부른다 (검사한 값의 타입이 이어지게). 400 본문에는 틀린 칸·이유만 (받은 값은 없음) |
-| `time.ts` | 한국 날짜 계산 (B-8 D1): `startOfKstDay`(한국 날짜의 0시), `kstDayIndex`(한국 요일, 월 0 ~ 일 6). 서버 시간대 설정과 관계없이 같은 답 |
+| `time.ts` | 한국 날짜 계산 (B-8 D1): `startOfKstDay`(한국 날짜의 0시), `kstDayIndex`(한국 요일, 월 0 ~ 일 6), `kstDateString`(한국 날짜 'YYYY-MM-DD'), `msUntilNextKstHour`(정리 작업 다음 실행, B-9). 서버 시간대 설정과 관계없이 같은 답 |
 | `pin-check.ts` | 변경 API의 PIN 확인 한곳: 막혔는지 → 비교 → 틀린 횟수 → 실패면 활동 기록과 429·403 |
-| `activity.ts` | 활동 기록 남기기: 라우트가 넘긴 "무엇을·대상·결과"에 요청의 방문자 id·IP·기기를 더해 저장. 실패해도 요청은 진행. PIN을 빼는 `withoutPin` |
+| `activity.ts` | 활동 기록 남기기: 라우트가 넘긴 "무엇을·대상·결과"에 요청의 방문자 id·IP·기기를 더해 저장. 실패해도 요청은 진행. PIN을 빼는 `withoutPin`. 요청 없이 서버가 한 일(정리 작업)은 `createSystemActivityRecorder` (방문자·IP 없음, B-9) |
 | `device.ts` | User-Agent 문자열을 "모바일 · iOS 18.1 · Safari 18"처럼 (bowser) |
 | `admin-session.ts` | 관리자 로그인 쿠키: "만료 시각.서명"(HMAC). 서명 비밀은 서버를 켤 때마다 새로 |
 
 옛 `log.ts`·`time.ts`(활동 로그 파일 `log.txt`)는 B-7에서 지웠다 (지금의 `time.ts`는 B-8에 새로 만든 한국 날짜 계산). 운영 로그(서버가 잘 도는지)는 `pino`가 표준 출력으로, 활동 기록(사용자가 무엇을 했는지)은 DB로 나눴다
 
-**src/jobs/ — (예정 B-9) 요청 없이 정해진 시간에 도는 일**. 예: 매일 새벽 날짜 지난 팀·합주 정리. 운영 서버에서만 돈다 (같은 DB를 쓰는 베타가 같은 일을 두 번 하지 않게)
+**src/jobs/ — 요청 없이 정해진 시간에 도는 일** (B-9). 운영 서버에서만 돈다 (`CLEANUP_ENABLED`, 같은 DB를 쓰는 베타·내 PC 서버가 같은 일을 하거나 운영 데이터를 지우지 않게)
+
+| 파일 | 역할 |
+|---|---|
+| `cleanup.ts` | `cleanupExpired`: 자동 삭제 날짜가 지난 팀(과 그 팀의 합주), 반복 종료 날짜가 지난 반복 합주, 날짜가 지난 일회성 합주를 지운다 (`GET /ensembles`가 목록에서 빼는 것과 같은 기준). 세어 보기(`apply: false`)도. 지운 것은 활동 기록(`team.expire`·`ensemble.expire`). `scheduleCleanup`: 시작 때 한 번 + 매일 04:00 KST (`main.ts`가 켠다, `scripts/cleanup.ts`는 손으로) |
 
 **scripts/ — 서버 앱이 아닌, 사람이 터미널에서 직접 실행하는 프로그램**. 배포된 서버가 스스로 부르지 않는다
 
@@ -246,7 +251,7 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
 |---|---|---|
 | 개발 도구 | `dev-prod-db.ts`, `dev-sample.ts` | 내 PC에서 서버를 띄우는 바깥 프로그램. 이 프로그램(부모 프로세스)이 DB 연결 정보를 준비하고(운영 DB의 `.env` 또는 메모리 MongoDB), `node --watch src/main.ts`를 자식 프로세스로 켠다. 코드를 고치면 자식(서버)만 다시 켜지고 메모리 DB는 그대로 |
 | 개발 도구 | `port-check.ts` | 위 둘이 켜기 전에 포트가 비었는지 본다 |
-| 데이터 변경 (한 번) | `hash-pins.ts`, `remove-ensemble-type.ts` | DB의 기존 데이터를 고치는 일회성 작업(마이그레이션). 실행 전 백업, 기본은 "세어 보기"(dry run)만, `--apply`로 실제로. 두 번 실행해도 결과가 같게(멱등). 운영 전환(B-14) 때 한 번 |
+| 데이터 변경 | `hash-pins.ts`, `remove-ensemble-type.ts`, `cleanup.ts` | DB의 기존 데이터를 고치는 일회성 작업(마이그레이션). 실행 전 백업, 기본은 "세어 보기"(dry run)만, `--apply`로 실제로. 두 번 실행해도 결과가 같게(멱등). 운영 전환(B-14) 때 한 번 |
 
 **test/ — 서버 테스트** (Vitest + supertest + mongodb-memory-server)
 

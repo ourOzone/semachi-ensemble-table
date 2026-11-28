@@ -197,7 +197,7 @@
 4. 🌐 `nano /srv/semachi/caddy.env` → 베타 테스터 아이디(`BETA_AUTH_USER`)와 암호 해시, `PROD_WEB_UPSTREAM=host.docker.internal:8080` 줄이 있는지
    - 해시 만들기 🌐 `docker run --rm -it caddy:2 caddy hash-password` → 암호를 두 번 입력 → 나온 `$2a$14$…`를 `BETA_AUTH_HASH='…'`에 (작은따옴표 필수)
 
-### 3-1. 옛 API 인증서 다시 읽기 (B-12에서 찾음, **2026-12-27 10:43 KST 전에**)
+### 3-1. 옛 API 인증서 다시 읽기 (B-12에서 찾음, ✅ 2026-11-28 완료. 2027-02-25 전에 전환을 못 마치면 한 번 더)
 
 옛 API(pm2 `cookie_back`, 8081)는 켤 때 한 번 읽은 인증서를 계속 쓴다. 11-18에 켜져 12-27에 만료되는 옛 인증서를 쓰고 있다 (파일은 이미 2027-02-25까지로 갱신됨).
 

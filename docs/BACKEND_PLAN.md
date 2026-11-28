@@ -401,7 +401,7 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 
 조사 결과 (진행 중, 2026-11-28):
 - 서버: Ubuntu, `x86_64`, Node 22.14(옛 서버용. 새 서버는 이미지 안의 Node 26이라 올리지 않는다), 시간대 Asia/Seoul, Docker 없음
-- 포트 (`ss -tlnp`): 80·443 = **nginx**, 8081 = `node /home/ubuntu/smch3/cookie_back.js`(옛 API), 8080 = `node /home/ubuntu/smch3/index-prod.js`(무엇인지 확인 중, 웹일 가능성), 22 = sshd. 둘 다 **root의 pm2 v6.0.5**(`/root/.pm2`, 2026-09-01부터)가 켜고 있다(2026-11-18 재시작). 재부팅 때 pm2·nginx가 다시 켜질 가능성이 크다 → 전환 때 "멈춤"과 함께 "부팅 때 켜지 않기"(nginx `systemctl disable`, pm2 `delete`+`save`). 새 구조의 재부팅 대비는 Docker(부팅 때 켜짐) + compose `restart: unless-stopped` (사용자 요청 2026-11-28)
+- 포트 (`ss -tlnp`): 80·443 = **nginx**, 8081 = `node /home/ubuntu/smch3/cookie_back.js`(옛 API), 8080 = `node /home/ubuntu/smch3/index-prod.js`(무엇인지 확인 중, 웹일 가능성), 22 = sshd. 둘 다 **root의 pm2 v6.0.5**(`/root/.pm2`, 2026-09-01부터)가 켜고 있다(2026-11-18 재시작). 재부팅 때 pm2·nginx가 다시 켜질 가능성이 크다 → 전환 때 "멈춤"과 함께 "부팅 때 켜지 않기"(nginx `systemctl disable`, pm2 `delete`+`save`). pm2 목록(`sudo pm2 list`): `cookie_back`(online, 8081) · `index-prod`(online, 8080) · `back`(stopped, 더 옛 API로 보임). 새 구조의 재부팅 대비는 Docker(부팅 때 켜짐) + compose `restart: unless-stopped` (사용자 요청 2026-11-28)
 - 폴더: `/home/ubuntu/smch3` 하나 (소스 없이 빌드 결과·`.env`·로그 파일)
 - OCI 콘솔: **들어갈 수 없음** (비밀번호 재설정 메일이 오지 않음). 80·443·8081은 지금 서비스 중이라 바깥 방화벽에서 이미 열려 있다 → 새 구조(80·443만)는 콘솔 없이 갈 수 있다. 서버 복구 등을 위해 계정 복구는 따로 계속
 - DB: MongoDB Atlas (`mongodb+srv`). 사용자는 Atlas 웹 화면에 들어갈 수 있음

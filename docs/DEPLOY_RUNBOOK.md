@@ -220,7 +220,7 @@
 | # | 할 일 | 명령 / 위치 | 되돌리기 |
 |---|---|---|---|
 | 1 | 직전 백업 + 내 PC로 복사 | 🌐 `bash backup.sh` → 🖥 `scp …` | – |
-| 2 | 옛 서버 멈춤 = 서비스 중단 시작. 옛 API(`smch3/cookie_back.js`, 8081)와 8080(`smch3/index-prod.js`)은 **root의 pm2**가 켜고 있다 (B-12) | 🌐 `sudo pm2 stop <이름>` (이름은 B-12의 `pm2 list`). 아직 `pm2 delete`·`pm2 save`는 하지 않는다 (되돌리기 쉽게) | `sudo pm2 start <이름>` |
+| 2 | 옛 서버 멈춤 = 서비스 중단 시작. 옛 API(`smch3/cookie_back.js`, 8081)와 8080(`smch3/index-prod.js`)은 **root의 pm2**가 켜고 있다 (B-12) | 🌐 `sudo pm2 stop cookie_back index-prod` (B-12의 `pm2 list`. `back`은 이미 stopped). 아직 `pm2 delete`·`pm2 save`는 하지 않는다 (되돌리기 쉽게) | `sudo pm2 start cookie_back index-prod` |
 | 2-1 | DB 비밀번호 바꾸기 (2026-11-28 채팅에 노출됨). 옛 서버는 멈췄으니 새 서버 설정만 바꾸면 된다 | 🔧 Atlas → Security → Database Access → 그 사용자 → Edit Password → 🌐 `production.env`·`beta.env`의 `MONGO_DB` 안 비밀번호를 새것으로 | 옛 비밀번호로 되돌림 |
 | 3 | 베타 api 멈춤 (스크립트 도는 동안 DB를 바꾸지 않게) | 🌐 `docker compose stop api-beta` | `docker compose up -d api-beta` |
 | 4 | ⛔ 합주 `type` 지우기: 세어 보기 → 확인 → `--apply` → 다시 세어 보기 (`type 있음` 0) | 🌐 `docker compose run --rm --no-deps api-beta node scripts/remove-ensemble-type.ts` (끝에 `--apply`) | 1의 백업 복원 |
@@ -228,7 +228,7 @@
 | 6 | ⛔ 정리 작업 세어 보기 (지울 팀 이름·지난 합주 수). 확인받으면 운영 api가 켜질 때 지운다 | 🌐 `docker compose run --rm --no-deps api-beta node scripts/cleanup.ts` | 1의 백업 복원 |
 | 7 | 주소를 새 서버로 (배포보다 먼저): 80·443을 쓰던 **nginx**를 멈추고 부팅 때도 켜지 않게 (그대로 두면 재부팅 때 nginx가 80·443을 먼저 잡아 Caddy가 못 켜진다) | 🌐 `sudo systemctl disable --now nginx` → 다음 8의 배포에서 Caddy가 80·443을 받는다 (⚠ DNS·로드 밸런서는 B-12 결과대로) | `sudo systemctl enable --now nginx` (Caddy를 먼저 멈춤) |
 | 8 | 운영 배포 (Caddy가 80·443을 잡는다) | 🔧 Variables `DEPLOY_PRODUCTION` = `true` → 🖥 `dev`를 `main`에 합침 → Actions "배포" (production) | `docker compose stop api web` |
-| 8-1 | 옛 pm2 목록에서 지우고 저장 (재부팅 때 옛 서버가 다시 켜지지 않게). 9 확인이 끝나고 하루쯤 지나 문제가 없을 때 | 🌐 `sudo pm2 delete <이름>` (둘 다) → `sudo pm2 save` | `sudo pm2 start /home/ubuntu/smch3/<파일> --name <이름>` → `sudo pm2 save` |
+| 8-1 | 옛 pm2 목록에서 지우고 저장 (재부팅 때 옛 서버가 다시 켜지지 않게). 9 확인이 끝나고 하루쯤 지나 문제가 없을 때 | 🌐 `sudo pm2 delete cookie_back index-prod back` → `sudo pm2 save` | `sudo pm2 start /home/ubuntu/smch3/<파일> --name <이름>` → `sudo pm2 save` |
 | 8-2 | 재부팅 확인 (선택, 사람이 적은 시간에. 1~2분 끊김) | 🌐 `sudo reboot` → 다시 접속해 `docker compose ps` (모두 Up·healthy), `sudo ss -tlnp`에 80·443 = docker-proxy | – |
 | 9 | 확인 | `https://semachi.net` 새 화면, 팀·합주 보임, PIN으로 합주 잡기·지우기, `/admin` 로그인, 활동 기록 "팀 자동 삭제"(6에서 잡힌 것) | – |
 | 10 | 베타 PIN 해시 켜기 | 🌐 `beta.env`의 `PIN_HASH=true` → `docker compose up -d api-beta` | `false`로 |
@@ -237,7 +237,7 @@
 크게 잘못되면 (전부 되돌리기):
 1. 🌐 `docker compose stop api web` (새 운영 끔)
 2. ⛔ 백업 복원 (평소 운영 → 백업에서 복원). 4·5를 했다면 반드시 (옛 서버는 해시 PIN을 못 읽는다)
-3. 옛 서버를 2·7의 반대로 다시 켬: `docker compose stop caddy` → `sudo systemctl enable --now nginx` → `sudo pm2 start <이름>` (8-1을 했다면 그 칸의 되돌리기)
+3. 옛 서버를 2·7의 반대로 다시 켬: `docker compose stop caddy` → `sudo systemctl enable --now nginx` → `sudo pm2 start cookie_back index-prod` (8-1을 했다면 그 칸의 되돌리기)
 4. Variables `DEPLOY_PRODUCTION`을 `false`로
 
 전환 뒤 한동안: 옛 `api.js` 폴더·`log.txt`는 지우지 않고 보관 (B-15에서 정리), `:8081`은 아무도 쓰지 않으므로 Security List에서 닫는다 (B-15).

@@ -50,7 +50,7 @@ apps/web/
     ├── lib/                 화면과 관계없는 계산 (날짜·합주판 배치·변환 등)
     ├── stores/              여러 기능이 쓰는 전역 상태 (Zustand: 열린 Drawer, 보고 있는 팀·합주)
     ├── hooks/               여러 기능이 쓰는 훅 (오늘 날짜, 키보드 높이, 스크롤에 헤더 숨김)
-    ├── types/               도메인·요청·응답 타입 (예정 B-8: 응답 스키마는 packages/shared로)
+    ├── types/               도메인·요청 타입 (응답 스키마는 packages/shared에 있고 index.ts가 다시 내보낸다, B-8)
     ├── constants/           고정 값 (요일·시간칸, 팀 색 20종)
     ├── styles/              index.css (Tailwind·색 토큰·다크 모드), 빗금 패턴
     ├── assets/fonts/        나눔스퀘어 네오
@@ -63,14 +63,15 @@ TypeScript를 Node가 바로 실행한다 (빌드 없음, B-3). "예정"은 해�
 ```
 apps/server/
 ├── package.json · tsconfig.json
-├── vitest.config.mts        테스트 설정 (서버 시간대 UTC)
+├── vitest.config.mts        테스트 설정 (서버 시간대 UTC: 운영 서버처럼. 날짜 계산은 코드가 한국 시간으로)
 ├── Dockerfile               (예정 B-11) 운영 이미지
 ├── .dev-db/                 개발 서버의 메모리 DB 데이터·로그 (커밋 안 함, pnpm dev:server·dev:server:sample이 만듦)
 ├── scripts/                 서버 앱이 아닌, 사람이 터미널에서 직접 실행하는 프로그램 (아래 "서버 자세히")
 │   ├── dev-prod-db.ts       [개발] 내 PC 서버를 운영 DB에 연결 (pnpm dev:server, 루트 .env)
 │   ├── dev-sample.ts        [개발] 내 PC 서버를 메모리 MongoDB + 예시 데이터로 (pnpm dev:server:sample)
 │   ├── port-check.ts        [개발] 위 둘이 켜기 전에 포트 확인 (이미 켜 둔 서버가 있으면 알림)
-│   └── hash-pins.ts         [데이터 변경, 한 번] 기존 평문 PIN을 해시로 (기본 세어 보기, --apply. B-14 때)
+│   ├── hash-pins.ts         [데이터 변경, 한 번] 기존 평문 PIN을 해시로 (기본 세어 보기, --apply. B-14 때)
+│   └── remove-ensemble-type.ts [데이터 변경, 한 번] 합주의 옛 type 필드를 지움 (기본 세어 보기, --apply. B-14 때, B-8)
 ├── src/
 │   ├── main.ts              시작: 설정 검사 → DB 연결 → HTTP(S) 실행 → 종료 신호 처리
 │   ├── app.ts               Express 앱 조립: createApp({ masterPin, logFile }) (테스트는 이것만 가져다 씀)
@@ -79,11 +80,11 @@ apps/server/
 │   ├── routes/              API (teams·ensembles·notes·notices·visits·health·admin)
 │   ├── middleware/          모든 요청이 라우트 전에 거치는 처리 (cors: 다른 주소의 웹 허락, visitor: 방문자 쿠키)
 │   ├── jobs/                (예정 B-9) 정해진 시간에 도는 일 (날짜 지난 팀·합주 정리)
-│   ├── lib/                 라우트가 불러 쓰는 함수 (activity·device: 활동 기록, admin-session: 관리자 로그인, pin·pin-auth·pin-guard·pin-check: PIN, pin-migration: 평문 → 해시)
+│   ├── lib/                 라우트가 불러 쓰는 함수 (activity·device: 활동 기록, admin-session: 관리자 로그인, pin·pin-auth·pin-guard·pin-check: PIN, validate: 요청 검사, time: 한국 날짜, pin-migration·ensemble-type-migration: 데이터 변경)
 │   └── types/               Express에 붙이는 타입 (req.visitorId)
 └── test/                    API 테스트 (메모리 MongoDB, 실제 DB·포트 없음)
     ├── setup.ts · helpers.ts  DB 켜기·비우기, 임시 로그 파일, 요청·데이터 도우미
-    └── *.test.ts            팀·합주·날적이·공지·공통 처리(middleware)·설정·health·PIN(pin, pin-limit)·삭제 안전·생성 시각
+    └── *.test.ts            팀·합주·날적이·공지·공통 처리(middleware)·설정·health·PIN(pin, pin-limit)·삭제 안전·생성 시각·활동 기록·관리자·한국 날짜(time)·웹과의 약속(contract)·type 지우기
 ```
 - 가져오기는 실제 파일 확장자로 (`./app.ts`), 타입만 가져올 때는 `import type`. enum·namespace처럼 타입만 지워서는 실행되지 않는 문법은 쓰지 않는다 (Node가 타입만 지우고 실행하므로)
 - 새 API: `routes/<리소스>.ts`에 `xxxRouter(의존성)` 함수를 만들고 `app.ts`에서 `app.use`
@@ -92,10 +93,19 @@ apps/server/
 ## packages/shared — 공유
 
 ```
-packages/shared/
-└── src/
-    └── index.ts             (예정 B-8) 요청·응답 Zod 스키마, 타입, 상수
+웹과 서버가 똑같이 알아야 하는 것 (B-8). 웹(Vite)·서버(Node가 바로 실행) 둘 다 이 `.ts` 파일을 그대로 가져다 쓴다 (빌드 없음)
 ```
+packages/shared/
+├── package.json · tsconfig.json   (zod, 테스트는 vitest)
+└── src/
+    ├── index.ts             내보내는 것 전부 (가져오기: import { … } from '@semachi/shared')
+    ├── limits.ts            입력 길이 제한 (팀명·팀원·셋리스트·날적이). 웹 입력칸과 서버 검사가 같은 값
+    ├── request.ts           요청 본문·주소 값(id)의 Zod 스키마. 서버가 라우트에서 검사한다 (틀리면 400)
+    ├── response.ts          목록 응답의 Zod 스키마. 웹이 응답을 검사하고, 서버 테스트(contract)가 맞는지 본다
+    └── response.test.ts     응답 스키마 테스트
+```
+- 브라우저·Node 전용 기능(DOM, `fs` 등)은 쓰지 않는다. 가져오기는 `.ts` 확장자로 (서버 규칙과 같음)
+- 이름이 웹 `types/`와 겹치지 않게: 공유 스키마는 `…BodySchema`·`…ResponseSchema`, 웹 요청 타입(Dayjs 값)은 `…Request`
 
 ## 어디에 둘까
 
@@ -153,7 +163,7 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
   ⑥ 라우터들         visits·teams·ensembles·notes·notices·admin 중 메서드·주소가 맞는 핸들러 하나가 처리하고 응답
   ⑦ (아무것도 안 맞으면) Express 기본 404
   ▼
-핸들러 안 (예: PUT /team): 입력 확인 → DB에서 팀 읽기(models) → PIN 확인(lib/pin-guard·pin-auth) → 바꾸고 저장 → res.json(...)
+핸들러 안 (예: PUT /team): id 검사(lib/validate, 틀리면 400) → DB에서 팀 읽기(models, 없으면 404) → 본문 검사(packages/shared 스키마, 틀리면 400) → PIN 확인(lib/pin-check, 틀리면 403) → 바꾸고 저장 → res.json(...)
 ```
 
 ### 용어
@@ -181,7 +191,7 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
 | 파일 | 컬렉션 | 메모 |
 |---|---|---|
 | `team.ts` | teams | 팀 이름·종류·멤버/셋리(`desc` 7칸)·PIN. PIN은 `select: false`(조회 결과에 기본으로 넣지 않음) |
-| `ensemble.ts` | ensembles | 합주: 팀 id·요일·시간칸·반복·다음 날짜·반복 종료(`due`). `teamId` 인덱스(팀으로 빨리 찾기). `type`·`day`·`teamName`은 옛 필드 |
+| `ensemble.ts` | ensembles | 합주: 팀 id·요일·시간칸·반복·다음 날짜·반복 종료(`due`). `teamId` 인덱스(팀으로 빨리 찾기). `teamName`·`day`는 서버가 채운다(팀 이름·nextDate의 한국 요일, 옛 웹이 읽음). 옛 `type`은 모델에서 지웠다 (저장된 값은 B-14에 스크립트로, B-8) |
 | `note.ts` | notes | 날적이 글·PIN |
 | `notice.ts` | notices | 공지 글·올린 시각 |
 | `setting.ts` | settings | 서버 설정을 "이름 → 값" 문서로. 지금은 `masterPin`(마스터 PIN 해시) 하나 |
@@ -218,12 +228,15 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
 | `pin-auth.ts` | PIN 확인 규칙: 마스터 PIN이 어디서 오는지(DB 우선, 없으면 `.env`), "마스터이거나 저장된 PIN과 맞는지", 새 PIN을 해시로 저장할지(`PIN_HASH`), 마스터 PIN 바꾸기 |
 | `pin-guard.ts` | PIN 틀린 횟수 세기·막기: 대상별(팀·날적이·마스터) 10번(맞추면 0), IP 전체 30번(맞춰도 그대로), 15분. 서버 메모리의 표. 미들웨어가 아니라 핸들러 안에서 부르는 이유: 합주는 DB에서 합주를 읽어야 어느 팀의 PIN인지 알 수 있다 |
 | `pin-migration.ts` | 기존 평문 PIN을 해시로 바꾸는 로직 (scripts/hash-pins.ts가 부르고, 테스트가 메모리 DB로 확인) |
+| `ensemble-type-migration.ts` | 합주의 옛 `type` 필드를 지우는 로직 (scripts/remove-ensemble-type.ts가 부른다, B-8) |
+| `validate.ts` | 요청 검사 (B-8): `validate(res, 스키마, req.body)` → 검사·정리한 값, 틀리면 400을 보내고 null. 핸들러 안에서 부른다 (검사한 값의 타입이 이어지게). 400 본문에는 틀린 칸·이유만 (받은 값은 없음) |
+| `time.ts` | 한국 날짜 계산 (B-8 D1): `startOfKstDay`(한국 날짜의 0시), `kstDayIndex`(한국 요일, 월 0 ~ 일 6). 서버 시간대 설정과 관계없이 같은 답 |
 | `pin-check.ts` | 변경 API의 PIN 확인 한곳: 막혔는지 → 비교 → 틀린 횟수 → 실패면 활동 기록과 429·403 |
 | `activity.ts` | 활동 기록 남기기: 라우트가 넘긴 "무엇을·대상·결과"에 요청의 방문자 id·IP·기기를 더해 저장. 실패해도 요청은 진행. PIN을 빼는 `withoutPin` |
 | `device.ts` | User-Agent 문자열을 "모바일 · iOS 18.1 · Safari 18"처럼 (bowser) |
 | `admin-session.ts` | 관리자 로그인 쿠키: "만료 시각.서명"(HMAC). 서명 비밀은 서버를 켤 때마다 새로 |
 
-옛 `log.ts`·`time.ts`(활동 로그 파일 `log.txt`)는 B-7에서 지웠다. 운영 로그(서버가 잘 도는지)는 `pino`가 표준 출력으로, 활동 기록(사용자가 무엇을 했는지)은 DB로 나눴다
+옛 `log.ts`·`time.ts`(활동 로그 파일 `log.txt`)는 B-7에서 지웠다 (지금의 `time.ts`는 B-8에 새로 만든 한국 날짜 계산). 운영 로그(서버가 잘 도는지)는 `pino`가 표준 출력으로, 활동 기록(사용자가 무엇을 했는지)은 DB로 나눴다
 
 **src/jobs/ — (예정 B-9) 요청 없이 정해진 시간에 도는 일**. 예: 매일 새벽 날짜 지난 팀·합주 정리. 운영 서버에서만 돈다 (같은 DB를 쓰는 베타가 같은 일을 두 번 하지 않게)
 
@@ -233,14 +246,14 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
 |---|---|---|
 | 개발 도구 | `dev-prod-db.ts`, `dev-sample.ts` | 내 PC에서 서버를 띄우는 바깥 프로그램. 이 프로그램(부모 프로세스)이 DB 연결 정보를 준비하고(운영 DB의 `.env` 또는 메모리 MongoDB), `node --watch src/main.ts`를 자식 프로세스로 켠다. 코드를 고치면 자식(서버)만 다시 켜지고 메모리 DB는 그대로 |
 | 개발 도구 | `port-check.ts` | 위 둘이 켜기 전에 포트가 비었는지 본다 |
-| 데이터 변경 (한 번) | `hash-pins.ts` | DB의 기존 데이터를 고치는 일회성 작업(마이그레이션). 실행 전 백업, 기본은 "세어 보기"(dry run)만, `--apply`로 실제로. 두 번 실행해도 결과가 같게(멱등). 운영 전환(B-14) 때 한 번 |
+| 데이터 변경 (한 번) | `hash-pins.ts`, `remove-ensemble-type.ts` | DB의 기존 데이터를 고치는 일회성 작업(마이그레이션). 실행 전 백업, 기본은 "세어 보기"(dry run)만, `--apply`로 실제로. 두 번 실행해도 결과가 같게(멱등). 운영 전환(B-14) 때 한 번 |
 
 **test/ — 서버 테스트** (Vitest + supertest + mongodb-memory-server)
 
 | 파일 | 역할 |
 |---|---|
 | `setup.ts` | 테스트 파일마다 한 번: 메모리 MongoDB를 켜고 연결, 테스트마다 DB를 비우고, 임시 로그 파일 |
-| `helpers.ts` | `api()`(앱에 요청 보내기), `freshApi()`(시도 횟수 같은 앱 상태를 새로 시작), `insert`·`findOne`(모델을 거치지 않고 컬렉션에 직접: 옛 데이터처럼 스키마와 다른 모양도 넣으려고), 예시 데이터 |
+| `helpers.ts` | `api()`(앱에 요청 보내기), `freshApi()`(시도 횟수 같은 앱 상태를 새로 시작), `insert`·`findOne`(모델을 거치지 않고 컬렉션에 직접: 옛 데이터처럼 스키마와 다른 모양도 넣으려고), 저장된 모양의 예시 데이터(`teamDoc`·`ensembleDoc`), 웹이 보내는 모양의 요청 본문(`teamBody`·`ensembleBody`, B-8 검사를 통과하는 값) |
 | `*.test.ts` | 대부분 HTTP로 요청을 보내 응답·DB를 확인하는 블랙박스 테스트(B-2에서 옛 동작을 고정한 것부터). `pin.test.ts`·`config.test.ts`·`pin-limit.test.ts`의 일부는 함수 단위 |
 
 **설정 파일**: `package.json`(의존성·스크립트), `tsconfig.json`(Node가 타입만 지우고 실행하므로 `.ts` 확장자로 가져오기·`import type`·enum 금지), `vitest.config.mts`(테스트 시간대 UTC)

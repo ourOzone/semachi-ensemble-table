@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅ · B-3 ✅ · B-4 ✅ · B-5 ✅ · B-6 ✅ · B-7 ✅, 다음은 B-8 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
+| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅ · B-3 ✅ · B-4 ✅ · B-5 ✅ · B-6 ✅ · B-7 ✅ · B-8 ✅, 다음은 B-9 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
 | View 개편 | ✅ **완료 (2026-11-26, V-0 ~ V-7)**: V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, V-4 날적이 ✅, V-5 공지 ✅, **V-6 일괄 정리 ✅**, **V-7 마무리 ✅ (2026-11-26)** (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
@@ -1425,6 +1425,32 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 웹 235 + 서버 153 / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅ (JS 846kB, 관리자 26kB 따로)
 
+### 2026-11-28 — 백엔드 개편 B-8: 입력 검증(공유 스키마), 한국 날짜, 합주 type 삭제, 합주 잡기의 팀 확인
+
+- 다른 PC에서 새 세션으로 이어서 함. 이 PC의 셸 기본 Node는 22.14이고 pnpm이 PATH에 없다 → fnm의 Node 26.13.1(그 안의 pnpm 12.21)로 실행. 서버 테스트를 처음 돌릴 때 테스트 파일들이 동시에 MongoDB 실행 파일을 받으려다 잠금 파일 오류로 실패 → 파일 하나로 먼저 받은 뒤 정상
+- 사전 결정 (사용자): 검증은 새 요청만, 팀 종류는 문자열 그대로, **합주 `type`은 완전히 없앰**(저장된 값은 B-14에 서버를 내린 시간에 지움), 길이 제한은 웹과 같은 값, 시간대·`day`·`teamName`·팀 확인은 Claude 제안대로. `endTime: null` 합주(ISSUES P9)는 사용자가 실제 DB에서 지움
+- 확인한 것: 옛 운영 웹(`main`)은 합주의 `day`(칸 배치)·`teamName`(이름)을 읽고 `type`은 읽지 않는다. 옛 `api.js`도 `type`을 저장만 한다 → 베타 기간(같은 DB)에 새 서버가 `type`을 쓰지 않아도 옛 화면은 그대로. 소모임·회의(`eventIds`)도 `teams` 컬렉션의 실제 팀 문서다 (그래서 팀 확인 하나로 모두 된다)
+- 커밋 일곱 — 지금 → 바꾼 후
+  - ① `77599b5` 공유 패키지 (동작 같음): 웹 `types/response.ts`(·테스트)를 `packages/shared`로 `git mv`, 입력 길이 제한 `limits.ts`(팀명 20·팀원 12·셋리스트 200·날적이 200)를 웹 입력칸이 가져다 씀. shared에 `typecheck`·`test` 스크립트·zod, 웹 tsconfig `allowImportingTsExtensions`(shared는 서버 Node가 바로 실행해 `.ts` 확장자로 가져옴)
+  - ② `ec3133d` D1: `GET /ensembles`의 "오늘 0시"가 서버 시간대 기준(UTC 서버면 KST 09:00) → 한국 날짜 기준(`lib/time.ts`의 `startOfKstDay`, UTC+9 고정 계산). KST 오전 9시 전에 시작하는 오늘 일회성 합주가 9시부터 빠지던 것이 그날 내내 보인다. `kstDayIndex`(한국 요일)도
+  - ③ `583f6ed` D3·B4 (서버): 합주 `teamName`·`day`를 웹이 보낸 값 그대로 → 서버가 채움(팀 이름, nextDate의 한국 요일). `type`을 모델에서 삭제(본문에 와도 쓰지 않음). 합주 수정이 본문 teamId로 팀을 바꾸던 것(teamName은 그대로라 어긋남) → 팀은 그대로. 합주 잡기의 팀이 없으면 마스터 PIN이면 저장 → 404 `{ error: 'Team not found' }` (PIN을 확인하지 않아 틀린 횟수에 들지 않음)
+  - ④ `092dcf9` S5: 검사 없이 저장 → `packages/shared/request.ts`의 스키마로 라우트 안에서 검사(`lib/validate.ts`), 틀리면 400 `{ error: 'Invalid request', issues: [{ path, message }] }` (받은 값은 담지 않음)
+    - 팀: 팀명 1~20자(앞뒤 공백 뺌), 종류는 빈 문자열만 아니면, desc 7칸(팀원 12자·셋리스트 200자), 새 PIN 숫자 4자리, publishDate는 ISO 시각
+    - 합주: 시간칸 0~29 정수·시작 ≤ 끝, repeat 불리언, nextDate ISO 시각, due `YYYY-MM-DD`(없는 날짜 거절)
+    - 날적이 1~200자·새 PIN 숫자 4자리, 공지는 비어 있지 않게(공백만 있는 글도 400, 이전엔 올라갔다), 길이 제한 없음
+    - id(`?id=`·`/:id`·본문 teamId·noteId): 형식이 틀리면 500 → 400, 삭제에서 id가 없으면 404 → 400 (DB에 묻지 않음)
+    - 수정에서 빠진 칸이 지워지던 것 → 400. PIN 확인 API에 숫자 PIN이면 false → 400, 잘못된 id에 마스터 PIN이면 true → 400
+    - 순서: id → 대상이 있는지(없으면 본문과 관계없이 404, 웹의 "이미 삭제됨") → 본문 → PIN. 본문이 틀리면 PIN을 확인하지 않는다. 변경 API의 PIN(확인용)은 그대로 없거나 틀리면 403
+  - ⑤ `c892f16` 웹: 합주 요청에서 `type`·`day`·`teamName`을 뺌, 응답 스키마에서 합주 `type`·팀/날적이 `pin` 삭제(와도 버림). 합주 잡기 직전의 팀 존재 확인(`GET /team/:id`) 삭제 → 서버 404면 이전과 같이 "이미 삭제된 팀이에요." + Drawer 모두 닫기 + 다시 불러오기. 팀 정보에서 잡을 때 존재 확인 2회 → 1회
+  - ⑥ `f78e36a` `scripts/remove-ensemble-type.ts` (+ `lib/ensemble-type-migration.ts`): 저장된 `type`을 지우는 1회 스크립트. 기본은 세어 보기(전체·type 있음·repeat와 어긋남), `--apply`로 `$unset`, 다시 실행해도 같음. 메모리 DB로만 테스트, 실행은 B-14
+  - ⑦ 문서
+- 처음 제안과 바꾼 것: `teamName`을 웹이 읽지 않게(팀 목록에서 찾기) 하자고 했으나, 서버가 채우면 어긋날 일이 없고, 옛 웹이 베타 기간에 읽고, 팀 없는 옛 합주·활동 기록에도 이름이 필요해 웹은 그대로 `teamName`·`day`를 읽는다 (지울 레거시 필드는 `type` 하나)
+- 테스트: "현재 동작"으로 고정했던 것(검사 없음·빈 본문 저장·빠진 칸 지워짐·잘못된 id 500·D1)을 바뀐 동작으로. 칸마다 400 경우(`test.each`), 서버 시간대가 달라도 같은 날짜(`time.test.ts`), 목록 응답이 공유 응답 스키마에 맞는지(`contract.test.ts`), 요청 본문 도우미(`helpers.ts`의 `teamBody`·`ensembleBody`)
+- 400 응답 형식은 임시 (사용자에게 B-10까지 이대로 둘지 확인 중)
+- 변형 검사는 하지 않았다 (작업 폴더에서 하면 켜 둔 개발 서버가 바뀐 코드를 불러온다. 별도 복사본이 필요해 다음에)
+
+**검증:** `pnpm typecheck` ✅ (공유·서버·웹) / `pnpm test:run` ✅ 공유 5 + 서버 205 + 웹 230 / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅ (JS 850kB)
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -1470,4 +1496,4 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)
 3. ~~3단계 내부 로직 개선~~ ✅ 완료 (2026-11-23)
 4. ~~View 개편~~ ✅ 완료 (2026-11-26, 기록: `docs/archive/VIEW_REDESIGN_PLAN.md`, 디렉터리 구조: `docs/DIRECTORY_STRUCTURE.md`)
-5. 남은 것: 백엔드 대기 항목(ISSUES B1·B3, 팀 자동 삭제, 반복 종료 합주의 실제 삭제), 번들 줄이기 제안(ISSUES V15)
+5. 백엔드 개편 (`docs/BACKEND_PLAN.md`): B-8까지 ✅. 다음 B-9 팀 자동 삭제·정리 작업 → B-10 API 형태 → B-11 배포 준비물 → (서버 접근 뒤) B-12~B-15. 그 밖에 번들 줄이기 제안(ISSUES V15)

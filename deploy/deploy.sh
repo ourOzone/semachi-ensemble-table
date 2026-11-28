@@ -41,7 +41,7 @@ for file in "$env_file" caddy.env; do
 done
 
 # 베타 암호 해시가 비어 있으면 Caddyfile을 읽지 못해 Caddy 전체(운영 포함)가 멈춘다 → 아무것도 바꾸기 전에 멈춘다
-if ! grep -Eq '^BETA_AUTH_HASH=.?[$]2' caddy.env; then
+if ! grep -q '^BETA_AUTH=no-auth' caddy.env && ! grep -Eq '^BETA_AUTH_HASH=.?[$]2' caddy.env; then
     echo "caddy.env의 BETA_AUTH_HASH가 비어 있습니다 (docs/DEPLOY_RUNBOOK.md 'B-13 베타 주소')" >&2
     exit 1
 fi

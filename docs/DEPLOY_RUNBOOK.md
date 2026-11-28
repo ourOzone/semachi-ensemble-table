@@ -238,6 +238,8 @@
 4. 🔧 GitHub → Packages: `semachi-api`·`semachi-web`가 보인다 (비공개여도 된다. 서버는 배포 때 토큰으로 받는다)
 5. 진짜 IP 확인: 베타 관리자 화면(`/admin`) → 활동 기록의 IP가 내 휴대폰·PC의 공인 IP인지 (`172.`·`10.`으로 시작하면 ⚠ 프록시 설정을 고친다)
 
+베타 기본 인증 끄기 (선택): 🌐 `echo BETA_AUTH=no-auth >> /srv/semachi/caddy.env` → 다음 배포 때(또는 `docker compose up -d caddy`) 적용. 다시 켜려면 그 줄을 지운다
+
 ### 6. 베타 기간에 할 것
 
 - 테스터에게: "**실제 데이터**라 지우면 진짜 지워진다", 아이디·암호

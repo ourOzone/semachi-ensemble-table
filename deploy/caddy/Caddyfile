@@ -14,6 +14,16 @@
 	log
 }
 
+# 베타 기본 인증 켬: 처음 열 때 브라우저가 아이디·암호를 묻는다 (암호는 해시로만 저장, 만드는 법은 docs/DEPLOY_RUNBOOK.md)
+(beta-auth) {
+	basic_auth {
+		{$BETA_AUTH_USER} {$BETA_AUTH_HASH}
+	}
+}
+# 베타 기본 인증 끔 (사용자 요청 2026-11-28: 테스터에게 아이디·암호를 알리기 번거롭다. 베타도 운영과 같은 데이터·PIN 확인이라 더 열리는 것은 없다)
+(no-auth) {
+}
+
 {$PROD_SITE:semachi.net} {
 	import common
 	# /api/teams → api 서버의 /teams (앞의 /api를 떼고 넘긴다)
@@ -41,10 +51,8 @@
 
 {$BETA_SITE:test.semachi.net} {
 	import common
-	# 베타는 테스터만: 처음 열 때 브라우저가 아이디·암호를 묻는다 (암호는 해시로만 저장, 만드는 법은 docs/DEPLOY_RUNBOOK.md)
-	basic_auth {
-		{$BETA_AUTH_USER} {$BETA_AUTH_HASH}
-	}
+	# 기본 인증: caddy.env의 BETA_AUTH가 beta-auth(기본)면 켬, no-auth면 끔 (아래 두 조각 중 하나를 넣는다)
+	import {$BETA_AUTH:beta-auth}
 	handle_path /api/* {
 		reverse_proxy api-beta:8081
 	}

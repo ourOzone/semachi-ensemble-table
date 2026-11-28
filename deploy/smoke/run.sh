@@ -104,6 +104,16 @@ req beta-health 200 -u tester:smoke-pass "$beta/api/health"
 has_body beta-health '"status":"ok"'
 req beta-api-no-auth 401 "$beta/api/teams"
 
+echo "== 베타 기본 인증 끄기 (caddy.env의 BETA_AUTH=no-auth)"
+echo 'BETA_AUTH=no-auth' >>caddy.env
+"${compose[@]}" up -d --force-recreate caddy >/dev/null
+for _ in $(seq 1 20); do
+    curl -s "${resolve[@]}" -o /dev/null "$beta/" && break
+    sleep 1
+done
+req beta-open 200 "$beta/"
+has_body beta-open 'id="root"'
+
 echo "== 웹이 꺼져 있으면 점검 안내 (운영 전환 중)"
 "${compose[@]}" stop web >/dev/null
 req maintenance 503 "$prod/"

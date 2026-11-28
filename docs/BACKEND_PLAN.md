@@ -411,6 +411,7 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 - Atlas: **FREE(M0) → Atlas 자동 백업 없음** (backup.sh가 유일한 백업). Network Access에 서버 IP와 함께 `0.0.0.0/0`(어디서나) → 비밀번호 노출과 겹쳐 위험 → **사용자가 지움** (2026-11-28, 서버 IP는 남김)
 - 백업 내용 (`mongorestore --dryRun`): 서비스 데이터는 **`test` DB** (MONGO_DB 주소에 DB 이름이 없어 기본값) — teams·ensembles·notes·notices + 새 서버의 activities·settings. 그 밖에 **`semachi` DB의 ensembles** (지금 쓰지 않는 옛 데이터로 보임, 전환 뒤 확인·정리 대상)
 - **B-13 진행 (2026-11-28)**: GitHub Environments(beta·production)·Secrets·Variables(`BETA_URL`·`DEPLOY_BETA=true`) 입력 완료. nginx → Caddy 교체 ✅ (몇 초 끊김, 인증서 셋 — semachi.net·www·test.158-180-85-102.sslip.io — 바로 발급. 처음의 `default.json: no such file`은 ACME 계정을 처음 만들 때의 정상 메시지)
+- **첫 베타 배포 성공** (2026-11-28, `dev` 푸시 → `3dfdc14`, api-beta·web-beta healthy). 베타 기본 인증은 끌 수 있게 (`caddy.env`의 `BETA_AUTH=no-auth`, 사용자 요청: 테스터에게 아이디·암호를 알리기 번거롭다. 베타도 같은 데이터·PIN 확인이라 운영보다 더 열리지 않는다. 기본은 켬)
 - GitHub: 저장소 주인이 `ourozone`이라 사용자는 Environments·Secrets·Variables를 만들 수 없다 → 주인이 대신 입력 (사용자 결정 2026-11-28, 배포 키는 파일로 건네고 입력 뒤 지움). `DEPLOY_BETA=true`·`BETA_URL`도 함께, `DEPLOY_PRODUCTION`은 B-14에 다시 부탁
 - 메모리 956Mi(남은 약 460Mi), **스왑 없음**, 디스크 45G 중 37G 남음 → 컨테이너 5개 + 베타 기간의 옛 pm2 둘이면 빠듯해 **스왑 2G를 만든다** (절차서 B-12)
 - 서버 방화벽 (`iptables -S INPUT`): 기본 ACCEPT, 22·80·443·8081 허용 줄, 막는 규칙 없음 → Caddy 컨테이너 → 호스트 8080 열림, 할 일 없음

@@ -105,6 +105,11 @@
 > 기존 서비스(`api.js`)는 그대로 돈다. Docker를 설치해도 기존 프로그램은 멈추지 않는다.
 > ⚠ 아래는 Ubuntu 기준이다. Oracle Linux면 Claude가 그에 맞는 명령으로 바꿔 안내한다.
 
+### 스왑 2GB (메모리 1GB·스왑 없음, B-12) 🌐
+
+`sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile && echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab && free -h`
+- 확인: `Swap:` 줄 total `2.0Gi` / 되돌리기: `sudo swapoff /swapfile && sudo rm /swapfile` + `/etc/fstab`의 마지막 줄 삭제
+
 ### Docker 설치 🌐
 
 1. `curl -fsSL https://get.docker.com -o get-docker.sh`
@@ -133,7 +138,9 @@
 2. 🖥 (저장소 폴더에서) `scp deploy/production.env.example deploy/beta.env.example deploy/caddy.env.example deploy/compose.yaml deploy/backup.sh <사용자>@<서버 IP>:/srv/semachi/`
    - 하는 일: 틀 파일과 백업에 필요한 파일을 서버로 복사 (compose.yaml·backup.sh는 나중에 배포가 덮어쓴다)
 3. 🌐 `cd /srv/semachi && cp production.env.example production.env && cp beta.env.example beta.env && cp caddy.env.example caddy.env`
-4. 🌐 `nano production.env` → `MONGO_DB=`·`MASTER_PIN=` 뒤에 **지금 서버의 `.env`에 있는 값 그대로** 붙여 넣기 → Ctrl+O, Enter, Ctrl+X
+4. 🌐 옛 서버의 `.env`에서 두 값을 화면에 띄우지 않고 옮기기:
+   `sed -i '/^MONGO_DB=$/d;/^MASTER_PIN=$/d' production.env beta.env && sudo grep -E '^(MONGO_DB|MASTER_PIN)=' /home/ubuntu/smch3/.env > /tmp/old.env && cat /tmp/old.env >> production.env && cat /tmp/old.env >> beta.env && rm /tmp/old.env && grep -cE '^(MONGO_DB|MASTER_PIN)=.' production.env beta.env`
+   - 확인: `production.env:2`·`beta.env:2` (값은 출력하지 않는다). 손으로 하려면 `nano production.env`
    - 값에 `$`가 있으면 작은따옴표로 감싼다 (`MONGO_DB='mongodb+srv://…'`)
    - `beta.env`도 같은 값으로 (`PIN_HASH=false`는 그대로)
 5. 🌐 `chmod 600 production.env beta.env caddy.env`

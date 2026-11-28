@@ -1,0 +1,22 @@
+{
+  // 웹(Vite)과 서버(Node가 .ts를 바로 실행) 둘 다 이 파일들을 그대로 가져다 쓴다. 그래서 둘 다 되는 문법만:
+  // - 가져올 때 실제 확장자(.ts), 타입만 가져올 때는 import type (서버의 Node type stripping)
+  // - enum·namespace 금지 (erasableSyntaxOnly)
+  // - 브라우저·Node 전용 API 없이 (lib에 DOM 없음, types 없음)
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["src"]
+}

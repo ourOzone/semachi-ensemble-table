@@ -1,8 +1,10 @@
 import { z } from 'zod';
 
-// 서버(api.js) 응답 원본의 스키마. mongoose 스키마를 기준으로 한다.
-// src/api에서 응답을 이 스키마로 검증한다 (목록은 항목 단위: api/index.ts의 getList). 모르는 필드(__v 등)는 버린다.
+// 서버 목록 응답(GET /teams 등)의 스키마. 서버의 mongoose 모델(apps/server/src/models)을 기준으로 한다.
+// 웹의 src/api가 응답을 이 스키마로 검증한다 (목록은 항목 단위: api/index.ts의 getList). 모르는 필드(__v 등)는 버린다.
+// 서버 테스트도 목록 응답이 이 스키마에 맞는지 본다 (웹과 서버가 같은 모양을 약속).
 // 날짜 필드는 JSON 직렬화된 ISO 8601 문자열로 온다.
+// (B-8에서 웹 src/types/response.ts를 옮겨 왔다)
 
 export const teamResponseSchema = z.object({
     _id: z.string(),

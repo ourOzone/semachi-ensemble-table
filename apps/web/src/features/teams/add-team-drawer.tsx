@@ -43,6 +43,7 @@ import type { LegacyTeamType, TeamType } from '@/types/index';
 import { useEditTeamStore, type EditTeamTarget } from './edit-team-store';
 import { TEAM_DUE_ENABLED } from './team-due';
 import type { HandleAddTeam, HandleUpdateTeam } from './types';
+import { SETLIST_MAX, TEAM_MEMBER_MAX, TEAM_NAME_MAX } from '@semachi/shared';
 
 // 팀 추가 Drawer (View 개편 V-3 10차). 아래에서 올라오는 Drawer 하나에서 모두 입력한다
 // (이전: 오른쪽에서 쌓이는 옛 Drawer 6단계: 종류 → 이름 → 팀원 → 셋리 → PIN 두 번 → 완료 화면 "팀을 만들었어요").
@@ -79,10 +80,9 @@ const TYPE_HINTS: Record<TeamType, string> = {
 /** desc의 앞 6칸 (7번째는 셋리스트). 팀 정보 Drawer와 같은 순서·색 */
 const MEMBER_LABELS = ['보컬', '기타', '베이스', '드럼', '키보드', '매니저'];
 
-/** 글자 수 제한 (옛 Drawer와 같음): 팀명 20, 팀원 칸마다 12, 셋리스트 200 */
-const NAME_MAX = 20;
-const MEMBER_MAX = 12;
-const SETLIST_MAX = 200;
+/** 글자 수 제한 (옛 Drawer와 같음): 팀명 20, 팀원 칸마다 12, 셋리스트 200. 서버도 같은 값으로 검사한다 (packages/shared, B-8) */
+const NAME_MAX = TEAM_NAME_MAX;
+const MEMBER_MAX = TEAM_MEMBER_MAX;
 /** 셋리스트 칸 높이: 줄 수만큼 4~10줄 (옛 Drawer와 같음) */
 const SETLIST_MIN_ROWS = 4;
 const SETLIST_MAX_ROWS = 10;

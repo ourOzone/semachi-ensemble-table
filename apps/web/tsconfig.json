@@ -9,6 +9,8 @@
     "noUncheckedIndexedAccess": true,
     "noEmit": true,
     "isolatedModules": true,
+    // packages/shared는 서버(Node)도 바로 실행하므로 가져오기에 .ts 확장자를 쓴다 (백엔드 개편 B-8)
+    "allowImportingTsExtensions": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "types": ["vite/client"],

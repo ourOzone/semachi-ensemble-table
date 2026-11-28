@@ -69,7 +69,7 @@ export function freezeTime(iso: string) {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date(iso) });
 }
 
-/** 실제 데이터 모양의 팀 (웹 types/response.ts: 실제 응답으로 확인한 필드) */
+/** 실제 데이터 모양의 팀 (packages/shared의 response.ts: 실제 응답으로 확인한 필드) */
 export const teamDoc = (over: Record<string, unknown> = {}) => ({
     name: '테스트밴드',
     desc: ['보컬', '기타', '베이스', '드럼', '키보드', '매니저', '셋리스트'],

@@ -4,7 +4,7 @@ import {
     noteResponseSchema,
     noticeResponseSchema,
     teamResponseSchema,
-} from './response';
+} from './response.ts';
 
 // 백엔드(mongoose)가 실제로 내려주는 JSON 형태 예시. __v 같은 부가 필드와 ISO 날짜 문자열을 포함한다.
 const teamJson = {

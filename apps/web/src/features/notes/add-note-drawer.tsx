@@ -20,6 +20,7 @@ import { useKeyboardSheet } from '@/components/sheet/keyboard-sheet';
 import { PIN_LENGTH, PinSlots } from '@/components/sheet/pin-step';
 import { cn } from '@/lib/utils';
 import { useDrawerStore } from '@/stores/drawer';
+import { NOTE_TEXT_MAX } from '@semachi/shared';
 
 // 날적이 남기기 Drawer (View 개편 V-4). 아래에서 올라오는 Drawer 하나에서 글 → "다음" → 같은 Drawer 안의 PIN → "남기기"
 // (이전: 오른쪽에서 열리는 옛 Drawer에 글·PIN 한 칸·"완료", 알림 없음).
@@ -27,8 +28,8 @@ import { useDrawerStore } from '@/stores/drawer';
 // 휴대폰에서 글을 쓰는 동안 아래 버튼 숨김, 닫히는 동안 내용 유지.
 // PIN은 한 번만 받는다 (사용자 결정: 잊어도 관리자가 지울 수 있는 가벼운 기능)
 
-/** 글자 수 제한 (옛 Drawer와 같음) */
-const TEXT_MAX = 200;
+/** 글자 수 제한 (옛 Drawer와 같음). 서버도 같은 값으로 검사한다 (packages/shared, B-8) */
+const TEXT_MAX = NOTE_TEXT_MAX;
 /** 글 칸 높이: 줄 수만큼 4~10줄 (옛 Drawer와 같음) */
 const MIN_ROWS = 4;
 const MAX_ROWS = 10;

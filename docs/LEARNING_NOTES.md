@@ -321,3 +321,59 @@
 **실수하기 쉬운 곳**
 - 라우트 순서: `/notices/check-pin`을 `/notices/:id`보다 먼저 등록해야 한다. 아니면 `check-pin`을 id로 읽는다 (여기서는 메서드가 POST·GET으로 달라 겹치지 않지만, 같은 메서드면 문제가 된다)
 - 204에는 본문을 보내지 않는다 (`res.status(204).end()`). 보내도 브라우저가 버린다
+
+## B-11 배포 준비물 (2026-11-28)
+
+**Docker 이미지·컨테이너**: 이미지는 "프로그램 + 실행에 필요한 것 전부(Node, 패키지, 코드)"를 묶은 파일, 컨테이너는 그 이미지를 실행한 것
+- 왜: 서버에 Node·pnpm을 설치하고 버전을 맞출 필요가 없다. CI에서 확인한 그 이미지가 그대로 서버에서 돈다. 되돌리기는 이전 이미지 이름으로 다시 켜기
+- 안 쓰면: 서버에서 `git pull` → `pnpm install` → 재시작을 손으로 (지금의 `api.js` 방식). 서버마다 환경이 조금씩 달라지고, 실패하면 반쯤 바뀐 상태가 남는다
+
+**Dockerfile 읽는 법**: 위에서부터 한 줄이 한 "층(layer)". 바뀌지 않은 층은 캐시를 그대로 쓴다
+- 그래서 `package.json`·잠금 파일을 먼저 복사하고 설치한 뒤에 소스를 복사한다: 소스만 고치면 설치 층은 다시 돌지 않는다
+- **multi-stage**: `FROM … AS deps`(설치용)와 마지막 `FROM`(실행용)을 나눈다. 실행 이미지에는 결과만 복사해 pnpm·캐시·개발 도구가 들어가지 않는다 (작고 안전)
+- **ARM·x86**: 서버 CPU를 아직 모른다. `--platform=$BUILDPLATFORM`을 붙인 단계는 만드는 컴퓨터(GitHub, x86)에서 돌고, 결과(JS 파일)는 CPU와 관계없어 ARM 이미지에도 그대로 쓴다. 마지막 단계는 복사만이라 느린 에뮬레이션(QEMU)이 거의 필요 없다
+- `.dockerignore`: 이미지를 만들 때 보내지 않을 파일. 루트 `.env`(비밀값)·`node_modules`를 꼭 뺀다
+
+**docker compose**: 컨테이너 여러 개(caddy·api·web·베타 둘·백업 도구)를 `compose.yaml` 하나로 켜고 끈다
+- `profiles`: 이름을 붙인 서비스는 `docker compose up -d`만으로는 켜지지 않는다. 아직 배포하지 않은 쪽을 실수로 켜지 않게
+- `healthcheck`: "떠 있다"가 아니라 "제대로 답한다"(GET /health)를 컨테이너 상태로. `up --wait`가 healthy까지 기다린다
+- `env_file`: 비밀값은 compose.yaml(저장소)에 쓰지 않고 서버의 파일에서 읽는다. 값에 `$`가 있으면 작은따옴표 (아니면 변수로 읽힌다)
+- 컨테이너끼리는 서비스 이름이 주소다 (`api:8081`). 바깥에는 caddy의 80·443만 연다
+
+**리버스 프록시 (Caddy)**: 바깥 요청을 받아 안쪽 서버에 나눠 주는 서버
+- 주소로 나누기: `semachi.net/api/*` → api, 그 밖 → web. 웹과 API가 같은 주소라 CORS가 필요 없다 (S3)
+- HTTPS: Caddy가 Let's Encrypt 인증서를 알아서 받고 갱신한다 (O3. 지금 `api.js`는 인증서 파일을 직접 읽어 갱신 뒤 재시작이 필요했다). 그래서 80·443이 Caddy에게 열려 있어야 한다
+- 프록시 뒤의 서버는 요청을 보낸 곳이 Caddy로 보인다 → Caddy가 진짜 IP를 `X-Forwarded-For`에 넣고, Express는 `TRUST_PROXY=1`(앞에 프록시 하나)로 그 값을 믿는다. 잘못 정하면 모두 한 IP로 세어 PIN 시도 제한에 서로 걸린다
+- 기본 인증(basic auth): 베타 주소를 처음 열 때 브라우저가 아이디·암호를 묻는다. 암호는 해시로만 저장
+
+**SPA 주소**: `/admin` 같은 화면 주소에는 실제 파일이 없다 → 파일이 없으면 `index.html`을 주고 웹(React)이 주소를 보고 그린다 (`try_files {path} /index.html`). 단 `/assets/*`는 없으면 404 (지난 파일을 HTML로 받으면 화면이 깨진다)
+
+**캐시**: Vite가 만든 `/assets/*` 이름에는 내용 해시가 붙는다(`index-DIYr.js`) → 1년 캐시해도 된다 (내용이 바뀌면 이름이 바뀜). `index.html`은 `no-cache` → 배포하면 바로 새 화면
+
+**CD (자동 배포) 흐름**: 푸시 → 검사 → 이미지 만들기 → GHCR(GitHub의 이미지 저장소)에 올리기 → SSH로 서버에서 `deploy.sh`
+- **재사용 워크플로**(`workflow_call`): deploy.yml이 ci.yml을 그대로 불러 검사한다. 검사 단계를 두 번 적지 않는다
+- **Environments**: 배포 대상(beta·production)마다 Secrets·승인·배포 기록을 따로. production 비밀값은 `main` 배포에서만 읽힌다
+- **Secrets vs Variables**: Secrets는 비밀(로그에 `***`로 가려짐), Variables는 공개 설정(`DEPLOY_BETA=true` 같은 스위치)
+- 배포용 SSH 키는 따로 만든다: 문제가 생기면 그 키만 지우면 된다. `known_hosts`로 접속할 서버가 진짜인지 확인
+- GHCR에서 받을 때 서버는 그 실행의 임시 토큰(`GITHUB_TOKEN`)을 잠깐 쓰고 로그아웃 → 서버에 오래 남는 토큰이 없다
+- 되돌리기: 잘 되던 때의 실행을 다시 돌리면(Re-run) 그때 이미지로 다시 켠다. 이미지 이름에 커밋을 붙인 이유
+
+**서버 없이 배포물 확인하기**: CI 안에서 실제 배포와 같은 compose.yaml을 빈 MongoDB와 함께 띄우고 `curl`로 확인한다 (`deploy/smoke/run.sh`). 서버에 처음 올릴 때 "설정 오타로 안 뜸" 같은 문제를 미리 잡는다
+
+자주 쓰는 것 (서버, `/srv/semachi`에서):
+
+| 하고 싶은 것 | 명령 |
+|---|---|
+| 상태 | `docker compose ps` |
+| 로그 | `docker compose logs --tail 100 -f api` |
+| 다시 켜기 | `docker compose restart api` |
+| 백업 | `bash backup.sh` |
+| 스크립트 | `docker compose run --rm --no-deps api node scripts/cleanup.ts` |
+| 손으로 배포 | `bash deploy.sh <beta\|production> <api 이미지> <web 이미지>` |
+
+**실수하기 쉬운 곳**
+- 파일 하나를 컨테이너에 연결(bind mount)하면, 그 파일을 새 파일로 바꿔 쓸 때 컨테이너는 옛 파일을 계속 본다 → Caddyfile은 폴더(`caddy/`)째 연결했다
+- env 파일을 바꾸면 컨테이너를 다시 만들어야 읽는다 (`docker compose up -d <서비스>`, restart로는 안 됨)
+- Caddy 설정에 빈 값(`BETA_AUTH_HASH`)이 있으면 Caddy 전체가 뜨지 않는다 → 운영도 멈춘다. 바꾼 뒤 `docker compose logs caddy`
+- Let's Encrypt는 같은 주소로 너무 자주 실패하면 잠시 막는다: `caddy_data` 볼륨(받은 인증서)을 지우지 않는다
+- 정리 작업(`CLEANUP_ENABLED=true`)은 운영 api가 **켜질 때** 바로 한 번 돈다 → 운영을 처음 켜기 전에 `cleanup.ts`로 세어 보고 확인

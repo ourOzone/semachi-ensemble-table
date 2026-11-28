@@ -9,7 +9,7 @@
 - **무엇을:** `api.js` 한 파일을 TypeScript 서버로 나누고, 저장소를 모노레포(`apps/web`·`apps/server`·`packages/shared`)로. 보안 문제·PIN·로그·입력 검증·API 형태를 고치고, 팀 자동 삭제를 켠다. 검색 엔진 차단
 - **어떻게 배포:** `dev`에 푸시 → 베타(`beta.semachi.net`), `main`에 푸시 → 운영(`semachi.net`)에 자동 배포. GitHub Actions + Docker + Caddy, 서버는 OCI
 - **순서:** 서버·DB 없이 할 수 있는 코드 작업을 모두 먼저 하고(B-1~B-11), 서버에 들어갈 수 있게 되면 조사 → 베타 배포·확인 → 운영 한 번에 전환(B-12~B-15). 모든 단계를 마친 뒤 한 번에 운영에 올린다 (중간에 급히 내는 것 없음)
-- **지금 막힌 것:** OCI 서버 조사·DB 접근 (백엔드 개발자 연락 대기). 서버가 필요한 단계는 뒤로 모았다
+- **지금:** B-11까지 끝. 서버 SSH·Atlas 화면 접속 가능 (2026-11-28). 다음은 B-12 서버 조사 (`docs/DEPLOY_RUNBOOK.md`)
 - **방식:** 사용자가 배우면서 따라간다. 개념 먼저 설명, 서버 명령은 하나씩, 단계마다 `docs/LEARNING_NOTES.md`
 
 | 단계 | 내용 | 서버 필요 |
@@ -24,7 +24,7 @@
 | B-8 ✅ | 입력 검증·데이터 정리 (2026-11-28, 공유 스키마·400, 한국 날짜, 합주 `type` 삭제, 팀 확인) | – |
 | B-9 ✅ | 팀 자동 삭제 상시 적용 + 정리 작업 (2026-11-28) | – |
 | B-10 ✅ | API 형태 정리 (2026-11-28, 오류 응답 통일, `/teams/:id`, 201·204) | – |
-| B-11 | 배포 준비물 (Docker·Caddy·워크플로, 데이터 변경 스크립트, 전환 절차서) | – |
+| B-11 ✅ | 배포 준비물 (2026-11-28, Docker 이미지·Caddy·compose·배포 워크플로·CI 이미지 확인·전환 절차서) | – |
 | B-12 | 서버 조사·백업 | ✅ |
 | B-13 | 베타 배포 + 테스터 확인 | ✅ |
 | B-14 | 운영 첫 배포 (전환) | ✅ |
@@ -73,9 +73,9 @@
 |---|---|---|---|
 | 1 | 저장소 구조 | **모노레포**: `apps/web`(프론트), `apps/server`(백엔드), `packages/shared`(공유 Zod 스키마·타입·상수). pnpm workspace | 아래 "저장소 구조" |
 | 2 | 런타임 | Node 최신 LTS(웹·서버 같게), Express 5, Mongoose 최신, Zod 4 | 사용자 결정(최신으로). Express 5는 async 오류를 자동으로 넘겨 `try/catch` 반복이 사라진다 |
-| 3 | 서버 TypeScript 실행 | 개발: Node가 `.ts`를 바로 실행(type stripping, `node --watch`). 운영 이미지: 서버 + `shared`를 JS 한 파일로 묶음(`tsdown`) | 개발은 빌드 없이 단순하게. 운영은 묶어 두면 이미지가 작고, Node가 `node_modules` 안의 `.ts`(공유 패키지)를 실행하지 못하는 제약을 피한다 (B-3에서 확인) |
+| 3 | 서버 TypeScript 실행 | 개발·운영 모두 Node가 `.ts`를 바로 실행(type stripping). ~~운영 이미지는 `tsdown`으로 묶음~~ → B-11: 묶지 않는다 | 이미지 안에서도 `node_modules/@semachi/shared`가 `packages/shared`로 가는 링크라 `node_modules` 안 `.ts` 제약에 걸리지 않는다 (B-3·B-11에서 확인). 묶는 도구·단계가 없어 개발과 운영이 같다 |
 | 4 | 배포 방식 | **Docker 이미지 + docker compose + Caddy** | 서버에는 Docker만 있으면 되고, 같은 이미지를 어디서나 똑같이 실행한다. 되돌리기도 이미지 이름 하나 |
-| 5 | 주소 | 운영 `https://semachi.net`(API는 `/api`), 베타 `https://beta.semachi.net`(DNS를 못 바꾸면 `https://semachi.net:8443`) | 같은 주소라 CORS가 필요 없다(S3). `:8081`·인증서 직접 읽기(O3) 사라짐. 옮기는 동안 `:8081`도 잠깐 살림 (B-10 뒤 재검토: 옛 웹은 새 API와 맞지 않아 B-11에서 하지 않는 쪽으로 제안) |
+| 5 | 주소 | 운영 `https://semachi.net`(API는 `/api`), 베타 `https://beta.semachi.net`(DNS를 못 바꾸면 `https://semachi.net:8443`) | 같은 주소라 CORS가 필요 없다(S3). `:8081`·인증서 직접 읽기(O3) 사라짐. ~~옮기는 동안 `:8081`도 잠깐 살림~~ → **하지 않는다** (사용자 결정 2026-11-28: 옛 웹은 새 API와 맞지 않아 넘겨도 동작하지 않음, B-10) |
 | 6 | 브랜치 | 작업 브랜치 → PR → `dev`(베타 자동 배포) → PR → `main`(운영 자동 배포) | 베타 테스터가 먼저 써 보고, 문제없으면 운영으로 |
 | 7 | 테스트 | Vitest + supertest + 메모리 MongoDB(`mongodb-memory-server`) | 웹과 같은 도구. 실제 DB를 건드리지 않는다 |
 | 8 | 비밀값 | 서버의 `.env`에만 (운영·베타 각각, DB 주소는 같음). GitHub에는 서버 접속용 SSH 키만 | 비밀값이 GitHub로 나가지 않는다 |
@@ -377,11 +377,31 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 - 컨테이너 환경변수 `TZ=Asia/Seoul` (B-8 D1: 로그 시각을 사람이 볼 때. 날짜 계산은 코드가 한국 시간으로 한다)
 - **전환 절차서** (`docs/DEPLOY_RUNBOOK.md`): B-12~B-14에서 할 일을 명령 단위로 (사용자가 따라 하는 문서, 되돌리기 포함)
 
+- ✅ 결과 (2026-11-28). 테스트 웹 233 → 236 (서버 222 그대로). 상세는 `docs/MIGRATION.md`
+  - 사용자 결정: `:8081` 넘기기를 하지 않는다 (추천안). 운영에 `CORS_ORIGINS` 없음
+  - 이미지 두 가지 (저장소 루트에서 만든다, `.dockerignore`)
+    - API `apps/server/Dockerfile`: 패키지 설치 단계 + Node 26 slim에 운영 의존성·소스. **묶지 않고 Node가 `.ts`를 바로 실행** (사전 결정 3 변경). root가 아닌 `node` 사용자, `TZ=Asia/Seoul`. 운영·베타가 같은 이미지(설정만 다름)
+    - 웹 `apps/web/Dockerfile`: Vite 빌드 + 작은 Caddy(`apps/web/Caddyfile`: `/assets/*` 1년 캐시·없으면 404, 그 밖 no-cache, 없는 주소는 index.html → `/admin`). 운영·베타를 `VITE_APP_ENV`만 다르게 따로 만든다
+    - ARM·x86 둘 다: 설치·빌드 단계는 만드는 컴퓨터의 CPU로 돌고(`--platform=$BUILDPLATFORM`, 서버 의존성에 CPU별 컴파일 패키지가 없다), 최종 단계는 복사만이라 에뮬레이션이 거의 없다
+  - 서버 묶음 `deploy/`: `compose.yaml`(caddy + 운영 api·web(profile production) + 베타 api-beta·web-beta(profile beta) + 백업 도구 db-tools(profile tools)), `caddy/Caddyfile`(주소별 나누기, `/api` 떼고 넘기기, `X-Robots-Tag`, 압축, 베타 기본 인증), `deploy.sh`(한쪽만 새 이미지 → healthy까지 기다림 → 실패하면 이전 이미지), `backup.sh`(mongodump), `*.env.example`(비밀값 틀)
+    - 웹을 Caddy 이미지에 넣지 않고 쪽마다 웹 컨테이너를 둔 이유: 베타를 배포해도 운영 웹이 바뀌지 않게
+    - api 환경변수는 compose에 고정: `APP_ENV`, `TZ`, `TRUST_PROXY=1`, `CLEANUP_ENABLED`(운영 api만 true). 비밀값(`MONGO_DB`·`MASTER_PIN`·`PIN_HASH`)은 서버의 `production.env`·`beta.env`
+  - `.github/workflows/deploy.yml`: `dev`·`main` 푸시 → ① `ci.yml` 그대로(재사용) ② 이미지(ARM·x86)를 GHCR에 (`semachi-api:<커밋>`, `semachi-web:<beta|production>-<커밋>`) ③ SSH로 `deploy.sh`. ③은 저장소 변수 `DEPLOY_BETA`·`DEPLOY_PRODUCTION`이 `true`일 때만 (그 전엔 ②까지). 서버가 GHCR에서 받을 때는 그 실행의 토큰을 잠깐 쓴다 (따로 둘 토큰 없음). 되돌리기는 이전 실행의 "서버에 배포" Re-run
+  - `ci.yml`: 작업 "이미지 확인" 추가 — 이미지 셋을 만들어 `deploy/compose.yaml` + 빈 MongoDB로 띄우고 `deploy/smoke/run.sh`로 주소 나누기·`/admin`·캐시·noindex 헤더·베타 인증·베타 표시를 확인 (서버 없이 배포물 검증). `dev`·`main` 푸시는 deploy.yml이 불러서 돌린다 (두 번 돌지 않게)
+  - 웹: API 주소 `https://semachi.net:8081` → 같은 주소의 `/api` (`env/.env`). `pnpm dev`는 Vite 개발 서버가 `/api`를 `https://semachi.net`으로 넘긴다(운영 전환 뒤부터 동작). 테스트 주소는 `env/.env.test`. 베타 빌드면 헤더에 "베타"
+  - 확인한 것 (이 PC에 Docker가 없어 이미지 자체는 CI가 처음 만든다): Dockerfile과 같은 설치(운영 의존성만)를 임시 폴더에서 재현해 서버를 켜고 `/health`·`/teams`·`POST /visits` 응답, compose의 healthcheck 명령, 웹 운영·베타 빌드의 `/api`·"베타" 유무, 셸 스크립트 문법
+  - 계획과 바뀐 것: Docker 설치를 B-13에서 B-12로 (백업 `backup.sh`가 Docker의 `mongo:8` 이미지를 쓴다. 기존 서비스에는 영향 없음). `/admin` 추가 기본 인증은 넣지 않았다 (마스터 PIN + 시도 제한으로 충분하고, 웹의 API 요청에도 인증을 맞춰야 해 복잡. 원하면 Caddyfile에 몇 줄). 기존 `log.txt` 옮기기 스크립트는 만들지 않음 (B-7 결정)
+  - B-12에서 정할 것: 80·443을 지금 누가 쓰는지·semachi.net이 어디를 가리키는지·로드 밸런서 유무에 따라 베타 방식(절차서 "갈리는 것")
+
 ## 서버에 들어갈 수 있게 된 뒤
 
 ### B-12 서버 조사·백업 (OCI 계정·DB 접근을 받은 뒤)
 
+명령 단위 순서는 `docs/DEPLOY_RUNBOOK.md` "B-12". 지금 아는 것 (사용자, 2026-11-28): 서버 SSH 접속 가능, MongoDB는 Atlas 웹 화면으로 접속 가능, 포트 포워딩·로드 밸런싱은 되어 있지만 어떻게인지 모름(필요하면 처음부터 다시 해도 됨), CI/CD·Docker 없음.
+
 서버에서 확인할 것 (값은 기록하지 않고 "있음/없음·버전"만):
+- OCI 콘솔: 인스턴스 Shape(CPU·메모리), Load Balancer 유무와 Listener, Security List의 열린 포트
+- Atlas: 클러스터 등급(M0면 Atlas 자동 백업 없음), Network Access에 서버 IP
 - 서버: CPU 종류(`uname -m`: `aarch64`면 ARM), OS, 남은 디스크·메모리
 - 지금 실행 방식: 무엇이 `api.js`를 켜고 있는지 (`ps`, `pm2`, `systemctl`, `crontab`)
 - 버전: `node -v`, 실행 폴더의 express·mongoose 버전
@@ -401,7 +421,7 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 
 ### B-13 베타 배포 + 테스터 확인
 
-- 서버에 Docker 설치, 배포용 SSH 키, GitHub Environments·Secrets, DNS(`beta.semachi.net`), 방화벽 (아래 "OCI 작업 안내")
+- 배포용 SSH 키, GitHub Environments·Secrets·Variables(`DEPLOY_BETA`), DNS(`beta.semachi.net`), 방화벽 (`docs/DEPLOY_RUNBOOK.md` "B-13". Docker는 B-12에서 설치)
 - 베타는 운영과 같은 DB를 쓴다. 데이터 변경 스크립트는 실행하지 않는다 (옛 운영 서버가 아직 같은 DB를 쓰므로, B-14에서)
 - 베타 테스터에게 "실제 데이터라 지우면 진짜 지워진다"고 알린다
 - `dev` 푸시 → 베타 자동 배포 → 사용자·베타 테스터가 전체 기능 확인. 팀 자동 삭제는 베타에서 실제로 지워지지 않으므로(정리 작업은 운영에서만, B-9) 오늘 날짜로 시험 팀을 만들고 다음 날 `scripts/cleanup.ts`(세어 보기)에 그 팀이 잡히는지 본 뒤, 그 팀은 직접 지운다
@@ -410,6 +430,7 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 ### B-14 운영 첫 배포 (전환)
 
 - 정한 시간에 (사용자가 적은 시간대), `docs/DEPLOY_RUNBOOK.md` 순서대로:
+  - (B-11) 절차서의 순서는 아래와 조금 다르다: 옛 서버를 먼저 멈춘 뒤 스크립트를 이미 켜 둔 베타 api 이미지로 돌리고(`docker compose run --rm api-beta node scripts/…`), 그다음 운영 배포. 정리 작업은 운영 api가 켜질 때 처음 돈다
   1. 운영 DB 백업
   2. 새 컨테이너를 켜서 `/health` 확인 (아직 기존 `api.js`가 서비스 중)
   3. 데이터 변경 스크립트 실행 (확인 후). 서비스를 내린 시간에 (사용자 결정: 1~2시간 괜찮음)
@@ -429,14 +450,14 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 
 ## OCI 작업 안내 (계정을 받은 뒤 채운다)
 
-> 지금은 접근할 수 없어 순서만 적어 둔다. 실제 명령은 B-11의 절차서와 B-12 조사 결과를 보고 하나씩 안내한다 (안내 방식 참고).
+> 명령 단위는 `docs/DEPLOY_RUNBOOK.md` (B-11). 실제로 할 때는 B-12 조사 결과를 보고 하나씩 다시 안내한다 (안내 방식 참고).
 
 1. **접속**: OCI 콘솔에서 인스턴스(서버) 찾기 → 공인 IP, 접속 사용자(`ubuntu`/`opc`), SSH 키 확인 → 내 PC에서 `ssh`로 접속
 2. **조사**: B-12 목록
 3. **백업**: `mongodump` → 서버 밖에도 보관
-4. **Docker 설치**: 서버 OS에 맞는 공식 방법 (`docker`, `docker compose`)
+4. **Docker 설치**: 서버 OS에 맞는 공식 방법 (`docker`, `docker compose`). B-12에서 (백업에 쓴다)
 5. **배포용 키**: GitHub Actions가 접속할 전용 SSH 키 만들기 → 공개키는 서버에, 비밀키는 GitHub Environment Secrets에. 서버 주소·사용자도 Secrets로
-6. **서버 폴더**: 예) `/srv/semachi/` 아래 `compose.yaml`·`Caddyfile`·`.env`(운영)·`.env.beta`(베타). 기존 `.env`의 값을 옮김
+6. **서버 폴더**: `/srv/semachi/` 아래 `compose.yaml`·`caddy/Caddyfile`·`deploy.sh`·`backup.sh`(배포가 복사) + `production.env`·`beta.env`·`caddy.env`(사용자가 만듦, 기존 `.env`의 값을 옮김)
 7. **방화벽**: OCI Security List와 서버 방화벽에서 80·443 열기 (Caddy 인증서 발급에 80 필요), 8081은 옮기는 동안만, 베타를 포트로 하면 8443
 8. **DNS**: `beta.semachi.net` A 레코드를 서버 IP로 (관리하는 곳에서)
 9. **베타 → 운영 전환**: B-13·B-14

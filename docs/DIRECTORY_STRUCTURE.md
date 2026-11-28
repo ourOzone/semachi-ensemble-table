@@ -12,8 +12,9 @@
 │   └── server/              서버 (Express + MongoDB). API
 ├── packages/
 │   └── shared/              웹·서버가 함께 쓰는 Zod 스키마·타입·상수
-├── deploy/                  (예정 B-11) 서버에 올라가는 배포 설정: compose.yaml, Caddyfile
-├── .github/workflows/       GitHub Actions: ci.yml(푸시·PR마다 검사, B-4), (예정 B-11) deploy.yml(배포)
+├── deploy/                  서버(/srv/semachi)에 올라가는 배포 설정 (B-11, 아래 "deploy")
+├── .github/workflows/       GitHub Actions: ci.yml(푸시·PR마다 검사 + 이미지 확인, B-4·B-11), deploy.yml(dev → 베타, main → 운영 배포, B-11)
+├── .dockerignore            이미지를 만들 때 보내지 않을 파일 (비밀값·node_modules·문서 등)
 ├── docs/                    문서 (계획·기록·문제 목록). 끝난 계획은 docs/archive/
 ├── package.json             루트 스크립트: 모든 패키지의 검사·테스트·빌드를 한 번에
 ├── pnpm-workspace.yaml      workspace에 들어가는 패키지 목록
@@ -30,7 +31,8 @@ apps/web/
 ├── vite.config.mts          Vite·Vitest 설정
 ├── tsconfig.json            TypeScript 설정 (`@/` = `src/`)
 ├── components.json          shadcn 설정 (부품 추가할 때 씀)
-├── env/.env                 공개 환경변수 (`VITE_API_URL` 등, 커밋함)
+├── env/                     공개 환경변수 (커밋함): .env(API 주소 /api), .env.test(테스트), .env.localserver(pnpm dev:local)
+├── Dockerfile · Caddyfile   웹 이미지 (빌드 결과 + 작은 Caddy, B-11). Caddyfile은 이미지 안에서 파일을 주는 설정
 ├── public/                  그대로 복사되는 정적 파일 (아이콘, manifest, robots.txt)
 └── src/
     ├── app/                 진입점(main.tsx)과 화면 배치(app.tsx)
@@ -64,7 +66,7 @@ TypeScript를 Node가 바로 실행한다 (빌드 없음, B-3). "예정"은 해�
 apps/server/
 ├── package.json · tsconfig.json
 ├── vitest.config.mts        테스트 설정 (서버 시간대 UTC: 운영 서버처럼. 날짜 계산은 코드가 한국 시간으로)
-├── Dockerfile               (예정 B-11) 운영 이미지
+├── Dockerfile               API 이미지 (Node가 .ts를 바로 실행, B-11)
 ├── .dev-db/                 개발 서버의 메모리 DB 데이터·로그 (커밋 안 함, pnpm dev:server·dev:server:sample이 만듦)
 ├── scripts/                 서버 앱이 아닌, 사람이 터미널에서 직접 실행하는 프로그램 (아래 "서버 자세히")
 │   ├── dev-prod-db.ts       [개발] 내 PC 서버를 운영 DB에 연결 (pnpm dev:server, 루트 .env)
@@ -90,6 +92,19 @@ apps/server/
 - 가져오기는 실제 파일 확장자로 (`./app.ts`), 타입만 가져올 때는 `import type`. enum·namespace처럼 타입만 지워서는 실행되지 않는 문법은 쓰지 않는다 (Node가 타입만 지우고 실행하므로)
 - 새 API: `routes/<리소스>.ts`에 `xxxRouter(의존성)` 함수를 만들고 `app.ts`에서 `app.use`
 - 테스트는 `apps/server/test/<리소스>.test.ts` (API를 요청으로 검사하므로 코드 옆이 아니라 한곳에). 순수 함수 단위 테스트가 생기면 웹처럼 그 파일 옆에
+
+## deploy — 서버에 올라가는 배포 설정 (B-11)
+
+순서·명령은 `docs/DEPLOY_RUNBOOK.md`. 배포 때마다 GitHub Actions가 `compose.yaml`·`caddy/`·`deploy.sh`·`backup.sh`를 서버에 복사한다.
+```
+deploy/
+├── compose.yaml             서버의 컨테이너 묶음: caddy, api·web(운영), api-beta·web-beta(베타), db-tools(백업)
+├── caddy/Caddyfile          맨 앞 Caddy: HTTPS, 주소별 나누기, /api → api, noindex 헤더, 베타 기본 인증
+├── deploy.sh                한쪽(운영·베타)만 새 이미지로 → healthy 확인 → 실패하면 이전 이미지
+├── backup.sh                운영 DB 백업 (mongodump → backups/)
+├── *.env.example            서버에서 채울 비밀값 파일의 틀 (production·beta·caddy). 채운 파일은 커밋하지 않음
+└── smoke/                   CI "이미지 확인": compose.yaml에 빈 MongoDB를 덧붙여 띄우고 run.sh로 확인
+```
 
 ## packages/shared — 공유
 
@@ -120,7 +135,8 @@ packages/shared/
 | 새 API | `apps/server/src/routes/` (+ 스키마는 `models/`, 테스트는 `apps/server/test/`) |
 | 웹·서버가 둘 다 알아야 하는 모양(요청·응답)·상수 | `packages/shared/` |
 | 서버 비밀값 | 루트 `.env` (커밋하지 않음). 웹 공개 값은 `apps/web/env/.env` |
-| 배포 설정 | `deploy/`, `.github/workflows/` |
+| 배포 설정 | `deploy/`(서버 묶음), 이미지는 각 앱의 `Dockerfile`, `.github/workflows/` |
+| 서버에서 쓰는 비밀값 | 서버의 `/srv/semachi/*.env` (틀은 `deploy/*.env.example`) |
 | 계획·기록 문서 | `docs/` (끝나면 `docs/archive/`) |
 
 - 처음엔 기능 폴더에 두고, 다른 기능도 쓰게 되면 그때 `components/`·`stores/`·`packages/shared`로 옮긴다

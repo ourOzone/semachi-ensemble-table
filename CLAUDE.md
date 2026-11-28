@@ -11,13 +11,14 @@
 패키지 매니저는 pnpm이다 (`package.json`의 `packageManager`로 버전 고정). npm/yarn을 쓰지 않는다.
 저장소 루트에서 실행하면 모든 패키지에 돈다. 하나만: `pnpm --filter @semachi/web <스크립트>` (`@semachi/server`·`@semachi/shared`).
 - 의존성 설치: `pnpm install` (패키지 추가는 `pnpm --filter <패키지> add <이름>`)
-- 웹 개발 서버: `pnpm dev` (운영 API에 연결)
+- 웹 개발 서버: `pnpm dev` (웹은 같은 주소의 `/api`로 요청하고 Vite가 `https://semachi.net`으로 넘긴다. 운영 전환(B-14) 뒤부터 동작)
 - 내 PC 서버 (http://localhost:8081) + 다른 터미널에서 `pnpm dev:local` (웹을 이 서버에 연결):
   - `pnpm dev:server`: **운영 DB** (루트 `.env`, 실제 데이터가 바뀐다, 사용자 결정 2026-11-27). 사용자가 직접 실행하고, Claude는 실행하지 않는다
   - `pnpm dev:server:sample`: 메모리 MongoDB + 예시 데이터 (마스터 PIN `0000`). Claude가 확인할 때는 이것만. 데이터 지우기: `pnpm --filter @semachi/server dev:sample:reset`
 - 정리 작업(날짜 지난 팀·합주 삭제, 매일 04:00, B-9)은 `CLEANUP_ENABLED=true`인 운영 서버에서만 돈다. 내 PC 서버는 늘 꺼짐. 무엇이 지워질지 보기: `apps/server/scripts/cleanup.ts`(세어 보기, Claude는 운영 DB로 실행하지 않는다)
 - 관리자 화면: 웹 `/admin` (마스터 PIN으로 로그인, 활동 기록·마스터 PIN 바꾸기, 백엔드 개편 B-7)
-- CI: `.github/workflows/ci.yml` (푸시·PR마다 린트·포맷·타입·테스트·빌드). Node 버전은 `.nvmrc`
+- CI: `.github/workflows/ci.yml` (푸시·PR마다 린트·포맷·타입·테스트·빌드 + 이미지 확인 `deploy/smoke/run.sh`). Node 버전은 `.nvmrc` (Dockerfile의 `NODE_VERSION`도 같게)
+- 배포: `.github/workflows/deploy.yml` (`dev` → 베타, `main` → 운영. 저장소 변수 `DEPLOY_BETA`·`DEPLOY_PRODUCTION`이 true일 때만 서버까지). 이미지 `apps/server/Dockerfile`·`apps/web/Dockerfile`, 서버 묶음 `deploy/`, 서버에서 하는 일은 `docs/DEPLOY_RUNBOOK.md` (사용자가 직접)
 - 타입 체크: `pnpm typecheck`
 - 빌드: `pnpm build`
 - 린트: `pnpm lint` (Oxlint, 설정은 루트 `.oxlintrc.json`)
@@ -40,7 +41,7 @@
 - 서버 데이터를 확인할 때는 값을 출력하지 않는다 (PIN 등). 테스트는 실제 서버·DB로 보내지 않는다.
 - 서버(OCI)·GitHub 설정은 사용자가 직접 한다. 명령과 화면 위치를 단계마다 안내한다.
 - **안내 규칙 (사용자 결정):** 사용자는 프론트엔드만 해 봤고 백엔드·Docker·CI/CD·서버 운영은 처음이라, 따라가며 배우는 것이 목표다. 새 개념은 처음 나올 때 "무엇·왜·안 쓰면 어떻게 되는지"를 짧게 먼저 설명하고, 서버 명령은 한 번에 하나씩 (하는 일·예상 출력·성공 확인·되돌리기와 함께) 준다. 단계가 끝나면 `docs/LEARNING_NOTES.md`에 배운 것을 남긴다 (`docs/BACKEND_PLAN.md` "안내 방식").
-- 저장소 루트 `.env`는 백엔드 전용(비밀값 포함, 커밋하지 않음)이다. 웹 환경변수는 `apps/web/env/.env`에 `VITE_` 접두사로 두고, 타입은 `apps/web/src/vite-env.d.ts`에 추가한다.
+- 저장소 루트 `.env`는 백엔드 전용(비밀값 포함, 커밋하지 않음)이다. 웹 환경변수는 `apps/web/env/.env`에 `VITE_` 접두사로 두고(테스트는 `.env.test`, 베타 빌드는 `VITE_APP_ENV=beta`), 타입은 `apps/web/src/vite-env.d.ts`에 추가한다.
 
 ## 마이그레이션 단계
 1. CRA → Vite: 완료. CRA 잔여물(react-scripts 관련 설정, 서비스워커, 사용하지 않는 템플릿 파일)을 발견하면 삭제를 제안한다.

@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅ · B-3 ✅ · B-4 ✅ · B-5 ✅ · B-6 ✅ · B-7 ✅ · B-8 ✅ · B-9 ✅ · B-10 ✅, 다음은 B-11 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
+| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅ · B-3 ✅ · B-4 ✅ · B-5 ✅ · B-6 ✅ · B-7 ✅ · B-8 ✅ · B-9 ✅ · B-10 ✅ · B-11 ✅, 다음은 B-12 서버 조사 (`docs/DEPLOY_RUNBOOK.md`) |
 | View 개편 | ✅ **완료 (2026-11-26, V-0 ~ V-7)**: V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, V-4 날적이 ✅, V-5 공지 ✅, **V-6 일괄 정리 ✅**, **V-7 마무리 ✅ (2026-11-26)** (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
@@ -1485,6 +1485,27 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 공유 5 + 서버 222 + 웹 233 / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅
 
+### 2026-11-28 — 백엔드 개편 B-11: 배포 준비물 (Docker 이미지, Caddy, compose, 배포 워크플로, 절차서)
+
+- 사용자 결정: `:8081` → 새 api 넘기기를 하지 않는다 (추천안, B-10에서 넘김). 운영에 `CORS_ORIGINS` 없음
+- 사용자가 알려 준 것 (B-12 준비): 서버 SSH 접속 가능, MongoDB는 Atlas 웹 화면으로 접속 가능, 포트 포워딩·로드 밸런싱은 되어 있지만 구성은 모름(필요하면 처음부터 다시 해도 됨), CI/CD·Docker 없음
+- 배포 준비물 (서버 없이 만듦) — 없음 → 있음
+  - 이미지: `apps/server/Dockerfile`(설치 단계 + Node 26 slim, 운영 의존성만, `node` 사용자, Node가 `.ts`를 바로 실행 — 사전 결정 3의 `tsdown` 묶기는 하지 않음), `apps/web/Dockerfile` + `apps/web/Caddyfile`(Vite 빌드 + 작은 Caddy: `/assets/*` 1년 캐시·없으면 404, 그 밖 no-cache, 없는 주소는 index.html), 루트 `.dockerignore`. ARM·x86 둘 다 (설치·빌드는 만드는 컴퓨터 CPU로)
+  - 서버 묶음 `deploy/`: `compose.yaml`(caddy, api·web = profile production, api-beta·web-beta = profile beta, db-tools = profile tools), `caddy/Caddyfile`(semachi.net·beta.semachi.net, `/api` 떼고 넘기기, `X-Robots-Tag: noindex, nofollow`, 압축, 베타 기본 인증), `deploy.sh`(한쪽만 새 이미지 → healthy까지 기다림 → 실패하면 이전 이미지로), `backup.sh`(mongodump), `production·beta·caddy.env.example`. api 환경변수 `APP_ENV`·`TZ=Asia/Seoul`·`TRUST_PROXY=1`·`CLEANUP_ENABLED`(운영만 true)는 compose에 고정
+  - `.github/workflows/deploy.yml`: `dev`·`main` 푸시 → `ci.yml`(재사용) → 이미지를 GHCR에 (`semachi-api:<커밋>`, `semachi-web:<beta|production>-<커밋>`) → SSH로 `deploy.sh`. 서버까지는 저장소 변수 `DEPLOY_BETA`·`DEPLOY_PRODUCTION`이 true일 때만
+  - `ci.yml`: `dev`·`main` 푸시는 deploy.yml이 부르게(`workflow_call`, 두 번 돌지 않게), 작업 "이미지 확인" 추가 — 이미지 셋을 만들어 `deploy/compose.yaml` + 빈 MongoDB(`deploy/smoke/compose.yaml`)로 띄우고 `deploy/smoke/run.sh`가 주소 나누기·`/admin`·캐시 헤더·noindex·404 JSON·베타 기본 인증·베타 표시를 확인
+  - 절차서 `docs/DEPLOY_RUNBOOK.md` (새로): B-12 조사(OCI 콘솔·서버·DNS·Atlas에서 볼 것, 조사 결과에 따라 갈리는 것), Docker 설치·서버 폴더·백업, B-13 배포 키·GitHub Environments·DNS·첫 베타 배포, B-14 전환 순서표와 되돌리기, 평소 운영(로그·되돌리기·데이터 스크립트·복원)
+- 웹 — 지금 → 바꾼 후
+  - API 주소: `https://semachi.net:8081` → 같은 주소의 `/api` (`env/.env`, 운영·베타 빌드 모두). 테스트는 `env/.env.test`(`https://semachi.net/api`)
+  - `pnpm dev`: 브라우저가 옛 `:8081`로 바로 요청 → Vite 개발 서버가 `/api`를 `https://semachi.net`으로 넘김 (CORS 필요 없음. 운영 전환 뒤부터 동작. 지금도 옛 서버와는 B-6부터 맞지 않았다)
+  - 헤더: 베타 빌드(`VITE_APP_ENV=beta`)면 제목 옆 "베타" (운영 빌드에서는 코드째 빠짐)
+  - 테스트 도우미 `test/requests.ts`: 요청 기록을 API 주소 앞부분(`/api`)을 뗀 경로로 (`apiPath`)
+- 계획과 바뀐 것: Docker 설치를 B-12로 (백업에 씀), `/admin` 추가 기본 인증은 넣지 않음, `log.txt` 옮기기 스크립트는 만들지 않음 (B-7 결정)
+- 확인 (이 PC에 Docker가 없어 이미지는 CI가 처음 만든다): Dockerfile과 같은 설치(운영 의존성만, 웹 package.json 포함)를 임시 폴더에서 재현 → 서버를 임시 MongoDB로 켜 `/health` `{"status":"ok"}`·`/teams` `[]`·`POST /visits` 204, 설정이 없으면 "설정 오류"·스크립트는 "MONGO_DB가 없습니다"(모든 가져오기가 풀림). compose healthcheck 명령(살아 있으면 0, 없으면 1). 웹 운영·베타 빌드에서 API 주소 `/api`, "베타"는 베타에만, `:8081` 없음. 셸 스크립트 `bash -n`
+- 테스트: `components/layout/header.test.tsx` 3개 (베타·운영·값 없음)
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 공유 5 + 서버 222 + 웹 236 / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅. 이미지 빌드·"이미지 확인" 작업은 푸시 후 CI에서 처음 돈다
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -1530,4 +1551,4 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)
 3. ~~3단계 내부 로직 개선~~ ✅ 완료 (2026-11-23)
 4. ~~View 개편~~ ✅ 완료 (2026-11-26, 기록: `docs/archive/VIEW_REDESIGN_PLAN.md`, 디렉터리 구조: `docs/DIRECTORY_STRUCTURE.md`)
-5. 백엔드 개편 (`docs/BACKEND_PLAN.md`): B-10까지 ✅. 다음 B-11 배포 준비물 → (서버 접근 뒤) B-12~B-15. 그 밖에 번들 줄이기 제안(ISSUES V15)
+5. 백엔드 개편 (`docs/BACKEND_PLAN.md`): B-11까지 ✅. 다음 B-12 서버 조사·백업 → B-13 베타 → B-14 전환 → B-15 (절차: `docs/DEPLOY_RUNBOOK.md`). 그 밖에 번들 줄이기 제안(ISSUES V15)

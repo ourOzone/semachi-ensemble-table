@@ -25,7 +25,7 @@
 | B-9 ✅ | 팀 자동 삭제 상시 적용 + 정리 작업 (2026-11-28) | – |
 | B-10 ✅ | API 형태 정리 (2026-11-28, 오류 응답 통일, `/teams/:id`, 201·204) | – |
 | B-11 ✅ | 배포 준비물 (2026-11-28, Docker 이미지·Caddy·compose·배포 워크플로·CI 이미지 확인·전환 절차서) | – |
-| B-12 | 서버 조사·백업 | ✅ |
+| B-12 ✅ | 서버 조사·백업 (2026-11-28, nginx·pm2 구조, 베타 방식 A, 스왑·Docker 설치, 첫 백업) | ✅ |
 | B-13 | 베타 배포 + 테스터 확인 | ✅ |
 | B-14 | 운영 첫 배포 (전환) | ✅ |
 | B-15 | 마무리 | ✅ |
@@ -399,7 +399,7 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 
 명령 단위 순서는 `docs/DEPLOY_RUNBOOK.md` "B-12". 지금 아는 것 (사용자, 2026-11-28): 서버 SSH 접속 가능, MongoDB는 Atlas 웹 화면으로 접속 가능, 포트 포워딩·로드 밸런싱은 되어 있지만 어떻게인지 모름(필요하면 처음부터 다시 해도 됨), CI/CD·Docker 없음.
 
-조사 결과 (진행 중, 2026-11-28):
+조사 결과 (2026-11-28 ✅):
 - 서버: Ubuntu, `x86_64`, Node 22.14(옛 서버용. 새 서버는 이미지 안의 Node 26이라 올리지 않는다), 시간대 Asia/Seoul, Docker 없음
 - 포트 (`ss -tlnp`): 80·443 = **nginx**, 8081 = `node /home/ubuntu/smch3/cookie_back.js`(옛 API), 8080 = `node /home/ubuntu/smch3/index-prod.js`(무엇인지 확인 중, 웹일 가능성), 22 = sshd. 둘 다 **root의 pm2 v6.0.5**(`/root/.pm2`, 2026-09-01부터)가 켜고 있다(2026-11-18 재시작). 재부팅 때 pm2·nginx가 다시 켜질 가능성이 크다 → 전환 때 "멈춤"과 함께 "부팅 때 켜지 않기"(nginx `systemctl disable`, pm2 `delete`+`save`). pm2 목록(`sudo pm2 list`): `cookie_back`(online, 8081) · `index-prod`(online, 8080) · `back`(stopped, 더 옛 API로 보임). 새 구조의 재부팅 대비는 Docker(부팅 때 켜짐) + compose `restart: unless-stopped` (사용자 요청 2026-11-28)
 - nginx (`/etc/nginx/sites-available/default`, sites-enabled에는 그 바로가기): 80 → https로 301, 443(`semachi.net`·`www.semachi.net`, 인증서 `/etc/letsencrypt/live/semachi.net/`) → 모두 `localhost:8080`(= `index-prod.js`, 옛 웹). 그래서 semachi.net은 이 서버를 가리킨다고 본다. 새 Caddyfile에 www → semachi.net 301 추가
@@ -407,6 +407,8 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
   - 그래서 생긴 것: 웹이 꺼져 있을 때 "점검 중" 안내(Caddy `handle_errors`, 전환 중), compose의 `host.docker.internal`. 확인할 것: 옛 API(8081)가 읽는 인증서 만료일과 갱신 방식(nginx를 끄면 certbot의 nginx 방식 갱신이 멈춘다), 서버 방화벽이 컨테이너 → 호스트 8080을 막지 않는지
 - DNS: `semachi.net` → 서버 IP (SSH 주소와 같음, 확정). **DNS는 AWS Route 53** (네임서버 `awsdns`). 베타 주소 레코드는 Route 53에서 만든다 → AWS 계정 접근 필요
 - AWS에 들어갈 수 없음 → **베타 주소는 무료 주소 `test.158-180-85-102.sslip.io`** (사용자 결정 2026-11-28. sslip.io는 이름 안의 IP를 그대로 답하는 공개 DNS라 설정이 필요 없다). 서버 `caddy.env`의 `BETA_SITE`, GitHub 변수 `BETA_URL`. 저장소 기본값은 그대로 `test.semachi.net`(Route 53에 들어갈 수 있게 되면 그쪽으로)
+- 한 일: 스왑 2G, Docker 29.10 설치(부팅 때 켜짐), `/srv/semachi` 준비(설정 파일 셋, 값은 옛 `.env`에서 화면에 띄우지 않고 옮김), **첫 DB 백업** `backups/semachi-20261128-201530.gz`(12K)
+- Atlas: **FREE(M0) → Atlas 자동 백업 없음** (backup.sh가 유일한 백업). Network Access에 서버 IP와 함께 `0.0.0.0/0`(어디서나) → 비밀번호 노출과 겹쳐 위험, 지우기를 추천 (사용자 결정 대기)
 - 메모리 956Mi(남은 약 460Mi), **스왑 없음**, 디스크 45G 중 37G 남음 → 컨테이너 5개 + 베타 기간의 옛 pm2 둘이면 빠듯해 **스왑 2G를 만든다** (절차서 B-12)
 - 서버 방화벽 (`iptables -S INPUT`): 기본 ACCEPT, 22·80·443·8081 허용 줄, 막는 규칙 없음 → Caddy 컨테이너 → 호스트 8080 열림, 할 일 없음
 - 인증서 (O3 그대로): 파일 `/etc/letsencrypt/live/semachi.net/`은 **2027-02-25**까지 (11월 말에 자동 갱신됨). 그런데 옛 API(8081)는 켤 때(11-18) 읽은 **옛 인증서를 써서 2026-12-27 10:43 KST에 만료** → 2026-11-28 사용자가 `sudo pm2 restart cookie_back` ✅ (8081도 이제 2027-02-25까지). A안으로 nginx를 끄면 certbot 갱신(nginx 방식으로 보임)이 멈추므로, 옛 API는 파일 만료일(2027-02-25) 전까지 운영 전환을 마쳐야 한다. 새 구조는 Caddy가 인증서를 받아 해당 없음

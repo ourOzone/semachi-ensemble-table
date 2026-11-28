@@ -135,20 +135,17 @@ describe('GET /ensembles', () => {
 });
 
 describe('POST /ensemble', () => {
+    // 웹이 보내는 모양 (B-8: teamName·day·type은 보내지 않는다). nextDate = KST 12/4(금) 18:00
     const body = {
-        teamId: '6650a1b2c3d4e5f607182930',
-        teamName: '테스트밴드',
         startTime: 20,
         endTime: 23,
-        day: 4,
-        type: '무기한',
-        due: '2099-12-31T00:00:00.000Z',
+        due: '2099-12-31',
         nextDate: '2026-12-04T09:00:00.000Z',
         repeat: true,
     };
 
-    test('그 팀의 PIN이 맞으면 저장하고 { id }. 저장된 값에 PIN은 없다', async () => {
-        const teamId = await insert('teams', teamDoc({ pin: '1234' }));
+    test('그 팀의 PIN이 맞으면 저장하고 { id }. teamName·day는 서버가 채운다 (B-8 D3)', async () => {
+        const teamId = await insert('teams', teamDoc({ name: '진짜 이름', pin: '1234' }));
         const res = await api()
             .post('/ensemble')
             .send({ ...body, teamId, pin: '1234' });
@@ -158,10 +155,31 @@ describe('POST /ensemble', () => {
         expect(saved).toMatchObject({
             ...body,
             teamId,
-            due: new Date(body.due),
+            teamName: '진짜 이름',
+            day: 4,
+            due: new Date('2099-12-31T00:00:00.000Z'),
             nextDate: new Date(body.nextDate),
         });
         expect(saved).not.toHaveProperty('pin');
+        expect(saved).not.toHaveProperty('type');
+    });
+
+    test('본문의 teamName·day·type은 쓰지 않는다 (B-8 D3)', async () => {
+        const teamId = await insert('teams', teamDoc({ name: '진짜 이름', pin: '1234' }));
+        const res = await api()
+            .post('/ensemble')
+            .send({ ...body, teamId, teamName: '가짜', day: 0, type: '무기한', pin: '1234' });
+        const saved = await findOne('ensembles', res.body.id);
+        expect(saved).toMatchObject({ teamName: '진짜 이름', day: 4 });
+        expect(saved).not.toHaveProperty('type');
+    });
+
+    test('요일은 한국 날짜로: UTC로는 일요일 23시지만 한국은 월요일 8시 → day 0', async () => {
+        const teamId = await insert('teams', teamDoc({ pin: '1234' }));
+        const res = await api()
+            .post('/ensemble')
+            .send({ ...body, teamId, nextDate: '2026-11-29T23:00:00.000Z', pin: '1234' });
+        expect((await findOne('ensembles', res.body.id))?.day).toBe(0);
     });
 
     test('PIN이 없거나 틀리면 403, 저장하지 않는다 (B-6 뒤 사용자 결정)', async () => {
@@ -175,52 +193,31 @@ describe('POST /ensemble', () => {
         expect(await findAll('ensembles')).toHaveLength(0);
     });
 
-    test('마스터 PIN이면 저장 (팀이 없어도: ISSUES B4는 마스터 PIN일 때만 남는다)', async () => {
+    test('마스터 PIN이면 어느 팀이든 저장', async () => {
+        const teamId = await insert('teams', teamDoc({ pin: '1234' }));
         const res = await api()
             .post('/ensemble')
-            .send({ ...body, pin: MASTER_PIN });
+            .send({ ...body, teamId, pin: MASTER_PIN });
         expect(res.status).toBe(200);
-        expect(res.body).toEqual({ id: expect.stringMatching(/^[0-9a-f]{24}$/) });
-        expect(await findOne('ensembles', res.body.id)).toMatchObject({
-            ...body,
-            due: new Date(body.due),
-            nextDate: new Date(body.nextDate),
-        });
+        expect(await findOne('ensembles', res.body.id)).toMatchObject({ teamId });
     });
 
-    test('없는 팀이면 마스터 PIN만 통과한다. 현재 동작: 범위·겹침 검사는 없다 (S5)', async () => {
-        const badRange = { ...body, teamId: missingId(), startTime: 99, endTime: -1, day: 9 };
-        expect(
-            (
-                await api()
-                    .post('/ensemble')
-                    .send({ ...badRange, pin: '1234' })
-            ).status,
-        ).toBe(403);
+    test('팀이 없으면 마스터 PIN이어도 404, 저장하지 않는다 (B-8 B4, 이전: 마스터 PIN이면 저장)', async () => {
+        for (const pin of ['1234', MASTER_PIN]) {
+            const res = await api()
+                .post('/ensemble')
+                .send({ ...body, teamId: missingId(), pin });
+            expect([res.status, res.body]).toEqual([404, { error: 'Team not found' }]);
+        }
+        expect(await findAll('ensembles')).toHaveLength(0);
+    });
+
+    test('팀이 없으면 PIN을 확인하지 않아 틀린 횟수에 들지 않는다', async () => {
         const res = await api()
             .post('/ensemble')
-            .send({ ...badRange, pin: MASTER_PIN });
-        expect(res.status).toBe(200);
-        expect(await findAll('ensembles')).toHaveLength(1);
-    });
-
-    test('현재 동작: 마스터 PIN만 있는 빈 본문도 저장한다', async () => {
-        const res = await api().post('/ensemble').send({ pin: MASTER_PIN });
-        expect(res.status).toBe(200);
-        expect(Object.keys((await findOne('ensembles', res.body.id)) ?? {}).sort()).toEqual([
-            '__v',
-            '_id',
-            'createdAt',
-            'updatedAt',
-        ]);
-    });
-
-    test('숫자 칸에 숫자가 아닌 값이면 500 (텍스트)', async () => {
-        const res = await api()
-            .post('/ensemble')
-            .send({ ...body, startTime: 'abc', pin: MASTER_PIN });
-        expect(res.status).toBe(500);
-        expect(res.text).toBe('Internal Server Error');
+            .send({ ...body, teamId: missingId(), pin: '0000' });
+        expect(res.status).toBe(404);
+        expect(res.headers['pin-attempts']).toBeUndefined();
     });
 });
 
@@ -276,37 +273,38 @@ describe('GET /ensemble/:id (존재 확인)', () => {
 });
 
 describe('PUT /ensemble?id=', () => {
+    // 웹이 보내는 모양 (B-8). nextDate = KST 12/7(월) 12:00
     const body = {
-        teamId: '6650a1b2c3d4e5f607182930',
         startTime: 4,
         endTime: 7,
-        day: 0,
-        type: '일회성',
-        due: '2026-12-31T00:00:00.000Z',
+        due: '2026-12-07',
         nextDate: '2026-12-07T03:00:00.000Z',
         repeat: false,
     };
 
-    test('teamId·시간·요일·종류·due·nextDate·repeat를 바꾼다. teamName은 그대로', async () => {
-        const id = await insert('ensembles', ensembleDoc({ teamName: '그대로' }));
+    test('시간·due·nextDate·repeat를 바꾸고 day는 nextDate의 한국 요일로. 팀·teamName은 그대로 (B-8 D3)', async () => {
+        const teamId = missingId();
+        const id = await insert('ensembles', ensembleDoc({ teamId, teamName: '그대로', day: 2 }));
         const res = await api()
             .put(`/ensemble?id=${id}`)
-            .send({ ...body, teamName: '무시됨', pin: MASTER_PIN });
+            .send({
+                ...body,
+                teamId: missingId(),
+                teamName: '무시됨',
+                day: 5,
+                type: '일회성',
+                pin: MASTER_PIN,
+            });
         expect(res.status).toBe(200);
         expect(res.body).toEqual({ message: 'Ensemble updated successfully', id });
         expect(await findOne('ensembles', id)).toMatchObject({
             ...body,
+            teamId,
             teamName: '그대로',
-            due: new Date(body.due),
+            day: 0,
+            due: new Date('2026-12-07T00:00:00.000Z'),
             nextDate: new Date(body.nextDate),
         });
-    });
-
-    test('현재 동작: 본문에 빠진 필드는 지워진다 (teamName만 남음)', async () => {
-        const id = await insert('ensembles', ensembleDoc());
-        await api().put(`/ensemble?id=${id}`).send({ pin: MASTER_PIN });
-        const saved = await findOne('ensembles', id);
-        expect(Object.keys(saved ?? {}).sort()).toEqual(['__v', '_id', 'teamName', 'updatedAt']);
     });
 
     test('그 합주 팀의 PIN이 맞아야 바꾼다. 없거나 틀리면 403 (B-6 B1)', async () => {

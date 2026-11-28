@@ -1,12 +1,13 @@
 // 합주 API: GET /ensembles, POST /ensemble, DELETE /ensemble, GET /ensemble/:id, PUT /ensemble
 // 잡기·수정·삭제는 요청 본문의 pin(그 합주 팀의 PIN 또는 마스터 PIN)을 서버가 확인한다. 틀리면 403 (B-6)
 // 틀린 횟수는 그 팀의 것으로 센다 (팀 PIN이므로). 하는 일마다 활동 기록 (B-7)
+// teamName·day는 서버가 채운다: teamName = 그 팀의 이름, day = nextDate의 한국 요일 (B-8 D3). type은 없다 (B-8, 사용자 결정)
 import express from 'express';
 import mongoose from 'mongoose';
 import { withoutPin, type RecordActivity } from '../lib/activity.ts';
 import type { PinCheck } from '../lib/pin-check.ts';
 import { pinTarget } from '../lib/pin-guard.ts';
-import { startOfKstDay } from '../lib/time.ts';
+import { kstDayIndex, startOfKstDay } from '../lib/time.ts';
 import { Ensemble } from '../models/ensemble.ts';
 import { Team } from '../models/team.ts';
 
@@ -19,7 +20,6 @@ const ensembleFields = (e: Record<string, unknown>) => ({
     repeat: e.repeat,
     nextDate: e.nextDate,
     due: e.due,
-    type: e.type,
 });
 
 export function ensemblesRouter({
@@ -62,28 +62,38 @@ export function ensemblesRouter({
         }
     });
 
-    // 합주 잡기 (B-6 뒤 사용자 결정: 잡을 때도 그 팀의 PIN. 팀이 없으면 마스터 PIN만, ISSUES B4)
+    // 합주 잡기 (B-6 뒤 사용자 결정: 잡을 때도 그 팀의 PIN)
+    // 팀이 없으면 404 (B-8 B4, 이전: 마스터 PIN이면 없는 팀의 합주도 만들었다). 소모임·회의도 teams 컬렉션의 팀이다
     router.post('/ensemble', async (req, res) => {
         try {
             const data = req.body;
-            const target = {
-                kind: 'ensemble',
-                name: typeof data.teamName === 'string' ? data.teamName : undefined,
-            };
+            const team =
+                typeof data.teamId === 'string' && mongoose.isValidObjectId(data.teamId)
+                    ? await Team.findById(data.teamId).select('+pin')
+                    : null;
+            if (!team) {
+                await activity(req, {
+                    action: 'ensemble.create',
+                    target: { kind: 'team', id: String(data.teamId) },
+                    result: 'not-found',
+                });
+                return res.status(404).json({ error: 'Team not found' });
+            }
+
+            const target = { kind: 'ensemble', name: team.name ?? undefined };
             const via = await pinCheck.require(req, res, {
-                guardTarget: pinTarget.team(data.teamId),
-                stored: await teamPinOf(data.teamId),
+                guardTarget: pinTarget.team(team.id),
+                stored: team.pin,
                 entry: { action: 'ensemble.create', target },
             });
             if (!via) return;
 
             const newEnsemble = new Ensemble({
-                teamId: data.teamId,
-                teamName: data.teamName,
+                teamId: team.id,
+                teamName: team.name,
                 startTime: data.startTime,
                 endTime: data.endTime,
-                day: data.day,
-                type: data.type,
+                day: kstDayIndex(new Date(data.nextDate)),
                 due: data.due,
                 nextDate: data.nextDate,
                 repeat: data.repeat,
@@ -162,9 +172,10 @@ export function ensemblesRouter({
         }
     });
 
-    // 합주 수정 (미루기·바로 하기·반복으로 바꾸기도 이 요청). teamName은 바꾸지 않는다. 현재 동작: 본문에 빠진 필드는 지워진다
+    // 합주 수정 (미루기·바로 하기·반복으로 바꾸기도 이 요청). 팀은 바꾸지 않는다 (B-8: 웹도 팀을 바꿀 수 없다. 이전엔 본문의 teamId로 바꾸고 teamName은 그대로라 서로 어긋났다)
+    // 현재 동작: 본문에 빠진 필드는 지워진다 (입력 검증에서 막는다)
     router.put('/ensemble', async (req, res) => {
-        const { teamId, startTime, endTime, day, type, due, nextDate, repeat } = req.body;
+        const { startTime, endTime, due, nextDate, repeat } = req.body;
         const ensembleId = req.query.id;
 
         try {
@@ -178,7 +189,7 @@ export function ensemblesRouter({
                 return res.status(404).json({ error: 'Ensemble not found' });
             }
 
-            // 지금 합주의 팀 PIN으로 확인한다 (본문의 teamId로 바꾸기 전)
+            // 지금 합주의 팀 PIN으로 확인한다
             const target = {
                 kind: 'ensemble',
                 id: existingEnsemble.id,
@@ -192,11 +203,9 @@ export function ensemblesRouter({
             if (!via) return;
 
             const before = ensembleFields(existingEnsemble.toObject());
-            existingEnsemble.teamId = teamId;
             existingEnsemble.startTime = startTime;
             existingEnsemble.endTime = endTime;
-            existingEnsemble.day = day;
-            existingEnsemble.type = type;
+            existingEnsemble.day = kstDayIndex(new Date(nextDate));
             existingEnsemble.due = due;
             existingEnsemble.nextDate = nextDate;
             existingEnsemble.repeat = repeat;

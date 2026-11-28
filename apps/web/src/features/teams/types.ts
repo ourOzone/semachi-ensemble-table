@@ -13,8 +13,8 @@ export interface AddTeamInput {
     /** [보컬, 기타, 베이스, 드럼, 키보드, 매니저, 셋리스트] */
     desc: string[];
     pin: string;
-    /** 팀 자동 삭제 'YYYY-MM-DD' (계속 유지는 2099-12-31). TEAM_DUE_ENABLED가 꺼져 있으면 없다 (teamDue.ts) */
-    due?: string;
+    /** 팀 자동 삭제 'YYYY-MM-DD' (계속 유지는 2099-12-31, 백엔드 개편 B-9) */
+    due: string;
 }
 
 /** 저장에 성공하면 true (실패하면 Drawer에 머문다: ISSUES F3) */

@@ -1,4 +1,5 @@
 import dayjs, { type Dayjs } from 'dayjs';
+import { NO_DUE } from '@semachi/shared';
 import { idx2hour } from '@/constants';
 import type { EnsembleUpdateRequest, TimeSlot } from '@/types';
 
@@ -40,7 +41,7 @@ export function withStartTime(date: Dayjs, startTime: TimeSlot): Dayjs {
 }
 
 /** 반복 종료 날짜가 없음(계속 반복)을 뜻하는 due */
-export const NO_REPEAT_END = '2099-12-31';
+export const NO_REPEAT_END = NO_DUE;
 
 /**
  * 반복 합주의 종료 날짜 (서버 due, 0시). 없거나 계속 반복(2099년 이후)이면 null. 지난 날짜도 그대로 돌려준다.

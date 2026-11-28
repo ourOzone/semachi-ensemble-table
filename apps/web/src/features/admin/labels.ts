@@ -7,9 +7,12 @@ const ACTION_LABELS: Record<string, string> = {
     'team.create': '팀 만들기',
     'team.update': '팀 수정',
     'team.delete': '팀 삭제',
+    // 서버의 정리 작업이 날짜가 지난 것을 지움 (백엔드 개편 B-9). 방문자 없음
+    'team.expire': '팀 자동 삭제',
     'ensemble.create': '합주 잡기',
     'ensemble.update': '합주 수정',
     'ensemble.delete': '합주 삭제',
+    'ensemble.expire': '합주 자동 삭제',
     'note.create': '날적이 남기기',
     'note.delete': '날적이 삭제',
     'notice.create': '공지 올리기',
@@ -64,6 +67,9 @@ export function formatDevice(device: Activity['device'] | null | undefined) {
     ];
     return [kind, device.os, device.browser].filter(Boolean).join(' · ') || undefined;
 }
+
+/** 사람이 아니라 서버가 스스로 한 일 (정리 작업, B-9) */
+export const isSystemAction = (action: string) => action.endsWith('.expire');
 
 /** 방문자 id(UUID)는 앞 8자리만 보여 준다 */
 export const shortId = (id: string | null | undefined) => (id ? id.slice(0, 8) : '없음');

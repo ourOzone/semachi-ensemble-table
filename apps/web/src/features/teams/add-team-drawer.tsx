@@ -41,9 +41,8 @@ import { useDrawerStore } from '@/stores/drawer';
 import { eventColors } from '@/constants/colors';
 import type { LegacyTeamType, TeamType } from '@/types/index';
 import { useEditTeamStore, type EditTeamTarget } from './edit-team-store';
-import { TEAM_DUE_ENABLED } from './team-due';
 import type { HandleAddTeam, HandleUpdateTeam } from './types';
-import { SETLIST_MAX, TEAM_MEMBER_MAX, TEAM_NAME_MAX } from '@semachi/shared';
+import { NO_DUE, SETLIST_MAX, TEAM_MEMBER_MAX, TEAM_NAME_MAX } from '@semachi/shared';
 
 // 팀 추가 Drawer (View 개편 V-3 10차). 아래에서 올라오는 Drawer 하나에서 모두 입력한다
 // (이전: 오른쪽에서 쌓이는 옛 Drawer 6단계: 종류 → 이름 → 팀원 → 셋리 → PIN 두 번 → 완료 화면 "팀을 만들었어요").
@@ -87,8 +86,8 @@ const MEMBER_MAX = TEAM_MEMBER_MAX;
 const SETLIST_MIN_ROWS = 4;
 const SETLIST_MAX_ROWS = 10;
 
-/** 계속 유지를 뜻하는 팀 due (합주의 계속 반복과 같은 값) */
-const NO_TEAM_DUE = '2099-12-31';
+/** 계속 유지를 뜻하는 팀 due (합주의 계속 반복과 같은 값, packages/shared) */
+const NO_TEAM_DUE = NO_DUE;
 
 /** "12월 21일 월요일" (합주 잡기 Drawer와 같은 모양) */
 const formatLongDate = (date: Dayjs) =>
@@ -188,7 +187,7 @@ const AddTeamForm = ({
         MEMBER_LABELS.map((_, idx) => edit?.desc[idx] ?? ''),
     );
     const [setlist, setSetlist] = useState(edit?.desc[6] ?? '');
-    // 팀 자동 삭제 (적용 예정: TEAM_DUE_ENABLED). 기본은 계속 유지
+    // 팀 자동 삭제 (V-3 10차에 만들고 백엔드 개편 B-9부터 늘 적용). 기본은 계속 유지
     const [hasDue, setHasDue] = useState(edit?.due != null);
     const [due, setDue] = useState<Dayjs | null>(edit?.due ?? null);
     const [dueOpen, setDueOpen] = useState(false);
@@ -197,7 +196,7 @@ const AddTeamForm = ({
         ? '팀 종류를 골라 주세요'
         : !name.trim()
           ? '팀명을 써 주세요'
-          : TEAM_DUE_ENABLED && hasDue && !due
+          : hasDue && !due
             ? '삭제 날짜를 골라 주세요'
             : null;
 
@@ -212,8 +211,7 @@ const AddTeamForm = ({
             (value, idx) =>
                 value === (idx < 6 ? (edit.desc[idx] ?? '').trim() : (edit.desc[6] ?? '')),
         ) &&
-        (!TEAM_DUE_ENABLED ||
-            (hasDue && due ? edit.due !== null && due.isSame(edit.due, 'day') : edit.due === null));
+        (hasDue && due ? edit.due !== null && due.isSame(edit.due, 'day') : edit.due === null);
 
     // 수정 저장: 실패하면 입력을 그대로 두고 다시 누를 수 있게 (성공하면 팀 정보로 돌아간다)
     const update = async () => {
@@ -225,7 +223,7 @@ const AddTeamForm = ({
                 type: type!, // missing === null
                 name: name.trim(),
                 desc,
-                ...(TEAM_DUE_ENABLED && { due: dueValue }),
+                due: dueValue,
             },
             edit.pin,
         );
@@ -238,7 +236,7 @@ const AddTeamForm = ({
             name: name.trim(),
             desc,
             pin,
-            ...(TEAM_DUE_ENABLED && { due: dueValue }),
+            due: dueValue,
         });
 
     if (step === 'pin') {
@@ -416,45 +414,43 @@ const AddTeamForm = ({
                         <Hint>가능한 한 작성해주세요.</Hint>
                     </Section>
 
-                    {/* 팀 자동 삭제 (적용 예정: 백엔드 팀 스키마에 due가 생기면 TEAM_DUE_ENABLED를 켠다) */}
-                    {TEAM_DUE_ENABLED && (
-                        <Section label="팀 자동 삭제">
-                            <Segmented
-                                label="팀 자동 삭제"
-                                value={hasDue}
-                                options={[
-                                    [false, '계속 유지', InfinityIcon],
-                                    [true, '삭제 날짜 지정', CalendarX2],
-                                ]}
-                                onChange={(value) => {
-                                    setHasDue(value);
-                                    // 날짜를 지정하면 바로 달력을 연다
-                                    setDueOpen(value && !due);
-                                }}
-                            />
-                            {hasDue && (
-                                <div className="mt-2.5">
-                                    <DateToggle
-                                        open={dueOpen}
-                                        text={due ? `${formatLongDate(due)}까지` : null}
-                                        placeholder="삭제 날짜 선택"
-                                        onClick={() => setDueOpen(!dueOpen)}
+                    {/* 팀 자동 삭제 (V-3 10차에 만들고 백엔드 개편 B-9부터 늘 보임). 날짜가 지나면 서버의 정리 작업이 팀과 그 팀의 합주를 지운다 */}
+                    <Section label="팀 자동 삭제">
+                        <Segmented
+                            label="팀 자동 삭제"
+                            value={hasDue}
+                            options={[
+                                [false, '계속 유지', InfinityIcon],
+                                [true, '삭제 날짜 지정', CalendarX2],
+                            ]}
+                            onChange={(value) => {
+                                setHasDue(value);
+                                // 날짜를 지정하면 바로 달력을 연다
+                                setDueOpen(value && !due);
+                            }}
+                        />
+                        {hasDue && (
+                            <div className="mt-2.5">
+                                <DateToggle
+                                    open={dueOpen}
+                                    text={due ? `${formatLongDate(due)}까지` : null}
+                                    placeholder="삭제 날짜 선택"
+                                    onClick={() => setDueOpen(!dueOpen)}
+                                />
+                                {dueOpen && (
+                                    <DatePicker
+                                        selected={due}
+                                        min={dayjs()}
+                                        onSelect={(picked) => {
+                                            setDue(picked);
+                                            setDueOpen(false);
+                                        }}
                                     />
-                                    {dueOpen && (
-                                        <DatePicker
-                                            selected={due}
-                                            min={dayjs()}
-                                            onSelect={(picked) => {
-                                                setDue(picked);
-                                                setDueOpen(false);
-                                            }}
-                                        />
-                                    )}
-                                    <Hint>이 날짜 이후에 자동으로 삭제돼요</Hint>
-                                </div>
-                            )}
-                        </Section>
-                    )}
+                                )}
+                                <Hint>이 날짜 이후에 자동으로 삭제돼요</Hint>
+                            </div>
+                        )}
+                    </Section>
                 </div>
             </div>
 

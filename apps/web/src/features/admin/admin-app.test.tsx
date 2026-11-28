@@ -6,7 +6,7 @@ import { url } from '@/constants/index';
 import { renderWithProviders } from '@/test/render';
 import { server } from '@/test/server';
 import AdminApp from './admin-app';
-import { changes, formatDevice, pinLabel } from './labels';
+import { actionLabel, changes, formatDevice, isSystemAction, pinLabel } from './labels';
 
 // 관리자 화면 (백엔드 개편 B-7): 마스터 PIN 로그인 → 요약·활동 기록·방문자·마스터 PIN 바꾸기
 const A = '0b8a5c7e-1f2d-4c3b-9a8e-7d6c5b4a3f21';
@@ -219,5 +219,12 @@ describe('labels', () => {
         expect(formatDevice({ kind: 'desktop', os: 'Windows 10', browser: 'Chrome 131' })).toBe(
             'PC · Windows 10 · Chrome 131',
         );
+    });
+
+    it('정리 작업의 자동 삭제 (백엔드 개편 B-9): 서버가 스스로 한 일', () => {
+        expect(actionLabel('team.expire')).toBe('팀 자동 삭제');
+        expect(actionLabel('ensemble.expire')).toBe('합주 자동 삭제');
+        expect(isSystemAction('team.expire')).toBe(true);
+        expect(isSystemAction('team.delete')).toBe(false);
     });
 });

@@ -13,7 +13,7 @@ export const teamResponseSchema = z.object({
     /** [보컬, 기타, 베이스, 드럼, 키보드, 매니저, 셋리스트] */
     desc: z.array(z.string()),
     publishDate: z.string().optional(),
-    /** 팀 자동 삭제 날짜 (V-3 10차). 아직 백엔드 스키마에 없다: 생기면 그대로 받는다 */
+    /** 팀 자동 삭제 날짜 (그날 UTC 0시의 ISO, B-9). 옛 팀은 없다 = 계속 유지 */
     due: z.string().optional(),
     // PIN은 서버가 목록에 넣지 않는다 (B-6 B3). 와도 버린다
 });

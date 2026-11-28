@@ -136,8 +136,8 @@ describe('팀', () => {
             pin: '1234',
         });
         expect(typeof posted!.publishDate).toBe('string'); // Dayjs → ISO 문자열로 직렬화
-        // 팀 자동 삭제는 적용 예정 (TEAM_DUE_ENABLED): 아직 보내지 않는다
-        expect(posted).not.toHaveProperty('due');
+        // 팀 자동 삭제: 기본은 계속 유지 (백엔드 개편 B-9부터 늘 보낸다)
+        expect(posted).toMatchObject({ due: '2099-12-31' });
         expect(useDrawerStore.getState().openedDrawers).toEqual([]);
     });
 
@@ -304,6 +304,76 @@ describe('팀', () => {
         expect(useDrawerStore.getState().openedDrawers).toEqual([]);
     });
 
+    describe('팀 자동 삭제 (백엔드 개편 B-9: 늘 보임)', () => {
+        beforeEach(() => {
+            vi.useFakeTimers({ toFake: ['Date'] });
+            vi.setSystemTime(new Date(2026, 10, 20, 10, 0));
+        });
+
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
+        it('팀 추가: "삭제 날짜 지정"으로 고른 날짜를 due로 보낸다. 고르기 전에는 다음으로 못 간다', async () => {
+            let posted: Record<string, unknown> | undefined;
+            server.use(
+                http.post(`${url}/team`, async ({ request }) => {
+                    posted = (await request.json()) as Record<string, unknown>;
+                    return HttpResponse.json({ id: 'team-2' });
+                }),
+            );
+            const user = userEvent.setup();
+            renderApp();
+            await user.click(await screen.findByRole('button', { name: '팀 추가' }));
+            const drawer = within(await findDialog('팀 추가'));
+            await user.type(drawer.getByRole('textbox', { name: '팀명' }), '새밴드');
+
+            expect(drawer.getByRole('radio', { name: '계속 유지' })).toHaveAttribute(
+                'aria-checked',
+                'true',
+            );
+            await user.click(drawer.getByRole('radio', { name: '삭제 날짜 지정' }));
+            expect(drawer.getByText('이 날짜 이후에 자동으로 삭제돼요')).toBeInTheDocument();
+            expect(drawer.getByRole('button', { name: '삭제 날짜를 골라 주세요' })).toBeDisabled();
+            await user.click(drawer.getByRole('button', { name: /11월 28일/ }));
+            expect(
+                drawer.getByRole('button', { name: '11월 28일 토요일까지' }),
+            ).toBeInTheDocument();
+
+            await user.click(drawer.getByRole('button', { name: /^다음/ }));
+            const pinDrawer = within(await findDialog('PIN을 만들어 주세요'));
+            await user.type(pinDrawer.getByLabelText('PIN 4자리'), '1234');
+            await screen.findByRole('heading', { name: '한 번 더 입력해 주세요' });
+            await user.type(screen.getByLabelText('PIN 4자리'), '1234');
+
+            expect(await screen.findByText('팀을 만들었어요.')).toBeInTheDocument();
+            expect(posted).toMatchObject({ name: '새밴드', due: '2026-11-28' });
+        });
+
+        it('팀 수정: 계속 유지인 팀에 삭제 날짜를 정하면 바뀐 것으로 보고 due를 보낸다', async () => {
+            let putBody: Record<string, unknown> | undefined;
+            server.use(
+                http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)),
+                http.put(`${url}/team`, async ({ request }) => {
+                    putBody = (await request.json()) as Record<string, unknown>;
+                    return HttpResponse.json({ id: 'team-1' });
+                }),
+            );
+            const user = await openTeamInfo();
+            await user.click(screen.getByRole('button', { name: /팀 수정/ }));
+            const pinStep = within(await findDialog('팀을 수정할까요?'));
+            await user.type(pinStep.getByLabelText('PIN 4자리'), '1234');
+            const drawer = within(await findDialog('팀 수정'));
+
+            expect(drawer.getByRole('button', { name: '바뀐 내용이 없어요' })).toBeDisabled();
+            await user.click(drawer.getByRole('radio', { name: '삭제 날짜 지정' }));
+            await user.click(drawer.getByRole('button', { name: /11월 30일/ }));
+            await user.click(drawer.getByRole('button', { name: '수정하기' }));
+
+            await waitFor(() => expect(putBody).toMatchObject({ due: '2026-11-30', pin: '1234' }));
+        });
+    });
+
     /** 팀 정보 → "팀 수정" → 같은 Drawer 안의 PIN 단계 → (맞으면) 팀 수정 Drawer (V-3 13차) */
     async function openTeamEdit() {
         server.use(http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)));
@@ -351,6 +421,7 @@ describe('팀', () => {
             type: '외부 공연',
             name: '새이름',
             desc: ['보컬A', '기타B', '베이스C', '드럼D', '키보드E', '매니저F', '셋리스트'],
+            due: '2099-12-31', // 계속 유지 그대로 (B-9부터 늘 보낸다)
             pin: '1234',
         });
         // 팀 정보로 돌아오고, 고친 값이 보인다
@@ -454,7 +525,7 @@ describe('팀', () => {
             );
         });
 
-        // V-3 10차: 팀 자동 삭제 날짜(서버 팀 due, 백엔드에 생기면)가 있으면 팀 정보에 적고, 매주 반복은 그 날짜까지만
+        // V-3 10차: 팀 자동 삭제 날짜(서버 팀 due, B-9)가 있으면 팀 정보에 적고, 매주 반복은 그 날짜까지만
         it('팀에 삭제 날짜가 있으면 팀 정보에 적고, 매주 반복은 "종료 날짜 지정"만 (그 날짜까지)', async () => {
             server.use(
                 http.get(`${url}/teams`, () =>

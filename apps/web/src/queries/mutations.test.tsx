@@ -78,6 +78,7 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
                 desc: ['', '', '', '', '', '', ''],
                 pin: '1234',
                 publishDate: dayjs(),
+                due: '2099-12-31',
             }),
         );
 
@@ -104,6 +105,7 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
                 type: '기타 등등',
                 name: '바뀐밴드',
                 desc: ['', '', '', '', '', '', ''],
+                due: '2099-12-31',
             }),
         );
 
@@ -112,6 +114,7 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
             type: '기타 등등',
             name: '바뀐밴드',
             desc: ['', '', '', '', '', '', ''],
+            due: '2099-12-31',
             pin: '1234',
         });
         await waitFor(() => expect(loads(requests)).toEqual({ teams: 2, ensembles: 2, notes: 1 }));

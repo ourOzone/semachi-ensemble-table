@@ -8,6 +8,7 @@ import {
     fields,
     formatDevice,
     formatTime,
+    isSystemAction,
     pinLabel,
     RESULT_LABELS,
     shortId,
@@ -68,7 +69,11 @@ const ActivityRow = ({ activity, onVisitor }: ActivityRowProps) => {
                             {shortId(activity.visitorId)}
                         </button>
                     ) : (
-                        <span className="font-mono">{shortId(activity.visitorId)}</span>
+                        <span className="font-mono">
+                            {!activity.visitorId && isSystemAction(activity.action)
+                                ? '자동'
+                                : shortId(activity.visitorId)}
+                        </span>
                     )}
                     <button
                         type="button"

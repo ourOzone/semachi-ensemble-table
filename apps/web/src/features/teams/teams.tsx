@@ -103,7 +103,7 @@ const Teams = () => {
     }, [setTeamStates, openDrawer]);
 
     // 팀 추가 Drawer의 저장 (V-3 10차). 성공하면 Drawer를 닫고 알림 (이전: 완료 화면 Drawer "팀을 만들었어요"),
-    // 실패하면 알리고 Drawer(PIN 만들기)에 머문다. due는 TEAM_DUE_ENABLED가 켜져 있을 때만 들어 있다 (teamDue.ts)
+    // 실패하면 알리고 Drawer(PIN 만들기)에 머문다. due: 팀 자동 삭제 날짜 (백엔드 개편 B-9)
     const handleAddTeam = useCallback(
         async ({ type, name, desc, pin, due }: AddTeamInput) => {
             try {
@@ -113,7 +113,7 @@ const Teams = () => {
                     desc,
                     pin,
                     publishDate: dayjs(),
-                    ...(due !== undefined && { due }),
+                    due,
                 });
                 setTeamStates(); // 초기화
                 closeAllDrawers();
@@ -138,7 +138,7 @@ const Teams = () => {
                     type,
                     name,
                     desc,
-                    ...(due !== undefined && { due }),
+                    due,
                 });
                 setTeamStates(id, type, name, desc); // 팀 정보 Drawer가 고친 값으로
                 setOpenedDrawers(['teamInfo']);

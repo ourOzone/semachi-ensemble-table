@@ -9,6 +9,7 @@ import { createQueryClient } from '@/lib/query-client';
 import { teamColors } from '@/constants/colors';
 import { ensembles, mockInitialData, notes, notices, teams } from '@/test/fixtures';
 import { createTestQueryClient } from '@/test/render';
+import { apiPath } from '@/test/requests';
 import { server } from '@/test/server';
 import { useBoardSchedule } from './ensembles';
 import { useNotes, useNotices } from './notes';
@@ -40,7 +41,7 @@ function useAll() {
 function countRequests() {
     const counts: Record<string, number> = { teams: 0, ensembles: 0, notes: 0, notices: 0 };
     server.events.on('request:start', ({ request }) => {
-        const name = new URL(request.url).pathname.slice(1);
+        const name = apiPath(request.url).slice(1);
         if (name in counts) counts[name]!++;
     });
     return counts;

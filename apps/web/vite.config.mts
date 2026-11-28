@@ -25,6 +25,11 @@ export default defineConfig(({ mode }) => {
         server: {
             host: '0.0.0.0',
             port: 3000,
+            // pnpm dev: 웹은 같은 주소의 /api로 요청하고(env/.env), 개발 서버가 그것을 운영으로 넘긴다 (백엔드 개편 B-11).
+            // 브라우저에는 같은 주소라 CORS가 필요 없다. pnpm dev:local은 내 PC 서버 주소를 바로 쓴다 (.env.localserver)
+            proxy: {
+                '/api': { target: 'https://semachi.net', changeOrigin: true },
+            },
         },
         build: { outDir: 'build' },
         test: {
@@ -32,7 +37,8 @@ export default defineConfig(({ mode }) => {
             environmentOptions: {
                 // jsdom의 XHR(axios가 사용)은 mock 응답에도 CORS를 검사한다.
                 // 테스트 페이지 origin을 API origin과 같게 맞춰 same-origin 요청으로 만든다.
-                jsdom: { url: new URL(env.VITE_API_URL).origin },
+                // (테스트가 아닌 모드의 API 주소는 /api처럼 상대 주소라 기준 주소를 붙여 읽는다)
+                jsdom: { url: new URL(env.VITE_API_URL, 'http://localhost').origin },
             },
             setupFiles: ['./src/test/setup.ts'],
             include: ['src/**/*.test.{ts,tsx}'],

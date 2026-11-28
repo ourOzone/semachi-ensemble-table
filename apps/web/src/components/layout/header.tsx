@@ -6,6 +6,9 @@ import { useDrawerStore } from '@/stores/drawer';
 // 헤더 (View 개편 V-2에서 새로 만듦: 이전은 antd Layout.Header + styled-components, 반투명 블러).
 // 배경은 페이지와 같은 색, 스크롤을 내리면 위로 들어가고 올리면 다시 나온다.
 // V-3 1차: 합주판 보기 방식 스위치 → 설정 버튼 (설정 Drawer에서 보기 방식·다크 모드)
+// 백엔드 개편 B-11: 베타 빌드(VITE_APP_ENV=beta, beta.semachi.net)면 제목 옆에 "베타" (운영 빌드에서는 코드째 빠진다)
+
+const IS_BETA = import.meta.env.VITE_APP_ENV === 'beta';
 
 const DRIVE_URL =
     'https://drive.google.com/drive/folders/1FneJEkXY-hSqpM_XOBic7ep8lJZ3tdFn?usp=sharing';
@@ -31,6 +34,11 @@ const Header = () => {
                 <span className="text-xl font-bold text-ink select-none md:text-2xl">
                     세마치 합주판
                 </span>
+                {IS_BETA && (
+                    <span className="ml-2 rounded-full bg-ink px-2 py-0.5 text-xs font-bold text-on-ink select-none md:text-sm">
+                        베타
+                    </span>
+                )}
                 <div className="ml-auto flex items-center gap-1">
                     <a
                         href={SUGGESTION_URL}

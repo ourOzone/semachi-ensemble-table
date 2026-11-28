@@ -42,7 +42,7 @@ const teamDescSchema = z.tuple([
 export const NO_DUE = '2099-12-31';
 
 /**
- * 팀 수정 (PUT /team?id=). 종류는 문자열이면 된다 (옛 종류도 그대로 쓴다, 사용자 결정).
+ * 팀 수정 (PUT /teams/:id). 종류는 문자열이면 된다 (옛 종류도 그대로 쓴다, 사용자 결정).
  * due: 팀 자동 삭제 날짜 'YYYY-MM-DD' (계속 유지는 NO_DUE, B-9). 지난 날짜인지는 서버가 오늘(한국)과 비교한다
  */
 export const teamUpdateBodySchema = z.object({
@@ -52,7 +52,7 @@ export const teamUpdateBodySchema = z.object({
     due: z.iso.date(),
 });
 
-/** 팀 만들기 (POST /team) */
+/** 팀 만들기 (POST /teams) */
 export const teamCreateBodySchema = teamUpdateBodySchema.extend({
     pin: newPinSchema,
     publishDate: z.iso.datetime().optional(),
@@ -60,7 +60,7 @@ export const teamCreateBodySchema = teamUpdateBodySchema.extend({
 
 // --- 합주 ---
 
-/** 합주 수정 (PUT /ensemble?id=). 팀은 바꾸지 않는다. teamName·day는 서버가 채운다 */
+/** 합주 수정 (PUT /ensembles/:id). 팀은 바꾸지 않는다. teamName·day는 서버가 채운다 */
 export const ensembleUpdateBodySchema = z
     .object({
         startTime: timeSlotSchema,
@@ -76,20 +76,20 @@ export const ensembleUpdateBodySchema = z
         path: ['endTime'],
     });
 
-/** 합주 잡기 (POST /ensemble) */
+/** 합주 잡기 (POST /ensembles) */
 export const ensembleCreateBodySchema = ensembleUpdateBodySchema.safeExtend({
     teamId: objectIdSchema,
 });
 
 // --- 날적이·공지 ---
 
-/** 날적이 남기기 (POST /note). 앞뒤 공백을 빼고 1 ~ 200자 */
+/** 날적이 남기기 (POST /notes). 앞뒤 공백을 빼고 1 ~ 200자 */
 export const noteCreateBodySchema = z.object({
     text: z.string().trim().min(1).max(NOTE_TEXT_MAX),
     pin: newPinSchema,
 });
 
-/** 공지 올리기 (POST /notice). 길이 제한 없음 (limits.ts) */
+/** 공지 올리기 (POST /notices). 길이 제한 없음 (limits.ts) */
 export const noticeCreateBodySchema = z.object({ content: z.string().trim().min(1) });
 
 export type TeamCreateBody = z.infer<typeof teamCreateBodySchema>;

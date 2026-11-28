@@ -31,7 +31,7 @@ describe('App', () => {
         vi.spyOn(console, 'warn').mockImplementation(capture);
 
         mockInitialData();
-        server.use(http.get(`${url}/team/:id`, () => HttpResponse.json(true)));
+        server.use(http.get(`${url}/teams/:id`, () => HttpResponse.json(true)));
     });
 
     it('API 데이터를 불러와 공지·팀·합주·메모를 표시한다', async () => {

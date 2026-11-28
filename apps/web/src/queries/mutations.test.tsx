@@ -68,7 +68,7 @@ const ensembleRequest: EnsembleUpdateRequest = {
 
 describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온다 (이전: 4개 목록 전체)', () => {
     it('팀 추가 → 팀 목록만', async () => {
-        server.use(http.post(`${url}/team`, () => HttpResponse.json({ id: 'team-2' })));
+        server.use(http.post(`${url}/teams`, () => HttpResponse.json({ id: 'team-2' })));
         const { result, requests } = await renderScreen();
 
         await act(() =>
@@ -86,11 +86,11 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
         expect(loads(requests)).toEqual({ teams: 2, ensembles: 1, notes: 1 });
     });
 
-    it('팀 수정 → 팀·합주 목록 (서버가 합주의 teamName도 바꾼다). PUT /team?id=', async () => {
+    it('팀 수정 → 팀·합주 목록 (서버가 합주의 teamName도 바꾼다). PUT /teams/:id', async () => {
         let putUrl = '';
         let body: unknown;
         server.use(
-            http.put(`${url}/team`, async ({ request }) => {
+            http.put(`${url}/teams/:id`, async ({ request }) => {
                 putUrl = request.url;
                 body = await request.json();
                 return HttpResponse.json({ id: 'team-1' });
@@ -109,7 +109,7 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
             }),
         );
 
-        expect(new URL(putUrl).searchParams.get('id')).toBe('team-1');
+        expect(new URL(putUrl).pathname.split('/').pop()).toBe('team-1');
         expect(body).toEqual({
             type: '기타 등등',
             name: '바뀐밴드',
@@ -123,7 +123,7 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
     it('팀 삭제 → 404(이미 삭제됨)여도 팀·합주 목록 (팀 삭제는 합주도 지운다)', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         server.use(
-            http.delete(`${url}/team`, () => HttpResponse.json({ id: -1 }, { status: 404 })),
+            http.delete(`${url}/teams/:id`, () => HttpResponse.json({ id: -1 }, { status: 404 })),
         );
         const { result, requests } = await renderScreen();
 
@@ -138,7 +138,9 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
         vi.spyOn(console, 'error').mockImplementation(() => {});
         let status = 200;
         server.use(
-            http.post(`${url}/ensemble`, () => HttpResponse.json({ id: 'ensemble-2' }, { status })),
+            http.post(`${url}/ensembles`, () =>
+                HttpResponse.json({ id: 'ensemble-2' }, { status }),
+            ),
         );
         const { result, requests } = await renderScreen();
 
@@ -164,10 +166,10 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
         expect(loads(requests)).toEqual({ teams: 1, ensembles: 2, notes: 1 });
     });
 
-    it('합주 수정 → 합주 목록만. PUT /ensemble?id=', async () => {
+    it('합주 수정 → 합주 목록만. PUT /ensembles/:id', async () => {
         let putUrl = '';
         server.use(
-            http.put(`${url}/ensemble`, ({ request }) => {
+            http.put(`${url}/ensembles/:id`, ({ request }) => {
                 putUrl = request.url;
                 return HttpResponse.json({ id: 'ensemble-1', message: 'ok' });
             }),
@@ -182,7 +184,7 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
             }),
         );
 
-        expect(new URL(putUrl).searchParams.get('id')).toBe('ensemble-1');
+        expect(new URL(putUrl).pathname.split('/').pop()).toBe('ensemble-1');
         await waitFor(() => expect(loads(requests).ensembles).toBe(2));
         expect(loads(requests)).toEqual({ teams: 1, ensembles: 2, notes: 1 });
     });
@@ -190,7 +192,9 @@ describe('팀·합주 mutation 훅: 영향을 받는 목록만 다시 불러온�
     it('합주 삭제 → 404(이미 삭제됨)여도 합주 목록만', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         server.use(
-            http.delete(`${url}/ensemble`, () => HttpResponse.json({ id: -1 }, { status: 404 })),
+            http.delete(`${url}/ensembles/:id`, () =>
+                HttpResponse.json({ id: -1 }, { status: 404 }),
+            ),
         );
         const { result, requests } = await renderScreen();
 

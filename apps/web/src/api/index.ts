@@ -13,7 +13,10 @@ const apiClient = axios.create({
 // get/post/put/del의 응답 타입 T는 런타임 검증 없이 호출부가 지정한다.
 // 화면에서 쓰는 응답은 리소스별 함수(team.ts 등)가 Zod 스키마로 검증한다: 목록은 getList, 단일 값은 schema.parse
 
-/** 서버가 404로 응답한 요청 에러인지. 대상이 이미 삭제된 경우를 판별한다 (서버의 수정·삭제·PIN 확인 API는 대상이 없으면 404) */
+// 서버 주소는 복수형 + 주소 안의 id (/teams/:id). 오류 본문은 { error: { code, message } } (백엔드 개편 B-10).
+// 웹은 오류 본문을 읽지 않고 상태 코드(404·403·429)와 헤더만 본다
+
+/** 서버가 404로 응답한 요청 에러인지. 대상이 이미 삭제된 경우를 판별한다 (서버의 조회·수정·삭제·PIN 확인 API는 대상이 없으면 404) */
 export const isNotFound = (err: unknown): boolean =>
     axios.isAxiosError(err) && err.response?.status === 404;
 
@@ -70,6 +73,12 @@ export const del = async <T>(endpoint: string, body?: object): Promise<T> => {
         console.error(`DELETE ${endpoint} 실패:`, err);
         throw err;
     }
+};
+
+/** 대상이 아직 있는지 (GET /teams/:id 등이 200이면 true, 없으면 404로 reject). 받은 내용은 쓰지 않는다 (B-10: 이전엔 true를 주는 확인 전용 API) */
+export const exists = async (endpoint: string): Promise<true> => {
+    await get<unknown>(endpoint);
+    return true;
 };
 
 /**

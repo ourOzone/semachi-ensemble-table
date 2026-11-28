@@ -16,7 +16,7 @@ function renderPinStep(onConfirm = vi.fn<(pin: string) => void>()) {
 
 describe('PinStep', () => {
     it('맞으면 그 PIN으로 onConfirm (변경 요청에 담아 보낸다)', async () => {
-        server.use(http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)));
+        server.use(http.post(`${url}/teams/:id/check-pin`, () => HttpResponse.json(true)));
         const { user, onConfirm } = renderPinStep();
         await user.type(screen.getByLabelText('PIN 4자리'), '1234');
         await waitFor(() => expect(onConfirm).toHaveBeenCalledWith('1234'));
@@ -24,7 +24,7 @@ describe('PinStep', () => {
 
     it('틀리면 서버가 알려 준 틀린 횟수를 함께 보인다 (예: 7/10)', async () => {
         server.use(
-            http.post(`${url}/check-team-pin`, () =>
+            http.post(`${url}/teams/:id/check-pin`, () =>
                 HttpResponse.json(false, { headers: { 'Pin-Attempts': '7/10' } }),
             ),
         );
@@ -37,7 +37,7 @@ describe('PinStep', () => {
     });
 
     it('서버가 횟수를 알려 주지 않으면 횟수 없이', async () => {
-        server.use(http.post(`${url}/check-team-pin`, () => HttpResponse.json(false)));
+        server.use(http.post(`${url}/teams/:id/check-pin`, () => HttpResponse.json(false)));
         const { user } = renderPinStep();
         await user.type(screen.getByLabelText('PIN 4자리'), '0000');
         expect(
@@ -47,7 +47,7 @@ describe('PinStep', () => {
 
     it('너무 많이 틀려 막히면(429) 다시 해도 되는 때까지 남은 분을 보인다 (알림 없이 그 자리에)', async () => {
         server.use(
-            http.post(`${url}/check-team-pin`, () =>
+            http.post(`${url}/teams/:id/check-pin`, () =>
                 HttpResponse.json(
                     { error: 'Too many PIN attempts' },
                     { status: 429, headers: { 'Retry-After': '845' } },

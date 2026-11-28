@@ -48,7 +48,7 @@ describe('한마디·공지 mutation 훅', () => {
     it('한마디 추가: POST /note 후 한마디 목록만 다시 불러온다', async () => {
         let body: unknown;
         server.use(
-            http.post(`${url}/note`, async ({ request }) => {
+            http.post(`${url}/notes`, async ({ request }) => {
                 body = await request.json();
                 return HttpResponse.json({ id: 'note-2' });
             }),
@@ -65,7 +65,7 @@ describe('한마디·공지 mutation 훅', () => {
 
     it('한마디 추가 실패: 에러를 그대로 던지고 목록은 다시 불러오지 않는다', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
-        server.use(http.post(`${url}/note`, () => new HttpResponse(null, { status: 400 })));
+        server.use(http.post(`${url}/notes`, () => new HttpResponse(null, { status: 400 })));
         const { result, requests } = await renderScreen();
 
         await expect(
@@ -80,7 +80,7 @@ describe('한마디·공지 mutation 훅', () => {
     it('한마디 삭제: 이미 삭제돼 404여도 목록을 다시 불러온다', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         server.use(
-            http.delete(`${url}/note`, () => HttpResponse.json({ id: -1 }, { status: 404 })),
+            http.delete(`${url}/notes/:id`, () => HttpResponse.json({ id: -1 }, { status: 404 })),
         );
         const { result, requests } = await renderScreen();
 
@@ -95,7 +95,7 @@ describe('한마디·공지 mutation 훅', () => {
     it('공지 추가: POST /notice({ content, pin }) 후 공지 목록만 다시 불러온다', async () => {
         let body: unknown;
         server.use(
-            http.post(`${url}/notice`, async ({ request }) => {
+            http.post(`${url}/notices`, async ({ request }) => {
                 body = await request.json();
                 return HttpResponse.json({ message: 'Notice created', id: 'notice-2' });
             }),
@@ -113,7 +113,9 @@ describe('한마디·공지 mutation 훅', () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         let status = 200;
         server.use(
-            http.delete(`${url}/notice`, () => HttpResponse.json({ message: 'ok' }, { status })),
+            http.delete(`${url}/notices/:id`, () =>
+                HttpResponse.json({ message: 'ok' }, { status }),
+            ),
         );
         const { result, requests } = await renderScreen();
 

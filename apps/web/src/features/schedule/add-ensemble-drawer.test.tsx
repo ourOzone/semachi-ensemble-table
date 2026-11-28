@@ -52,8 +52,8 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
         vi.setSystemTime(new Date(2026, 10, 20, 10, 0));
         requests = recordRequests();
         mockInitialData();
-        server.use(http.get(`${url}/team/:id`, () => HttpResponse.json(true)));
-        server.use(http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)));
+        server.use(http.get(`${url}/teams/:id`, () => HttpResponse.json(true)));
+        server.use(http.post(`${url}/teams/:id/check-pin`, () => HttpResponse.json(true)));
     });
 
     afterEach(() => {
@@ -63,7 +63,7 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
     it('빈 칸에서 열면 날짜·시작 시간이 채워져 있고(2시간), 팀·반복 여부를 고르면 저장한다', async () => {
         let posted: Record<string, unknown> | undefined;
         server.use(
-            http.post(`${url}/ensemble`, async ({ request }) => {
+            http.post(`${url}/ensembles`, async ({ request }) => {
                 posted = (await request.json()) as Record<string, unknown>;
                 return HttpResponse.json({ id: 'new' });
             }),
@@ -116,7 +116,7 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
             '2026-11-21 12:00',
         );
         // 팀이 있는지는 서버가 확인한다 (B-8 B4, 이전: 저장 직전에 GET /team/:id)
-        expect(countOf(requests, 'GET /team/team-1')).toBe(0);
+        expect(countOf(requests, 'GET /teams/team-1')).toBe(0);
         expect(useDrawerStore.getState().openedDrawers).toEqual([]);
     });
 
@@ -266,7 +266,7 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
             ['C팀', 6, 9],
         ]);
         server.use(
-            http.post(`${url}/ensemble`, () => {
+            http.post(`${url}/ensembles`, () => {
                 posted = true;
                 return HttpResponse.json({ id: 'new' });
             }),
@@ -361,7 +361,7 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
     it('반복 종료 날짜: 매주 반복일 때만, 지정하면 그 날짜를 due로 보낸다', async () => {
         let posted: Record<string, unknown> | undefined;
         server.use(
-            http.post(`${url}/ensemble`, async ({ request }) => {
+            http.post(`${url}/ensembles`, async ({ request }) => {
                 posted = (await request.json()) as Record<string, unknown>;
                 return HttpResponse.json({ id: 'new' });
             }),
@@ -421,7 +421,7 @@ describe('합주 잡기 Drawer (합주판에서)', () => {
     it('반복 종료를 지정했다가 "계속 반복"으로 돌리면 2099-12-31', async () => {
         let posted: Record<string, unknown> | undefined;
         server.use(
-            http.post(`${url}/ensemble`, async ({ request }) => {
+            http.post(`${url}/ensembles`, async ({ request }) => {
                 posted = (await request.json()) as Record<string, unknown>;
                 return HttpResponse.json({ id: 'new' });
             }),
@@ -477,8 +477,8 @@ describe('합주 잡기 Drawer: 스크롤·막대 끌기', () => {
         vi.useFakeTimers({ toFake: ['Date'] });
         vi.setSystemTime(new Date(2026, 10, 20, 10, 0));
         mockInitialData();
-        server.use(http.get(`${url}/team/:id`, () => HttpResponse.json(true)));
-        server.use(http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)));
+        server.use(http.get(`${url}/teams/:id`, () => HttpResponse.json(true)));
+        server.use(http.post(`${url}/teams/:id/check-pin`, () => HttpResponse.json(true)));
         scrollTo = vi.fn<(options: ScrollToOptions) => void>();
         Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
             configurable: true,

@@ -34,11 +34,11 @@ describe('공지', () => {
         let posted: unknown;
         let pinBody: unknown;
         server.use(
-            http.post(`${url}/check-notice-pin`, async ({ request }) => {
+            http.post(`${url}/notices/check-pin`, async ({ request }) => {
                 pinBody = await request.json();
                 return HttpResponse.json(true);
             }),
-            http.post(`${url}/notice`, async ({ request }) => {
+            http.post(`${url}/notices`, async ({ request }) => {
                 posted = await request.json();
                 return HttpResponse.json({ message: 'Notice created', id: 'notice-2' });
             }),
@@ -60,7 +60,7 @@ describe('공지', () => {
     });
 
     it('관리자 PIN이 틀리면 글쓰기로 넘어가지 않는다', async () => {
-        server.use(http.post(`${url}/check-notice-pin`, () => HttpResponse.json(false)));
+        server.use(http.post(`${url}/notices/check-pin`, () => HttpResponse.json(false)));
         const { user, drawer } = await openNoticeDrawer();
 
         await user.click(drawer.getByRole('button', { name: '공지 올리기 (관리자)' }));
@@ -76,8 +76,8 @@ describe('공지', () => {
     it('올리기에 실패하면 알리고 글쓰기에 머문다', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         server.use(
-            http.post(`${url}/check-notice-pin`, () => HttpResponse.json(true)),
-            http.post(`${url}/notice`, () => new HttpResponse(null, { status: 500 })),
+            http.post(`${url}/notices/check-pin`, () => HttpResponse.json(true)),
+            http.post(`${url}/notices`, () => new HttpResponse(null, { status: 500 })),
         );
         const { user, drawer } = await openNoticeDrawer();
 
@@ -100,9 +100,9 @@ describe('공지', () => {
         let deletedUrl = '';
         let deletedBody: unknown;
         server.use(
-            http.get(`${url}/notice/:id`, () => HttpResponse.json(true)),
-            http.post(`${url}/check-notice-pin`, () => HttpResponse.json(true)),
-            http.delete(`${url}/notice`, async ({ request }) => {
+            http.get(`${url}/notices/:id`, () => HttpResponse.json(true)),
+            http.post(`${url}/notices/check-pin`, () => HttpResponse.json(true)),
+            http.delete(`${url}/notices/:id`, async ({ request }) => {
                 deletedUrl = request.url;
                 deletedBody = await request.json();
                 return HttpResponse.json({ message: 'Notice deleted successfully' });
@@ -120,19 +120,19 @@ describe('공지', () => {
         await user.click(pinDrawer.getByRole('button', { name: '삭제하기' }));
 
         expect(await screen.findByText('삭제했어요.')).toBeInTheDocument();
-        expect(new URL(deletedUrl).searchParams.get('id')).toBe('notice-1');
+        expect(new URL(deletedUrl).pathname.split('/').pop()).toBe('notice-1');
         // PIN 단계에서 맞은 PIN을 삭제 요청에도 담는다 (서버가 다시 확인, 백엔드 개편 B-6)
         expect(deletedBody).toEqual({ pin: '1234' });
         expect(await findDialog('공지')).toBeInTheDocument();
         // 존재 확인은 X를 누를 때 한 번
-        expect(countOf(requests, 'GET /notice/notice-1')).toBe(1);
+        expect(countOf(requests, 'GET /notices/notice-1')).toBe(1);
         await waitFor(() => expect(countOf(requests, 'GET /notices')).toBe(2));
         expect(countOf(requests, 'GET /teams')).toBe(1);
     });
 
     it('X를 눌렀는데 이미 삭제됐으면 알리고 목록에 머문다', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
-        server.use(http.get(`${url}/notice/:id`, () => new HttpResponse(null, { status: 404 })));
+        server.use(http.get(`${url}/notices/:id`, () => new HttpResponse(null, { status: 404 })));
         const { user, drawer } = await openNoticeDrawer();
 
         await user.click(drawer.getByRole('button', { name: '공지 삭제' }));

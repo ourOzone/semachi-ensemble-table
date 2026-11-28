@@ -63,12 +63,6 @@ export interface IdResponse {
     id: string;
 }
 
-/** 옛 응답 (웹 커밋에서 지운다) */
-export interface MessageResponse {
-    message: string;
-}
-export const existsResponseSchema = z.boolean();
-
 /** PIN 확인(POST /teams/:id/check-pin 등) 응답. PIN이 맞으면 true. 틀리면 false + Pin-Attempts 헤더 */
 export const pinCheckResponseSchema = z.boolean();
 export type PinCheckResponse = z.infer<typeof pinCheckResponseSchema>;

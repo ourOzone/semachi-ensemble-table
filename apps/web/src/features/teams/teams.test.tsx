@@ -51,7 +51,7 @@ async function openAddEnsembleFromTeam(user: ReturnType<typeof userEvent.setup>)
 
 /** 합주 잡기의 마지막: "합주 잡기"를 누른 뒤 고른 팀의 PIN (팀 PIN 1234, 백엔드 개편 B-6 뒤) */
 async function enterBookingPin(user: ReturnType<typeof userEvent.setup>) {
-    server.use(http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)));
+    server.use(http.post(`${url}/teams/:id/check-pin`, () => HttpResponse.json(true)));
     const pinStep = within(await findDialog('합주를 잡을까요?'));
     await user.type(pinStep.getByLabelText('PIN 4자리'), '1234');
 }
@@ -111,13 +111,13 @@ describe('팀', () => {
     beforeEach(() => {
         requests = recordRequests();
         mockInitialData();
-        server.use(http.get(`${url}/team/:id`, () => HttpResponse.json(true)));
+        server.use(http.get(`${url}/teams/:id`, () => HttpResponse.json(true)));
     });
 
     it('팀 추가: 한 Drawer에서 종류·이름·팀원·셋리스트 → PIN 두 번 → 서버에 보내고 닫으며 알린다', async () => {
         let posted: Record<string, unknown> | undefined;
         server.use(
-            http.post(`${url}/team`, async ({ request }) => {
+            http.post(`${url}/teams`, async ({ request }) => {
                 posted = (await request.json()) as Record<string, unknown>;
                 return HttpResponse.json({ id: 'team-2' });
             }),
@@ -214,7 +214,7 @@ describe('팀', () => {
     it('팀 추가: 확인 PIN이 다르면 흔든 뒤 처음부터, 저장하지 않는다', async () => {
         let attempted = false;
         server.use(
-            http.post(`${url}/team`, () => {
+            http.post(`${url}/teams`, () => {
                 attempted = true;
                 return HttpResponse.json({ id: 'x' });
             }),
@@ -238,7 +238,7 @@ describe('팀', () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         let attempted = false;
         server.use(
-            http.post(`${url}/team`, () => {
+            http.post(`${url}/teams`, () => {
                 attempted = true;
                 return new HttpResponse(null, { status: 500 });
             }),
@@ -268,7 +268,7 @@ describe('팀', () => {
         expect(drawer.getByText('매니저F')).toBeInTheDocument();
         expect(drawer.getByText('셋리스트', { selector: 'div' })).toBeInTheDocument();
         // 팀 클릭 시점의 존재 확인 요청은 없다 (이전: 1회, 사전 결정 5)
-        expect(countOf(requests, 'GET /team/team-1')).toBe(0);
+        expect(countOf(requests, 'GET /teams/team-1')).toBe(0);
     });
 
     it('팀 삭제: 팀 정보 Drawer 안의 PIN 단계에서 PIN이 맞으면 삭제하고 모두 닫으며 알린다', async () => {
@@ -276,11 +276,11 @@ describe('팀', () => {
         let deletedUrl = '';
         let deletedBody: unknown;
         server.use(
-            http.post(`${url}/check-team-pin`, async ({ request }) => {
+            http.post(`${url}/teams/:id/check-pin`, async ({ request }) => {
                 pinBody = await request.json();
                 return HttpResponse.json(true);
             }),
-            http.delete(`${url}/team`, async ({ request }) => {
+            http.delete(`${url}/teams/:id`, async ({ request }) => {
                 deletedUrl = request.url;
                 deletedBody = await request.json();
                 return HttpResponse.json({ id: 'team-1' });
@@ -297,8 +297,8 @@ describe('팀', () => {
         await user.click(button);
 
         expect(await screen.findByText('삭제했어요.')).toBeInTheDocument();
-        expect(pinBody).toEqual({ teamId: 'team-1', pin: '1234' });
-        expect(new URL(deletedUrl).searchParams.get('id')).toBe('team-1');
+        expect(pinBody).toEqual({ pin: '1234' }); // 팀 id는 주소에 (B-10)
+        expect(new URL(deletedUrl).pathname.split('/').pop()).toBe('team-1');
         // PIN 단계에서 맞은 PIN을 삭제 요청에도 담는다 (서버가 다시 확인, 백엔드 개편 B-6)
         expect(deletedBody).toEqual({ pin: '1234' });
         expect(useDrawerStore.getState().openedDrawers).toEqual([]);
@@ -317,7 +317,7 @@ describe('팀', () => {
         it('팀 추가: "삭제 날짜 지정"으로 고른 날짜를 due로 보낸다. 고르기 전에는 다음으로 못 간다', async () => {
             let posted: Record<string, unknown> | undefined;
             server.use(
-                http.post(`${url}/team`, async ({ request }) => {
+                http.post(`${url}/teams`, async ({ request }) => {
                     posted = (await request.json()) as Record<string, unknown>;
                     return HttpResponse.json({ id: 'team-2' });
                 }),
@@ -353,8 +353,8 @@ describe('팀', () => {
         it('팀 수정: 계속 유지인 팀에 삭제 날짜를 정하면 바뀐 것으로 보고 due를 보낸다', async () => {
             let putBody: Record<string, unknown> | undefined;
             server.use(
-                http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)),
-                http.put(`${url}/team`, async ({ request }) => {
+                http.post(`${url}/teams/:id/check-pin`, () => HttpResponse.json(true)),
+                http.put(`${url}/teams/:id`, async ({ request }) => {
                     putBody = (await request.json()) as Record<string, unknown>;
                     return HttpResponse.json({ id: 'team-1' });
                 }),
@@ -376,7 +376,7 @@ describe('팀', () => {
 
     /** 팀 정보 → "팀 수정" → 같은 Drawer 안의 PIN 단계 → (맞으면) 팀 수정 Drawer (V-3 13차) */
     async function openTeamEdit() {
-        server.use(http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)));
+        server.use(http.post(`${url}/teams/:id/check-pin`, () => HttpResponse.json(true)));
         const user = await openTeamInfo();
         await user.click(screen.getByRole('button', { name: /팀 수정/ }));
         const pinStep = within(await findDialog('팀을 수정할까요?'));
@@ -389,7 +389,7 @@ describe('팀', () => {
         let putBody: unknown;
         let putUrl = '';
         server.use(
-            http.put(`${url}/team`, async ({ request }) => {
+            http.put(`${url}/teams/:id`, async ({ request }) => {
                 putUrl = request.url;
                 putBody = await request.json();
                 return HttpResponse.json({ id: 'team-1' });
@@ -415,7 +415,7 @@ describe('팀', () => {
         await user.click(drawer.getByRole('button', { name: '수정하기' }));
 
         expect(await screen.findByText('팀을 수정했어요.')).toBeInTheDocument();
-        expect(new URL(putUrl).searchParams.get('id')).toBe('team-1');
+        expect(new URL(putUrl).pathname.split('/').pop()).toBe('team-1');
         // 팀 정보에서 맞은 PIN을 함께 보낸다 (서버가 다시 확인, 백엔드 개편 B-6)
         expect(putBody).toEqual({
             type: '외부 공연',
@@ -433,7 +433,7 @@ describe('팀', () => {
     it('팀 수정: 누를 때 확인 요청이 실패하면(서버 오류) 알리고 팀 정보에 머문다', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         const user = await openTeamInfo();
-        server.use(http.get(`${url}/team/:id`, () => new HttpResponse(null, { status: 500 })));
+        server.use(http.get(`${url}/teams/:id`, () => new HttpResponse(null, { status: 500 })));
 
         await user.click(screen.getByRole('button', { name: /팀 수정/ }));
 
@@ -455,7 +455,7 @@ describe('팀', () => {
 
     it('팀 수정: 저장할 때 서버가 404(이미 삭제됨)를 주면 Drawer를 모두 닫고 팀·합주 목록을 다시 불러오며 알린다', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
-        server.use(http.put(`${url}/team`, () => new HttpResponse(null, { status: 404 })));
+        server.use(http.put(`${url}/teams/:id`, () => new HttpResponse(null, { status: 404 })));
         const { user, drawer } = await openTeamEdit();
         await user.type(drawer.getByRole('textbox', { name: '팀명' }), '2');
         requests.length = 0;
@@ -484,7 +484,7 @@ describe('팀', () => {
         it('팀이 골라져 있고, 반복 여부 → 날짜 → 시간을 고르면 서버에 보내고 닫으며 알린다', async () => {
             let posted: Record<string, unknown> | undefined;
             server.use(
-                http.post(`${url}/ensemble`, async ({ request }) => {
+                http.post(`${url}/ensembles`, async ({ request }) => {
                     posted = (await request.json()) as Record<string, unknown>;
                     return HttpResponse.json({ id: 'ensemble-2' });
                 }),
@@ -511,7 +511,7 @@ describe('팀', () => {
                 '2026-11-27 12:00',
             );
             // 팀 정보 Drawer의 합주 잡기 버튼에서 한 번. 저장 직전 확인은 없앴다: 서버가 확인한다 (B-8 B4, 이전 2회)
-            expect(countOf(requests, 'GET /team/team-1')).toBe(1);
+            expect(countOf(requests, 'GET /teams/team-1')).toBe(1);
         });
 
         it('저장하지 않고 닫으면 팀 정보로 돌아간다', async () => {
@@ -565,7 +565,7 @@ describe('팀', () => {
         it('팀이 그새 삭제됐으면(서버가 404) 모두 닫고 알리며 목록을 다시 불러온다 (B-8 B4)', async () => {
             let attempted = false;
             server.use(
-                http.post(`${url}/ensemble`, () => {
+                http.post(`${url}/ensembles`, () => {
                     attempted = true;
                     return HttpResponse.json({ error: 'Team not found' }, { status: 404 });
                 }),
@@ -586,7 +586,7 @@ describe('팀', () => {
             vi.spyOn(console, 'error').mockImplementation(() => {});
             let attempted = false;
             server.use(
-                http.post(`${url}/ensemble`, () => {
+                http.post(`${url}/ensembles`, () => {
                     attempted = true;
                     return new HttpResponse(null, { status: 500 });
                 }),

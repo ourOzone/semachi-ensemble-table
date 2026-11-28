@@ -26,7 +26,7 @@ import type { Notice } from '@/types/index';
 
 // 공지 Drawer (View 개편 V-5). 아래에서 올라오는 Drawer 하나에서 목록·올리기·삭제를 모두 한다
 // (이전: 오른쪽에서 열리는 옛 Drawer 3개 — 목록, 올리기(글 + PIN 한 칸 + "완료"), 삭제(PIN 한 칸 + "진짜 삭제해요"), 알림 없음).
-// 공지는 관리자만 쓰고, PIN은 고정된 관리자 PIN이다 (서버 check-notice-pin). 그래서 올리기는 PIN을 먼저 확인한 뒤 글을 쓴다
+// 공지는 관리자만 쓰고, PIN은 고정된 관리자 PIN이다 (서버 POST /notices/check-pin). 그래서 올리기는 PIN을 먼저 확인한 뒤 글을 쓴다
 // (관리자가 아니면 글을 쓰기 전에 막힌다). 단계: 목록 → (올리기) PIN → 글 → 올리기 / (삭제) PIN → 삭제하기.
 // 올리거나 삭제하면 목록으로 돌아온다. 팀 정보 Drawer와 같은 규칙: 스크롤 막대 없이 끝 흐림, 키보드 처리(keyboardSheet)
 

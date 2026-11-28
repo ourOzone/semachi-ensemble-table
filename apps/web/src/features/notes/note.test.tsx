@@ -30,7 +30,7 @@ describe('날적이', () => {
     it('글 → 다음 → PIN → 남기기: 서버에 앞뒤 공백을 뺀 text와 pin을 보내고, 닫고 알린다', async () => {
         let posted: unknown;
         server.use(
-            http.post(`${url}/note`, async ({ request }) => {
+            http.post(`${url}/notes`, async ({ request }) => {
                 posted = await request.json();
                 return HttpResponse.json({ id: 'note-2' });
             }),
@@ -61,7 +61,7 @@ describe('날적이', () => {
 
     it('저장에 실패하면 알리고 PIN 단계에 머문다', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
-        server.use(http.post(`${url}/note`, () => new HttpResponse(null, { status: 500 })));
+        server.use(http.post(`${url}/notes`, () => new HttpResponse(null, { status: 500 })));
         const user = userEvent.setup();
         renderApp();
 
@@ -91,12 +91,12 @@ describe('날적이', () => {
         let deletedUrl = '';
         let deletedBody: unknown;
         server.use(
-            http.get(`${url}/note/:id`, () => HttpResponse.json(true)),
-            http.post(`${url}/check-note-pin`, async ({ request }) => {
+            http.get(`${url}/notes/:id`, () => HttpResponse.json(true)),
+            http.post(`${url}/notes/:id/check-pin`, async ({ request }) => {
                 pinBody = await request.json();
                 return HttpResponse.json(true);
             }),
-            http.delete(`${url}/note`, async ({ request }) => {
+            http.delete(`${url}/notes/:id`, async ({ request }) => {
                 deletedUrl = request.url;
                 deletedBody = await request.json();
                 return HttpResponse.json({ id: 'note-1' });
@@ -115,12 +115,12 @@ describe('날적이', () => {
         await user.click(drawer.getByRole('button', { name: '삭제하기' }));
 
         expect(await screen.findByText('삭제했어요.')).toBeInTheDocument();
-        expect(pinBody).toEqual({ noteId: 'note-1', pin: '1234' });
-        expect(new URL(deletedUrl).searchParams.get('id')).toBe('note-1');
+        expect(pinBody).toEqual({ pin: '1234' }); // 글 id는 주소에 (B-10)
+        expect(new URL(deletedUrl).pathname.split('/').pop()).toBe('note-1');
         // PIN 단계에서 맞은 PIN을 삭제 요청에도 담는다 (서버가 다시 확인, 백엔드 개편 B-6)
         expect(deletedBody).toEqual({ pin: '1234' });
         // 존재 확인은 X를 누를 때 한 번
-        expect(countOf(requests, 'GET /note/note-1')).toBe(1);
+        expect(countOf(requests, 'GET /notes/note-1')).toBe(1);
         // 삭제 후에는 날적이 목록만 다시 불러온다
         await waitFor(() => expect(countOf(requests, 'GET /notes')).toBe(2));
         expect(countOf(requests, 'GET /teams')).toBe(1);
@@ -128,7 +128,7 @@ describe('날적이', () => {
 
     it('X를 눌렀는데 이미 삭제됐으면 알리고 Drawer를 열지 않는다', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
-        server.use(http.get(`${url}/note/:id`, () => new HttpResponse(null, { status: 404 })));
+        server.use(http.get(`${url}/notes/:id`, () => new HttpResponse(null, { status: 404 })));
         const user = userEvent.setup();
         renderApp();
 

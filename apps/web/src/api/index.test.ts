@@ -21,13 +21,13 @@ describe('api client', () => {
     it('POST 시 body를 JSON으로 전송한다', async () => {
         let received: unknown;
         server.use(
-            http.post(`${url}/note`, async ({ request }) => {
+            http.post(`${url}/notes`, async ({ request }) => {
                 received = await request.json();
                 return HttpResponse.json({ ok: true });
             }),
         );
 
-        await post('/note', { text: '메모', pin: '1234' });
+        await post('/notes', { text: '메모', pin: '1234' });
 
         expect(received).toEqual({ text: '메모', pin: '1234' });
     });
@@ -44,15 +44,18 @@ describe('isNotFound', () => {
     it('서버가 404로 응답한 요청 에러만 true', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         server.use(
-            http.get(`${url}/team/:id`, ({ params }) =>
+            http.get(`${url}/teams/:id`, ({ params }) =>
                 params.id === 'gone'
-                    ? HttpResponse.json(false, { status: 404 })
+                    ? HttpResponse.json(
+                          { error: { code: 'NOT_FOUND', message: '팀이 없습니다' } },
+                          { status: 404 },
+                      )
                     : new HttpResponse(null, { status: 500 }),
             ),
         );
 
-        const notFound = await get('/team/gone').catch((err: unknown) => err);
-        const serverError = await get('/team/x').catch((err: unknown) => err);
+        const notFound = await get('/teams/gone').catch((err: unknown) => err);
+        const serverError = await get('/teams/x').catch((err: unknown) => err);
 
         expect(isNotFound(notFound)).toBe(true);
         expect(isNotFound(serverError)).toBe(false);
@@ -62,17 +65,17 @@ describe('isNotFound', () => {
 });
 
 describe('합주 수정·삭제 경로', () => {
-    // P8: 경로 앞의 '/' 유무와 관계없이 baseURL과 합쳐진 최종 URL이 같아야 한다
-    it('PUT·DELETE 모두 {url}/ensemble?id=로 보낸다', async () => {
+    // P8에서 고정한 최종 URL. B-10부터 id는 주소 안에 (/ensembles/:id, 이전 /ensemble?id=)
+    it('PUT·DELETE 모두 {url}/ensembles/:id로 보낸다', async () => {
         const requested: string[] = [];
         server.use(
-            http.put(`${url}/ensemble`, ({ request }) => {
+            http.put(`${url}/ensembles/:id`, ({ request }) => {
                 requested.push(`PUT ${request.url}`);
-                return HttpResponse.json({ id: 'e1', message: 'ok' });
-            }),
-            http.delete(`${url}/ensemble`, ({ request }) => {
-                requested.push(`DELETE ${request.url}`);
                 return HttpResponse.json({ id: 'e1' });
+            }),
+            http.delete(`${url}/ensembles/:id`, ({ request }) => {
+                requested.push(`DELETE ${request.url}`);
+                return new HttpResponse(null, { status: 204 });
             }),
         );
         const nextDate = dayjs('2026-11-20');
@@ -91,7 +94,7 @@ describe('합주 수정·삭제 경로', () => {
         );
         await deleteEnsemble('e1', '1234');
 
-        expect(requested).toEqual([`PUT ${url}/ensemble?id=e1`, `DELETE ${url}/ensemble?id=e1`]);
+        expect(requested).toEqual([`PUT ${url}/ensembles/e1`, `DELETE ${url}/ensembles/e1`]);
     });
 });
 
@@ -140,7 +143,7 @@ describe('응답 검증 (Zod)', () => {
     });
 
     it('PIN 확인 응답이 boolean이 아니면 에러 (이전에는 truthy면 맞는 PIN으로 처리됐다)', async () => {
-        server.use(http.post(`${url}/check-team-pin`, () => HttpResponse.json({ ok: true })));
+        server.use(http.post(`${url}/teams/:id/check-pin`, () => HttpResponse.json({ ok: true })));
 
         await expect(checkTeamPin('t1', '1234')).rejects.toBeInstanceOf(ZodError);
     });

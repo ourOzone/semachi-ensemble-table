@@ -1,11 +1,10 @@
 import {
-    existsResponseSchema,
     teamResponseSchema,
     type IdResponse,
     type TeamCreateRequest,
     type TeamUpdateRequest,
 } from '@/types';
-import { get, getList, post, put, del } from '.';
+import { del, exists, getList, post, put } from '.';
 import { checkPin } from './pin';
 
 /*
@@ -29,12 +28,11 @@ export const getTeams = async () => {
 */
 
 export const getTeams = () => getList('/teams', teamResponseSchema);
-export const addTeam = (team: TeamCreateRequest) => post<IdResponse>('/team', team);
-// 수정·삭제는 서버가 PIN(팀 PIN 또는 마스터 PIN)을 확인한다. 틀리면 403 (백엔드 개편 B-6)
+export const addTeam = (team: TeamCreateRequest) => post<IdResponse>('/teams', team);
+// 수정·삭제는 서버가 PIN(팀 PIN 또는 마스터 PIN)을 확인한다. 틀리면 403 (백엔드 개편 B-6). 삭제는 204 (B-10)
 export const updateTeam = (id: string, team: TeamUpdateRequest, pin: string) =>
-    put<IdResponse>(`/team?id=${id}`, { ...team, pin });
-export const deleteTeam = (id: string, pin: string) => del<IdResponse>(`/team?id=${id}`, { pin });
-export const teamExists = async (id: string) =>
-    existsResponseSchema.parse(await get(`/team/${id}`));
+    put<IdResponse>(`/teams/${id}`, { ...team, pin });
+export const deleteTeam = (id: string, pin: string) => del<void>(`/teams/${id}`, { pin });
+export const teamExists = (id: string) => exists(`/teams/${id}`);
 export const checkTeamPin = (teamId: string, pin: string) =>
-    checkPin('/check-team-pin', { teamId, pin });
+    checkPin(`/teams/${teamId}/check-pin`, { pin });

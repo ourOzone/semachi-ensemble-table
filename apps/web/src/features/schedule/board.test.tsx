@@ -68,9 +68,9 @@ describe('합주표', () => {
         requests = recordRequests();
         mockInitialData();
         server.use(
-            http.get(`${url}/ensemble/:id`, () => HttpResponse.json(true)),
-            http.post(`${url}/check-team-pin`, () => HttpResponse.json(true)),
-            http.put(`${url}/ensemble`, async ({ request }) => {
+            http.get(`${url}/ensembles/:id`, () => HttpResponse.json(true)),
+            http.post(`${url}/teams/:id/check-pin`, () => HttpResponse.json(true)),
+            http.put(`${url}/ensembles/:id`, async ({ request }) => {
                 putBody = (await request.json()) as Record<string, unknown>;
                 return HttpResponse.json({
                     message: 'Ensemble updated successfully',
@@ -100,7 +100,7 @@ describe('합주표', () => {
         expect(drawer.queryByRole('button', { name: /바로 하기/ })).not.toBeInTheDocument();
         expect(useDrawerStore.getState().openedDrawers).toEqual(['ensembleInfo']);
         // 블록 클릭 시점의 존재 확인 요청은 없다 (이전: 1회, 사전 결정 5)
-        expect(countOf(requests, 'GET /ensemble/ensemble-1')).toBe(0);
+        expect(countOf(requests, 'GET /ensembles/ensemble-1')).toBe(0);
     });
 
     it('닫기 버튼을 누르면 닫힌다', async () => {
@@ -116,7 +116,7 @@ describe('합주표', () => {
 
     // V-3 17차: 존재 확인에서 404(이미 삭제됨)와 서버 오류를 나눠 알린다 (이전: 알림 없이 모두 닫음)
     it('미루기를 누를 때 합주가 이미 삭제됐으면 알리고 모두 닫는다', async () => {
-        server.use(http.get(`${url}/ensemble/:id`, () => new HttpResponse(null, { status: 404 })));
+        server.use(http.get(`${url}/ensembles/:id`, () => new HttpResponse(null, { status: 404 })));
         const { user, dialog } = await openEnsembleInfo();
 
         await user.click(within(dialog).getByRole('button', { name: '11/30(월)로 미루기' }));
@@ -127,7 +127,7 @@ describe('합주표', () => {
 
     it('미루기를 누를 때 확인 요청이 실패하면(서버 오류) 알리고 합주 정보에 머문다', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
-        server.use(http.get(`${url}/ensemble/:id`, () => new HttpResponse(null, { status: 500 })));
+        server.use(http.get(`${url}/ensembles/:id`, () => new HttpResponse(null, { status: 500 })));
         const { user, dialog } = await openEnsembleInfo();
 
         await user.click(within(dialog).getByRole('button', { name: '11/30(월)로 미루기' }));
@@ -290,7 +290,7 @@ describe('합주표', () => {
 
     it('수정: 저장에 실패하면 알리고 수정 Drawer에 머문다', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
-        server.use(http.put(`${url}/ensemble`, () => new HttpResponse(null, { status: 500 })));
+        server.use(http.put(`${url}/ensembles/:id`, () => new HttpResponse(null, { status: 500 })));
         const { user, dialog } = await openEnsembleInfo();
         const drawer = await openEdit(user, dialog);
 
@@ -327,7 +327,7 @@ describe('합주표', () => {
             reopened.getByRole('button', { name: '11/23(월)부터 바로 하기' }),
         ).toBeInTheDocument();
         // 존재 확인은 미루기 버튼을 누를 때 1회 (이전: PIN을 넣을 때 한 번 더, 그 전에는 5회: 사전 결정 5)
-        expect(countOf(requests, 'GET /ensemble/ensemble-1')).toBe(1);
+        expect(countOf(requests, 'GET /ensembles/ensemble-1')).toBe(1);
     });
 
     it('반복 종료 날짜가 있으면 머리에 "…까지"를 보여주고, 미뤄도 그대로 둔다', async () => {
@@ -365,7 +365,7 @@ describe('합주표', () => {
 
     it('미루기: 저장에 실패하면 알림을 띄우고 PIN 단계에 머물러 다시 넣게 한다. 뒤로 가면 날짜는 그대로', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
-        server.use(http.put(`${url}/ensemble`, () => new HttpResponse(null, { status: 500 })));
+        server.use(http.put(`${url}/ensembles/:id`, () => new HttpResponse(null, { status: 500 })));
         const { user, dialog } = await openEnsembleInfo();
 
         await user.click(within(dialog).getByRole('button', { name: '11/30(월)로 미루기' }));
@@ -386,7 +386,7 @@ describe('합주표', () => {
     it('PIN: 확인하는 동안은 틀림으로 표시하지 않고, 틀리면 확인 버튼을 누를 수 없고 칸을 비운다', async () => {
         let respond: (ok: boolean) => void = () => {};
         server.use(
-            http.post(`${url}/check-team-pin`, async () => {
+            http.post(`${url}/teams/:id/check-pin`, async () => {
                 const ok = await new Promise<boolean>((resolve) => (respond = resolve));
                 return HttpResponse.json(ok);
             }),
@@ -415,7 +415,7 @@ describe('합주표', () => {
     it('PIN: 응답이 오기 전에 PIN을 고치면 이전 응답은 버린다', async () => {
         const pending: ((ok: boolean) => void)[] = [];
         server.use(
-            http.post(`${url}/check-team-pin`, async ({ request }) => {
+            http.post(`${url}/teams/:id/check-pin`, async ({ request }) => {
                 const { pin } = (await request.json()) as { pin: string };
                 // 처음 PIN(틀림)은 늦게, 고친 PIN(맞음)은 바로
                 if (pin === '1111') {
@@ -492,7 +492,7 @@ describe('합주표', () => {
         let deletedUrl = '';
         let deletedBody: unknown;
         server.use(
-            http.delete(`${url}/ensemble`, async ({ request }) => {
+            http.delete(`${url}/ensembles/:id`, async ({ request }) => {
                 deletedUrl = request.url;
                 deletedBody = await request.json();
                 return HttpResponse.json({ id: 'ensemble-1' });
@@ -505,7 +505,7 @@ describe('합주표', () => {
         await confirmPin(user, '삭제하기');
 
         await waitFor(() => expect(deletedUrl).not.toBe(''));
-        expect(new URL(deletedUrl).searchParams.get('id')).toBe('ensemble-1');
+        expect(new URL(deletedUrl).pathname.split('/').pop()).toBe('ensemble-1');
         // PIN 단계에서 맞은 PIN을 삭제 요청에도 담는다 (서버가 다시 확인, 백엔드 개편 B-6)
         expect(deletedBody).toEqual({ pin: '1234' });
         expect(await screen.findByText('삭제했어요.')).toBeInTheDocument();
@@ -515,7 +515,7 @@ describe('합주표', () => {
     it('삭제: PIN이 맞으면 Enter로도 삭제한다 (PC)', async () => {
         let deleted = false;
         server.use(
-            http.delete(`${url}/ensemble`, () => {
+            http.delete(`${url}/ensembles/:id`, () => {
                 deleted = true;
                 return HttpResponse.json({ id: 'ensemble-1' });
             }),
@@ -533,11 +533,11 @@ describe('합주표', () => {
     it('삭제: PIN 확인 전에는 Enter를 눌러도 삭제하지 않는다', async () => {
         let deleted = false;
         server.use(
-            http.post(`${url}/check-team-pin`, async () => {
+            http.post(`${url}/teams/:id/check-pin`, async () => {
                 await new Promise((resolve) => setTimeout(resolve, 300));
                 return HttpResponse.json(true);
             }),
-            http.delete(`${url}/ensemble`, () => {
+            http.delete(`${url}/ensembles/:id`, () => {
                 deleted = true;
                 return HttpResponse.json({ id: 'ensemble-1' });
             }),

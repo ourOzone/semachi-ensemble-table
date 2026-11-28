@@ -4,6 +4,8 @@ export default defineConfig({
     test: {
         environment: 'node',
         include: ['test/**/*.test.ts'],
+        // 메모리 MongoDB는 전체에서 하나 (global-setup), 파일마다 DB 이름만 다르게 (setup)
+        globalSetup: ['./test/global-setup.ts'],
         setupFiles: ['./test/setup.ts'],
         env: {
             // 날짜 계산은 코드가 한국 시간으로 한다(lib/time.ts, B-8 D1). 운영 서버처럼 UTC로 두고 그래도 맞는지 본다

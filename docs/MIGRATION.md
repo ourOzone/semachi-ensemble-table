@@ -1528,6 +1528,7 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
   - 뒤의 서버가 꺼져 있으면: Caddy 빈 502 → "세마치 합주판 점검 중이에요…" 503 (전환 중)
   - 베타 주소: `beta.semachi.net` → **`test.semachi.net`** (사용자 결정). 바깥 주소만, 서버 안의 이름(`api-beta`·`beta.env`·`APP_ENV=beta`·"베타" 표시)은 그대로
   - smoke: www 넘기기, 웹을 멈추면 점검 안내
+- B-13 진행: GitHub 설정(저장소 주인이 입력), nginx → Caddy 교체 ✅ (인증서 셋 발급). `dev` 첫 푸시의 CI에서 서버 테스트 실패 (같은 커밋이 api3.0에서는 통과, 로그에 출력이 없었음) → 느린 CI의 메모리 MongoDB 문제를 근본적으로: **전체에서 한 번만 켜고**(`test/global-setup.ts`, vitest provide/inject) 파일마다 새 이름의 DB (`test/setup.ts`). 서버 테스트 1분+ → 약 9초. 루트 `test:run`에 `--stream`(패키지 하나씩이어도 출력이 보이게)
 
 ## 남은 일
 

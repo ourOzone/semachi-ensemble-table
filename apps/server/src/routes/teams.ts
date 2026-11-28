@@ -3,6 +3,7 @@
 // 수정·삭제는 요청 본문의 pin(팀 PIN 또는 마스터 PIN)을 서버가 확인한다. 틀리면 403 (B-6 B1)
 // 목록에는 PIN을 넣지 않는다 (모델의 select: false, B-6 B3). 하는 일마다 활동 기록 (B-7)
 // 본문·id는 packages/shared의 스키마로 먼저 검사한다. 틀리면 400 (B-8 S5)
+// 팀 자동 삭제 날짜(due)를 받아 저장한다. 날짜가 지나면 정리 작업(jobs/cleanup)이 팀과 그 팀의 합주를 지운다 (B-9)
 import {
     checkTeamPinBodySchema,
     idParamsSchema,
@@ -15,16 +16,21 @@ import { withoutPin, type RecordActivity } from '../lib/activity.ts';
 import type { PinAuth } from '../lib/pin-auth.ts';
 import type { PinCheck } from '../lib/pin-check.ts';
 import { pinTarget, type PinGuard } from '../lib/pin-guard.ts';
-import { validate } from '../lib/validate.ts';
+import { kstDateString } from '../lib/time.ts';
+import { invalidDue, validate } from '../lib/validate.ts';
 import { Ensemble } from '../models/ensemble.ts';
 import { Team } from '../models/team.ts';
 
 /** 활동 기록에 남길 팀 내용 (바뀌기 전·후 비교용) */
-const teamFields = (team: { name?: unknown; type?: unknown; desc?: unknown }) => ({
+const teamFields = (team: { name?: unknown; type?: unknown; desc?: unknown; due?: unknown }) => ({
     name: team.name,
     type: team.type,
     desc: team.desc,
+    due: team.due,
 });
+
+/** 저장된 due(그날 UTC 0시)를 'YYYY-MM-DD'로. 없으면(옛 팀) null */
+const dueString = (due: Date | null | undefined) => (due ? due.toISOString().slice(0, 10) : null);
 
 export function teamsRouter({
     pins,
@@ -54,12 +60,15 @@ export function teamsRouter({
         try {
             const data = validate(res, teamCreateBodySchema, req.body);
             if (!data) return;
+            // 자동 삭제 날짜는 오늘(한국) 이후만. 오늘이면 내일 새벽 정리 작업이 지운다 (B-9)
+            if (data.due < kstDateString(new Date())) return res.status(400).json(invalidDue);
 
             const newTeam = new Team({
                 name: data.name,
                 desc: data.desc,
                 type: data.type,
                 publishDate: data.publishDate,
+                due: new Date(data.due),
                 pin: await pins.forStorage(data.pin),
             });
 
@@ -178,6 +187,10 @@ export function teamsRouter({
             // 팀이 있는지 먼저 본 뒤 본문을 검사한다 (없는 팀이면 본문과 관계없이 404: 웹의 "이미 삭제된 팀")
             const body = validate(res, teamUpdateBodySchema, req.body);
             if (!body) return;
+            // 지난 날짜는 거절. 단, 지금 저장된 날짜 그대로면 받는다 (정리 작업 전에 다른 칸만 고치는 경우)
+            if (body.due < kstDateString(new Date()) && body.due !== dueString(existingTeam.due)) {
+                return res.status(400).json(invalidDue);
+            }
 
             const target = {
                 kind: 'team',
@@ -195,6 +208,7 @@ export function teamsRouter({
             existingTeam.name = body.name;
             existingTeam.desc = body.desc;
             existingTeam.type = body.type;
+            existingTeam.due = new Date(body.due);
 
             await existingTeam.save();
             await Ensemble.updateMany({ teamId }, { $set: { teamName: body.name } });

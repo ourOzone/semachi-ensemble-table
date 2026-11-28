@@ -9,6 +9,8 @@ import mongoose from 'mongoose';
 import { pino } from 'pino';
 import { createApp } from './app.ts';
 import { loadConfig } from './config.ts';
+import { cleanupExpired, scheduleCleanup } from './jobs/cleanup.ts';
+import { createSystemActivityRecorder } from './lib/activity.ts';
 
 let config;
 try {
@@ -42,12 +44,23 @@ server.listen(config.port, '0.0.0.0', () => {
     console.log(`${config.tls ? 'HTTPS' : 'HTTP'} 서버 실행 중: 포트 ${config.port}`);
 });
 
+// 정리 작업 (B-9): 운영 서버에서만 (CLEANUP_ENABLED). 시작할 때 한 번 + 매일 04:00 (한국 시각)
+const record = createSystemActivityRecorder({ env: config.appEnv, logger });
+const stopCleanup = config.cleanupEnabled
+    ? scheduleCleanup({
+          run: () => cleanupExpired({ now: new Date(), apply: true, record }),
+          logger,
+      })
+    : undefined;
+console.log(`정리 작업: ${config.cleanupEnabled ? '켜짐 (매일 04:00)' : '꺼짐'}`);
+
 // 종료 신호(Ctrl+C, Docker 정지): 새 요청을 받지 않고, 하던 요청을 마친 뒤 DB 연결을 닫고 끝낸다
 let stopping = false;
 function shutdown(signal: string) {
     if (stopping) return;
     stopping = true;
     console.log(`${signal}: 서버를 멈춥니다`);
+    stopCleanup?.();
     server.close(async () => {
         await mongoose.disconnect();
         process.exit(0);

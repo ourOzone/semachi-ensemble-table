@@ -19,3 +19,18 @@ export function kstDayIndex(date: Date): number {
     const sundayFirst = new Date(date.getTime() + KST_OFFSET_MS).getUTCDay(); // 일요일 0
     return (sundayFirst + 6) % 7;
 }
+
+/** 이 시각의 한국 날짜 'YYYY-MM-DD' (팀·합주 due와 비교할 때. 같은 형식의 문자열은 글자 순서 = 날짜 순서) */
+export function kstDateString(now: Date): string {
+    return new Date(now.getTime() + KST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/**
+ * 다음에 한국 시각 hour시가 될 때까지 남은 시간(ms). 정각이 지금이면 하루 뒤 (B-9 정리 작업의 다음 실행).
+ * 한국은 서머타임이 없어 하루가 늘 24시간이다
+ */
+export function msUntilNextKstHour(now: Date, hour: number): number {
+    const today = startOfKstDay(now).getTime() + hour * 60 * 60 * 1000;
+    const next = today > now.getTime() ? today : today + 24 * 60 * 60 * 1000;
+    return next - now.getTime();
+}

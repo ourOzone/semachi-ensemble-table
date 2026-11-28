@@ -20,6 +20,11 @@ export interface Config {
     /** 새 PIN을 해시로 저장 (PIN_HASH=true, 기본 false). 운영 전환(B-14) 때 켜고 scripts/hash-pins.ts로 기존 PIN도 바꾼다 */
     hashPins: boolean;
     /**
+     * 날짜 지난 팀·합주 정리 작업 (CLEANUP_ENABLED=true, 기본 false, B-9). 운영 서버 하나에서만 켠다:
+     * 베타·내 PC 서버(pnpm dev:server)는 같은 DB를 쓰므로 켜면 같은 일을 두 번 하거나 실수로 운영 데이터를 지운다
+     */
+    cleanupEnabled: boolean;
+    /**
      * 프록시 뒤에서 진짜 사용자 IP를 읽기 위한 Express trust proxy (TRUST_PROXY, 기본 false).
      * 숫자면 앞에 있는 프록시 수(Caddy 하나면 1), true/false, 또는 주소 목록. PIN 시도 제한이 IP로 세므로 B-11에서 꼭 정한다
      */
@@ -59,6 +64,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
             .filter(Boolean),
         trustProxy: parseTrustProxy(env.TRUST_PROXY),
         hashPins: env.PIN_HASH === 'true',
+        cleanupEnabled: env.CLEANUP_ENABLED === 'true',
         dnsServers: (env.DNS_SERVERS ?? '')
             .split(',')
             .map((server) => server.trim())

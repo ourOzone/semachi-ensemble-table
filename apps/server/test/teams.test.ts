@@ -7,6 +7,7 @@ import {
     ensembleDoc,
     findAll,
     findOne,
+    freezeTime,
     insert,
     MASTER_PIN,
     missingId,
@@ -53,6 +54,7 @@ describe('POST /team', () => {
         desc: ['v', 'g', 'b', 'd', 'k', 'm', 'set'],
         pin: '4321',
         publishDate: '2026-11-27T01:02:03.000Z',
+        due: '2099-12-31',
     };
 
     test('저장하고 { id }를 돌려준다. PIN은 해시 저장을 켜기 전까지 평문 (S4, 사전 결정 10)', async () => {
@@ -60,15 +62,18 @@ describe('POST /team', () => {
         expect(res.status).toBe(200);
         expect(res.body).toEqual({ id: expect.stringMatching(/^[0-9a-f]{24}$/) });
         const saved = await findOne('teams', res.body.id);
-        expect(saved).toMatchObject({ ...body, publishDate: new Date(body.publishDate) });
+        expect(saved).toMatchObject({
+            ...body,
+            publishDate: new Date(body.publishDate),
+            due: new Date('2099-12-31T00:00:00.000Z'), // 'YYYY-MM-DD' → 그날 UTC 0시 (합주 due와 같음)
+        });
     });
 
-    test('스키마에 없는 필드는 버린다 (due 포함)', async () => {
+    test('스키마에 없는 필드는 버린다', async () => {
         const res = await api()
             .post('/team')
-            .send({ ...body, due: '2026-12-31', extra: 1 });
+            .send({ ...body, extra: 1 });
         const saved = await findOne('teams', res.body.id);
-        expect(saved).not.toHaveProperty('due');
         expect(saved).not.toHaveProperty('extra');
     });
 
@@ -134,6 +139,89 @@ describe('POST /team', () => {
             issues: [{ path: 'pin', message: '숫자 4자리가 아니다' }],
         });
         expect(JSON.stringify(res.body)).not.toContain('98765');
+    });
+});
+
+describe('팀 자동 삭제 날짜 (due, B-9)', () => {
+    // 지금 = KST 11/28 12:00
+    const NOW = '2026-11-28T03:00:00Z';
+
+    test('오늘(한국 날짜)이나 그 뒤면 저장, 어제면 400. 계속 유지는 2099-12-31', async () => {
+        freezeTime(NOW);
+        for (const due of ['2026-11-28', '2026-12-31', '2099-12-31']) {
+            expect(
+                (
+                    await api()
+                        .post('/team')
+                        .send(teamBody({ due, pin: '1234' }))
+                ).status,
+            ).toBe(200);
+        }
+        const past = await api()
+            .post('/team')
+            .send(teamBody({ due: '2026-11-27', pin: '1234' }));
+        expect([past.status, past.body]).toEqual([
+            400,
+            { error: 'Invalid request', issues: [{ path: 'due', message: '지난 날짜다' }] },
+        ]);
+        expect(await findAll('teams')).toHaveLength(3);
+    });
+
+    test('한국 날짜 기준: UTC로는 아직 11/27이지만 한국은 11/28 오전이면 11/28은 오늘', async () => {
+        freezeTime('2026-11-27T16:00:00Z'); // KST 11/28 01:00
+        expect(
+            (
+                await api()
+                    .post('/team')
+                    .send(teamBody({ due: '2026-11-28', pin: '1234' }))
+            ).status,
+        ).toBe(200);
+        expect(
+            (
+                await api()
+                    .post('/team')
+                    .send(teamBody({ due: '2026-11-27', pin: '1234' }))
+            ).status,
+        ).toBe(400);
+    });
+
+    test('형식이 틀리거나 없으면 400', async () => {
+        freezeTime(NOW);
+        for (const due of [undefined, '2026-12-31T00:00:00.000Z', '12/31', '2026-02-30']) {
+            const res = await api()
+                .post('/team')
+                .send(teamBody({ due, pin: '1234' }));
+            expect(res.status).toBe(400);
+        }
+    });
+
+    test('수정: 날짜를 바꾸면 저장. 지난 날짜로는 못 바꾸지만, 지금 저장된 날짜 그대로면 다른 칸을 고칠 수 있다', async () => {
+        freezeTime(NOW);
+        const id = await insert(
+            'teams',
+            teamDoc({ due: new Date('2026-11-27T00:00:00Z') }), // 어제까지: 오늘 새벽 정리 작업 전
+        );
+        const put = (body: Record<string, unknown>) =>
+            api()
+                .put(`/team?id=${id}`)
+                .send(teamBody({ pin: '1234', ...body }));
+
+        expect((await put({ due: '2026-11-26' })).status).toBe(400);
+        expect((await put({ name: '새 이름', due: '2026-11-27' })).status).toBe(200);
+        expect(await findOne('teams', id)).toMatchObject({ name: '새 이름' });
+        expect((await put({ due: '2027-01-31' })).status).toBe(200);
+        expect((await findOne('teams', id))?.due).toEqual(new Date('2027-01-31T00:00:00Z'));
+    });
+
+    test('목록 응답에 due가 날짜(ISO)로. 옛 팀(due 없음)은 없다', async () => {
+        freezeTime(NOW);
+        await api()
+            .post('/team')
+            .send(teamBody({ name: '새 팀', due: '2026-12-31', pin: '1234' }));
+        await insert('teams', teamDoc({ name: '옛 팀' }));
+        const res = await api().get('/teams');
+        expect(res.body[0]).toMatchObject({ name: '새 팀', due: '2026-12-31T00:00:00.000Z' });
+        expect(res.body[1]).not.toHaveProperty('due');
     });
 });
 
@@ -256,6 +344,7 @@ describe('PUT /team?id=', () => {
                 name: '새 이름',
                 desc: ['1', '2', '3', '4', '5', '6', '7'],
                 type: '외부 공연',
+                due: '2026-12-31',
                 pin: MASTER_PIN, // 본문의 pin은 확인에만 쓰고 저장하지 않는다
             });
         expect(res.status).toBe(200);
@@ -266,6 +355,7 @@ describe('PUT /team?id=', () => {
             name: '새 이름',
             desc: ['1', '2', '3', '4', '5', '6', '7'],
             type: '외부 공연',
+            due: new Date('2026-12-31T00:00:00.000Z'),
             pin: '1234',
             publishDate: new Date('2026-11-01T03:00:00.000Z'),
         });

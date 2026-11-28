@@ -56,6 +56,8 @@ const server = spawn(process.execPath, ['--watch', 'src/main.ts'], {
         // 활동 기록에 "개발"로 남긴다. 운영 로그는 경고 이상만 (요청마다 JSON 한 줄이 터미널을 덮지 않게)
         APP_ENV: 'development',
         LOG_LEVEL: 'warn',
+        // 정리 작업은 운영 서버에서만 (B-9). 내 PC 서버는 셸에 켜 둔 값이 있어도 끈다 (운영 DB의 데이터를 지우지 않게)
+        CLEANUP_ENABLED: 'false',
         TLS_KEY_FILE: '',
         TLS_CERT_FILE: '',
         CORS_ORIGINS: 'http://localhost:3000',

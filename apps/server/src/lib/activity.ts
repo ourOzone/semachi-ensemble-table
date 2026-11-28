@@ -23,6 +23,9 @@ export interface ActivityEntry {
 
 export type RecordActivity = (req: Request, entry: ActivityEntry) => Promise<void>;
 
+/** 요청 없이 서버가 스스로 한 일(정리 작업, B-9)의 기록. 방문자·IP·기기는 없다 */
+export type RecordSystemActivity = (entry: ActivityEntry) => Promise<void>;
+
 /** IPv4를 담은 IPv6(::ffff:1.2.3.4)는 IPv4로 (보기 쉽게) */
 export const cleanIp = (ip: string | undefined) =>
     ip?.replace(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i, '$1');
@@ -63,6 +66,23 @@ export function createActivityRecorder({
                 device: parseDevice(userAgent),
                 ...entry,
             });
+        } catch (err) {
+            logger.error({ err, action: entry.action }, '활동 기록을 쓰지 못했습니다');
+        }
+    };
+}
+
+/** 정리 작업처럼 요청 없이 하는 일의 기록 (B-9). 실패해도 일은 계속한다 */
+export function createSystemActivityRecorder({
+    env,
+    logger,
+}: {
+    env: string;
+    logger: Logger;
+}): RecordSystemActivity {
+    return async (entry) => {
+        try {
+            await Activity.create({ env, ...entry });
         } catch (err) {
             logger.error({ err, action: entry.action }, '활동 기록을 쓰지 못했습니다');
         }

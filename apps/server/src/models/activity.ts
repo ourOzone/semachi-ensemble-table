@@ -11,9 +11,13 @@ export type ActivityAction =
     | 'team.create'
     | 'team.update'
     | 'team.delete'
+    /** 정리 작업이 자동 삭제 날짜가 지난 팀(과 그 팀의 합주)을 지움 (B-9). 방문자·IP·기기 없음 */
+    | 'team.expire'
     | 'ensemble.create'
     | 'ensemble.update'
     | 'ensemble.delete'
+    /** 정리 작업이 날짜가 지난 합주(일회성) · 반복 종료 날짜가 지난 반복 합주를 지움 (B-9) */
+    | 'ensemble.expire'
     | 'note.create'
     | 'note.delete'
     | 'notice.create'

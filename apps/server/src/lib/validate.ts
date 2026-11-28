@@ -19,6 +19,12 @@ export function invalidRequest(error: z.ZodError) {
     };
 }
 
+/** 자동 삭제 날짜(due)가 이미 지났을 때 (팀, B-9). 스키마 밖의 검사라 같은 모양으로 따로 만든다 */
+export const invalidDue = {
+    error: 'Invalid request',
+    issues: [{ path: 'due', message: '지난 날짜다' }],
+};
+
 export function validate<T extends z.ZodType>(
     res: Response,
     schema: T,

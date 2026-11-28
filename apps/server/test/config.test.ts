@@ -44,6 +44,12 @@ describe('loadConfig', () => {
         expect(loadConfig({ ...required, PIN_HASH: '1' }).hashPins).toBe(false);
     });
 
+    test('CLEANUP_ENABLED: "true"일 때만 정리 작업 (기본 꺼짐: 운영 서버 하나에서만 켠다, B-9)', () => {
+        expect(loadConfig(required).cleanupEnabled).toBe(false);
+        expect(loadConfig({ ...required, CLEANUP_ENABLED: 'true' }).cleanupEnabled).toBe(true);
+        expect(loadConfig({ ...required, CLEANUP_ENABLED: '1' }).cleanupEnabled).toBe(false);
+    });
+
     test('DNS_SERVERS: 쉼표로 여러 개, 없으면 빈 목록(컴퓨터 설정)', () => {
         expect(loadConfig(required).dnsServers).toEqual([]);
         expect(loadConfig({ ...required, DNS_SERVERS: '8.8.8.8, 1.1.1.1' }).dnsServers).toEqual([

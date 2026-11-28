@@ -37,11 +37,18 @@ const teamDescSchema = z.tuple([
     z.string().max(SETLIST_MAX),
 ]);
 
-/** 팀 수정 (PUT /team?id=). 종류는 문자열이면 된다 (옛 종류도 그대로 쓴다, 사용자 결정) */
+/** 계속 유지·계속 반복을 뜻하는 due (팀·합주) */
+export const NO_DUE = '2099-12-31';
+
+/**
+ * 팀 수정 (PUT /team?id=). 종류는 문자열이면 된다 (옛 종류도 그대로 쓴다, 사용자 결정).
+ * due: 팀 자동 삭제 날짜 'YYYY-MM-DD' (계속 유지는 NO_DUE, B-9). 지난 날짜인지는 서버가 오늘(한국)과 비교한다
+ */
 export const teamUpdateBodySchema = z.object({
     name: z.string().trim().min(1).max(TEAM_NAME_MAX),
     type: z.string().trim().min(1),
     desc: teamDescSchema,
+    due: z.iso.date(),
 });
 
 /** 팀 만들기 (POST /team) */

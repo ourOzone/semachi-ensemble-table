@@ -101,6 +101,7 @@ export const teamBody = (over: Record<string, unknown> = {}) => ({
     name: '테스트밴드',
     type: '교내 공연',
     desc: ['보컬', '기타', '베이스', '드럼', '키보드', '매니저', '셋리스트'],
+    due: '2099-12-31', // 계속 유지 (B-9)
     ...over,
 });
 

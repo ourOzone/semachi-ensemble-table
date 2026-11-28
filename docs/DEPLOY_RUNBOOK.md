@@ -222,7 +222,7 @@
 1. 🌐 `cd /srv/semachi && docker compose config --quiet && echo OK` → `OK` (설정 문법 확인)
 2. 🌐 `sudo systemctl stop nginx` → 이 순간부터 `semachi.net`이 끊긴다
 3. 🌐 `docker compose up -d caddy` → `Container semachi-caddy-1 Started`
-4. 🌐 `docker compose logs caddy | grep -iE 'certificate obtained|error'` → `certificate obtained successfully`가 `semachi.net`·`www.semachi.net`·`test.158-180-85-102.sslip.io` 각각 (1분 안쪽). `error`가 계속 나오면 바로 되돌리기
+4. 🌐 `docker compose logs caddy | grep -iE 'certificate obtained|error'` → (처음의 `…/users/default/default.json: no such file or directory` 오류는 계정을 처음 만들 때의 정상 메시지) `certificate obtained successfully`가 `semachi.net`·`www.semachi.net`·`test.158-180-85-102.sslip.io` 각각 (1분 안쪽). `error`가 계속 나오면 바로 되돌리기
 5. 🖥 브라우저로 `https://semachi.net` → 지금 화면 그대로, 주소창 자물쇠 (인증서가 Let's Encrypt 새것)
 6. 확인되면 🌐 `sudo systemctl disable nginx` (재부팅 때 nginx가 80·443을 먼저 잡지 않게)
 

@@ -410,6 +410,7 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 - 한 일: 스왑 2G, Docker 29.10 설치(부팅 때 켜짐), `/srv/semachi` 준비(설정 파일 셋, 값은 옛 `.env`에서 화면에 띄우지 않고 옮김), **첫 DB 백업** `backups/semachi-20261128-201530.gz`(12K)
 - Atlas: **FREE(M0) → Atlas 자동 백업 없음** (backup.sh가 유일한 백업). Network Access에 서버 IP와 함께 `0.0.0.0/0`(어디서나) → 비밀번호 노출과 겹쳐 위험 → **사용자가 지움** (2026-11-28, 서버 IP는 남김)
 - 백업 내용 (`mongorestore --dryRun`): 서비스 데이터는 **`test` DB** (MONGO_DB 주소에 DB 이름이 없어 기본값) — teams·ensembles·notes·notices + 새 서버의 activities·settings. 그 밖에 **`semachi` DB의 ensembles** (지금 쓰지 않는 옛 데이터로 보임, 전환 뒤 확인·정리 대상)
+- **B-13 진행 (2026-11-28)**: GitHub Environments(beta·production)·Secrets·Variables(`BETA_URL`·`DEPLOY_BETA=true`) 입력 완료. nginx → Caddy 교체 ✅ (몇 초 끊김, 인증서 셋 — semachi.net·www·test.158-180-85-102.sslip.io — 바로 발급. 처음의 `default.json: no such file`은 ACME 계정을 처음 만들 때의 정상 메시지)
 - GitHub: 저장소 주인이 `ourozone`이라 사용자는 Environments·Secrets·Variables를 만들 수 없다 → 주인이 대신 입력 (사용자 결정 2026-11-28, 배포 키는 파일로 건네고 입력 뒤 지움). `DEPLOY_BETA=true`·`BETA_URL`도 함께, `DEPLOY_PRODUCTION`은 B-14에 다시 부탁
 - 메모리 956Mi(남은 약 460Mi), **스왑 없음**, 디스크 45G 중 37G 남음 → 컨테이너 5개 + 베타 기간의 옛 pm2 둘이면 빠듯해 **스왑 2G를 만든다** (절차서 B-12)
 - 서버 방화벽 (`iptables -S INPUT`): 기본 ACCEPT, 22·80·443·8081 허용 줄, 막는 규칙 없음 → Caddy 컨테이너 → 호스트 8080 열림, 할 일 없음

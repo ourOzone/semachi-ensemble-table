@@ -79,9 +79,9 @@ apps/server/
 │   ├── config.ts            환경변수 읽기·검사 (MONGO_DB·MASTER_PIN 필수, PORT·LOG_FILE·TLS_*)
 │   ├── models/              MongoDB 스키마 (team·ensemble·note·notice·setting(마스터 PIN)·activity(활동 기록))
 │   ├── routes/              API (teams·ensembles·notes·notices·visits·health·admin)
-│   ├── middleware/          모든 요청이 라우트 전에 거치는 처리 (cors: 다른 주소의 웹 허락, visitor: 방문자 쿠키)
+│   ├── middleware/          모든 요청이 거치는 처리 (cors: 다른 주소의 웹 허락, visitor: 방문자 쿠키, errors: 없는 경로·오류를 JSON으로)
 │   ├── jobs/                정해진 시간에 도는 일 (cleanup: 날짜 지난 팀·합주 정리, 매일 04:00, B-9)
-│   ├── lib/                 라우트가 불러 쓰는 함수 (activity·device: 활동 기록, admin-session: 관리자 로그인, pin·pin-auth·pin-guard·pin-check: PIN, validate: 요청 검사, time: 한국 날짜, pin-migration·ensemble-type-migration: 데이터 변경)
+│   ├── lib/                 라우트가 불러 쓰는 함수 (activity·device: 활동 기록, admin-session: 관리자 로그인, pin·pin-auth·pin-guard·pin-check: PIN, validate: 요청 검사, errors: 오류 응답, time: 한국 날짜, pin-migration·ensemble-type-migration: 데이터 변경)
 │   └── types/               Express에 붙이는 타입 (req.visitorId)
 └── test/                    API 테스트 (메모리 MongoDB, 실제 DB·포트 없음)
     ├── setup.ts · helpers.ts  DB 켜기·비우기, 임시 로그 파일, 요청·데이터 도우미
@@ -148,7 +148,7 @@ packages/shared/
 
 ```
 브라우저 (웹의 api/ 함수가 axios로 보냄)
-  │  HTTP 요청: 메서드(GET·POST·PUT·DELETE) + 주소(/team?id=…) + 헤더(쿠키 등) + 본문(JSON)
+  │  HTTP 요청: 메서드(GET·POST·PUT·DELETE) + 주소(/teams/:id …) + 헤더(쿠키 등) + 본문(JSON)
   ▼
 (B-11부터) Caddy: HTTPS를 풀고, semachi.net/api/… 의 /api를 떼어 서버로 넘긴다
   ▼
@@ -162,7 +162,8 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
   ⑤ visitor         방문자 쿠키를 읽거나 새로 만들어 req.visitorId에 둔다
   ⓪ pino-http       (맨 앞) 요청마다 운영 로그 한 줄 (메서드·주소·상태·시간)
   ⑥ 라우터들         visits·teams·ensembles·notes·notices·admin 중 메서드·주소가 맞는 핸들러 하나가 처리하고 응답
-  ⑦ (아무것도 안 맞으면) Express 기본 404
+  ⑦ notFound         (아무것도 안 맞으면) 404 { error: { code: 'NOT_FOUND' } }
+  ⑧ errorHandler     처리 중 던져진 오류 → 500 JSON (깨진 JSON 본문은 400). Express 5가 async 오류도 여기로 넘긴다 (B-10)
   ▼
 핸들러 안 (예: PUT /team): id 검사(lib/validate, 틀리면 400) → DB에서 팀 읽기(models, 없으면 404) → 본문 검사(packages/shared 스키마, 틀리면 400) → PIN 확인(lib/pin-check, 틀리면 403) → 바꾸고 저장 → res.json(...)
 ```
@@ -204,10 +205,12 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
 
 | 파일 | 주소 |
 |---|---|
-| `teams.ts` | `GET /teams` 목록, `POST /team` 만들기, `PUT·DELETE /team?id=` 수정·삭제(PIN), `POST /check-team-pin`, `GET /team/:id` 있는지 |
-| `ensembles.ts` | `GET /ensembles`(지난 것 빼고), `POST·PUT·DELETE /ensemble` 잡기·수정·삭제(그 팀 PIN), `GET /ensemble/:id` |
-| `notes.ts` | 날적이 목록·남기기·삭제(PIN)·PIN 확인·있는지 |
-| `notices.ts` | 공지 목록·올리기·삭제(마스터 PIN)·PIN 확인·있는지 |
+| `teams.ts` | `GET·POST /teams` 목록·만들기(201), `GET /teams/:id` 한 팀, `PUT·DELETE /teams/:id` 수정·삭제(PIN, 삭제 204), `POST /teams/:id/check-pin` |
+| `ensembles.ts` | `GET·POST /ensembles` 목록(지난 것 빼고)·잡기(그 팀 PIN, 201), `GET·PUT·DELETE /ensembles/:id` |
+| `notes.ts` | `GET·POST /notes`, `GET·DELETE /notes/:id`(글 PIN), `POST /notes/:id/check-pin` |
+| `notices.ts` | `GET·POST /notices`(마스터 PIN), `GET·DELETE /notices/:id`, `POST /notices/check-pin` |
+
+주소 규칙 (B-10): 복수형 + 주소 안의 id (`/teams/:id`), 만들기 201 `{ id }`·수정 200 `{ id }`·삭제 204(본문 없음). 오류는 모두 `{ error: { code, message, issues? } }` (코드 목록은 `packages/shared`의 `API_ERROR_CODES`)
 | `admin.ts` | 관리자: 로그인·로그아웃·로그인 상태, 활동 기록 찾기, 방문자 한 명, 요약, 마스터 PIN 바꾸기 (로그인한 요청만 — 라우터 안의 `requireAdmin` 미들웨어) |
 | `health.ts` | `GET /health` 서버·DB가 살아 있는지 (배포 확인용) |
 | `visits.ts` | `POST /visits` 웹을 열 때 한 번 "방문" 기록 |
@@ -218,6 +221,8 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
 |---|---|
 | `cors.ts` | 브라우저는 A 주소의 웹이 B 주소의 응답을 읽지 못하게 막는다(동일 출처 정책). 허락 목록(`CORS_ORIGINS`)의 주소면 "읽어도 된다" 헤더를 붙인다. 다른 주소에서 JSON을 보내기 전에 브라우저가 먼저 보내는 확인 요청(OPTIONS, preflight)에도 답한다. 운영은 웹과 API가 같은 주소라 필요 없다 |
 | `visitor.ts` | 방문자 쿠키(`semachi_vid`, 1년)를 읽고, 없거나 이상하면 새로 만들어 응답에 심는다. 값을 `req.visitorId`에 두어 라우트가 활동 기록에 쓴다 |
+
+| `errors.ts` | 맨 뒤에 붙는 두 처리 (B-10): `notFound`(어느 라우트도 답하지 않으면 404 JSON), `errorHandler`(던져진 오류 → 500 JSON, 내용은 응답에 넣지 않고 운영 로그에. 깨진 JSON 본문은 400). 그래서 라우트에는 try/catch가 없다 |
 
 라이브러리가 주는 미들웨어(`helmet` 보안 헤더, `express.json` 본문 해석)는 파일 없이 `app.ts`에서 바로 등록한다.
 
@@ -230,6 +235,7 @@ Express 앱 — src/app.ts가 조립. 등록한 순서대로 하나씩 통과한
 | `pin-guard.ts` | PIN 틀린 횟수 세기·막기: 대상별(팀·날적이·마스터) 10번(맞추면 0), IP 전체 30번(맞춰도 그대로), 15분. 서버 메모리의 표. 미들웨어가 아니라 핸들러 안에서 부르는 이유: 합주는 DB에서 합주를 읽어야 어느 팀의 PIN인지 알 수 있다 |
 | `pin-migration.ts` | 기존 평문 PIN을 해시로 바꾸는 로직 (scripts/hash-pins.ts가 부르고, 테스트가 메모리 DB로 확인) |
 | `ensemble-type-migration.ts` | 합주의 옛 `type` 필드를 지우는 로직 (scripts/remove-ensemble-type.ts가 부른다, B-8) |
+| `errors.ts` | 오류 응답 한곳 (B-10): `sendError(res, 'NOT_FOUND', { message })` → 상태 코드는 코드로 정해지고 본문은 `{ error: { code, message } }` |
 | `validate.ts` | 요청 검사 (B-8): `validate(res, 스키마, req.body)` → 검사·정리한 값, 틀리면 400을 보내고 null. 핸들러 안에서 부른다 (검사한 값의 타입이 이어지게). 400 본문에는 틀린 칸·이유만 (받은 값은 없음) |
 | `time.ts` | 한국 날짜 계산 (B-8 D1): `startOfKstDay`(한국 날짜의 0시), `kstDayIndex`(한국 요일, 월 0 ~ 일 6), `kstDateString`(한국 날짜 'YYYY-MM-DD'), `msUntilNextKstHour`(정리 작업 다음 실행, B-9). 서버 시간대 설정과 관계없이 같은 답 |
 | `pin-check.ts` | 변경 API의 PIN 확인 한곳: 막혔는지 → 비교 → 틀린 횟수 → 실패면 활동 기록과 429·403 |

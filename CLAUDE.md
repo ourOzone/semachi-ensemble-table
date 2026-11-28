@@ -32,7 +32,7 @@
 - Zustand store는 모듈 전역이라 테스트끼리 상태가 이어진다. 새 store를 만들면 `src/test/setup.ts`의 afterEach에 초기화를 추가한다.
 - 테스트는 `pnpm test:run` 또는 `pnpm --filter @semachi/web exec vitest run <apps/web 기준 경로>`로 실행한다. `npx vitest`(와 메인 저장소에서 `node node_modules/vitest/vitest.mjs` 직접 실행)는 이 환경에서 runner를 찾지 못해 원본에서도 항상 실패한다.
 - 서버(`apps/server/test/`): Vitest + supertest + mongodb-memory-server. `createApp`으로 만든 앱에 메모리 안에서 요청을 보내고 테스트 파일마다 메모리 MongoDB를 쓴다 (첫 실행 때 MongoDB 실행 파일을 받는다). 데이터는 `helpers.ts`의 `insert`로 DB에 직접 넣는다. 로그를 보는 테스트는 `resetLog()`로 시작한다 (로그 쓰기가 응답 뒤에 끝나서)
-- 공유(`packages/shared/src/`): Vitest, 테스트는 대상 파일 옆에. 요청·응답 스키마는 서버 테스트(요청 검사, `contract.test.ts`)로도 확인된다. 서버 테스트의 요청 본문은 `helpers.ts`의 `teamBody`·`ensembleBody`(검사를 통과하는 웹 모양)로 만든다 (B-8)
+- 공유(`packages/shared/src/`): Vitest, 테스트는 대상 파일 옆에. 요청·응답 스키마는 서버 테스트(요청 검사, `contract.test.ts`)로도 확인된다. 서버 테스트의 요청 본문은 `helpers.ts`의 `teamBody`·`ensembleBody`(검사를 통과하는 웹 모양)로 만든다 (B-8). 오류 응답은 `apiError('NOT_FOUND')`처럼 코드로 비교한다 (message는 설명이라 보지 않음, B-10)
 - 뮤테이션 검사 등 스크립트로 테스트 결과를 판정할 때는 원본이 통과하는지(기준선)를 먼저 확인하고, 종료 코드가 아니라 출력의 `Tests N failed`로 판정한다.
 
 ## 작업 범위

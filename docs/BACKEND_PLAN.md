@@ -23,7 +23,7 @@
 | B-7 ✅ | 활동 기록 고도화 + 관리자 화면 (2026-11-27) | – |
 | B-8 ✅ | 입력 검증·데이터 정리 (2026-11-28, 공유 스키마·400, 한국 날짜, 합주 `type` 삭제, 팀 확인) | – |
 | B-9 ✅ | 팀 자동 삭제 상시 적용 + 정리 작업 (2026-11-28) | – |
-| B-10 | API 형태 정리 | – |
+| B-10 ✅ | API 형태 정리 (2026-11-28, 오류 응답 통일, `/teams/:id`, 201·204) | – |
 | B-11 | 배포 준비물 (Docker·Caddy·워크플로, 데이터 변경 스크립트, 전환 절차서) | – |
 | B-12 | 서버 조사·백업 | ✅ |
 | B-13 | 베타 배포 + 테스터 확인 | ✅ |
@@ -75,7 +75,7 @@
 | 2 | 런타임 | Node 최신 LTS(웹·서버 같게), Express 5, Mongoose 최신, Zod 4 | 사용자 결정(최신으로). Express 5는 async 오류를 자동으로 넘겨 `try/catch` 반복이 사라진다 |
 | 3 | 서버 TypeScript 실행 | 개발: Node가 `.ts`를 바로 실행(type stripping, `node --watch`). 운영 이미지: 서버 + `shared`를 JS 한 파일로 묶음(`tsdown`) | 개발은 빌드 없이 단순하게. 운영은 묶어 두면 이미지가 작고, Node가 `node_modules` 안의 `.ts`(공유 패키지)를 실행하지 못하는 제약을 피한다 (B-3에서 확인) |
 | 4 | 배포 방식 | **Docker 이미지 + docker compose + Caddy** | 서버에는 Docker만 있으면 되고, 같은 이미지를 어디서나 똑같이 실행한다. 되돌리기도 이미지 이름 하나 |
-| 5 | 주소 | 운영 `https://semachi.net`(API는 `/api`), 베타 `https://beta.semachi.net`(DNS를 못 바꾸면 `https://semachi.net:8443`) | 같은 주소라 CORS가 필요 없다(S3). `:8081`·인증서 직접 읽기(O3) 사라짐. 옮기는 동안 `:8081`도 잠깐 살림 |
+| 5 | 주소 | 운영 `https://semachi.net`(API는 `/api`), 베타 `https://beta.semachi.net`(DNS를 못 바꾸면 `https://semachi.net:8443`) | 같은 주소라 CORS가 필요 없다(S3). `:8081`·인증서 직접 읽기(O3) 사라짐. 옮기는 동안 `:8081`도 잠깐 살림 (B-10 뒤 재검토: 옛 웹은 새 API와 맞지 않아 B-11에서 하지 않는 쪽으로 제안) |
 | 6 | 브랜치 | 작업 브랜치 → PR → `dev`(베타 자동 배포) → PR → `main`(운영 자동 배포) | 베타 테스터가 먼저 써 보고, 문제없으면 운영으로 |
 | 7 | 테스트 | Vitest + supertest + 메모리 MongoDB(`mongodb-memory-server`) | 웹과 같은 도구. 실제 DB를 건드리지 않는다 |
 | 8 | 비밀값 | 서버의 `.env`에만 (운영·베타 각각, DB 주소는 같음). GitHub에는 서버 접속용 SSH 키만 | 비밀값이 GitHub로 나가지 않는다 |
@@ -351,6 +351,15 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 - A2: `/teams/:id`처럼 복수형·경로 id로 (`PUT /team?id=` → `PUT /teams/:id`), 존재 확인 전용 API는 대상 조회로
 - 웹은 `src/api/` 파일만 바꾸면 된다 (3단계에서 모아 둠). 같은 배포로 함께
 
+- ✅ 결과 (2026-11-28): 서버 `bedeeda`, 웹 `7419b5f`. 테스트 서버 220 → 222, 웹 233 그대로. 상세는 `docs/MIGRATION.md`
+  - 오류: 모두 `{ error: { code, message, issues? } }`. 코드 6개 (`INVALID_REQUEST` 400, `ADMIN_LOGIN_REQUIRED` 401, `WRONG_PIN` 403, `NOT_FOUND` 404, `TOO_MANY_PIN_ATTEMPTS` 429, `INTERNAL_ERROR` 500) — `packages/shared`의 `API_ERROR_CODES`·`apiErrorSchema`, 서버 `lib/errors.ts`
+  - `middleware/errors.ts`: 없는 경로·깨진 JSON·던져진 오류를 JSON으로 (이전: Express 기본 HTML). 라우트의 try/catch를 지웠다 (Express 5가 async 오류를 넘겨 줌)
+  - 주소: 팀·합주·날적이·공지 모두 `/복수형`·`/복수형/:id`. PIN 확인 `/teams/:id/check-pin`·`/notes/:id/check-pin`·`/notices/check-pin` (본문 `{ pin }`). 관리자(`/admin/…`)·`/visits`·`/health`는 그대로
+  - 존재 확인 전용 API(true/false) → 대상 조회(`GET /teams/:id`가 그 문서, PIN 없음, 없으면 404)
+  - 만들기 201 `{ id }`, 수정 200 `{ id }`, 삭제·마스터 PIN 바꾸기 204. 공지 삭제는 대상 확인을 PIN보다 먼저 (다른 삭제와 같게)
+  - 웹은 상태 코드·헤더만 봐서 화면 동작은 그대로
+  - **B-11에 넘김 (결정 필요)**: 옛 웹은 새 API와 맞지 않는다 (B-6부터 변경 요청에 PIN 본문, B-8 검증, B-10 주소). 그래서 계획의 "옮기는 동안 `:8081` → 새 api"를 해도 옛 웹이 동작하지 않는다. 추천: `:8081` 넘기기를 하지 않고, 전환 때 `semachi.net`이 새 웹을 주게 한다 (열어 둔 옛 탭은 새로 고치면 새 웹). 그러면 `CORS_ORIGINS`도 운영에는 필요 없다
+
 ### B-11 배포 준비물 (서버 없이 만들 수 있는 것 전부)
 
 - `apps/server/Dockerfile`: Node LTS 이미지 + 운영 의존성 + 묶은 서버 파일. ARM·x86 둘 다 만들 수 있게 (서버 CPU를 모르므로)
@@ -358,9 +367,9 @@ V-3 10차에 웹 쪽을 다 만들어 두고 `TEAM_DUE_ENABLED = false`로 꺼 �
 - `deploy/compose.yaml`(caddy·api·api-beta), `deploy/Caddyfile`:
   - `semachi.net` → 운영 웹, `/api/*` → api (앞의 `/api`를 떼고 전달)
   - `beta.semachi.net` → 베타 웹 + 기본 인증, `/api/*` → api-beta
-  - 옮기는 동안 `semachi.net:8081` → api (예전 웹이 남아 있는 브라우저를 위해, 한동안 뒤 삭제)
+  - ~~옮기는 동안 `semachi.net:8081` → api~~ → B-10 결과: 옛 웹은 새 API와 맞지 않아 넘겨도 동작하지 않는다. 하지 않는 것을 추천 (사용자 확인)
   - 모든 응답에 `X-Robots-Tag: noindex, nofollow` (B-1)
-  - api 환경변수: `CLEANUP_ENABLED=true` (운영 api만, B-9. api-beta는 넣지 않는다: 같은 DB라 두 번 돌거나 베타가 운영 데이터를 지운다), `TRUST_PROXY=1` (Caddy 뒤라 진짜 사용자 IP로 PIN 시도를 센다, B-5 S2. 안 정하면 모든 사용자가 한 IP로 세어져 서로 막힌다), `CORS_ORIGINS=https://semachi.net` (옮기는 동안 `:8081`로 오는 옛 웹용, B-5 S3)
+  - api 환경변수: `CLEANUP_ENABLED=true` (운영 api만, B-9. api-beta는 넣지 않는다: 같은 DB라 두 번 돌거나 베타가 운영 데이터를 지운다), `TRUST_PROXY=1` (Caddy 뒤라 진짜 사용자 IP로 PIN 시도를 센다, B-5 S2. 안 정하면 모든 사용자가 한 IP로 세어져 서로 막힌다), `CORS_ORIGINS`는 `:8081` 넘기기를 하지 않으면 운영에 필요 없다 (B-5 S3, B-10 결과)
 - `.github/workflows/deploy.yml`: `dev` 푸시 → Environment `beta`, `main` 푸시 → Environment `production`(원하면 사용자 승인). 순서: CI 통과 → 이미지 → GHCR → SSH로 서버에서 새 이미지 받아 다시 켜기 → `/health` 확인, 실패하면 이전 이미지로. 서버 정보(Secrets)가 없는 동안은 이미지 만들기까지만 돈다
 - **CI에서 이미지 확인**: 만든 이미지를 Actions 안에서 MongoDB와 함께 띄워 `/health`·조회 API가 응답하는지 (서버 없이 배포물 검증)
 - 베타 화면: `VITE_APP_ENV=beta`면 헤더에 "베타" 표시와 건의사항 링크

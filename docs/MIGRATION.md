@@ -9,7 +9,7 @@
 | 1. CRA → Vite | ✅ 완료 (잔여물 처리 완료) |
 | 2. JS → TS 100% 전환 | ✅ 완료 (2026-11-20, `src`의 JS 0개, 계획: `docs/archive/TS_MIGRATION_PLAN.md`) |
 | 3. 내부 로직 개선 | ✅ 완료 (2026-11-23, 계획: `docs/archive/LOGIC_IMPROVEMENT_PLAN.md`. 3-6은 폐기하고 알림 기능 삭제) |
-| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅ · B-3 ✅ · B-4 ✅ · B-5 ✅ · B-6 ✅ · B-7 ✅ · B-8 ✅ · B-9 ✅, 다음은 B-10 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
+| 백엔드 개편 | 📝 계획 수립 (2026-11-27, 브랜치 `api3.0`, 계획: `docs/BACKEND_PLAN.md`). B-1 ✅ · B-2 ✅ · B-3 ✅ · B-4 ✅ · B-5 ✅ · B-6 ✅ · B-7 ✅ · B-8 ✅ · B-9 ✅ · B-10 ✅, 다음은 B-11 (서버·DB가 필요한 B-12~B-15는 OCI·DB 접근을 받은 뒤) |
 | View 개편 | ✅ **완료 (2026-11-26, V-0 ~ V-7)**: V-0·V-1 ✅, **V-2 합주표 ✅ (2026-11-25, 1~32차 + 마무리)**, **V-3 팀 ✅ (2026-11-26, 1~17차 + 마무리)**, V-4 날적이 ✅, V-5 공지 ✅, **V-6 일괄 정리 ✅**, **V-7 마무리 ✅ (2026-11-26)** (브랜치 `ui3.0`, 계획: `docs/archive/VIEW_REDESIGN_PLAN.md`) |
 
 ## 작업 로그
@@ -1469,6 +1469,22 @@ ID마다 커밋을 나눴다. 각 커밋에서 해당 테스트 기대값을 함
 
 **검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 공유 5 + 서버 220 + 웹 233 / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅
 
+### 2026-11-28 — 백엔드 개편 B-10: API 형태 정리 (오류 응답 통일, 복수형 경로·주소 안의 id, 201·204)
+
+- 사용자 질문에 답함 (B-10 전): 매일 04:00 정리 작업의 원리 (서버 안의 `setTimeout` 사슬, `main.ts` → `jobs/cleanup.ts`의 `scheduleCleanup` → `lib/time.ts`의 `msUntilNextKstHour`)
+- 서버 `bedeeda` — 지금 → 바꾼 후
+  - 오류 본문: 404 `{ id: -1 }`·`{ error: 'Team not found' }`·`false`, 500 글자·JSON, 없는 경로·깨진 JSON은 Express HTML → 모두 `{ error: { code, message, issues? } }`. 코드 `INVALID_REQUEST`·`ADMIN_LOGIN_REQUIRED`·`WRONG_PIN`·`NOT_FOUND`·`TOO_MANY_PIN_ATTEMPTS`·`INTERNAL_ERROR` (`packages/shared` `API_ERROR_CODES`·`apiErrorSchema`, 서버 `lib/errors.ts`의 `sendError`)
+  - `middleware/errors.ts`(새로): 없는 경로 404, 깨진 JSON 400, 던져진 오류 500 (내용은 응답에 넣지 않고 운영 로그에). 라우트마다 있던 try/catch 삭제 (Express 5가 async 오류를 넘겨 준다)
+  - 주소: `POST /team`·`PUT·DELETE /team?id=`·`GET /team/:id`(true)·`POST /check-team-pin { teamId, pin }` → `POST /teams`·`PUT·DELETE /teams/:id`·`GET /teams/:id`(그 팀, PIN 없음)·`POST /teams/:id/check-pin { pin }`. 합주·날적이·공지도 같은 모양 (공지 PIN 확인은 `/notices/check-pin`). 관리자·`/visits`·`/health`는 그대로
+  - 상태 코드: 만들기 200(공지만 201) → 201 `{ id }`, 수정 200 `{ id }`(합주 수정의 message 삭제), 삭제 200 `{ id }`·`{ message }` → 204 본문 없음, 마스터 PIN 바꾸기 → 204
+  - id 없는 주소(`DELETE /teams` 등)·옛 `?id=` 모양 → 없는 경로 404. 공지 삭제는 PIN 먼저 → 공지가 있는지 먼저
+  - shared: `pinCheckBodySchema { pin }` (id는 주소에), `idQuerySchema`·옛 PIN 확인 스키마 삭제
+- 웹 `7419b5f`: `src/api`의 주소, 존재 확인을 대상 조회로(`api/index`의 `exists`: 200이면 있음), 삭제 응답 타입 `void`. 웹은 오류 본문을 읽지 않아(상태 코드·헤더만) 화면 동작은 그대로. shared의 `existsResponseSchema`·`MessageResponse` 삭제
+- 알게 된 것 (B-11에 넘김, 결정 필요): 옛 웹은 새 API와 맞지 않는다 (B-6 변경 요청의 PIN 본문, B-8 검증, B-10 주소). 계획의 "옮기는 동안 `:8081` → 새 api"는 해도 옛 웹이 동작하지 않으므로 하지 않는 것을 추천 (`docs/BACKEND_PLAN.md` B-10 결과·B-11)
+- 테스트: 서버 테스트의 주소·상태 코드·오류 본문(`helpers.ts`의 `apiError`), 500 처리(내용이 새지 않음), 모든 오류가 `apiErrorSchema`에 맞는지(`contract.test.ts`). 웹 테스트의 MSW 주소·요청 기록. 주소 바꾸기는 한 번 쓰는 스크립트로 하고 남은 것(상태 코드 등)은 실패한 테스트를 보며 고침
+
+**검증:** `pnpm typecheck` ✅ / `pnpm test:run` ✅ 공유 5 + 서버 222 + 웹 233 / `pnpm lint` → 에러 0·경고 0 / `pnpm format:check` ✅ / `pnpm build` ✅
+
 ## 남은 일
 
 > 발견된 문제 전체(백엔드·버그·구조·View·환경)는 `docs/ISSUES.md`에 ID별로 정리했다. 아래 표는 린트 기준 요약이다.
@@ -1514,4 +1530,4 @@ View 개편 때 해당 코드와 함께 정리한다. 로직 층은 0건.
 2. ~~로직 개선 전 `context/fetch` 정제 로직에 characterization test 작성~~ ✅ 완료 (`src/context/fetch.test.tsx`)
 3. ~~3단계 내부 로직 개선~~ ✅ 완료 (2026-11-23)
 4. ~~View 개편~~ ✅ 완료 (2026-11-26, 기록: `docs/archive/VIEW_REDESIGN_PLAN.md`, 디렉터리 구조: `docs/DIRECTORY_STRUCTURE.md`)
-5. 백엔드 개편 (`docs/BACKEND_PLAN.md`): B-9까지 ✅. 다음 B-10 API 형태 → B-11 배포 준비물 → (서버 접근 뒤) B-12~B-15. 그 밖에 번들 줄이기 제안(ISSUES V15)
+5. 백엔드 개편 (`docs/BACKEND_PLAN.md`): B-10까지 ✅. 다음 B-11 배포 준비물 → (서버 접근 뒤) B-12~B-15. 그 밖에 번들 줄이기 제안(ISSUES V15)
